@@ -1,0 +1,47 @@
+name: Release on merge
+
+# A version is published only when the operator merges a pull request titled "vX.Y.Z: <what it delivers>".
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read the version from the pull request title
+        id: v
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+          if [[ "$TITLE" =~ ^v([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?):[[:space:]] ]]; then
+            echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+          else
+            echo "The title is not 'vX.Y.Z: ...': nothing to release."
+            echo "version=" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Check, pack and publish the release
+        if: steps.v.outputs.version != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.v.outputs.version }}
+          SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          set -euo pipefail
+          if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then echo "Tag v$VERSION already exists" >&2; exit 1; fi
+          node tools/check.mjs
+          bash tools/pack.sh "$VERSION" "$SHA" out
+          gh release create "v$VERSION" out/* --target "$SHA" --title "v$VERSION" --notes "Studium v$VERSION"

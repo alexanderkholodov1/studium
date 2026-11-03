@@ -1,0 +1,8 @@
+# Service-account keys and any credential never enter this repository
+*adminsdk*.json
+*service-account*.json
+private/
+.env
+.env.*
+.firebase/
+node_modules/

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Studium</title>
+<meta name="description" content="Guías de estudio interactivas por materia, semestre y profesor.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="/studium/assets/catalog.css">
+</head>
+<body>
+<header><div class="in">
+  <div><h1>STUDIUM</h1><p>Guías de estudio interactivas: explicaciones desde cero, simulaciones paso a paso, ejercicios que se corrigen solos y tarjetas de siglas.</p></div>
+  <button class="theme" id="theme">Claro / oscuro</button>
+</div></header>
+<main class="in">
+  <div class="filters">
+    <label>Buscar<input id="q" type="search" placeholder="Materia, tema, profesor…"></label>
+    <label>Materia<select id="f-course"></select></label>
+    <label>Semestre<select id="f-term"></select></label>
+    <label>Profesor<select id="f-prof"></select></label>
+  </div>
+  <p class="count" id="count"></p>
+  <div class="list" id="list"></div>
+</main>
+<footer class="in">Hecho por Alexander Kholodov.</footer>
+<script src="/studium/assets/catalog.js"></script>
+</body>
+</html>
