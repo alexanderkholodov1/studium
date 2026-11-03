@@ -33,7 +33,25 @@ jobs:
             echo "The title is not 'vX.Y.Z: ...': nothing to release."
             echo "version=" >> "$GITHUB_OUTPUT"
           fi
-      - name: Check, pack and publish the release
+      - name: Check the site
+        if: steps.v.outputs.version != ''
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          set -euo pipefail
+          if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then echo "Tag v$VERSION already exists" >&2; exit 1; fi
+          node tools/check.mjs
+      # The database rules ship with the release: published first, then tested live with temporary accounts.
+      # If either step fails, no release is created.
+      - name: Publish and test the database rules
+        if: steps.v.outputs.version != ''
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STUDIUM101 }}
+        run: |
+          set -euo pipefail
+          node tools/deploy-rules.mjs
+          node tools/test-rules.mjs
+      - name: Pack and publish the release
         if: steps.v.outputs.version != ''
         env:
           GH_TOKEN: ${{ github.token }}
@@ -41,7 +59,5 @@ jobs:
           SHA: ${{ github.event.pull_request.merge_commit_sha }}
         run: |
           set -euo pipefail
-          if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then echo "Tag v$VERSION already exists" >&2; exit 1; fi
-          node tools/check.mjs
           bash tools/pack.sh "$VERSION" "$SHA" out
           gh release create "v$VERSION" out/* --target "$SHA" --title "v$VERSION" --notes "Studium v$VERSION"
