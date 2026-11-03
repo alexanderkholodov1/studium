@@ -4,24 +4,25 @@ Interactive study guides, organized by course, term and professor. The portfolio
 `alexanderkholodov.web.app/studium`, mounted from this repository's latest GitHub Release.
 
 The guides are not in this repository. They live in the project's Firestore database and are readable only by
-signed-in accounts whose e-mail address is verified and belongs to the allowed domain. This repository holds the app
-shell (sign-in, catalog, viewer), the database rules and the admin tools.
+signed-in accounts of the allowed domain. This repository holds the app shell (sign-in, catalog, viewer), the database
+rules and the admin tools.
 
 ## Layout
 
 - `public/index.html`, `public/assets/`: the app. It signs people in with Firebase Authentication (e-mail and
-  password, with e-mail confirmation), reads the catalog from `catalog/`, and opens one guide at a time from
-  `guides/{id}` in a sandboxed frame that cannot reach the page or the account. Assets load from `/studium/assets/`.
-- `public/assets/config.js`: the public web configuration and the allowed domain. A Firebase web API key is public by
-  design; access is decided by the rules.
-- `firestore.rules`: verified accounts of the allowed domain may read the catalog and get one guide at a time;
-  nobody writes from a browser.
+  password), reads the catalog from `catalog/`, and opens one guide at a time from `guides/{id}` in a sandboxed frame
+  that cannot reach the page or the account. Assets load from `/studium/assets/`.
+- `public/assets/config.js`: the public web configuration, the allowed domain, and `confirmEmail`, the sign-up flow
+  setting (address confirmation and password recovery by e-mail). A Firebase web API key is public by design; access
+  is decided by the rules.
+- `firestore.rules`: password accounts of the allowed domain may read the catalog and get one guide at a time,
+  following `confirmEmail`; nobody writes from a browser.
 - `tools/check.mjs`: checks `public/` before a release. Only the app shell may ship (no guide pages), every
   root-absolute resource stays inside `/studium/`, no key material except the web key in `config.js`, and the domain
-  in `config.js` matches the one the rules enforce.
+  and `confirmEmail` in `config.js` match what the rules enforce.
 - `tools/deploy-rules.mjs`: publishes `firestore.rules` (skipped when the live rules are identical).
 - `tools/test-rules.mjs`: tests the live rules with temporary accounts (verified, unverified, other domain,
-  look-alike domain, none) and deletes them afterwards.
+  look-alike domain, none), expecting what `confirmEmail` says, and deletes them afterwards.
 - `tools/upload-guide.mjs <meta.json> <guide.html>`: publishes or replaces a guide and its catalog entry in one
   atomic write; `--remove <id>` takes one down.
 - `tools/pack.sh <version> <commit>`: builds `studium-dist-v<version>.tar.gz`, `version.json` and `SHA256SUMS`.

@@ -7,7 +7,11 @@ export const firebaseConfig = {
   appId: '1:921417767106:web:15e83839e0a7216dc8435b',
 };
 
-// Only verified accounts of this domain can read guides. firestore.rules enforces the same domain;
+// Only accounts of this domain can read guides. firestore.rules enforces the same domain;
 // tools/check.mjs fails if the two ever differ.
 export const allowedDomain = 'estud.usfq.edu.ec';
+
+// Sign-up flow: whether an account confirms its address through an e-mailed link, and may recover its password by
+// e-mail. firestore.rules follows the same setting; tools/check.mjs fails if the two ever differ.
+export const confirmEmail = false;
 export const audience = 'estudiantes de la USFQ';
