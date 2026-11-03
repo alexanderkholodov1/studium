@@ -1,13 +1,14 @@
 rules_version = '2';
 
-// Guides and their catalog are readable only by signed-in accounts whose e-mail address is verified and belongs
-// to the allowed domain (the same one as public/assets/config.js). Nobody writes from a browser: guides are
-// uploaded with the admin tool, which bypasses these rules.
+// Guides and their catalog are readable only by accounts signed in with e-mail and password whose address belongs
+// to the allowed domain (the same one as public/assets/config.js). While confirmEmail is off in config.js the address
+// is not confirmed by e-mail; when it is on, add `request.auth.token.email_verified == true` below.
+// Nobody writes from a browser: guides are uploaded with the admin tool, which bypasses these rules.
 service cloud.firestore {
   match /databases/{database}/documents {
     function student() {
       return request.auth != null
-        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider == 'password'
         && request.auth.token.email.lower().matches('[^@]+@estud[.]usfq[.]edu[.]ec');
     }
 

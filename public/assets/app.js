@@ -6,7 +6,7 @@ import {
   sendPasswordResetEmail, signOut,
 } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js';
 import { getFirestore, collection, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-lite.js';
-import { firebaseConfig, allowedDomain, audience } from './config.js';
+import { firebaseConfig, allowedDomain, audience, confirmEmail } from './config.js';
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -36,13 +36,13 @@ const MESSAGES = {
   'auth/wrong-password': 'Correo o contraseña incorrectos.',
   'auth/user-not-found': 'Correo o contraseña incorrectos.',
   'auth/invalid-email': 'Ese correo no es válido.',
-  'auth/email-already-in-use': 'Ya existe una cuenta con ese correo. Entra con tu contraseña o usa «Olvidé mi contraseña».',
+  'auth/email-already-in-use': `Ya existe una cuenta con ese correo. Entra con tu contraseña${confirmEmail ? ' o usa «Olvidé mi contraseña»' : ''}.`,
   'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres.',
   'auth/password-does-not-meet-requirements': 'La contraseña debe tener al menos 6 caracteres.',
   'auth/too-many-requests': 'Demasiados intentos seguidos. Espera unos minutos y vuelve a probar.',
   'auth/network-request-failed': 'Sin conexión. Revisa tu internet y vuelve a probar.',
   'auth/user-disabled': 'Esta cuenta está desactivada.',
-  'permission-denied': 'Tu cuenta todavía no tiene acceso. Si acabas de confirmar el correo, recarga la página.',
+  'permission-denied': 'Tu cuenta no tiene acceso a las guías. Recarga la página; si sigue igual, sal y vuelve a entrar.',
   unavailable: 'Sin conexión. Revisa tu internet y vuelve a probar.',
 };
 const explain = (error) => MESSAGES[error?.code] ?? 'Algo falló. Vuelve a intentarlo en un momento.';
@@ -64,10 +64,11 @@ function setMode(next) {
   $('#auth-submit').textContent = mode === 'in' ? 'Entrar' : 'Crear cuenta';
   $('#password').autocomplete = mode === 'in' ? 'current-password' : 'new-password';
   $('#pw-hint').hidden = mode === 'in';
-  $('#forgot').hidden = mode === 'up';
+  // Password recovery goes by e-mail too, so it is offered only while e-mails are delivered.
+  $('#forgot').hidden = mode === 'up' || !confirmEmail;
   $('#auth-lead').innerHTML = mode === 'in'
     ? `Para ${esc(audience)}. Entra con tu correo <span class="mono">@${esc(allowedDomain)}</span>.`
-    : `Crea tu cuenta con tu correo <span class="mono">@${esc(allowedDomain)}</span>. Te enviaremos un enlace para confirmar que es tuyo.`;
+    : `Crea tu cuenta con tu correo <span class="mono">@${esc(allowedDomain)}</span>.${confirmEmail ? ' Te enviaremos un enlace para confirmar que es tuyo.' : ''}`;
   $('#auth-msg').textContent = '';
 }
 $('#tab-in').addEventListener('click', () => setMode('in'));
@@ -93,7 +94,7 @@ $('#auth-form').addEventListener('submit', (event) => {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
         const { user } = await createUserWithEmailAndPassword(auth, email, password);
-        await sendEmailVerification(user, { url: returnUrl() });
+        if (confirmEmail) await sendConfirmation(user);
       }
     } catch (error) { say('#auth-msg', explain(error)); }
   });
@@ -111,6 +112,14 @@ $('#forgot').addEventListener('click', () => {
 });
 
 /* ---------- confirm the address ---------- */
+// The account exists as soon as it is created, so the app has already moved to the confirmation screen when the
+// e-mail is sent: a failure is reported there, and kept so that a re-render does not wipe it.
+let verifyNote = '';
+async function sendConfirmation(user) {
+  try { await sendEmailVerification(user, { url: returnUrl() }); verifyNote = ''; }
+  catch (error) { verifyNote = `No pudimos enviar el enlace: ${explain(error)} Pulsa «Reenviar enlace».`; }
+  say('#verify-msg', verifyNote);
+}
 // Firebase only writes email_verified into a new ID token: after the link is opened, reload the user and refresh it.
 async function recheck() {
   const user = auth.currentUser;
@@ -126,8 +135,8 @@ $('#verify-check').addEventListener('click', () => busy($('#verify-check'), asyn
   catch (error) { say('#verify-msg', explain(error)); }
 }));
 $('#verify-resend').addEventListener('click', () => busy($('#verify-resend'), async () => {
-  try { await sendEmailVerification(auth.currentUser, { url: returnUrl() }); say('#verify-msg', 'Listo: enviamos otro enlace.', true); }
-  catch (error) { say('#verify-msg', explain(error)); }
+  try { await sendEmailVerification(auth.currentUser, { url: returnUrl() }); verifyNote = ''; say('#verify-msg', 'Listo: enviamos otro enlace.', true); }
+  catch (error) { verifyNote = explain(error); say('#verify-msg', verifyNote); }
 }));
 // Coming back from the e-mail tab is the usual moment the address has just been confirmed.
 document.addEventListener('visibilitychange', () => {
@@ -191,7 +200,7 @@ async function route() {
     $('#denied-text').textContent = `Studium es para ${audience}: entra con un correo que termine en @${allowedDomain}. Esta sesión es de ${user.email ?? 'otra cuenta'}.`;
     show('denied'); return;
   }
-  if (!user.emailVerified) { $('#verify-email').textContent = user.email; say('#verify-msg', ''); show('verify'); return; }
+  if (confirmEmail && !user.emailVerified) { $('#verify-email').textContent = user.email; say('#verify-msg', verifyNote); show('verify'); return; }
   const id = decodeURIComponent((location.hash.match(/^#\/guia\/([^/]+)$/) ?? [])[1] ?? '');
   try {
     if (id) {
@@ -224,6 +233,6 @@ window.addEventListener('hashchange', () => route());
 onAuthStateChanged(auth, async (user) => {
   catalog = null; guides.clear();
   // A token minted before the address was confirmed still says email_verified=false: refresh it once.
-  if (user?.emailVerified && !(await user.getIdTokenResult()).claims.email_verified) await user.getIdToken(true);
+  if (confirmEmail && user?.emailVerified && !(await user.getIdTokenResult()).claims.email_verified) await user.getIdToken(true);
   await route();
 });

@@ -10,4 +10,9 @@ export const firebaseConfig = {
 // Only verified accounts of this domain can read guides. firestore.rules enforces the same domain;
 // tools/check.mjs fails if the two ever differ.
 export const allowedDomain = 'estud.usfq.edu.ec';
+
+// Whether an account must confirm its address through an e-mailed link before it can read guides. Off while the
+// school's mail server drops the sign-in e-mails; then the domain and the password are the only checks.
+// firestore.rules must agree (email_verified is required exactly when this is on); tools/check.mjs enforces it.
+export const confirmEmail = false;
 export const audience = 'estudiantes de la USFQ';
