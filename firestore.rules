@@ -1,0 +1,27 @@
+rules_version = '2';
+
+// Guides and their catalog are readable only by signed-in accounts whose e-mail address is verified and belongs
+// to the allowed domain (the same one as public/assets/config.js). Nobody writes from a browser: guides are
+// uploaded with the admin tool, which bypasses these rules.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function student() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower().matches('[^@]+@estud[.]usfq[.]edu[.]ec');
+    }
+
+    match /catalog/{id} {
+      allow read: if student();
+    }
+
+    // One guide at a time: listing every guide would download all of them.
+    match /guides/{id} {
+      allow get: if student();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
