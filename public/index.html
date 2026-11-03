@@ -5,16 +5,66 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Studium</title>
 <meta name="description" content="Guías de estudio interactivas por materia, semestre y profesor.">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500&display=swap">
-<link rel="stylesheet" href="/studium/assets/catalog.css">
+<link rel="stylesheet" href="/studium/assets/studium.css">
+<script>try { const t = localStorage.getItem('studium-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
 </head>
 <body>
-<header><div class="in">
+<header id="top"><div class="in">
   <div><h1>STUDIUM</h1><p>Guías de estudio interactivas: explicaciones desde cero, simulaciones paso a paso, ejercicios que se corrigen solos y tarjetas de siglas.</p></div>
-  <button class="theme" id="theme">Claro / oscuro</button>
+  <div class="who">
+    <span id="who-email" hidden></span>
+    <button class="ghost" id="sign-out" hidden>Salir</button>
+    <button class="ghost" data-theme-toggle>Claro / oscuro</button>
+  </div>
 </div></header>
-<main class="in">
+
+<main class="in" id="view-boot"><p class="status">Cargando…</p></main>
+
+<!-- Sign in, create an account, recover the password, confirm the address -->
+<main class="in" id="view-auth" hidden>
+  <section class="card auth">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-in" aria-selected="true">Entrar</button>
+      <button role="tab" id="tab-up" aria-selected="false">Crear cuenta</button>
+    </div>
+    <p class="lead" id="auth-lead"></p>
+    <form id="auth-form" novalidate>
+      <label>Correo estudiantil<input id="email" type="email" autocomplete="username" inputmode="email" required></label>
+      <label>Contraseña<input id="password" type="password" autocomplete="current-password" minlength="6" required></label>
+      <p class="hint" id="pw-hint" hidden>Al menos 6 caracteres. Usa una contraseña sencilla y <strong>distinta</strong> a la de tu correo: esta cuenta solo sirve para abrir las guías.</p>
+      <p class="msg" id="auth-msg" role="alert"></p>
+      <button class="primary" id="auth-submit" type="submit">Entrar</button>
+      <button class="link" id="forgot" type="button">Olvidé mi contraseña</button>
+    </form>
+  </section>
+</main>
+
+<main class="in" id="view-verify" hidden>
+  <section class="card auth">
+    <h2>Confirma tu correo</h2>
+    <p>Enviamos un enlace a <strong id="verify-email"></strong>. Ábrelo, pulsa el botón para completar la verificación y vuelve a esta página: se abrirá sola.</p>
+    <p class="hint">Si no aparece en un par de minutos, revisa <em>Correo no deseado</em> u <em>Otros</em>. El remitente es <span class="mono">noreply@studium101.firebaseapp.com</span>.</p>
+    <p class="msg" id="verify-msg" role="alert"></p>
+    <div class="row">
+      <button class="primary" id="verify-check">Ya lo confirmé</button>
+      <button class="ghost dark" id="verify-resend">Reenviar enlace</button>
+      <button class="link" id="verify-other">Usar otra cuenta</button>
+    </div>
+  </section>
+</main>
+
+<main class="in" id="view-denied" hidden>
+  <section class="card auth">
+    <h2>Esta cuenta no tiene acceso</h2>
+    <p id="denied-text"></p>
+    <div class="row"><button class="primary" id="denied-out">Usar otra cuenta</button></div>
+  </section>
+</main>
+
+<main class="in" id="view-catalog" hidden>
   <div class="filters">
     <label>Buscar<input id="q" type="search" placeholder="Materia, tema, profesor…"></label>
     <label>Materia<select id="f-course"></select></label>
@@ -24,7 +74,20 @@
   <p class="count" id="count"></p>
   <div class="list" id="list"></div>
 </main>
-<footer class="in">Hecho por Alexander Kholodov.</footer>
-<script src="/studium/assets/catalog.js"></script>
+
+<!-- One guide, isolated in a sandboxed frame without access to this page or the account -->
+<section id="view-guide" hidden>
+  <div class="bar">
+    <a class="back" href="#/">← Guías</a>
+    <span class="bar-title" id="guide-title"></span>
+    <button class="ghost" id="guide-full">Pantalla completa</button>
+    <button class="ghost" id="guide-out">Salir</button>
+  </div>
+  <p class="status" id="guide-status"></p>
+  <iframe id="guide-frame" title="Guía de estudio" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-downloads"></iframe>
+</section>
+
+<footer class="in" id="foot">Hecho por Alexander Kholodov.</footer>
+<script type="module" src="/studium/assets/app.js"></script>
 </body>
 </html>
