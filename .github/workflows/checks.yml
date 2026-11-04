@@ -22,3 +22,17 @@ jobs:
         run: for f in public/assets/*.js tools/*.mjs; do node --check "$f"; done
       - name: Pack a trial release
         run: bash tools/pack.sh 0.0.0-check "$GITHUB_SHA" /tmp/trial
+
+  rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Test the database rules on the emulators
+        run: npx --yes firebase-tools@15.11.0 emulators:exec --only auth,firestore --project studium101 "node tools/test-rules.mjs --emulators"

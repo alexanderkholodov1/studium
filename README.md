@@ -1,53 +1,74 @@
 # Studium
 
-Interactive study guides, organized by course, term and professor. The portfolio serves Studium at
+Study guides and a shared knowledge map, organized by course, term and professor. The portfolio serves Studium at
 `alexanderkholodov.web.app/studium`, mounted from this repository's latest GitHub Release.
 
-The guides are not in this repository. They live in the project's Firestore database and are readable only by
-signed-in accounts of the allowed domain. This repository holds the app shell (sign-in, catalog, viewer), the database
-rules and the admin tools.
+The content is not in this repository. Guides and contributions live in the project's Firestore database and are
+readable only by signed-in accounts of the allowed domain. This repository holds the app (sign-in, guides, map,
+contributing, viewer), the database rules and the admin tools.
+
+## How content gets in
+
+Students use their own AI (ChatGPT, Gemini, Claude, Copilot, NotebookLM…). Studium gives it the instructions and reads
+back what it returns:
+
+- **Contributions.** Exams, homework, slides, books, notes, contest problems or a curriculum go to the person's AI with
+  Studium's instructions. The AI returns a compact JSON extract: concepts and their relations, question patterns,
+  examples and how the material is taught or evaluated. The original files never reach Studium. Before publishing,
+  the app looks for personal data and offers to remove it.
+- **Guides.** Studium exports the part of the map a guide needs (a Markdown context file) and the instructions, with
+  settings for level, length, practice, difficulty and examples. The AI returns one HTML file with a JSON block that
+  names the concepts it explains and the sections where it explains them.
+
+Everything a person publishes is public by default, or private to their account. Neither a guide nor a contribution
+names its author.
+
+## The map
+
+`public/assets/graph.js` joins every guide and contribution an account can see into one graph: concepts, courses,
+guides and careers. Concepts with the same name join across courses, so a concept shared by two courses links them.
+A curriculum lays its courses out by semester and shows what comes next.
 
 ## Layout
 
-- `public/index.html`, `public/assets/`: the app. It signs people in with Firebase Authentication (e-mail and
-  password), reads the catalog from `catalog/`, and opens one guide at a time from `guides/{id}` in a sandboxed frame
-  that cannot reach the page or the account. Assets load from `/studium/assets/`.
+- `public/index.html`, `public/assets/`: the app. `app.js` (sign-in, routes, guides, map panel), `data.js`
+  (Firestore), `graph.js` (the map), `contribute.js` (contributing), `prompts.js` (the instructions for the AI and the
+  readers of what it returns), `viewer.js` (guides run in a sandboxed frame under a fixed content policy),
+  `themes.js` (each course's colors and motif), `fx.js` (motion and glass). Assets load from `/studium/assets/`.
 - `public/assets/config.js`: the public web configuration, the allowed domain, and `confirmEmail`, the sign-up flow
   setting (address confirmation and password recovery by e-mail). A Firebase web API key is public by design; access
   is decided by the rules.
-- `firestore.rules`: password accounts of the allowed domain may read the catalog and get one guide at a time,
-  following `confirmEmail`; nobody writes from a browser.
-- `tools/check.mjs`: checks `public/` before a release. Only the app shell may ship (no guide pages), every
-  root-absolute resource stays inside `/studium/`, no key material except the web key in `config.js`, and the domain
-  and `confirmEmail` in `config.js` match what the rules enforce.
+- `firestore.rules`: who reads and writes each collection (`catalog`, `guides`, `contributions`, `owners`), what a
+  document may contain, and how public and private documents are listed.
+- `tools/check.mjs`: checks `public/` before a release. Only the app may ship (no guide pages), every root-absolute
+  resource stays inside `/studium/`, no key material except the web key in `config.js`, and the domain and
+  `confirmEmail` in `config.js` match what the rules enforce.
+- `tools/test-rules.mjs`: tests the rules with temporary accounts and documents, and deletes them afterwards; with
+  `--emulators`, against the local emulators instead of the live project.
 - `tools/deploy-rules.mjs`: publishes `firestore.rules` (skipped when the live rules are identical).
-- `tools/test-rules.mjs`: tests the live rules with temporary accounts (verified, unverified, other domain,
-  look-alike domain, none), expecting what `confirmEmail` says, and deletes them afterwards.
-- `tools/upload-guide.mjs <meta.json> <guide.html>`: publishes or replaces a guide and its catalog entry in one
-  atomic write; `--remove <id>` takes one down.
+- `tools/upload-guide.mjs <meta.json> <guide.html>`: publishes or replaces a guide as an administrator;
+  `--remove <id>` takes one down.
+- `tools/dev.mjs [--emulators]`: serves the app at `http://localhost:5173/studium/`, against the live project or the
+  local emulators.
 - `tools/pack.sh <version> <commit>`: builds `studium-dist-v<version>.tar.gz`, `version.json` and `SHA256SUMS`.
 
 The admin tools read the service-account key from `GOOGLE_SERVICE_ACCOUNT_JSON` (its content) or
 `GOOGLE_APPLICATION_CREDENTIALS` (a path), refuse a key for any project other than the one in `.firebaserc`, and never
 print it.
 
-## Publishing a guide
+## Working locally
 
-A guide is one self-contained HTML file. Describe it in a `meta.json`:
-
-```json
-{ "id": "school-course-term-evaluation", "course": "…", "code": "…", "university": "…", "term": "…",
-  "professor": "…", "title": "…", "date": "YYYY-MM-DD", "topics": ["…"] }
+```sh
+firebase emulators:start --only auth,firestore     # Java 21 and firebase-tools
+node tools/test-rules.mjs --emulators
+node tools/dev.mjs --emulators
 ```
-
-and run `node tools/upload-guide.mjs meta.json guide.html`. It is stored gzip-compressed (a document holds at most
-1 MiB) and appears in the catalog at once; no release is needed.
 
 ## How changes ship
 
 1. Work on a branch. Commits may carry any working version.
 2. When a milestone is complete, open a pull request titled `vX.Y.Z: <what it delivers>`. `Checks` runs on every push
-   and pull request.
+   and pull request, including the rules tests on the emulators.
 3. The operator merges. `Release on merge` then checks the merge commit, publishes and tests the database rules, and
    publishes the GitHub Release `vX.Y.Z`. Nothing is published without that merge.
 4. The portfolio mounts the latest release on its next deploy.

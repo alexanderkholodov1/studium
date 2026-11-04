@@ -1,8 +1,10 @@
 // Publishes one guide to the project's database: its catalog entry and its HTML (gzip), in one atomic write.
 // Usage: node tools/upload-guide.mjs <meta.json> <guide.html>
 //        node tools/upload-guide.mjs --remove <id>
-// meta.json: { "id", "course", "code", "university", "term", "professor", "title", "date": "YYYY-MM-DD", "topics": [] }
-// The guide must be one self-contained HTML file; the site shows it in a sandboxed frame.
+// meta.json: { "id", "course", "code", "university", "term", "professor", "title", "date": "YYYY-MM-DD", "topics": [],
+//              "concepts": [{ "name", "anchor" }], "theme", "level" }
+// The guide must be one self-contained HTML file; the site shows it in a sandboxed frame. Guides published with this
+// tool are public and have no owner: no account can change them from the site.
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
@@ -43,6 +45,8 @@ for (const k of ['course', 'title']) if (typeof meta[k] !== 'string' || !meta[k]
 for (const k of ['code', 'university', 'term', 'professor']) if (meta[k] !== undefined && typeof meta[k] !== 'string') problems.push(`${k}: text`);
 if (!/^\d{4}-\d{2}-\d{2}$/.test(meta.date ?? '')) problems.push('date: YYYY-MM-DD');
 if (meta.topics !== undefined && !(Array.isArray(meta.topics) && meta.topics.every((t) => typeof t === 'string'))) problems.push('topics: list of text');
+if (meta.concepts !== undefined && !(Array.isArray(meta.concepts) && meta.concepts.every((c) => typeof c?.name === 'string'))) problems.push('concepts: list of { name, anchor }');
+if (meta.level !== undefined && !['basic', 'standard', 'advanced'].includes(meta.level)) problems.push('level: basic, standard or advanced');
 if (!/^\s*<!doctype html>/i.test(html.subarray(0, 200).toString('utf8'))) problems.push('the guide must be an HTML document starting with <!doctype html>');
 const packed = gzipSync(html, { level: 9 });
 if (packed.length > LIMIT) problems.push(`the compressed guide is ${packed.length} bytes; the limit is ${LIMIT}`);
@@ -50,12 +54,16 @@ if (problems.length) { console.error(`Not uploaded:\n- ${problems.join('\n- ')}`
 
 const now = new Date();
 const sha256 = createHash('sha256').update(html).digest('hex');
-const entry = { course: meta.course, title: meta.title, date: meta.date, topics: meta.topics ?? [], sha256, updatedAt: now };
-for (const k of ['code', 'university', 'term', 'professor']) if (meta[k]) entry[k] = meta[k];
+const concepts = meta.concepts ?? [];
+const entry = {
+  course: meta.course, title: meta.title, date: meta.date, topics: meta.topics ?? [], concepts: concepts.map((c) => c.name),
+  anchors: concepts.map((c) => c.anchor ?? ''), visibility: 'public', sha256, updatedAt: now,
+};
+for (const k of ['code', 'university', 'term', 'professor', 'theme', 'level']) if (meta[k]) entry[k] = meta[k];
 await call(token, 'POST', `${api}:commit`, {
   writes: [
     { update: { name: `${base}/catalog/${meta.id}`, fields: fields(entry) } },
-    { update: { name: `${base}/guides/${meta.id}`, fields: fields({ title: `${meta.course} · ${meta.title}`, encoding: 'gzip', html: packed, sha256, size: html.length, updatedAt: now }) } },
+    { update: { name: `${base}/guides/${meta.id}`, fields: fields({ title: `${meta.course} · ${meta.title}`, encoding: 'gzip', html: packed, sha256, size: html.length, visibility: 'public', updatedAt: now }) } },
   ],
 });
 console.log(`Uploaded ${meta.id} to ${id}: ${html.length} bytes, ${packed.length} compressed, sha256 ${sha256.slice(0, 12)}`);

@@ -1,9 +1,16 @@
 rules_version = '2';
 
-// Guides and their catalog are readable only by accounts signed in with e-mail and password whose address belongs
-// to the allowed domain (the same one as public/assets/config.js). The condition follows confirmEmail in config.js
-// (`request.auth.token.email_verified == true` goes with it); tools/check.mjs fails if the two ever differ.
-// Nobody writes from a browser: guides are uploaded with the admin tool, which bypasses these rules.
+// Studium's database. Everything is readable only by accounts signed in with e-mail and password whose address
+// belongs to the allowed domain (the same one as public/assets/config.js). The condition follows confirmEmail in
+// config.js (`request.auth.token.email_verified == true` goes with it); tools/check.mjs fails if the two ever differ.
+//
+// - catalog/{id} + guides/{id}: published study guides (the catalog entry, and the guide's HTML as gzip bytes).
+// - contributions/{id}: compact, anonymous extracts of study material (concepts, question patterns, examples) that
+//   together form the knowledge graph. Neither a contribution nor a guide names its author.
+// - owners/{id}: the account that may replace or delete the guide or contribution with the same id; only that account
+//   can read it. Guides published with the admin tool have no owner, so no browser can change them.
+// A guide or contribution is public, or private to its owner. Lists return public documents only (a list query must
+// ask for visibility == 'public'); the owner opens its private ones one by one.
 service cloud.firestore {
   match /databases/{database}/documents {
     function student() {
@@ -12,13 +19,89 @@ service cloud.firestore {
         && request.auth.token.email.lower().matches('[^@]+@estud[.]usfq[.]edu[.]ec');
     }
 
+    function at(collection, id) { return /databases/$(database)/documents/$(collection)/$(id); }
+    // The owner as stored before this request, and as it will be after it (a batch creates both together).
+    function mine(id) { return get(at('owners', id)).data.uid == request.auth.uid; }
+    function mineAfter(id) { return getAfter(at('owners', id)).data.uid == request.auth.uid; }
+    // Ids created from the app are Firestore's random 20-character ids.
+    function appId(id) { return id.matches('[A-Za-z0-9]{20}'); }
+
+    function shown(id) { return resource == null || resource.data.get('visibility', 'public') == 'public' || mine(id); }
+    function visibility(d) { return d.visibility in ['public', 'private']; }
+
+    function text(value, max) { return value is string && value.size() > 0 && value.size() <= max; }
+    function optional(data, key, max) { return !(key in data) || (data[key] is string && data[key].size() <= max); }
+    function described(d) {
+      return text(d.course, 80) && text(d.title, 120) && text(d.theme, 24) && visibility(d)
+        && optional(d, 'code', 30) && optional(d, 'university', 60) && optional(d, 'term', 60) && optional(d, 'professor', 80)
+        && d.updated == request.time;
+    }
+
+    function entry(d) {
+      return d.keys().hasOnly(['course', 'code', 'university', 'term', 'professor', 'title', 'date', 'topics', 'concepts',
+          'anchors', 'theme', 'level', 'visibility', 'updated'])
+        && d.keys().hasAll(['course', 'title', 'date', 'topics', 'concepts', 'anchors', 'theme', 'visibility', 'updated'])
+        && described(d)
+        && d.date is string && d.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && (!('level' in d) || d.level in ['basic', 'standard', 'advanced'])
+        && d.topics is list && d.topics.size() <= 40
+        && d.concepts is list && d.concepts.size() <= 200
+        && d.anchors is list && d.anchors.size() == d.concepts.size();
+    }
+    function guide(d) {
+      return d.keys().hasOnly(['title', 'html', 'encoding', 'size', 'visibility', 'updated'])
+        && d.keys().hasAll(['title', 'html', 'encoding', 'size', 'visibility', 'updated'])
+        && text(d.title, 220) && visibility(d) && d.html is bytes && d.html.size() <= 900000 && d.encoding == 'gzip' && d.size is int
+        && d.updated == request.time;
+    }
+    function contribution(d) {
+      return d.keys().hasOnly(['kind', 'course', 'code', 'university', 'term', 'professor', 'title', 'theme', 'concepts',
+          'questions', 'examples', 'body', 'encoding', 'visibility', 'updated'])
+        && d.keys().hasAll(['kind', 'course', 'title', 'theme', 'concepts', 'questions', 'examples', 'body', 'encoding',
+          'visibility', 'updated'])
+        && d.kind in ['exam', 'homework', 'slides', 'book', 'notes', 'contest', 'curriculum', 'other']
+        && described(d)
+        && d.concepts is list && d.concepts.size() <= 300
+        && d.questions is int && d.examples is int
+        && d.body is bytes && d.body.size() <= 900000 && d.encoding == 'gzip';
+    }
+
+    // A guide's catalog entry and its HTML always share the same visibility.
+    function sameAs(collection, id) { return getAfter(at(collection, id)).data.visibility == request.resource.data.visibility; }
+
     match /catalog/{id} {
-      allow read: if student();
+      allow get: if student() && shown(id);
+      allow list: if student() && resource.data.visibility == 'public';
+      allow create: if student() && appId(id) && entry(request.resource.data) && mineAfter(id) && sameAs('guides', id);
+      allow update: if student() && mine(id) && entry(request.resource.data) && sameAs('guides', id);
+      allow delete: if student() && mine(id) && !existsAfter(at('guides', id));
     }
 
     // One guide at a time: listing every guide would download all of them.
     match /guides/{id} {
-      allow get: if student();
+      allow get: if student() && shown(id);
+      allow create: if student() && appId(id) && guide(request.resource.data) && mineAfter(id) && sameAs('catalog', id);
+      allow update: if student() && mine(id) && guide(request.resource.data) && sameAs('catalog', id);
+      allow delete: if student() && mine(id) && !existsAfter(at('catalog', id));
+    }
+
+    match /contributions/{id} {
+      allow get: if student() && shown(id);
+      allow list: if student() && resource.data.visibility == 'public';
+      allow create: if student() && appId(id) && contribution(request.resource.data) && mineAfter(id);
+      allow update: if student() && mine(id) && contribution(request.resource.data);
+      allow delete: if student() && mine(id);
+    }
+
+    // An owner is recorded only together with the guide or contribution it creates, which must not exist yet.
+    match /owners/{id} {
+      allow read: if student() && resource.data.uid == request.auth.uid;
+      allow create: if student() && appId(id)
+        && request.resource.data.keys().hasOnly(['uid']) && request.resource.data.uid == request.auth.uid
+        && ((existsAfter(at('guides', id)) && !exists(at('guides', id)))
+          || (existsAfter(at('contributions', id)) && !exists(at('contributions', id))));
+      allow delete: if student() && resource.data.uid == request.auth.uid
+        && !existsAfter(at('guides', id)) && !existsAfter(at('contributions', id));
     }
 
     match /{document=**} {
