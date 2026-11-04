@@ -51,6 +51,7 @@
     <div class="menu glass" id="account-menu" role="menu" hidden>
       <p id="who-email"></p>
       <a role="menuitem" href="#/mis-aportes">Mis aportes</a>
+      <a role="menuitem" href="#/fuentes">Fuentes y agradecimientos</a>
       <button role="menuitem" id="sign-out">Salir</button>
     </div>
   </div>
@@ -178,6 +179,12 @@
   <section id="pane-mine" hidden></section>
 </main>
 
+<main class="view page" id="view-sources" hidden>
+  <div class="page-head"><h1>Fuentes</h1></div>
+  <p class="lede-small">De dónde viene el material del mapa, y a quiénes se lo debemos.</p>
+  <div id="sources"></div>
+</main>
+
 <!-- One guide, isolated in a sandboxed frame without access to this page or the account -->
 <section class="view reader" id="view-guide" hidden>
   <div class="reader-bar glass">
@@ -196,7 +203,7 @@
 </dialog>
 
 <div class="toast glass" id="toast" role="status" hidden></div>
-<footer class="foot" id="foot">Hecho por Alexander Kholodov.</footer>
+<footer class="foot" id="foot">Hecho por Alexander Kholodov. <a href="#/fuentes" id="foot-sources" hidden>Fuentes y agradecimientos</a></footer>
 <script type="module" src="/studium/assets/app.js"></script>
 </body>
 </html>

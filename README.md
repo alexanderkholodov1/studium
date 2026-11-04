@@ -23,6 +23,9 @@ back what it returns:
 Everything a person publishes is public by default, or private to their account. Neither a guide nor a contribution
 names its author.
 
+Material that comes from a shared collection keeps its credit: the collection is a **source** (name, description,
+acknowledgment and a link to the original), shown on the Sources page and next to the courses it contributed to.
+
 ## The map
 
 `public/assets/graph.js` joins every guide and contribution an account can see into one graph: concepts, courses,
@@ -38,7 +41,7 @@ A curriculum lays its courses out by semester and shows what comes next.
 - `public/assets/config.js`: the public web configuration, the allowed domain, and `confirmEmail`, the sign-up flow
   setting (address confirmation and password recovery by e-mail). A Firebase web API key is public by design; access
   is decided by the rules.
-- `firestore.rules`: who reads and writes each collection (`catalog`, `guides`, `contributions`, `owners`), what a
+- `firestore.rules`: who reads and writes each collection (`catalog`, `guides`, `contributions`, `owners`, `sources`), what a
   document may contain, and how public and private documents are listed.
 - `tools/check.mjs`: checks `public/` before a release. Only the app may ship (no guide pages), every root-absolute
   resource stays inside `/studium/`, no key material except the web key in `config.js`, and the domain and
@@ -48,6 +51,9 @@ A curriculum lays its courses out by semester and shows what comes next.
 - `tools/deploy-rules.mjs`: publishes `firestore.rules` (skipped when the live rules are identical).
 - `tools/upload-guide.mjs <meta.json> <guide.html>`: publishes or replaces a guide as an administrator;
   `--remove <id>` takes one down.
+- `tools/upload-contribution.mjs <aporte.json> [--source <id>]`: publishes a contribution as an administrator, read
+  and checked with the app's own reader (`--dry-run` only checks it); `--remove <id>` takes one down.
+- `tools/upload-source.mjs <source.json>`: publishes or updates a source and its credits.
 - `tools/dev.mjs [--emulators]`: serves the app at `http://localhost:5173/studium/`, against the live project or the
   local emulators.
 - `tools/pack.sh <version> <commit>`: builds `studium-dist-v<version>.tar.gz`, `version.json` and `SHA256SUMS`.
