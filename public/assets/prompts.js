@@ -450,7 +450,10 @@ export function findPersonal(text, email = '') {
   };
   for (const m of text.matchAll(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi)) if (!EXAMPLE_DOMAINS.test(m[0])) add(m[0], 'correo', true);
   for (const m of text.matchAll(/(?:\+?593[\s.-]?|\b0)9\d(?:[\s.-]?\d){7}\b/g)) add(m[0], 'teléfono', true);
-  for (const m of text.matchAll(/\b\d{10}\b|\b00\d{6}\b/g)) add(m[0], 'número que parece una cédula o un código de estudiante', false);
+  // Ten digits (an ID card) or 00 + six digits (a student code); constants such as 1000000007 are not IDs.
+  for (const m of text.matchAll(/\b\d{10}\b|\b00\d{6}\b/g)) {
+    if (!/0{5}/.test(m[0].slice(1))) add(m[0], 'número que parece una cédula o un código de estudiante', false);
+  }
   for (const m of text.matchAll(/\b(?:nombre(?: del estudiante| completo)?|apellidos?|estudiante|alumn[oa]|c[oó]digo(?: banner| de estudiante)?|c[eé]dula|id banner|calificaci[oó]n|nota obtenida|firma)\s*:\s*[^\s,;"][^\n",;]{0,40}/gi)) {
     add(m[0], 'dato con etiqueta personal', false);
   }
