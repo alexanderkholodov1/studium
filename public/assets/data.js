@@ -47,11 +47,13 @@ async function contributionOf(snap) {
 // Everything public, plus the account's own private guides and contributions.
 export async function loadAll(uid) {
   const visible = where('visibility', '==', 'public');
-  const [cat, con, own] = await Promise.all([
+  const [cat, con, own, src] = await Promise.all([
     getDocs(query(collection(db, 'catalog'), visible)),
     getDocs(query(collection(db, 'contributions'), visible)),
     uid ? getDocs(query(collection(db, 'owners'), where('uid', '==', uid))) : null,
+    getDocs(collection(db, 'sources')),
   ]);
+  const sources = src.docs.map((d) => ({ id: d.id, order: 0, ...d.data() })).sort((a, b) => a.order - b.order);
   const catalog = cat.docs.map(entryOf);
   const contributions = await Promise.all(con.docs.map(contributionOf));
   const mine = new Set(own?.docs.map((d) => d.id) ?? []);
@@ -63,7 +65,7 @@ export async function loadAll(uid) {
     if (item.exists()) contributions.push(await contributionOf(item));
   }
   for (const item of [...catalog, ...contributions]) item.mine = mine.has(item.id);
-  return { catalog, contributions };
+  return { catalog, contributions, sources };
 }
 
 export async function loadGuide(id) {

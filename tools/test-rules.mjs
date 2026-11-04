@@ -124,6 +124,9 @@ try {
   expect('student cannot list every guide', await status(s.token, 'GET', '/guides'), 403);
   expect('student cannot list every owner', await status(s.token, 'GET', '/owners'), 403);
   expect('student cannot read other collections', await status(s.token, 'GET', `/other/${tag}`), 403);
+  expect('student lists the sources', await list(s.token, 'sources'), 200);
+  expect('student cannot write a source', await status(s.token, 'PATCH', `/sources/${tag}`, write), 403);
+  expect('otherDomain cannot list the sources', await list(accounts.otherDomain.token, 'sources'), 403);
   for (const [name, account] of Object.entries(accounts).filter(([name]) => !['student', 'classmate'].includes(name))) {
     const allowedToo = name === 'unverified' && !confirmEmail;
     const verb = allowedToo ? 'can' : 'cannot';

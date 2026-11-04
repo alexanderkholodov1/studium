@@ -9,6 +9,7 @@ rules_version = '2';
 //   together form the knowledge graph. Neither a contribution nor a guide names its author.
 // - owners/{id}: the account that may replace or delete the guide or contribution with the same id; only that account
 //   can read it. Guides published with the admin tool have no owner, so no browser can change them.
+// - sources/{id}: the collections that material comes from, with their credits; published with the admin tools.
 // A guide or contribution is public, or private to its owner. Lists return public documents only (a list query must
 // ask for visibility == 'public'); the owner opens its private ones one by one.
 service cloud.firestore {
@@ -94,6 +95,10 @@ service cloud.firestore {
     }
 
     // An owner is recorded only together with the guide or contribution it creates, which must not exist yet.
+    match /sources/{id} {
+      allow read: if student();
+    }
+
     match /owners/{id} {
       allow read: if student() && resource.data.uid == request.auth.uid;
       allow create: if student() && appId(id)

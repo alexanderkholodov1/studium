@@ -24,15 +24,16 @@ startSky();
 glassLight();
 for (const el of document.querySelectorAll('[data-liquid]')) liquid(el, JSON.parse(el.dataset.liquid || '{}'));
 
-const VIEWS = ['boot', 'auth', 'verify', 'denied', 'catalog', 'map', 'contribute', 'guide'];
+const VIEWS = ['boot', 'auth', 'verify', 'denied', 'catalog', 'map', 'contribute', 'sources', 'guide'];
 const TABS = { catalog: 'guides', map: 'map', contribute: 'contribute' };
+const INSIDE = ['catalog', 'map', 'contribute', 'sources'];
 let current = 'boot';
 function show(view) {
   const swap = () => {
     for (const v of VIEWS) $(`#view-${v}`).hidden = v !== view;
-    const inside = !!TABS[view] || view === 'guide';
-    $('#nav').hidden = !inside || view === 'guide';
-    $('#tabbar').hidden = !TABS[view];
+    $('#nav').hidden = !INSIDE.includes(view);
+    $('#tabbar').hidden = !INSIDE.includes(view);
+    $('#foot-sources').hidden = !INSIDE.includes(view);
     $('#foot').hidden = view === 'guide' || view === 'map';
     root.classList.toggle('quiet', view === 'map' || view === 'guide');
     for (const a of document.querySelectorAll('[data-tab]')) a.setAttribute('aria-current', String(a.dataset.tab === TABS[view]));
@@ -231,7 +232,7 @@ function renderCatalog() {
         <div>
           <p class="course-code">${esc([c.code, c.contributions.find((x) => x.university)?.university ?? c.guides.find((x) => x.university)?.university].filter(Boolean).join(' · '))}</p>
           <h2>${esc(c.name)}</h2>
-          <p class="course-meta">${people.length ? `${esc(people.slice(0, 3).join(', '))}${people.length > 3 ? ` y ${people.length - 3} más` : ''}. ` : ''}${c.contributions.length} ${c.contributions.length === 1 ? 'aporte' : 'aportes'}, ${concepts} conceptos.</p>
+          <p class="course-meta">${people.length ? `${esc(people.slice(0, 3).join(', '))}${people.length > 3 ? ` y ${people.length - 3} más` : ''}. ` : ''}${c.contributions.length} ${c.contributions.length === 1 ? 'aporte' : 'aportes'}, ${concepts} conceptos.${creditLine(c.contributions)}</p>
         </div>
         <div class="course-actions">
           <a class="button ghost" href="#/mapa/${encodeURIComponent(c.id)}">Ver en el mapa</a>
@@ -254,6 +255,32 @@ function renderCatalog() {
 }
 $('#q').addEventListener('input', renderCatalog);
 $('#course-chips').addEventListener('click', (e) => { const b = e.target.closest('[data-course]'); if (b) { courseFilter = b.dataset.course; renderCatalog(); } });
+
+/* ---------- sources and credits ---------- */
+const sourceOf = (id) => state.sources.find((x) => x.id === id);
+function renderSources() {
+  const el = $('#sources');
+  if (!state.sources.length) { el.innerHTML = '<div class="empty glass"><h2>Todavía no hay fuentes registradas</h2><p>Cuando el mapa reciba material de una colección compartida, aparecerá aquí con su reconocimiento.</p></div>'; return; }
+  el.innerHTML = state.sources.map((src) => {
+    const items = state.contributions.filter((c) => c.source === src.id);
+    const courses = new Set(items.map((c) => keyOf(c.course)));
+    const paras = (text) => String(text ?? '').split(/\n{2,}/).filter(Boolean).map((p) => `<p>${esc(p)}</p>`).join('');
+    return `<article class="source glass" style="${themeStyle(src.theme ?? 'estrellas')}">
+      <div class="course-art" aria-hidden="true"></div>
+      ${src.by ? `<p class="course-code">${esc(src.by)}</p>` : ''}
+      <h2>${esc(src.name)}</h2>
+      ${src.thanks ? `<div class="thanks">${paras(src.thanks)}</div>` : ''}
+      ${paras(src.description)}
+      <p class="muted">${items.length ? `En Studium: ${items.length} ${items.length === 1 ? 'aporte' : 'aportes'} de ${courses.size} ${courses.size === 1 ? 'materia' : 'materias'},.` : 'Su material se está incorporando al mapa.'}</p>
+      ${src.url ? `<div class="actions"><a class="button primary" href="${esc(src.url)}" target="_blank" rel="noopener noreferrer">${esc(src.linkLabel ?? 'Ver la fuente original')}</a></div>` : ''}
+    </article>`;
+  }).join('');
+  rise(el);
+}
+const creditLine = (items) => {
+  const ids = [...new Set(items.map((c) => c.source).filter(Boolean))];
+  return ids.length ? ` Con material de ${ids.map((id) => `<a href="#/fuentes">${esc(sourceOf(id)?.name ?? id)}</a>`).join(' y ')}.` : '';
+};
 
 /* ---------- map ---------- */
 let map = null;
@@ -358,7 +385,7 @@ function panel(n) {
     for (const c of n.contributions) counts[c.kind] = (counts[c.kind] ?? 0) + 1;
     html = `<p class="kicker">${n.planned ? 'Materia de la malla' : 'Materia o competencia'}</p><h2>${esc(n.name)}</h2>
       <p class="muted">${esc([n.code, ...n.careers.map((c) => `${g.byId.get(c.career)?.name}, semestre ${c.semester}`)].filter(Boolean).join('. '))}</p>
-      ${n.contributions.length ? `<p>${Object.entries(counts).map(([k, c]) => esc(countKind(k, c))).join(', ')}${n.professors.size ? `, de ${esc([...n.professors.keys()].join(', '))}` : ''}.</p>` : '<p class="muted">Nadie aportó material de esta materia todavía.</p>'}
+      ${n.contributions.length ? `<p>${Object.entries(counts).map(([k, c]) => esc(countKind(k, c))).join(', ')}${n.professors.size ? `, de ${esc([...n.professors.keys()].join(', '))}` : ''}.${creditLine(n.contributions)}</p>` : '<p class="muted">Nadie aportó material de esta materia todavía.</p>'}
       ${before.length ? `<h3>Se necesita antes</h3><div class="chips small">${chipsOf(before)}</div>` : ''}
       ${next.length ? `<h3>Lo que viene después</h3><ul class="next">${next.map((x) => `<li><button class="link" data-node="${esc(x.course.id)}">${esc(x.course.name)}</button>${x.shared.length ? `<span class="muted"> usa ${esc(x.shared.slice(0, 5).map((s) => s.name).join(', '))}${x.shared.length > 5 ? ` y ${x.shared.length - 5} más` : ''}</span>` : ''}</li>`).join('')}</ul>` : ''}
       ${concepts.length ? `<h3>Conceptos más evaluados</h3><div class="chips small">${chipsOf(concepts.slice(0, 18))}</div>` : ''}
@@ -427,6 +454,14 @@ async function route() {
       await load();
       if (ticket !== routing) return;
       await openMap(arg.join('/'));
+      return;
+    }
+    if (page === 'fuentes') {
+      document.title = 'Fuentes · Studium';
+      show('sources');
+      await load();
+      if (ticket !== routing) return;
+      renderSources();
       return;
     }
     if (page === 'aportar' || page === 'mis-aportes') {
