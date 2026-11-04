@@ -52,6 +52,11 @@ if (existsSync(CONFIG)) {
   const rules = readFileSync('firestore.rules', 'utf8');
   if (!domain) errors.push(`${CONFIG} has no allowedDomain`);
   else if (!rules.includes(`'[^@]+@${domain.replaceAll('.', '[.]')}'`)) errors.push(`firestore.rules does not enforce the domain ${domain} of ${CONFIG}`);
+  // The app and the rules must agree on whether a confirmed address is required.
+  const confirm = config.match(/confirmEmail\s*=\s*(true|false)/)?.[1];
+  const requiresVerified = /^\s*&&\s*request\.auth\.token\.email_verified\s*==\s*true/m.test(rules);
+  if (!confirm) errors.push(`${CONFIG} has no confirmEmail`);
+  else if ((confirm === 'true') !== requiresVerified) errors.push(`confirmEmail is ${confirm} in ${CONFIG} but firestore.rules ${requiresVerified ? 'requires' : 'does not require'} email_verified`);
 } else errors.push(`${CONFIG} is missing`);
 
 if (errors.length) {

@@ -9,6 +9,8 @@ const id = project();
 const config = readFileSync(new URL('../public/assets/config.js', import.meta.url), 'utf8');
 const webKey = config.match(/apiKey:\s*'(AIza[0-9A-Za-z_-]{30,})'/)[1];
 const domain = config.match(/allowedDomain\s*=\s*'([a-z0-9.-]+)'/)[1];
+// What an unconfirmed account of the domain may do follows the confirmEmail setting.
+const confirmEmail = config.match(/confirmEmail\s*=\s*(true|false)/)[1] === 'true';
 const base = `projects/${id}/databases/(default)/documents`;
 const firestore = `https://firestore.googleapis.com/v1/${base}`;
 const admin = await accessToken();
@@ -40,10 +42,13 @@ async function status(token, method, path, body) {
   await response.arrayBuffer();
   return response.status;
 }
+// CI logs of a public repository are public: there, only failures are itemized.
+let checks = 0;
 function expect(label, actual, wanted) {
   const ok = actual === wanted;
+  checks += 1;
   if (!ok) failures += 1;
-  console.log(`${ok ? 'ok  ' : 'FAIL'} ${label}: HTTP ${actual}${ok ? '' : ` (expected ${wanted})`}`);
+  if (!ok || !process.env.CI) console.log(`${ok ? 'ok  ' : 'FAIL'} ${label}: HTTP ${actual}${ok ? '' : ` (expected ${wanted})`}`);
 }
 
 try {
@@ -62,9 +67,12 @@ try {
   expect('verified student cannot write a guide', await status(s, 'PATCH', `guides/${tag}`, write), 403);
   expect('verified student cannot read other collections', await status(s, 'GET', `other/${tag}`), 403);
   for (const [name, account] of Object.entries(accounts).filter(([name]) => name !== 'student')) {
-    expect(`${name} cannot list the catalog`, await status(account.token, 'GET', 'catalog'), 403);
-    expect(`${name} cannot open a guide`, await status(account.token, 'GET', `guides/${tag}`), 403);
+    const allowedToo = name === 'unverified' && !confirmEmail;
+    const verb = allowedToo ? 'can' : 'cannot';
+    expect(`${name} ${verb} list the catalog`, await status(account.token, 'GET', 'catalog'), allowedToo ? 200 : 403);
+    expect(`${name} ${verb} open a guide`, await status(account.token, 'GET', `guides/${tag}`), allowedToo ? 200 : 403);
   }
+  if (!confirmEmail) expect('unverified account still cannot write', await status(accounts.unverified.token, 'PATCH', `catalog/${tag}`, write), 403);
   expect('no account cannot list the catalog', await status(null, 'GET', 'catalog'), 403);
   expect('no account cannot open a guide', await status(null, 'GET', `guides/${tag}`), 403);
 } finally {
@@ -73,4 +81,4 @@ try {
   console.log(`Cleaned up ${created.length} test accounts and the test guide`);
 }
 if (failures) { console.error(`${failures} check(s) failed`); process.exit(1); }
-console.log('All rule checks passed');
+console.log(`All ${checks} rule checks passed`);
