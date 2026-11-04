@@ -6,3 +6,6 @@ private/
 .env.*
 .firebase/
 node_modules/
+
+# Emulator logs
+*-debug.log
