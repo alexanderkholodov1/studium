@@ -2,18 +2,18 @@
 // contribution names its theme; a course takes the theme most of its guides and contributions use.
 
 export const THEMES = {
-  vectores: { name: 'Vectores', hint: 'Álgebra, cálculo, matemáticas', a: '#8d63ff', b: '#22d3ee' },
-  redes: { name: 'Redes', hint: 'Redes, sistemas, telecomunicaciones', a: '#ff8a3d', b: '#4f7bff' },
+  vectores: { name: 'Vectores', hint: 'Álgebra, cálculo, matemáticas', a: '#3d7bff', b: '#2dd4bf' },
+  redes: { name: 'Redes', hint: 'Redes, sistemas, telecomunicaciones', a: '#ff6a3d', b: '#3d6bff' },
   codigo: { name: 'Código', hint: 'Programación, software, datos', a: '#2ee59d', b: '#16b5d0' },
   algoritmos: { name: 'Algoritmos', hint: 'Programación competitiva: IEEEXtreme, ICPC', a: '#ffd23f', b: '#ff4f6d' },
-  neuronas: { name: 'Neuronas', hint: 'Inteligencia artificial, estadística', a: '#ff4fd8', b: '#ffb547' },
+  neuronas: { name: 'Neuronas', hint: 'Inteligencia artificial, estadística', a: '#ff5a4f', b: '#ffb547' },
   ondas: { name: 'Ondas', hint: 'Física, electrónica, señales', a: '#3fa7ff', b: '#7cf2ff' },
   moleculas: { name: 'Moléculas', hint: 'Química, materiales', a: '#b8f34a', b: '#2ed3a0' },
-  celulas: { name: 'Células', hint: 'Biología, medicina, salud', a: '#ff6f91', b: '#7be495' },
+  celulas: { name: 'Células', hint: 'Biología, medicina, salud', a: '#ff6b7a', b: '#7be495' },
   mercados: { name: 'Mercados', hint: 'Economía, finanzas, administración', a: '#ffc93c', b: '#19c2a0' },
-  palabras: { name: 'Palabras', hint: 'Humanidades, idiomas, derecho', a: '#c58bff', b: '#ff8fb1' },
+  palabras: { name: 'Palabras', hint: 'Humanidades, idiomas, derecho', a: '#f0a35e', b: '#ff5a5f' },
   trazos: { name: 'Trazos', hint: 'Arte, diseño, arquitectura', a: '#ff7a59', b: '#5ac8fa' },
-  estrellas: { name: 'Estrellas', hint: 'Cualquier otra materia', a: '#a78bfa', b: '#22e5c9' },
+  estrellas: { name: 'Estrellas', hint: 'Cualquier otra materia', a: '#4f7dff', b: '#2dd4bf' },
 };
 export const DEFAULT_THEME = 'estrellas';
 

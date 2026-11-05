@@ -1,8 +1,10 @@
-// Studium's data: Firebase sign-in, and the guides and contributions in Firestore (see firestore.rules).
+// Studium's data: Firebase sign-in, and in Firestore (see firestore.rules) the guides and contributions, the person's own
+// profile, the thanks students give to guides and what they know about their professors.
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js';
 import { getAuth, connectAuthEmulator } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js';
 import {
-  getFirestore, connectFirestoreEmulator, collection, query, where, getDocs, doc, getDoc, writeBatch, serverTimestamp, Bytes,
+  getFirestore, connectFirestoreEmulator, collection, query, where, getDocs, doc, getDoc, setDoc, deleteDoc, writeBatch,
+  serverTimestamp, Bytes,
 } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-lite.js';
 import { firebaseConfig } from './config.js';
 import { keyOf } from './themes.js';
@@ -135,4 +137,48 @@ export async function remove(item) {
   } else batch.delete(doc(db, 'contributions', item.id));
   batch.delete(doc(db, 'owners', item.id));
   await batch.commit();
+}
+
+/* ---------- the person's profile (only its owner reads it) ---------- */
+export async function loadProfile(uid) {
+  const snap = await getDoc(doc(db, 'profiles', uid));
+  if (!snap.exists()) return null;
+  const { updated, ...data } = snap.data();
+  return data;
+}
+export async function saveProfile(uid, profile) {
+  await setDoc(doc(db, 'profiles', uid), { ...profile, updated: serverTimestamp() });
+}
+
+/* ---------- thanks: only positive reactions, one document per guide and account ---------- */
+export const KUDOS = ['salvo', 'entendi', 'examen', 'gracias'];
+export async function loadKudos(uid) {
+  const snap = await getDocs(collection(db, 'kudos'));
+  const counts = new Map();
+  const mine = new Map();
+  for (const d of snap.docs) {
+    const { guide, kinds = [] } = d.data();
+    const tally = counts.get(guide) ?? Object.fromEntries(KUDOS.map((k) => [k, 0]));
+    for (const k of kinds) if (k in tally) tally[k] += 1;
+    counts.set(guide, tally);
+    if (uid && d.id === `${guide}__${uid}`) mine.set(guide, new Set(kinds));
+  }
+  return { counts, mine };
+}
+export async function setKudos(uid, guide, kinds) {
+  const ref = doc(db, 'kudos', `${guide}__${uid}`);
+  if (kinds.length) await setDoc(ref, { guide, kinds, updated: serverTimestamp() });
+  else await deleteDoc(ref);
+}
+
+/* ---------- what students know about their professors: fixed, constructive tags, no free text ---------- */
+export async function loadTips() {
+  const snap = await getDocs(collection(db, 'tips'));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data(), updated: millis(d.data().updated) }));
+}
+export async function setTip(uid, tip) {
+  const ref = doc(db, 'tips', `${tip.prof}__${uid}`);
+  if (tip.tags.length) {
+    await setDoc(ref, { prof: tip.prof, professor: tip.professor, ...(tip.course ? { course: tip.course } : {}), tags: tip.tags, updated: serverTimestamp() });
+  } else await deleteDoc(ref);
 }

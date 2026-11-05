@@ -61,6 +61,8 @@ const value = (v) => {
   if (Buffer.isBuffer(v)) return { bytesValue: v.toString('base64') };
   if (Array.isArray(v)) return { arrayValue: { values: v.map(value) } };
   if (Number.isInteger(v)) return { integerValue: String(v) };
+  if (typeof v === 'boolean') return { booleanValue: v };
+  if (v && typeof v === 'object') return { mapValue: { fields: fields(v) } };
   return { stringValue: String(v) };
 };
 const fields = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, value(v)]));
@@ -213,6 +215,46 @@ try {
   expect('student cannot keep the entry while deleting the guide', await commit(s.token, [remove(`guides/${g}`)]), 403);
   expect('student deletes its guide', await commit(s.token, [remove(`guides/${g}`), remove(`catalog/${g}`), remove(`owners/${g}`)]), 200);
   expect('student deletes its contribution', await commit(s.token, [remove(`contributions/${mine}`), remove(`owners/${mine}`)]), 200);
+  // The person's own space
+  const profile = (extra = {}) => ({ mode: 'metas', ambience: 'jugueton', sound: true, theme: 'dark', semester: 7, career: 'Carrera de prueba',
+    nickname: 'Prueba', goals: [{ id: 'a1', text: 'Terminar la guía', done: false }], progress: { [adminGuide]: 'done' }, ...extra });
+  expect('student saves its profile', await commit(s.token, [put(`profiles/${s.uid}`, profile())]), 200);
+  expect('student reads its profile', await status(s.token, 'GET', `/profiles/${s.uid}`), 200);
+  expect('classmate cannot read the profile of another account', await status(c.token, 'GET', `/profiles/${s.uid}`), 403);
+  expect('classmate cannot write the profile of another account', await commit(c.token, [put(`profiles/${s.uid}`, profile())]), 403);
+  expect('a profile with an unknown ambience is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ ambience: 'neon' }))]), 403);
+  expect('a profile with other fields is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ email: s.email }))]), 403);
+  expect('otherDomain cannot save a profile', await commit(accounts.otherDomain.token, [put(`profiles/${accounts.otherDomain.uid}`, profile())]), 403);
+
+  // Thanks: only fixed, positive kinds
+  const kudo = (guideId, kinds, extra = {}) => ({ guide: guideId, kinds, ...extra });
+  expect('classmate thanks a guide', await commit(c.token, [put(`kudos/${adminGuide}__${c.uid}`, kudo(adminGuide, ['salvo', 'gracias']))]), 200);
+  expect('student lists the thanks', await list(s.token, 'kudos'), 200);
+  expect('otherDomain cannot list the thanks', await list(accounts.otherDomain.token, 'kudos'), 403);
+  expect('thanks in the name of another account are refused', await commit(c.token, [put(`kudos/${adminGuide}__${s.uid}`, kudo(adminGuide, ['salvo']))]), 403);
+  expect('a reaction that is not one of the positive kinds is refused', await commit(s.token, [put(`kudos/${adminGuide}__${s.uid}`, kudo(adminGuide, ['malo']))]), 403);
+  expect('a repeated reaction is refused', await commit(s.token, [put(`kudos/${adminGuide}__${s.uid}`, kudo(adminGuide, ['salvo', 'salvo']))]), 403);
+  expect('thanks with a comment are refused', await commit(s.token, [put(`kudos/${adminGuide}__${s.uid}`, kudo(adminGuide, ['salvo'], { comment: 'texto' }))]), 403);
+  const ghost = appId();
+  expect('thanks for a guide that does not exist are refused', await commit(s.token, [put(`kudos/${ghost}__${s.uid}`, kudo(ghost, ['salvo']))]), 403);
+  expect('student cannot delete the thanks of another account', await commit(s.token, [remove(`kudos/${adminGuide}__${c.uid}`)]), 403);
+  expect('classmate takes back its thanks', await commit(c.token, [remove(`kudos/${adminGuide}__${c.uid}`)]), 200);
+
+  // What students know about a professor: fixed constructive tags, no free text
+  const prof = `docente-${tag}`;
+  const tip = (extra = {}) => ({ prof, professor: 'Docente de Prueba', course: 'Curso de prueba', tags: ['puntos-extra', 'asistencia'], ...extra });
+  expect('student shares what it knows of a professor', await commit(s.token, [put(`tips/${prof}__${s.uid}`, tip())]), 200);
+  expect('classmate lists the tips', await list(c.token, 'tips'), 200);
+  expect('otherDomain cannot list the tips', await list(accounts.otherDomain.token, 'tips'), 403);
+  expect('a tag that is not one of the fixed ones is refused', await commit(s.token, [put(`tips/${prof}__${s.uid}`, tip({ tags: ['es pésimo'] }))]), 403);
+  expect('a tip with a comment is refused', await commit(s.token, [put(`tips/${prof}__${s.uid}`, tip({ comment: 'texto' }))]), 403);
+  expect('a professor name with a link is refused', await commit(s.token, [put(`tips/${prof}__${s.uid}`, tip({ professor: 'https://example.com' }))]), 403);
+  expect('a tip in the name of another account is refused', await commit(c.token, [put(`tips/${prof}__${s.uid}`, tip())]), 403);
+  expect('classmate cannot delete the tip of another account', await commit(c.token, [remove(`tips/${prof}__${s.uid}`)]), 403);
+  expect('otherDomain cannot share a tip', await commit(accounts.otherDomain.token, [put(`tips/${prof}__${accounts.otherDomain.uid}`, tip())]), 403);
+  expect('student takes back its tip', await commit(s.token, [remove(`tips/${prof}__${s.uid}`)]), 200);
+  expect('student deletes its profile', await commit(s.token, [remove(`profiles/${s.uid}`)]), 200);
+
   expect('nobody writes elsewhere', await status(s.token, 'PATCH', `/other/${tag}`, write), 403);
 } finally {
   for (const localId of created) await call(admin, 'POST', `${identity}/projects/${id}/accounts:delete`, { localId }).catch(() => { failures += 1; console.log('FAIL could not delete a test account'); });

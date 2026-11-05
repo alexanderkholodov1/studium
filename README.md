@@ -1,11 +1,29 @@
 # Studium
 
-Study guides and a shared knowledge map, organized by course, term and professor. The portfolio serves Studium at
-`alexanderkholodov.web.app/studium`, mounted from this repository's latest GitHub Release.
+A personal space to study anything, and a community of students who share guides, notes and what they know of each
+professor. The portfolio serves Studium at `alexanderkholodov.web.app/studium`, mounted from this repository's latest
+GitHub Release.
 
 The content is not in this repository. Guides and contributions live in the project's Firestore database and are
-readable only by signed-in accounts of the allowed domain. This repository holds the app (sign-in, guides, map,
-contributing, viewer), the database rules and the admin tools.
+readable only by signed-in members of a community. This repository holds the app, the database rules and the admin
+tools.
+
+## What a visitor and a member see
+
+- **Anyone:** what Studium is, its look, who made it and the community manifesto (`#/`, `#/acerca`). The sign-in page
+  never names the accepted domain.
+- **A member:** their own space (`#/`): the next exam with its countdown, goals with sounds and confetti, a focus timer,
+  where they left off, and what is new, ordered by how they study. Their settings (`#/ajustes`): semester, career, how
+  they study (exams, for fun, intensive, step by step) and the ambience (playful with a companion and bubbles, lively,
+  calm, or focus in black and white), sounds and day or night. Everything they choose is kept in their account.
+- **The community:** every guide as a card (`#/guias`), the knowledge map, contributing, and the professors page
+  (`#/profes`). Interactions are only positive: guides get four fixed kinds of thanks and professors get fixed,
+  constructive tags, counted and never signed. The database accepts nothing else, so nobody can write anything negative.
+
+## Communities
+
+Today there is one, USFQ (`communities` in `public/assets/config.js`). A second one needs its domain in `config.js` and
+`firestore.rules`, and a `community` field on what its members publish so that each pool reads only its own.
 
 ## How content gets in
 
@@ -37,11 +55,16 @@ A curriculum lays its courses out by semester and shows what comes next.
 - `public/index.html`, `public/assets/`: the app. `app.js` (sign-in, routes, guides, map panel), `data.js`
   (Firestore), `graph.js` (the map), `contribute.js` (contributing), `prompts.js` (the instructions for the AI and the
   readers of what it returns), `viewer.js` (guides run in a sandboxed frame under a fixed content policy),
-  `themes.js` (each course's colors and motif), `fx.js` (motion and glass). Assets load from `/studium/assets/`.
+  `themes.js` (each course's colors and motif), `fx.js` (the scene, tilting cards, glass, transitions), `play.js`
+  (floating tokens with physics, the companion, bubbles, confetti, the springy wordmark), `sfx.js` (synthesized
+  sounds), `prefs.js` (the person's settings, synced to `profiles/{uid}`), `space.js` (home, goals, timer,
+  settings), `community.js` (thanks and professors), `demos.js` (the landing's live examples). Assets load from
+  `/studium/assets/`.
 - `public/assets/config.js`: the public web configuration, the allowed domain, and `confirmEmail`, the sign-up flow
   setting (address confirmation and password recovery by e-mail). A Firebase web API key is public by design; access
   is decided by the rules.
-- `firestore.rules`: who reads and writes each collection (`catalog`, `guides`, `contributions`, `owners`, `sources`), what a
+- `firestore.rules`: who reads and writes each collection (`catalog`, `guides`, `contributions`, `owners`, `sources`,
+  `profiles`, `kudos`, `tips`), what a
   document may contain, and how public and private documents are listed.
 - `tools/check.mjs`: checks `public/` before a release. Only the app may ship (no guide pages), every root-absolute
   resource stays inside `/studium/`, no key material except the web key in `config.js`, and the domain and
@@ -54,6 +77,8 @@ A curriculum lays its courses out by semester and shows what comes next.
 - `tools/upload-contribution.mjs <aporte.json> [--source <id>]`: publishes a contribution as an administrator, read
   and checked with the app's own reader (`--dry-run` only checks it); `--remove <id>` takes one down.
 - `tools/upload-source.mjs <source.json>`: publishes or updates a source and its credits.
+- `tools/set-owner.mjs <id> <e-mail>`: gives a guide or contribution published with the admin tools to an account, so
+  that its owner can change, replace or delete it from the site.
 - `tools/dev.mjs [--emulators]`: serves the app at `http://localhost:5173/studium/`, against the live project or the
   local emulators.
 - `tools/pack.sh <version> <commit>`: builds `studium-dist-v<version>.tar.gz`, `version.json` and `SHA256SUMS`.

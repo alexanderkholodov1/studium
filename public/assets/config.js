@@ -8,10 +8,16 @@ export const firebaseConfig = {
 };
 
 // Only accounts of this domain can read guides. firestore.rules enforces the same domain;
-// tools/check.mjs fails if the two ever differ.
+// tools/check.mjs fails if the two ever differ. The site never shows it: members of a community already know it.
 export const allowedDomain = 'estud.usfq.edu.ec';
+
+// The communities: each one is the pool of students that share guides, the map and what they know of their professors.
+// Today there is one. A second one needs its own domain here and in firestore.rules, and a community field on what its
+// members publish, so that each pool reads only its own.
+export const communities = [
+  { id: 'usfq', name: 'USFQ', full: 'Universidad San Francisco de Quito', domain: allowedDomain },
+];
 
 // Sign-up flow: whether an account confirms its address through an e-mailed link, and may recover its password by
 // e-mail. firestore.rules follows the same setting; tools/check.mjs fails if the two ever differ.
 export const confirmEmail = false;
-export const audience = 'estudiantes de la USFQ';
