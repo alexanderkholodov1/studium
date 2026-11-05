@@ -5,8 +5,8 @@ import {
   onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification,
   sendPasswordResetEmail, signOut,
 } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js';
-import { allowedDomain, confirmEmail } from './config.js';
-import { auth, loadAll, loadGuide } from './data.js';
+import { allowedDomain, confirmEmail, mailFrom } from './config.js';
+import { auth, loadAll, loadGuide, loadLibrary } from './data.js';
 import { keyOf, themeStyle, courseThemes } from './themes.js';
 import { LEVELS, QUESTION_KINDS, RELATIONS, countKind } from './prompts.js';
 import { buildGraph, upcoming, GraphView } from './graph.js';
@@ -19,6 +19,11 @@ import { play, springLetters, celebrate } from './play.js';
 import { mountSpace, renderHome, renderSettings, renderAmbiences, remember, soonLabel, daysTo } from './space.js';
 import { mountCommunity, loadCommunity, kudosRow, renderKudos, renderProfes } from './community.js';
 import { mountDemos } from './demos.js';
+import { mountScenes } from './scenes.js';
+import { mountLibrary, renderLibrary } from './library.js';
+import { mountEditor, openEditor } from './editor.js';
+import * as ai from './ai.js';
+import { setLang, t } from './i18n.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -37,10 +42,13 @@ play.start($('#play'), $('#fx-top'));
 for (const el of document.querySelectorAll('[data-liquid]')) liquid(el, JSON.parse(el.dataset.liquid || '{}'));
 springLetters($('#wordmark'));
 mountDemos();
+mountScenes();
 for (const el of document.querySelectorAll('[data-ambience-picker]')) renderAmbiences(el);
 
 /* ---------- the person's choices, applied everywhere ---------- */
+let shownLang = '';
 function applyPrefs(p) {
+  if (p.lang !== shownLang) { shownLang = p.lang; setLang(p.lang); }
   sfx.enable(p.sound);
   play.setAmbience(p.ambience);
   for (const b of document.querySelectorAll('[data-sound-toggle]')) b.setAttribute('aria-pressed', String(p.sound));
@@ -52,6 +60,10 @@ document.querySelectorAll('[data-sound-toggle]').forEach((b) => b.addEventListen
   prefs.set({ sound: on });
   if (on) sfx.chime();
   toast(on ? 'Sonidos activados.' : 'Sonidos apagados.');
+}));
+document.querySelectorAll('[data-lang-toggle]').forEach((b) => b.addEventListener('click', () => {
+  prefs.set({ lang: prefs.get().lang === 'en' ? 'es' : 'en' });
+  sfx.tick();
 }));
 document.querySelectorAll('[data-theme-toggle]').forEach((b) => b.addEventListener('click', () => {
   const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
@@ -66,8 +78,8 @@ document.addEventListener('click', (e) => {
 });
 
 /* ---------- views ---------- */
-const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'catalog', 'map', 'profes', 'contribute', 'settings', 'about', 'sources', 'guide'];
-const TABS = { home: 'home', catalog: 'catalog', map: 'map', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about' };
+const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'catalog', 'map', 'library', 'profes', 'contribute', 'settings', 'about', 'sources', 'guide'];
+const TABS = { home: 'home', catalog: 'catalog', map: 'map', library: 'library', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about' };
 const PUBLIC = ['landing', 'auth', 'about', 'denied', 'verify'];
 let current = 'boot';
 function show(view) {
@@ -228,13 +240,14 @@ const leave = () => signOut(auth).then(() => { prefs.detach(); location.hash = '
 for (const id of ['#sign-out', '#verify-other', '#denied-out']) $(id).addEventListener('click', leave);
 
 /* ---------- data ---------- */
-const state = { catalog: [], contributions: [], sources: [], tips: [], graph: null, themes: new Map(), loaded: false };
+const state = { catalog: [], contributions: [], sources: [], tips: [], library: [], graph: null, themes: new Map(), loaded: false };
 let loading = null;
 async function load(force = false) {
   if (state.loaded && !force) return state;
   loading ??= (async () => {
-    const [data] = await Promise.all([loadAll(auth.currentUser?.uid), loadCommunity(force)]);
+    const [data, library] = await Promise.all([loadAll(auth.currentUser?.uid), loadLibrary(auth.currentUser?.uid).catch(() => []), loadCommunity(force)]);
     Object.assign(state, data, {
+      library,
       graph: buildGraph(data),
       themes: courseThemes([...data.catalog, ...data.contributions.filter((c) => c.kind !== 'curriculum')]),
       loaded: true,
@@ -253,6 +266,8 @@ async function refresh() {
 const context = { state, get user() { return { uid: auth.currentUser?.uid, email: auth.currentUser?.email ?? '' }; }, refresh, toast, explain };
 mountSpace(context);
 mountCommunity(context);
+mountLibrary(context);
+mountEditor();
 
 /* ---------- guides ---------- */
 const day = (d) => (d ? new Date(`${d}T12:00:00`) : null);
@@ -271,6 +286,7 @@ function guideCard(g) {
       <h3>${esc(g.title)}</h3>
       <p class="who">${esc([g.professor, g.term].filter(Boolean).join(' · '))}</p>
       <div class="flags">${g.level ? `<span class="level">${esc(LEVELS[g.level])}</span>` : ''}${g.visibility === 'private' ? '<span class="level private">Solo tú</span>' : ''}${g.mine ? '<span class="level private">Tuya</span>' : ''}${done ? '<span class="level done">La terminaste</span>' : ''}</div>
+      ${g.by || g.ai?.provider ? `<p class="made">${g.by ? `Por <strong>${esc(g.by)}</strong>` : ''}${g.by && g.ai?.provider ? ' · ' : ''}${g.ai?.provider ? `Hecha con ${esc(ai.PROVIDERS[g.ai.provider]?.name ?? 'otra IA')}${g.ai.model ? ` <span class="model">${esc(g.ai.model)}</span>` : ''}${g.ai.effort ? `, esfuerzo ${esc((ai.EFFORTS[g.ai.effort] ?? g.ai.effort).toLowerCase())}` : ''}` : ''}</p>` : ''}
       <div class="tags">${(g.topics?.length ? g.topics : g.concepts ?? []).slice(0, 5).map((t) => `<span>${esc(t)}</span>`).join('')}</div>
       ${kudosRow(g.id)}
     </div>
@@ -470,6 +486,22 @@ $('#guide-done').addEventListener('click', (e) => {
   }
 });
 
+$('#guide-edit').addEventListener('click', () => {
+  const entry = state.catalog.find((g) => g.id === openGuide);
+  const guide = guides.get(openGuide);
+  if (!entry || !guide) return;
+  openEditor({
+    id: openGuide, entry, html: guide.html, uid: auth.currentUser?.uid, toast,
+    onSaved: (html, anchor) => {
+      guides.set(openGuide, { ...guide, html });
+      const frame = $('#guide-frame');
+      frame.addEventListener('load', () => showAnchor(frame, anchor), { once: true });
+      frame.srcdoc = prepareGuide(html);
+      load(true).catch(() => {});
+    },
+  });
+});
+
 /* ---------- routing ---------- */
 const isMember = (user) => !!user && allowed(user.email) && (!confirmEmail || user.emailVerified);
 let routing = 0;
@@ -482,8 +514,8 @@ async function route() {
   root.style.removeProperty('--a');
   if (!user) {
     document.title = 'Studium';
-    if (page === 'entrar') { document.title = 'Entrar · Studium'; show('auth'); }
-    else if (page === 'acerca') { document.title = 'Acerca · Studium'; show('about'); }
+    if (page === 'entrar') { document.title = `${t('Entrar')} · Studium`; show('auth'); }
+    else if (page === 'acerca') { document.title = `${t('Acerca')} · Studium`; show('about'); }
     else if (!page) show('landing');
     // A link to something inside: sign in first, then go there.
     else { pending = location.hash; show('auth'); }
@@ -493,7 +525,7 @@ async function route() {
     $('#denied-text').textContent = `Esta sesión es de ${user.email ?? 'otra cuenta'}, que no pertenece a ninguna comunidad de Studium. Por ahora existe una sola, y se entra con el correo de estudiante de esa universidad.`;
     show('denied'); return;
   }
-  if (confirmEmail && !user.emailVerified) { $('#verify-email').textContent = user.email; say('#verify-msg', verifyNote); show('verify'); return; }
+  if (confirmEmail && !user.emailVerified) { $('#verify-email').textContent = user.email; $('#verify-from').textContent = mailFrom; say('#verify-msg', verifyNote); show('verify'); return; }
   if (pending) { const to = pending; pending = ''; if (location.hash !== to) { location.hash = to; return; } }
   if (page === 'entrar') { location.hash = '#/'; return; }
   try {
@@ -503,6 +535,7 @@ async function route() {
       show('guide');
       const known = state.catalog.find((g) => g.id === id);
       $('#guide-title').textContent = known ? `${known.course}: ${known.title}` : '';
+      $('#guide-edit').hidden = !known?.mine;
       $('#guide-map').href = `#/mapa/guide:${encodeURIComponent(id)}`;
       $('#guide-status').textContent = 'Abriendo la guía…'; $('#guide-status').hidden = false;
       remember(id);
@@ -527,6 +560,7 @@ async function route() {
       return;
     }
     const views = {
+      biblioteca: ['library', 'Biblioteca', renderLibrary],
       mapa: ['map', 'Mapa', () => openMap(arg.join('/'))],
       fuentes: ['sources', 'Fuentes', renderSources],
       profes: ['profes', 'Profes', renderProfes],
@@ -536,7 +570,7 @@ async function route() {
       '': ['home', 'Inicio', renderHome],
     };
     if (page === 'aportar' || page === 'mis-aportes') {
-      document.title = 'Aportar · Studium';
+      document.title = `${t('Aportar')} · Studium`;
       show('contribute');
       await load();
       if (ticket !== routing) return;
@@ -546,7 +580,7 @@ async function route() {
       return;
     }
     const [view, title, render] = views[page] ?? views[''];
-    document.title = `${title} · Studium`;
+    document.title = `${t(title)} · Studium`;
     show(view);
     if (!render) return;
     if (!state.loaded && view === 'catalog') $('#gallery').innerHTML = '<p class="status">Cargando…</p>';

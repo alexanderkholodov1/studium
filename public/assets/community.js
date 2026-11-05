@@ -2,6 +2,7 @@
 // their professors (fixed constructive tags, counted, never signed). There is no way to write anything negative here:
 // the database only accepts the kinds and tags listed below.
 import { KUDOS, loadKudos, setKudos, loadTips, setTip } from './data.js';
+import { QUESTION_KINDS } from './prompts.js';
 import { keyOf, themeStyle } from './themes.js';
 import { sfx } from './sfx.js';
 import { burst } from './play.js';
@@ -110,7 +111,7 @@ function profCard(p) {
       <p class="muted">${esc([...p.courses].slice(0, 3).join(' · '))}${p.courses.size ? ' · ' : ''}${people ? `${people} ${people === 1 ? 'estudiante contó' : 'estudiantes contaron'} lo que sabe` : 'Nadie contó nada todavía'}${p.questions ? ` · ${p.questions} preguntas de sus exámenes en el mapa` : ''}</p></div></header>
     ${groups || '<p class="muted">¿Tomaste clases con este profe? Lo que sabes le sirve a quien se inscribe el próximo semestre.</p>'}
     <div class="actions"><button class="button ghost small" data-tip-for="${esc(p.name)}" data-tip-course="${esc([...p.courses][0] ?? '')}">${p.tips.some((t) => t.id.endsWith(`__${ctx.user.uid}`)) ? 'Cambiar lo que conté' : 'Contar lo que sé'}</button>
-      ${p.questions ? `<a class="button ghost small" href="#/mapa">Sus preguntas en el mapa</a>` : ''}</div>
+      ${p.questions ? `<button class="button ghost small" data-bank="${esc(p.key)}">Banco de preguntas (${p.questions})</button>` : ''}</div>
   </article>`;
 }
 export function renderProfes() {
@@ -171,6 +172,24 @@ async function saveTip(remove = false) {
   finally { button.disabled = false; }
 }
 
+/* ---------- a professor's question bank, by evaluation ---------- */
+
+function openBank(key) {
+  const items = ctx.state.contributions.filter((c) => keyOf(c.professor) === key && (c.data?.questions ?? []).length);
+  const name = items[0]?.professor ?? '';
+  const groups = new Map();
+  for (const c of items) {
+    const label = [c.title, c.term].filter(Boolean).join(' · ') || 'Sin evaluación indicada';
+    groups.set(label, [...(groups.get(label) ?? []), ...c.data.questions.map((q) => ({ ...q, course: c.course }))]);
+  }
+  const total = [...groups.values()].reduce((s, g) => s + g.length, 0);
+  $('#bank-title').textContent = `Banco de preguntas: ${name}`;
+  $('#bank-hint').textContent = `${total} ${total === 1 ? 'pregunta' : 'preguntas'} de ${groups.size} ${groups.size === 1 ? 'evaluación' : 'evaluaciones'}, en paráfrasis anónima. Practica con ellas; no son para copiar.`;
+  $('#bank-body').innerHTML = [...groups].map(([label, qs]) => `<details class="asked" open><summary><strong>${esc(label)}</strong> <span class="muted">${qs.length} ${qs.length === 1 ? 'pregunta' : 'preguntas'} · ${esc(qs[0].course)}</span></summary>
+    <ul>${qs.map((q) => `<li><span class="muted">${esc(QUESTION_KINDS[q.kind] ?? q.kind)} · dificultad ${q.difficulty} de 5${q.points != null ? ` · ${q.points} puntos` : ''}${q.concepts?.length ? ` · ${esc(q.concepts.join(', '))}` : ''}</span><p>${esc(q.text)}</p>${q.solution ? `<details><summary>Ver solución</summary><p>${esc(q.solution)}</p></details>` : ''}</li>`).join('')}</ul></details>`).join('');
+  $('#bank-dialog').showModal();
+}
+
 export function mountCommunity(context) {
   ctx = context;
   document.addEventListener('click', (e) => {
@@ -178,6 +197,8 @@ export function mountCommunity(context) {
     if (k) toggleKudo(k);
     const t = e.target.closest('[data-tip-for]');
     if (t) openTip(t.dataset.tipFor, t.dataset.tipCourse);
+    const bank = e.target.closest('[data-bank]');
+    if (bank) openBank(bank.dataset.bank);
   });
   $('#tip-new').addEventListener('click', () => openTip());
   $('#p-q').addEventListener('input', renderProfes);

@@ -17,7 +17,9 @@ export const AMBIENCES = {
 };
 export const THEMES = { auto: 'Como tu sistema', light: 'Día', dark: 'Noche' };
 
-const DEFAULTS = { mode: 'examenes', ambience: 'vivo', sound: false, theme: 'auto', semester: 0, career: '', nickname: '', goals: [], progress: {} };
+export const AVATARS = ['blue', 'red', 'teal', 'butter', 'sky', 'peach'];
+const LANG = /^en\b/i.test(globalThis.navigator?.language ?? '') ? 'en' : 'es';
+const DEFAULTS = { mode: 'examenes', ambience: 'vivo', sound: false, theme: 'auto', lang: LANG, avatar: 'blue', semester: 0, career: '', nickname: '', name: '', goals: [], progress: {} };
 const KEYS = Object.keys(DEFAULTS);
 const LOCAL = 'studium-prefs';
 const root = document.documentElement;
@@ -32,6 +34,9 @@ const clean = (p) => {
   out.semester = Math.max(0, Math.min(20, Number(out.semester) || 0));
   out.career = String(out.career ?? '').slice(0, 80);
   out.nickname = String(out.nickname ?? '').slice(0, 40);
+  out.name = String(out.name ?? '').trim().slice(0, 60);
+  if (!['es', 'en'].includes(out.lang)) out.lang = LANG;
+  if (!AVATARS.includes(out.avatar)) out.avatar = 'blue';
   out.goals = (Array.isArray(out.goals) ? out.goals : []).slice(0, 60)
     .map((g) => ({ id: String(g.id ?? Math.random().toString(36).slice(2, 10)).slice(0, 16), text: String(g.text ?? '').slice(0, 140), done: !!g.done, ...(g.guide ? { guide: String(g.guide).slice(0, 100) } : {}) }))
     .filter((g) => g.text);
@@ -50,6 +55,8 @@ const listeners = new Set();
 
 function apply() {
   root.dataset.ambience = state.ambience;
+  root.lang = state.lang;
+  root.style.setProperty('--me', `var(--${state.avatar})`);
   if (state.theme === 'auto') delete root.dataset.theme; else root.dataset.theme = state.theme;
   try { localStorage.setItem(LOCAL, JSON.stringify(state)); } catch { /* the browser does not keep it */ }
 }

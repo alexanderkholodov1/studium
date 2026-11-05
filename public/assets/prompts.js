@@ -259,6 +259,23 @@ const AUDIENCE = {
   advanced: 'Avanzado y técnico: el estudiante domina lo básico. Usa lenguaje técnico preciso, demostraciones, casos límite, complejidad y trampas; no expliques lo elemental.',
 };
 
+// What each extra section the student asks for adds to the instructions.
+const SECTION_TEXT = {
+  flashcards: 'Tarjetas de términos: al final, un mazo de tarjetas que se voltean al pulsarlas (término al frente; definición y un ejemplo atrás), con botones «La sé» y «Repasar» y un contador de las que faltan.',
+  mock: 'Simulacro: al final, un examen de práctica con el formato, la cantidad de preguntas y la dificultad de la evaluación real, con cronómetro, que se corrige al terminar y explica cada respuesta.',
+  cheatsheet: 'Resumen de una página: fórmulas, definiciones y pasos clave en una sola pantalla, lista para imprimir.',
+  mistakes: 'Errores comunes: en cada tema, los errores típicos y las trampas habituales de la evaluación, con el razonamiento correcto.',
+  solved: 'Ejercicios resueltos paso a paso: cada paso se revela con un botón, con su justificación.',
+  conceptmap: 'Mapa de conceptos: un diagrama SVG interactivo de cómo se relacionan los conceptos, que lleva a la sección de cada uno.',
+  selfcheck: 'Autoevaluación: al final de cada tema, de 3 a 5 preguntas con puntaje y un mensaje según el resultado.',
+};
+const DECOR_TEXT = {
+  notebook: 'Cuaderno: papel claro con líneas azules y margen rojo, y los consejos como anotaciones a mano (fuente Caveat de Google Fonts); en modo oscuro, papel azul noche.',
+  minimal: 'Minimal: blanco y negro con un solo color de acento, tipografía limpia, nada de adornos.',
+  playful: 'Tierna: colores suaves, esquinas muy redondeadas y pequeñas ilustraciones SVG simpáticas y originales; emojis con moderación.',
+  night: 'Nocturna: fondo oscuro profundo, acentos brillantes y brillos suaves alrededor de lo importante.',
+};
+
 export function guideInstructions(o) {
   const contest = o.contest;
   const theme = THEMES[o.theme] ?? THEMES.estrellas;
@@ -273,14 +290,21 @@ export function guideInstructions(o) {
 Escribe una guía de estudio interactiva para «${meta.title}» de ${o.course}${who ? ` (${who})` : ''}${o.date ? `, que es el ${o.date}` : ''}.
 Te adjunto \`${o.contextFile}\`: lo que Studium sabe de esta ${contest ? 'competencia' : 'materia'}, sacado de material que
 aportaron estudiantes de forma anónima: conceptos, relaciones, preguntas reales en paráfrasis y ${contest ? 'cómo son los problemas' : 'cómo evalúa el profesor'}.
-Si adjunto más material mío, úsalo también.${o.focus ? `\n\nEnfócate en: ${o.focus}.` : ''}
+Si adjunto más material mío, úsalo también.${o.focus ? `\n\nEnfócate en: ${o.focus}.` : ''}${o.goal ? `\n\nEl objetivo del estudiante con esta guía: ${o.goal}.` : ''}
 
 ## Para quién es
 - Nivel: ${AUDIENCE[o.level] ?? AUDIENCE.standard}
 - Extensión: ${LENGTH[o.length] ?? LENGTH.medium}.
 - Práctica: ${PRACTICE[o.practice] ?? PRACTICE.normal}, ${CHALLENGE[o.challenge] ?? CHALLENGE.same}.
 - Ejemplos: ${EXAMPLES[o.examples] ?? EXAMPLES.normal}.
+- Idioma: ${o.lang === 'en' ? 'inglés. Write the whole guide in English (lang="en"), keeping the technical terms the course uses.' : 'español.'}
 
+## Estilo y decoración
+${DECOR_TEXT[o.decor] ?? DECOR_TEXT.notebook}
+${(o.sections ?? []).filter((k) => SECTION_TEXT[k]).length ? `
+## Secciones extra que pidió el estudiante
+${o.sections.filter((k) => SECTION_TEXT[k]).map((k) => `- ${SECTION_TEXT[k]}`).join('\n')}
+` : ''}
 ## Cómo debe ser
 1. Explica cada término en el momento en que aparece: primero la definición formal y técnica, después, si ayuda, una
    analogía. Da el término original en inglés cuando sea el usual.
@@ -301,7 +325,7 @@ Si adjunto más material mío, úsalo también.${o.focus ? `\n\nEnfócate en: ${
    (desbordamiento, límites, casos borde).` : ''}
 
 ## Requisitos técnicos de Studium
-- Un solo archivo HTML completo que empieza con <!doctype html>, en español (lang="es"), con todo dentro: CSS,
+- Un solo archivo HTML completo que empieza con <!doctype html>, ${o.lang === 'en' ? 'en inglés (lang="en")' : 'en español (lang="es")'}, con todo dentro: CSS,
   JavaScript e imágenes (SVG o data: URLs).
 - Bibliotecas externas solo de cdnjs.cloudflare.com, cdn.jsdelivr.net o unpkg.com (por ejemplo KaTeX para
   matemáticas o highlight.js para código) y fuentes solo de Google Fonts. Nada más se carga.
@@ -310,6 +334,8 @@ Si adjunto más material mío, úsalo también.${o.focus ? `\n\nEnfócate en: ${
 - Usa como colores característicos los del tema «${theme.name}»: ${theme.a} y ${theme.b}, más los neutros que necesites.
 - Menos de 2 MB.
 - Cada concepto que la guía explica tiene su sección con un atributo id (usa el id que da el contexto).
+- Cada parte de la guía va en su propio elemento <section id="…"> con un único <h2>: así el estudiante puede pedirle
+  a su IA que cambie o agregue una sección sin rehacer la guía entera.
 - Al inicio de <head>, este bloque con los datos de la guía, completado ("concepts" lista cada concepto que la guía
   explica con el id de su sección; "topics", los temas en pocas palabras):
 
@@ -318,8 +344,9 @@ ${JSON.stringify(meta, null, 2)}
 </script>
 
 ## Entrega
-Devuélveme el archivo \`guia.html\` para descargar. Si no puedes crear archivos, escribe el HTML completo en un solo
-bloque de código; si no cabe en una respuesta, divídelo en partes y espera a que te pida la siguiente.
+${o.api
+    ? 'Responde solo con el HTML completo, desde <!doctype html> hasta </html>, sin texto antes ni después.'
+    : 'Devuélveme el archivo `guia.html` para descargar. Si no puedes crear archivos, escribe el HTML completo en un solo\nbloque de código; si no cabe en una respuesta, divídelo en partes y espera a que te pida la siguiente.'}
 `;
 }
 

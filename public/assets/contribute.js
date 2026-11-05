@@ -8,6 +8,8 @@ import {
 import { publishContribution, publishGuide, setVisibility, remove, LIMIT } from './data.js';
 import { prepareGuide } from './viewer.js';
 import { rise } from './fx.js';
+import * as ai from './ai.js';
+import { prefs } from './prefs.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -70,15 +72,102 @@ const dropzone = (id) => `<div class="dropzone" data-drop="${id}">
   </details>
   <div class="reviews" data-reviews="${id}"></div>`;
 
+/* ---------- your AI, inside Studium ---------- */
+const PROMPT_URL = 'https://github.com/alexanderkholodov1/studium/blob/main/public/assets/prompts.js';
+const promise = () => `<aside class="anon glass">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
+    <div><h2>Todo se anonimiza. Siempre.</h2>
+      <p>Tus archivos van solo a tu IA. Ella saca las notas, nombres, códigos, correos y comentarios personales, y a
+        Studium llega solo lo que se estudia: conceptos, preguntas y ejemplos. Antes de publicar, Studium vuelve a buscar
+        datos personales y te muestra lo que encuentre.</p>
+      <p class="fine">El único propósito es armar el conocimiento más amplio posible para otros estudiantes como tú.
+        <a href="${PROMPT_URL}" target="_blank" rel="noopener noreferrer">Puedes leer las instrucciones exactas que recibe tu IA</a>.</p></div>
+  </aside>`;
+function aiStep(zone) {
+  if (!ai.ready()) {
+    return `<li class="step glass ai-step off"><h2>Con tu IA, sin copiar ni pegar</h2>
+      <p>Conecta Claude, ChatGPT o Gemini en <a href="#/ajustes">Ajustes</a> con tu propia clave, y Studium hace todo el
+        camino: le pasa tus archivos a tu IA con estas instrucciones y te muestra el resultado para que lo revises.
+        Studium no cobra nada; tu proveedor cobra lo que use tu clave.</p>
+      <div class="actions"><a class="button primary" href="#/ajustes">Conectar mi IA</a></div></li>`;
+  }
+  return `<li class="step glass ai-step"><h2>Con tu IA, sin copiar ni pegar</h2>
+    <p>Usará <strong>${esc(ai.label())}</strong>. Suelta uno o varios archivos, o una carpeta entera: cada archivo va a
+      tu IA con las instrucciones de Studium y vuelve aquí para que lo revises.</p>
+    <div class="dropzone" data-ai-drop="${zone}">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 14a4 4 0 0 1 4-4h8l4 4h12a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4Z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M24 30V20m0 0-5 5m5-5 5 5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <p><strong>Suelta aquí tus archivos o una carpeta</strong>: PDF, fotos o texto.</p>
+      <div class="actions"><label class="button primary">Elegir archivos<input type="file" multiple hidden data-ai-files="${zone}" accept=".pdf,image/*,.txt,.md,.tex,.csv,.json,.py,.c,.cpp,.java,.js"></label>
+        <label class="button ghost">Elegir una carpeta<input type="file" multiple hidden webkitdirectory data-ai-files="${zone}"></label></div>
+    </div>
+    <ul class="ai-queue" data-ai-queue="${zone}"></ul>
+  </li>`;
+}
+const queue = [];
+let working = false;
+function enqueue(zone, files) {
+  const list = $(`[data-ai-queue="${zone}"]`);
+  for (const file of files) {
+    const id = `q${serial += 1}`;
+    list.insertAdjacentHTML('beforeend', `<li id="${id}"><span class="name">${esc(file.webkitRelativePath || file.name)}</span><span class="state">En espera</span></li>`);
+    queue.push({ id, zone, file });
+  }
+  work();
+}
+const setRow = (id, text, cls = '') => { const row = document.getElementById(id); if (row) { row.className = cls; row.querySelector('.state').textContent = text; } };
+async function work() {
+  if (working) return;
+  working = true;
+  while (queue.length) {
+    const job = queue.shift();
+    try {
+      setRow(job.id, 'Leyendo…', 'busy');
+      const file = await ai.readFile(job.file);
+      if (file.skipped) { setRow(job.id, `Saltado: ${file.skipped}`, 'skip'); continue; }
+      setRow(job.id, 'Tu IA lo está leyendo…', 'busy');
+      const v = materialValues();
+      const system = v.kind === 'curriculum' ? curriculumInstructions(v) : contributionInstructions(v);
+      const res = await ai.run({
+        system, files: [file], maxTokens: 32000,
+        text: 'Procesa el material adjunto siguiendo las instrucciones de Studium. Responde solo con el JSON, en un bloque de código.',
+        onProgress: (n) => setRow(job.id, n < 0 ? 'Tu IA está escribiendo…' : `Tu IA está escribiendo… ${n.toLocaleString('es')} caracteres`, 'busy'),
+      });
+      const item = addReview('material', res.text, job.file.webkitRelativePath || job.file.name, { provider: res.provider, model: res.model, effort: res.effort });
+      setRow(job.id, item.parsed.error ? 'Tu IA no devolvió un aporte válido: revisa abajo' : res.truncated ? 'Listo, pero quedó cortado: revisa abajo' : 'Listo: revísalo abajo', item.parsed.error ? 'bad' : 'ok');
+    } catch (error) {
+      setRow(job.id, error.message || 'Algo falló', 'bad');
+      if (/clave|saldo|límite/.test(error.message || '')) { for (const j of queue.splice(0)) setRow(j.id, 'Detenido', 'skip'); }
+    }
+  }
+  working = false;
+}
+// A dropped folder arrives as entries: walk it.
+async function droppedFiles(dataTransfer) {
+  const out = [];
+  const walk = (entry) => new Promise((resolve) => {
+    if (entry.isFile) entry.file((f) => { out.push(f); resolve(); }, () => resolve());
+    else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      const all = [];
+      const more = () => reader.readEntries(async (batch) => { if (!batch.length) { for (const e of all) await walk(e); resolve(); } else { all.push(...batch); more(); } }, () => resolve());
+      more();
+    } else resolve();
+  });
+  const entries = [...(dataTransfer.items ?? [])].map((i) => i.webkitGetAsEntry?.()).filter(Boolean);
+  if (!entries.length) return [...dataTransfer.files];
+  for (const e of entries) await walk(e);
+  return out;
+}
+
 /* ---------- material ---------- */
 function materialPane() {
   const d = store.get('studium-draft-material') ?? { kind: 'exam' };
   return `${datalists()}
+  ${promise()}
   <ol class="flow">
     <li class="step glass">
-      <h2>Prepara las instrucciones para tu IA</h2>
-      <p>Sirven con cualquier IA que lea archivos: ChatGPT, Gemini, Claude, Copilot o NotebookLM. Lo que completes va
-        en las instrucciones; lo que dejes vacío, tu IA lo saca del material.</p>
+      <h2>Cuéntale a tu IA qué es</h2>
+      <p>Lo que completes va en las instrucciones; lo que dejes vacío, tu IA lo saca del material.</p>
       <form class="grid" id="m-form">
         ${segmented('kind', KINDS, d.kind, 'Qué material es')}
         ${input('course', 'Materia, competencia o carrera', d.course, 'list="dl-courses" autocomplete="off"')}
@@ -87,14 +176,16 @@ function materialPane() {
         ${input('professor', 'Profesor', d.professor, 'list="dl-profs" autocomplete="off"')}
         ${input('term', 'Semestre o edición', d.term, 'list="dl-terms" autocomplete="off" placeholder="202610, IEEEXtreme 19.0…"')}
       </form>
+      <details class="prompt"><summary>Ver las instrucciones que recibe tu IA</summary><pre id="m-prompt"></pre></details>
+    </li>
+    ${aiStep('material')}
+    <li class="step glass">
+      <h2>${ai.ready() ? 'O hazlo a mano, con cualquier IA' : 'Pásale tu material a tu IA'}</h2>
+      <p>Sirve con cualquier IA que lea archivos: ChatGPT, Gemini, Claude, Copilot o NotebookLM.</p>
       <div class="actions">
-        <button class="button primary" id="m-copy">Copiar instrucciones</button>
+        <button class="button ${ai.ready() ? 'ghost' : 'primary'}" id="m-copy">Copiar instrucciones</button>
         <button class="button ghost" id="m-download">Descargar instrucciones</button>
       </div>
-      <details class="prompt"><summary>Ver las instrucciones</summary><pre id="m-prompt"></pre></details>
-    </li>
-    <li class="step glass">
-      <h2>Pásale tu material</h2>
       <ol class="howto">
         <li>Abre un chat nuevo en tu IA.</li>
         <li>Adjunta tu material: PDF, fotos, diapositivas, enunciados o la malla. Varios archivos a la vez está bien.</li>
@@ -153,6 +244,14 @@ function guidePane(preset = {}) {
         ${segmented('examples', { few: 'Pocos', normal: 'Normal', lots: 'Muchos' }, d.examples, 'Ejemplos resueltos')}
         ${chosen.theme === 'algoritmos' || chosen.contributions.some((c) => c.kind === 'contest') ? segmented('language', { 'C++': 'C++', Python: 'Python', Java: 'Java' }, d.language, 'Lenguaje del código') : ''}
         ${input('focus', 'Quiero reforzar (opcional)', d.focus ?? '', 'placeholder="Ej.: demostraciones, programación dinámica…"')}
+        ${input('goal', 'Tu objetivo con esta guía (opcional)', d.goal ?? '', 'placeholder="Sacar más de 18, entender desde cero, repasar en una noche…"')}
+        ${segmented('lang', { es: 'Español', en: 'English' }, d.lang ?? (prefs.get().lang || 'es'), 'Idioma de la guía')}
+        ${segmented('decor', DECOR, d.decor ?? 'notebook', 'Estilo y decoración')}
+        <fieldset class="tagpick wide"><legend>Secciones extra: cada una suma instrucciones para tu IA</legend><div>${Object.entries(SECTIONS).map(([k, label]) => {
+          const rec = (RECOMMENDED[prefs.get().mode] ?? []).includes(k);
+          const on = d.sections ? d.sections.includes(k) : rec;
+          return `<label><input type="checkbox" name="sections" value="${k}" ${on ? 'checked' : ''}><span>${esc(label)}${rec ? ' <small>· recomendada para ti</small>' : ''}</span></label>`;
+        }).join('')}</div></fieldset>
       </form>
       <div class="scope">
         <div class="scope-head"><h3>Conceptos que entran</h3><button class="link" data-scope="all">Todos</button><button class="link" data-scope="none">Ninguno</button></div>
@@ -162,8 +261,13 @@ function guidePane(preset = {}) {
     </li>
     <li class="step glass">
       <h2>Pídesela a tu IA</h2>
+      ${ai.ready() ? `<div class="ai-make"><button class="button primary big" id="g-ai">Crear con mi IA</button>
+        <span class="hint">Usará ${esc(ai.label())}. Una guía larga puede tardar varios minutos; no cierres la página.</span>
+        <p class="ai-progress" id="g-ai-progress" role="status" hidden></p></div>
+        <p class="note">O hazlo a mano con cualquier IA:</p>`
+        : '<p class="note">Con tu IA conectada en <a href="#/ajustes">Ajustes</a>, Studium la crea por ti sin copiar ni pegar. Mientras, hazlo a mano:</p>'}
       <div class="actions">
-        <button class="button primary" id="g-download">Descargar contexto</button>
+        <button class="button ${ai.ready() ? 'ghost' : 'primary'}" id="g-download">Descargar contexto</button>
         <button class="button ghost" id="g-copy">Copiar instrucciones</button>
       </div>
       <ol class="howto">
@@ -182,11 +286,25 @@ function guidePane(preset = {}) {
     </li>
   </ol>`;
 }
+const SECTIONS = {
+  flashcards: 'Tarjetas de términos para repasar',
+  mock: 'Simulacro de la prueba, con tiempo',
+  cheatsheet: 'Resumen de una página para el último repaso',
+  mistakes: 'Errores comunes y trampas',
+  solved: 'Ejercicios resueltos paso a paso',
+  conceptmap: 'Mapa de conceptos interactivo',
+  selfcheck: 'Autoevaluación con puntaje al final de cada tema',
+};
+// What fits each way of studying (the person's setting), checked by default.
+const RECOMMENDED = { examenes: ['mock', 'cheatsheet', 'mistakes'], gusto: ['conceptmap', 'solved'], intensivo: ['flashcards', 'mock'], metas: ['selfcheck', 'flashcards'] };
+const DECOR = { notebook: 'Cuaderno', minimal: 'Minimal', playful: 'Tierna', night: 'Nocturna' };
 let scope = null;
 function guideValues() {
   const form = $('#g-form');
   if (!form) return null;
-  const v = Object.fromEntries(new FormData(form).entries());
+  const f = new FormData(form);
+  const v = Object.fromEntries(f.entries());
+  v.sections = f.getAll('sections');
   store.set('studium-draft-guide', v);
   const g = ctx.state.graph;
   const course = g.byId.get(v.course);
@@ -217,12 +335,42 @@ function guideRequest() {
   const file = `studium-contexto-${keyOf(course.name).slice(0, 40)}.md`;
   return { v, course, picked, contest, file };
 }
-function guidePrompt() {
+function guidePrompt(api = false) {
   const { v, course, contest, file } = guideRequest();
   return guideInstructions({
     ...v, course: course.name, code: course.code, university: course.contributions.find((c) => c.university)?.university ?? '',
-    theme: course.theme, contest, contextFile: file,
+    theme: course.theme, contest, contextFile: file, api, mode: prefs.get().mode,
   });
+}
+let making = null;
+async function generateGuide() {
+  const button = $('#g-ai');
+  const out = $('#g-ai-progress');
+  if (making) { making.abort(); return; }
+  making = new AbortController();
+  button.textContent = 'Cancelar';
+  out.hidden = false;
+  out.textContent = 'Tu IA está leyendo el contexto…';
+  try {
+    const { file } = guideRequest();
+    const res = await ai.run({
+      system: guidePrompt(true),
+      text: `Este es el archivo ${file}, con el contexto de Studium:\n\n${guideContext()}\n\nEscribe la guía completa. Responde solo con el HTML completo, desde <!doctype html> hasta </html>.`,
+      maxTokens: ai.config().provider === 'anthropic' ? 64000 : 32000,
+      signal: making.signal,
+      onProgress: (n) => { out.textContent = n < 0 ? 'Tu IA está escribiendo la guía…' : `Tu IA está escribiendo la guía… ${n.toLocaleString('es')} caracteres`; },
+    });
+    const html = ai.htmlFrom(res.text);
+    if (!html) throw new Error('Tu IA no devolvió una página HTML completa. Vuelve a intentarlo.');
+    const item = addReview('guide', html, `Guía creada con ${ai.PROVIDERS[res.provider]?.name ?? 'tu IA'}`, { provider: res.provider, model: res.model, effort: res.effort });
+    out.textContent = res.truncated ? 'Lista, pero quedó cortada: elige una extensión más corta y vuelve a crearla.' : 'Lista: revísala abajo y publícala.';
+    document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } catch (error) {
+    out.textContent = error.message || 'Algo falló.';
+  } finally {
+    making = null;
+    button.textContent = 'Crear con mi IA';
+  }
 }
 function guideContext() {
   const { v, course, picked, contest } = guideRequest();
@@ -244,7 +392,7 @@ async function readFiles(zone, files) {
     addReview(zone, await file.text(), file.name);
   }
 }
-function addReview(zone, text, name) {
+function addReview(zone, text, name, made = null) {
   const html = /^\s*<!doctype html/i.test(text.replace(/^﻿/, ''));
   const preset = zone === 'guide' ? guideValues() : null;
   const fallback = zone === 'guide' && preset
@@ -252,12 +400,13 @@ function addReview(zone, text, name) {
     : materialValues();
   const parsed = html ? parseGuide(text, fallback) : parseContribution(text, fallback);
   const id = `r${serial += 1}`;
-  const item = { id, zone, name, html, text, parsed, visibility: 'public', confirmed: false, replace: zone.startsWith('replace:') ? zone.slice(8) : '' };
+  const item = { id, zone, name, html, text, parsed, visibility: 'public', confirmed: false, replace: zone.startsWith('replace:') ? zone.slice(8) : '', ai: made, sign: false };
   reviews.set(id, item);
   const list = $(`[data-reviews="${zone.startsWith('replace:') ? 'mine' : zone}"]`);
   list.insertAdjacentHTML('afterbegin', `<article class="review glass" id="${id}"></article>`);
   renderReview(item);
   rise(list, ':scope > :first-child');
+  return item;
 }
 function renderReview(item) {
   const el = document.getElementById(item.id);
@@ -303,7 +452,15 @@ function renderReview(item) {
       ${isGuide ? input('date', 'Fecha de la evaluación', m.date, 'type="date" required') : ''}
       ${isGuide ? `<label class="field"><span>Nivel</span><select name="level"><option value="">Sin indicar</option>${Object.entries(LEVELS).map(([key, v]) => `<option value="${key}" ${key === m.level ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></label>` : ''}
       ${curriculum ? '' : themePicker(`theme-${item.id}`, m.theme)}
-      ${segmented(`vis-${item.id}`, { public: 'Para todos los estudiantes', private: 'Solo para mí' }, item.visibility, 'Quién la ve')}
+      ${isGuide ? `<label class="field"><span>Hecha con</span><select name="aiprov"><option value="">No lo digo</option>${Object.entries(ai.PROVIDERS).map(([k, pr]) => `<option value="${k}" ${item.ai?.provider === k ? 'selected' : ''}>${esc(pr.name)}</option>`).join('')}<option value="other" ${item.ai?.provider === 'other' ? 'selected' : ''}>Otra IA</option></select></label>
+        ${input('aimodel', 'Modelo', item.ai?.model ?? '', 'maxlength="80" placeholder="Ej.: claude-opus-5-5"')}
+        <label class="field"><span>Esfuerzo</span><select name="aieffort"><option value="">Sin indicar</option>${Object.entries(ai.EFFORTS).map(([k, label]) => `<option value="${k}" ${item.ai?.effort === k ? 'selected' : ''}>${esc(label)}</option>`).join('')}</select></label>` : ''}
+      ${isGuide
+        ? segmented(`vis-${item.id}`, { public: 'Para todos los estudiantes', private: 'Solo para mí' }, item.visibility, 'Quién la ve')
+        : segmented(`vis-${item.id}`, { public: 'Sí, aportar al grafo', private: 'No, solo para mí' }, item.visibility, '¿Aportar al grafo de conocimiento?')}
+      ${isGuide ? (prefs.get().name
+        ? `<label class="check wide"><input type="checkbox" data-sign="${item.id}" ${item.sign ? 'checked' : ''}> Firmar con mi nombre: <strong>${esc(prefs.get().name)}</strong></label>`
+        : '<p class="hint wide">Para firmar tus guías con tu nombre, escríbelo en <a href="#/ajustes">Ajustes</a>.</p>') : ''}
     </form>
     <p class="summary">${summary}</p>
     ${parsed.warnings.length ? `<ul class="warnings">${parsed.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}
@@ -328,6 +485,7 @@ function readMeta(item) {
   for (const k of ['kind', 'course', 'code', 'university', 'professor', 'term', 'title', 'date', 'level']) if (k in v) m[k] = v[k].trim();
   if (v[`theme-${item.id}`]) m.theme = v[`theme-${item.id}`];
   if (v[`vis-${item.id}`]) item.visibility = v[`vis-${item.id}`];
+  if ('aiprov' in v) item.ai = v.aiprov ? { provider: v.aiprov, model: String(v.aimodel ?? '').trim().slice(0, 80), effort: v.aieffort ?? '' } : null;
 }
 async function publish(item) {
   readMeta(item);
@@ -342,6 +500,7 @@ async function publish(item) {
       id = await publishGuide(ctx.user.uid, {
         ...m, theme: m.theme, topics: m.topics?.length ? m.topics : concepts.slice(0, 12).map((c) => c.name),
         concepts: concepts.map((c) => c.name), anchors: concepts.map((c) => c.anchor), visibility: item.visibility,
+        by: item.sign ? prefs.get().name : '', ai: item.ai?.provider ? item.ai : null,
       }, item.text, item.replace || undefined);
       item.done = `Publicada${item.visibility === 'private' ? ' solo para ti' : ''}. <a href="#/guia/${encodeURIComponent(id)}">Abrir la guía</a> · <a href="#/mapa/guide:${encodeURIComponent(id)}">Verla en el mapa</a>`;
     } else {
@@ -410,6 +569,10 @@ export function mountContribute(context) {
   view.addEventListener('change', async (e) => {
     const files = e.target.dataset.files;
     if (files) { await readFiles(files, e.target.files); e.target.value = ''; }
+    const aiFiles = e.target.dataset.aiFiles;
+    if (aiFiles) { enqueue(aiFiles, [...e.target.files]); e.target.value = ''; }
+    const sign = e.target.dataset.sign;
+    if (sign) { const item = reviews.get(sign); item.sign = e.target.checked; }
     const replaceId = e.target.dataset.replace;
     if (replaceId) { const [file] = e.target.files; if (file) addReview(`replace:${replaceId}`, await file.text(), file.name); e.target.value = ''; }
     const confirm = e.target.dataset.confirm;
@@ -429,6 +592,7 @@ export function mountContribute(context) {
     if (t.id === 'm-copy') copy(materialPrompt(), 'Instrucciones');
     if (t.id === 'm-download') download(materialValues().kind === 'curriculum' ? 'studium-instrucciones-malla.md' : 'studium-instrucciones-aporte.md', materialPrompt());
     if (t.id === 'g-copy') copy(guidePrompt(), 'Instrucciones');
+    if (t.id === 'g-ai') generateGuide();
     if (t.id === 'g-download') { const r = guideRequest(); download(r.file, guideContext()); }
     if (t.dataset.concept) { scope.off.has(t.dataset.concept) ? scope.off.delete(t.dataset.concept) : scope.off.add(t.dataset.concept); renderScope(); }
     if (t.dataset.scope) {
@@ -460,9 +624,11 @@ export function mountContribute(context) {
       catch (error) { t.disabled = false; ctx.toast(ctx.explain(error)); }
     }
   });
-  for (const type of ['dragenter', 'dragover']) view.addEventListener(type, (e) => { const z = e.target.closest('[data-drop]'); if (z) { e.preventDefault(); z.classList.add('over'); } });
-  view.addEventListener('dragleave', (e) => e.target.closest('[data-drop]')?.classList.remove('over'));
-  view.addEventListener('drop', (e) => {
+  for (const type of ['dragenter', 'dragover']) view.addEventListener(type, (e) => { const z = e.target.closest('[data-drop], [data-ai-drop]'); if (z) { e.preventDefault(); z.classList.add('over'); } });
+  view.addEventListener('dragleave', (e) => e.target.closest('[data-drop], [data-ai-drop]')?.classList.remove('over'));
+  view.addEventListener('drop', async (e) => {
+    const zone = e.target.closest('[data-ai-drop]');
+    if (zone) { e.preventDefault(); zone.classList.remove('over'); enqueue(zone.dataset.aiDrop, await droppedFiles(e.dataTransfer)); return; }
     const z = e.target.closest('[data-drop]');
     if (!z) return;
     e.preventDefault(); z.classList.remove('over');

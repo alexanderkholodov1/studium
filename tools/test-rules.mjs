@@ -87,7 +87,7 @@ const contribution = (extra = {}) => ({
   theme: 'vectores', concepts: ['concepto-a', 'concepto-b'], questions: 1, examples: 0,
   body: gz(JSON.stringify({ concepts: [{ name: 'Concepto A' }] })), encoding: 'gzip', visibility: 'public', ...extra,
 });
-const entry = (visibility = 'public') => ({ course: 'Curso de prueba', title: 'Guía de prueba', date: '2026-01-01', topics: [], concepts: ['Concepto A'], anchors: [''], theme: 'vectores', visibility });
+const entry = (visibility = 'public', extra = {}) => ({ course: 'Curso de prueba', title: 'Guía de prueba', date: '2026-01-01', topics: [], concepts: ['Concepto A'], anchors: [''], theme: 'vectores', visibility, ...extra });
 const guide = (html = '<!doctype html><title>prueba</title>', visibility = 'public') => ({ title: 'Guía de prueba', html: gz(html), encoding: 'gzip', size: html.length, visibility });
 const owner = (uid) => ({ uid });
 
@@ -213,6 +213,16 @@ try {
   expect('classmate cannot replace the guide', await commit(c.token, [put(`guides/${g}`, guide('<!doctype html><title>otra</title>'))]), 403);
   expect('student replaces its guide', await commit(s.token, [put(`guides/${g}`, guide('<!doctype html><title>nueva</title>')), put(`catalog/${g}`, entry())]), 200);
   expect('student cannot keep the entry while deleting the guide', await commit(s.token, [remove(`guides/${g}`)]), 403);
+  const signed2 = appId();
+  expect('student publishes a guide signed with its name and the AI that made it', await commit(s.token, [
+    put(`guides/${signed2}`, guide(), { create: true }),
+    put(`catalog/${signed2}`, entry('public', { by: 'Nombre de Prueba', ai: { provider: 'anthropic', model: 'claude-opus-5-5', effort: 'high' } }), { create: true }),
+    put(`owners/${signed2}`, owner(s.uid), { stamp: false, create: true })]), 200);
+  const oddAi = appId();
+  expect('a guide naming an unknown kind of AI is refused', await commit(s.token, [
+    put(`guides/${oddAi}`, guide(), { create: true }),
+    put(`catalog/${oddAi}`, entry('public', { ai: { provider: 'skynet', model: 'x' } }), { create: true }),
+    put(`owners/${oddAi}`, owner(s.uid), { stamp: false, create: true })]), 403);
   expect('student deletes its guide', await commit(s.token, [remove(`guides/${g}`), remove(`catalog/${g}`), remove(`owners/${g}`)]), 200);
   expect('student deletes its contribution', await commit(s.token, [remove(`contributions/${mine}`), remove(`owners/${mine}`)]), 200);
   // The person's own space
@@ -253,7 +263,31 @@ try {
   expect('classmate cannot delete the tip of another account', await commit(c.token, [remove(`tips/${prof}__${s.uid}`)]), 403);
   expect('otherDomain cannot share a tip', await commit(accounts.otherDomain.token, [put(`tips/${prof}__${accounts.otherDomain.uid}`, tip())]), 403);
   expect('student takes back its tip', await commit(s.token, [remove(`tips/${prof}__${s.uid}`)]), 200);
+  expect('student saves its language and avatar color', await commit(s.token, [put(`profiles/${s.uid}`, profile({ lang: 'en', avatar: 'red', name: 'Nombre de Prueba' }))]), 200);
+  expect('a profile with an unknown avatar color is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ avatar: 'purple' }))]), 403);
   expect('student deletes its profile', await commit(s.token, [remove(`profiles/${s.uid}`)]), 200);
+
+  // The library: course documents as links
+  const shared = (extra = {}) => ({ course: 'Curso de prueba', kind: 'syllabus', title: 'Sílabo de prueba', url: 'https://drive.google.com/file/d/abc123/view', professor: 'Docente de Prueba', term: '202610', ...extra });
+  const lib = appId();
+  expect('student shares a document by its Drive link', await commit(s.token, [
+    put(`library/${lib}`, shared(), { create: true }), put(`owners/${lib}`, owner(s.uid), { stamp: false, create: true })]), 200);
+  expect('classmate lists the library', await list(c.token, 'library'), 200);
+  expect('otherDomain cannot list the library', await list(accounts.otherDomain.token, 'library'), 403);
+  for (const [label, url] of [['another site', 'https://example.com/file.pdf'], ['a script', 'javascript:alert(1)'], ['plain http', 'http://drive.google.com/file/d/x']]) {
+    const bad = appId();
+    expect(`a document linking to ${label} is refused`, await commit(s.token, [
+      put(`library/${bad}`, shared({ url }), { create: true }), put(`owners/${bad}`, owner(s.uid), { stamp: false, create: true })]), 403);
+  }
+  const loose2 = appId();
+  expect('a document without an owner is refused', await commit(s.token, [put(`library/${loose2}`, shared(), { create: true })]), 403);
+  const kindless = appId();
+  expect('a document of an unknown kind is refused', await commit(s.token, [
+    put(`library/${kindless}`, shared({ kind: 'book' }), { create: true }), put(`owners/${kindless}`, owner(s.uid), { stamp: false, create: true })]), 403);
+  expect('classmate cannot change the document', await commit(c.token, [put(`library/${lib}`, shared({ title: 'otro' }))]), 403);
+  expect('classmate cannot delete the document', await commit(c.token, [remove(`library/${lib}`)]), 403);
+  expect('student changes its document', await commit(s.token, [put(`library/${lib}`, shared({ title: 'Sílabo corregido' }))]), 200);
+  expect('student deletes its document', await commit(s.token, [remove(`library/${lib}`), remove(`owners/${lib}`)]), 200);
 
   expect('nobody writes elsewhere', await status(s.token, 'PATCH', `/other/${tag}`, write), 403);
 } finally {

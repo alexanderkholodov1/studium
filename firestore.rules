@@ -13,6 +13,7 @@ rules_version = '2';
 // - profiles/{uid}: the person's own settings, goals and progress; only that account reads or writes it.
 // - kudos/{guide}__{uid}: the thanks an account gives a guide. Only fixed, positive kinds: nobody can write a comment.
 // - tips/{professor}__{uid}: what an account knows about a professor, as fixed constructive tags; no free text.
+// - library/{id}: shared course documents as links (Drive, OneDrive, Dropbox); the owner record works as for guides.
 // A guide or contribution is public, or private to its owner. Lists return public documents only (a list query must
 // ask for visibility == 'public'); the owner opens its private ones one by one.
 service cloud.firestore {
@@ -20,7 +21,8 @@ service cloud.firestore {
     function student() {
       return request.auth != null
         && request.auth.token.firebase.sign_in_provider == 'password'
-        && request.auth.token.email.lower().matches('[^@]+@estud[.]usfq[.]edu[.]ec');
+        && request.auth.token.email.lower().matches('[^@]+@estud[.]usfq[.]edu[.]ec')
+        && request.auth.token.email_verified == true;
     }
 
     function at(collection, id) { return /databases/$(database)/documents/$(collection)/$(id); }
@@ -41,9 +43,16 @@ service cloud.firestore {
         && d.updated == request.time;
     }
 
+    // The AI that made a guide, as its author states it.
+    function made(a) {
+      return a is map && a.keys().hasOnly(['provider', 'model', 'effort']) && a.provider in ['anthropic', 'openai', 'gemini', 'other']
+        && (!('model' in a) || (a.model is string && a.model.size() <= 80))
+        && (!('effort' in a) || a.effort in ['', 'low', 'medium', 'high', 'xhigh']);
+    }
     function entry(d) {
       return d.keys().hasOnly(['course', 'code', 'university', 'term', 'professor', 'title', 'date', 'topics', 'concepts',
-          'anchors', 'theme', 'level', 'visibility', 'updated'])
+          'anchors', 'theme', 'level', 'visibility', 'by', 'ai', 'updated'])
+        && optional(d, 'by', 60) && (!('ai' in d) || made(d.ai))
         && d.keys().hasAll(['course', 'title', 'date', 'topics', 'concepts', 'anchors', 'theme', 'visibility', 'updated'])
         && described(d)
         && d.date is string && d.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
@@ -104,8 +113,11 @@ service cloud.firestore {
 
     // The person's own space.
     function profile(d) {
-      return d.keys().hasOnly(['nickname', 'career', 'semester', 'mode', 'ambience', 'sound', 'theme', 'goals', 'progress', 'updated'])
-        && optional(d, 'nickname', 40) && optional(d, 'career', 80)
+      return d.keys().hasOnly(['nickname', 'name', 'career', 'semester', 'mode', 'ambience', 'sound', 'theme', 'lang', 'avatar',
+          'goals', 'progress', 'updated'])
+        && optional(d, 'nickname', 40) && optional(d, 'name', 60) && optional(d, 'career', 80)
+        && (!('lang' in d) || d.lang in ['es', 'en'])
+        && (!('avatar' in d) || d.avatar in ['blue', 'red', 'teal', 'butter', 'sky', 'peach'])
         && (!('semester' in d) || (d.semester is int && d.semester >= 0 && d.semester <= 20))
         && (!('mode' in d) || d.mode in ['examenes', 'gusto', 'intensivo', 'metas'])
         && (!('ambience' in d) || d.ambience in ['jugueton', 'vivo', 'sereno', 'enfoque'])
@@ -157,14 +169,34 @@ service cloud.firestore {
       allow delete: if student() && id == resource.data.prof + '__' + request.auth.uid;
     }
 
+    // The library: course documents anyone may share (syllabi, lab guides, assignments, the professor's own material),
+    // as links to where they are shared. Studium stores no file.
+    function shared(id, d) {
+      return d.keys().hasOnly(['course', 'code', 'professor', 'term', 'kind', 'title', 'url', 'note', 'by', 'updated'])
+        && d.keys().hasAll(['course', 'kind', 'title', 'url', 'updated'])
+        && name(d.course, 80) && text(d.title, 140) && optional(d, 'code', 30) && optional(d, 'term', 60)
+        && optional(d, 'note', 200) && optional(d, 'by', 60) && (!('professor' in d) || name(d.professor, 80))
+        && d.kind in ['syllabus', 'reading', 'lab', 'assignment', 'slides', 'other']
+        && d.url is string && d.url.size() <= 500
+        && d.url.matches('https://(drive[.]google[.]com|docs[.]google[.]com|onedrive[.]live[.]com|1drv[.]ms|[a-z0-9-]+[.]sharepoint[.]com|(www[.])?dropbox[.]com)/[^ <>"]*')
+        && d.updated == request.time;
+    }
+    match /library/{id} {
+      allow read: if student();
+      allow create: if student() && appId(id) && shared(id, request.resource.data) && mineAfter(id);
+      allow update: if student() && mine(id) && shared(id, request.resource.data);
+      allow delete: if student() && mine(id);
+    }
+
     match /owners/{id} {
       allow read: if student() && resource.data.uid == request.auth.uid;
       allow create: if student() && appId(id)
         && request.resource.data.keys().hasOnly(['uid']) && request.resource.data.uid == request.auth.uid
         && ((existsAfter(at('guides', id)) && !exists(at('guides', id)))
-          || (existsAfter(at('contributions', id)) && !exists(at('contributions', id))));
+          || (existsAfter(at('contributions', id)) && !exists(at('contributions', id)))
+          || (existsAfter(at('library', id)) && !exists(at('library', id))));
       allow delete: if student() && resource.data.uid == request.auth.uid
-        && !existsAfter(at('guides', id)) && !existsAfter(at('contributions', id));
+        && !existsAfter(at('guides', id)) && !existsAfter(at('contributions', id)) && !existsAfter(at('library', id));
     }
 
     match /{document=**} {

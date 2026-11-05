@@ -1,6 +1,7 @@
 // The person's own space: the home page (next exam, goals, focus timer, where they left off, what is new), the
 // ambience picker, and the settings. Everything the person chooses lives in prefs.js.
-import { prefs, MODES, AMBIENCES, THEMES } from './prefs.js';
+import { prefs, MODES, AMBIENCES, THEMES, AVATARS } from './prefs.js';
+import * as ai from './ai.js';
 import { sfx } from './sfx.js';
 import { celebrate } from './play.js';
 import { themeStyle, keyOf } from './themes.js';
@@ -204,12 +205,18 @@ export function renderSettings() {
   const p = prefs.get();
   const careers = ctx.state.graph?.nodes.filter((n) => n.type === 'career').map((n) => n.name) ?? [];
   $('#settings').innerHTML = `
-    <section class="set glass"><h2>Tú</h2><p>Solo tú ves esto. Sirve para saludarte y para mostrarte primero lo de tu semestre.</p>
+    <section class="set glass"><h2>Tú</h2><p>Esto lo ves solo tú, salvo tu nombre público: aparece únicamente en lo que decidas firmar.</p>
       <div class="grid3">
         <label class="field"><span>Cómo te llamamos</span><input data-pref="nickname" maxlength="40" value="${esc(p.nickname)}" placeholder="Opcional"></label>
         <label class="field"><span>Carrera</span><input data-pref="career" maxlength="80" list="careers" value="${esc(p.career)}" placeholder="Por ejemplo, Computación"><datalist id="careers">${careers.map((c) => `<option value="${esc(c)}">`).join('')}</datalist></label>
         <label class="field"><span>Semestre</span><select data-pref="semester"><option value="0">—</option>${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}" ${p.semester === i + 1 ? 'selected' : ''}>${i + 1}.º</option>`).join('')}</select></label>
+      </div>
+      <div class="grid3">
+        <label class="field"><span>Nombre público (para firmar)</span><input data-pref="name" maxlength="60" value="${esc(p.name)}" placeholder="Opcional: como quieres que te reconozcan"></label>
+        <fieldset class="avatars"><legend>Tu color</legend>${AVATARS.map((c) => `<label><input type="radio" name="avatar" value="${c}" data-pref="avatar" ${p.avatar === c ? 'checked' : ''}><span style="--c:var(--${c})" aria-label="${c}"></span></label>`).join('')}</fieldset>
+        <fieldset class="seg"><legend>Idioma</legend><label><input type="radio" name="lang" value="es" data-pref="lang" ${p.lang === 'es' ? 'checked' : ''}><span>Español</span></label><label><input type="radio" name="lang" value="en" data-pref="lang" ${p.lang === 'en' ? 'checked' : ''}><span>English</span></label></fieldset>
       </div></section>
+    ${aiSettings()}
     <section class="set glass"><h2>Cómo estudias</h2><p>Cambia el orden de tu inicio.</p>
       <div class="picks" role="radiogroup">${Object.entries(MODES).map(([id, m]) => `<button type="button" class="pick" role="radio" aria-checked="${p.mode === id}" data-set-mode="${id}"><strong>${esc(m.name)}</strong><span>${esc(m.text)}</span></button>`).join('')}</div></section>
     <section class="set glass"><h2>Ambiente</h2><p>Cuánto se mueve la página, y qué tan tierna se pone.</p><div class="ambiences" data-ambience-picker></div></section>
@@ -219,9 +226,51 @@ export function renderSettings() {
     <section class="set glass"><h2>Día o noche</h2>
       <fieldset class="seg"><legend class="sr">Tema</legend>${Object.entries(THEMES).map(([id, name]) => `<label><input type="radio" name="theme" value="${id}" data-pref="theme" ${p.theme === id ? 'checked' : ''}><span>${esc(name)}</span></label>`).join('')}</fieldset></section>
     <section class="set glass"><h2>Tu comunidad</h2>
-      <p>Perteneces a la comunidad <strong>USFQ</strong>. Lo que aportas se ve sin tu nombre; tus ajustes, metas y progreso se guardan en tu cuenta y solo los ves tú.</p></section>`;
+      <p>Perteneces a la comunidad <strong>USFQ</strong>. Tus ajustes, metas y progreso se guardan en tu cuenta y solo los ves tú.</p></section>`;
   renderAmbiences($('#settings [data-ambience-picker]'));
   rise($('#settings'));
+}
+
+/* ---------- your AI ---------- */
+function aiSettings() {
+  const c = ai.config();
+  const pr = ai.PROVIDERS[c.provider];
+  return `<section class="set glass" id="set-ai"><h2>Tu IA</h2>
+    <p>Conecta tu propia IA y Studium la usa para procesar tu material, crear guías a tu medida, identificar documentos y
+      editar tus guías por partes. <strong>Studium no cobra nada</strong>: tu proveedor cobra lo que use tu clave, según su tarifa.</p>
+    <div class="grid3">
+      <label class="field"><span>Proveedor</span><select data-ai="provider">${Object.entries(ai.PROVIDERS).map(([k, v]) => `<option value="${k}" ${k === c.provider ? 'selected' : ''}>${esc(v.name)} (${esc(v.by)})</option>`).join('')}</select></label>
+      <label class="field"><span>Tu clave de API</span><input data-ai="key" type="password" autocomplete="off" spellcheck="false" value="${esc(c.key)}" placeholder="${esc(pr.keyHint)}"></label>
+      <label class="field"><span>Esfuerzo</span><select data-ai="effort">${Object.entries(ai.EFFORTS).map(([k, v]) => `<option value="${k}" ${k === c.effort ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></label>
+    </div>
+    <div class="grid3">
+      <label class="field" style="grid-column:span 2"><span>Modelo</span><input data-ai="model" list="ai-models" value="${esc(c.model || pr.model)}" placeholder="Pulsa «Probar» para ver los modelos de tu cuenta"><datalist id="ai-models"></datalist></label>
+      <div class="actions" style="align-self:end"><button class="button primary" data-ai-test>Probar</button><button class="link" data-ai-forget>Borrar mi clave</button></div>
+    </div>
+    <p class="msg" id="ai-msg" role="status"></p>
+    <p class="hint">La clave se guarda solo en este navegador: no llega a la base de datos de Studium ni a su creador. En un
+      computador compartido, bórrala al terminar. <a href="${esc(pr.keys)}" target="_blank" rel="noopener noreferrer">¿Dónde consigo una clave de ${esc(pr.name)}?</a></p>
+    <p class="fine">Con tu suscripción de Claude o ChatGPT, sin clave: llega con el conector de Studium.</p>
+  </section>`;
+}
+async function testAI() {
+  const msg = $('#ai-msg');
+  msg.classList.remove('ok');
+  msg.textContent = 'Probando…';
+  try {
+    const list = await ai.models();
+    $('#ai-models').innerHTML = list.map((m) => `<option value="${esc(m)}">`).join('');
+    const c = ai.config();
+    if (!c.model || !list.includes(c.model)) {
+      const pick = list.includes(ai.PROVIDERS[c.provider].model) ? ai.PROVIDERS[c.provider].model : list[0];
+      ai.save({ ...c, model: pick ?? '' });
+      const input = document.querySelector('[data-ai="model"]');
+      if (input) input.value = pick ?? '';
+    }
+    msg.classList.add('ok');
+    msg.textContent = `Conectada: tu cuenta tiene ${list.length} ${list.length === 1 ? 'modelo' : 'modelos'}. Usará ${ai.label()}.`;
+    sfx.chime();
+  } catch (error) { msg.textContent = error.message; }
 }
 
 let savedTimer = 0;
@@ -248,6 +297,8 @@ export function mountSpace(context) {
     }
     if (t.dataset.goalRemove) { prefs.set({ goals: prefs.get().goals.filter((g) => g.id !== t.dataset.goalRemove) }); renderHome(); }
     if (t.dataset.reroll !== undefined) renderHome();
+    if (t.dataset.aiTest !== undefined) testAI();
+    if (t.dataset.aiForget !== undefined) { ai.forget(); renderSettings(); ctx?.toast('Tu clave se borró de este navegador.'); }
     if (t.dataset.soundTest !== undefined) { sfx.enable(true); sfx.chime(); if (!prefs.get().sound) setTimeout(() => sfx.enable(false), 900); }
     if (t.id === 'timer-go') {
       timer.running = !timer.running;
@@ -267,6 +318,12 @@ export function mountSpace(context) {
         celebrate(r.left + 30, r.top + r.height / 2, goals.every((g) => g.done));
       }
       setTimeout(renderHome, t.checked ? 650 : 0);
+    }
+    if (t.dataset.ai) {
+      const c = ai.config();
+      const next = ai.save({ ...c, [t.dataset.ai]: t.value, ...(t.dataset.ai === 'provider' ? { model: '' } : {}) });
+      if (t.dataset.ai === 'provider') renderSettings();
+      else if (t.dataset.ai === 'key' && next.key) testAI();
     }
     if (t.dataset.pref) {
       const k = t.dataset.pref;
