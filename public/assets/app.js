@@ -118,7 +118,6 @@ function show(view) {
     nav.dataset.mode = member ? 'member' : 'public';
     nav.hidden = view === 'boot' || view === 'guide';
     $('#tabbar').hidden = !member || PUBLIC.includes(view) && view !== 'about' || view === 'guide' || view === 'boot';
-    $('#foot-sources').hidden = !member;
     $('#foot').hidden = ['guide', 'map', 'boot'].includes(view);
     const quiet = view === 'map' || view === 'guide';
     root.classList.toggle('quiet', quiet);
@@ -647,6 +646,8 @@ async function route() {
     $(where).textContent = explain(error);
   }
 }
+$('#map-info-open').addEventListener('click', () => $('#map-info').showModal());
+
 // The guide's bar can be hidden; the choice is remembered on this device.
 function bareReader(on) {
   $('#view-guide').classList.toggle('bare', on);

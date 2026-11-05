@@ -943,7 +943,7 @@ mark:not(.hl) { background: color-mix(in oklab, var(--danger) 30%, transparent);
 .hero2-copy { position: relative; isolation: isolate; }
 .hero2-copy::before { content: ""; position: absolute; inset: -14% -18% -16% -20%; z-index: -1; pointer-events: none;
   background: radial-gradient(closest-side, color-mix(in oklab, var(--bg) 72%, transparent), transparent); }
-.view h1, .view h2, .lede, .lede-small, .note-hand { text-shadow: 0 1px 18px color-mix(in oklab, var(--bg) 80%, transparent), 0 0 2px color-mix(in oklab, var(--bg) 60%, transparent); }
+.page-head h1, .home-head h1, .home-head .lede-small, .hero2-copy .note-hand, .hero2-copy .lede, .hero-motto p, .band > h2, .band > .kicker, .band > .lede-small { text-shadow: 0 1px 18px color-mix(in oklab, var(--bg) 80%, transparent), 0 0 2px color-mix(in oklab, var(--bg) 60%, transparent); }
 .view .glass h1, .view .glass h2, .view .tile h2, .view .wordmark { text-shadow: none; }
 
 /* ---------- creating a guide ---------- */
@@ -1039,16 +1039,24 @@ kbd { font: 700 .85em var(--display); padding: 1px 7px; border-radius: 6px; back
 .timer-set .grid { margin-top: 10px; grid-template-columns: 1fr 1fr; }
 
 /* ---------- hints ---------- */
-.hint-bubble { position: fixed; z-index: 40; left: max(16px, env(safe-area-inset-left)); bottom: max(20px, env(safe-area-inset-bottom)); width: min(340px, calc(100% - 32px));
-  padding: 16px 18px 10px; border-radius: 22px 22px 22px 6px; display: grid; gap: 6px; font-size: 15.5px; color: var(--ink-2);
-  animation: hint-in 1.2s cubic-bezier(.2, .8, .2, 1) both; }
+/* A bubble next to its subject, with a little arrow that points at it; it rises in and sinks out. */
+.hint-bubble { position: absolute; z-index: 40; width: min(320px, calc(100vw - 24px)); padding: 14px 16px 8px; border-radius: 20px;
+  display: grid; gap: 6px; font-size: 15px; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line), 0 22px 50px -20px rgba(0, 0, 0, .45);
+  transform-origin: var(--arrow, 50%) top; animation: hint-in .7s cubic-bezier(.2, .9, .3, 1.15) both; }
+.hint-bubble.above { transform-origin: var(--arrow, 50%) bottom; }
+.hint-bubble::before { content: ""; position: absolute; top: -7px; left: calc(var(--arrow, 50%) - 7px); width: 14px; height: 14px; rotate: 45deg; border-radius: 3px 0 0 0;
+  background: inherit; box-shadow: -1px -1px 0 var(--line); }
+.hint-bubble.above::before { top: auto; bottom: -7px; border-radius: 0 0 3px 0; box-shadow: 1px 1px 0 var(--line); }
 .hint-bubble p::before { content: "💡 "; }
 .hint-bubble .actions { gap: 14px; }
 .hint-bubble .link { font-size: 13.5px; }
-.hint-bubble.out { opacity: 0; translate: 0 8px; transition: opacity .5s, translate .5s; }
-.hint-bubble.still { animation: none; }
-@keyframes hint-in { from { opacity: 0; translate: 0 10px; } }
-@media (max-width: 760px) { .hint-bubble { bottom: calc(86px + env(safe-area-inset-bottom)); } }
+.hint-bubble.out { animation: hint-out .45s ease-in forwards; }
+/* Serene: it fades in and out without moving. */
+.hint-bubble.still { animation: hint-fade 1s ease both; }
+.hint-bubble.still.out { animation: hint-fade .8s ease reverse forwards; }
+@keyframes hint-fade { from { opacity: 0; } }
+@keyframes hint-in { from { opacity: 0; transform: translateY(8px) scale(.92); } }
+@keyframes hint-out { to { opacity: 0; transform: translateY(6px) scale(.96); } }
 
 /* ---------- easter eggs ---------- */
 .egg-crit { position: fixed; z-index: 60; pointer-events: none; translate: -50% -100%; font: 800 26px/1 var(--display); letter-spacing: .02em; color: #3ddc97;
@@ -1199,3 +1207,31 @@ html.has-announce .page { padding-top: 170px; }
 .ai-pick .fine { flex-basis: 100%; }
 .ai-pick .field > span { font-size: 12.5px; }
 .ai-pick select, .ai-pick input { padding-top: 8px; padding-bottom: 8px; font-size: 14.5px; }
+
+/* ---------- the map's light links ---------- */
+.map-links { display: inline-flex; gap: 14px; align-items: center; padding: 0 6px; }
+.map-links .link { font-size: 14px; }
+#map-info .why { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; color: var(--ink-2); }
+#map-info p { color: var(--ink-2); }
+
+/* ---------- the note that feeds the graph: three stages, shown ---------- */
+.note-card.anon { border-color: color-mix(in oklab, var(--teal) 50%, transparent); }
+.note-card.anon .note-title { color: var(--teal); }
+.note-card .chips { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+.note-card.anon { background: #fffdf6; }
+.flow-steps { position: absolute; left: 50%; bottom: 74px; translate: -50% 0; display: flex; gap: 6px; margin: 0; padding: 4px; list-style: none; border-radius: 999px;
+  background: color-mix(in oklab, var(--card) 88%, transparent); box-shadow: inset 0 0 0 1px var(--line); white-space: nowrap; }
+.flow-steps li { padding: 5px 12px; border-radius: 999px; font: 700 12.5px var(--display); color: var(--muted); transition: background .4s, color .4s; }
+.flow-steps li + li::before { content: "→ "; color: var(--muted); }
+.flow-steps li.on { color: var(--on-accent); background: var(--blue); }
+.flow-steps li.on::before { color: inherit; }
+.flow-steps li.done { color: var(--ink); }
+@media (max-width: 760px) { .flow-steps { bottom: 64px; } .flow-steps li { padding: 4px 8px; font-size: 11.5px; } }
+
+/* ---------- the first section, in the operator's words ---------- */
+.hero-motto { display: grid; gap: 2px; justify-items: start; margin: 8px 0 4px; }
+.hero-motto p:first-child { font: 750 clamp(22px, 2.3vw, 30px)/1.2 var(--display); letter-spacing: -.02em; color: var(--ink); }
+.hero-motto .motto-hand { font: 600 clamp(24px, 2.4vw, 32px)/1 var(--hand); color: var(--red); rotate: -2.5deg; margin-left: .6em; }
+.hero2 .lede.hero-what { max-width: 44ch; font-size: clamp(16px, 1.35vw, 19px); line-height: 1.5; }
+/* The note card is paper in day and night: its chips keep the paper's colors. */
+.note-card .chip { color: #1b2233; background: #e7edff; border-color: #c4d2ff; font: 700 12.5px var(--display); }

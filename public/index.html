@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Studium</title>
-<meta name="description" content="Tu espacio para estudiar lo que sea, y una comunidad de estudiantes que se pasa guías, apuntes y lo que sabe de cada profe.">
+<meta name="description" content="Hecho por estudiantes, para estudiantes. Guías de estudio, material de clases, ejercicios, exámenes de práctica, proyectos finales.">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="theme-color" content="#0a0e1a">
 <link rel="icon" href="/studium/assets/logo.svg" type="image/svg+xml">
@@ -83,7 +83,6 @@
       <a role="menuitem" href="#/admin" class="admin-only">Panel de admin</a>
       <a role="menuitem" href="#/ajustes">Ajustes</a>
       <a role="menuitem" href="#/mis-aportes">Mis aportes</a>
-      <a role="menuitem" href="#/fuentes">Fuentes y agradecimientos</a>
       <a role="menuitem" href="#/acerca">Acerca de Studium</a>
       <button role="menuitem" id="sign-out">Salir</button>
     </div>
@@ -108,7 +107,8 @@
     <div class="hero2-copy">
       <p class="note-hand">guías, apuntes y datos de cada profe, hechos por estudiantes</p>
       <h1 class="wordmark" id="wordmark" aria-label="studium"><span class="l" style="--i:0"><span class="g">s</span></span><span class="l" style="--i:1"><span class="g">t</span></span><span class="l" style="--i:2"><span class="g">u</span></span><span class="l" style="--i:3"><span class="g">d</span></span><span class="l i" style="--i:4"><span class="g">ı<b></b></span></span><span class="l" style="--i:5"><span class="g">u</span></span><span class="l" style="--i:6"><span class="g">m</span></span></h1>
-      <p class="lede">Tu espacio para estudiar lo que sea. Y una comunidad que se pasa los apuntes.</p>
+      <div class="motto hero-motto"><p>Hecho por estudiantes, para estudiantes.</p><p class="motto-hand">Gratis, no vendo nada jaja</p></div>
+      <p class="lede hero-what">Guías de estudio, material de clases, ejercicios, exámenes de práctica, proyectos finales. Úsalo para tus clases o tus hobbies, y aporta al crecimiento de la comunidad de Studium.</p>
       <div class="actions"><a class="button primary big" href="#/entrar">Entrar</a><a class="button ghost big" href="#/" data-scroll="que-es">Cómo es por dentro</a></div>
       <p class="drag-hint"><svg viewBox="0 0 46 30" aria-hidden="true"><path d="M3 24C12 6 26 2 41 9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="m34 3 7 6-8 4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>psst: lo que flota se puede lanzar. Las letras también.</p>
     </div>
@@ -175,6 +175,7 @@
       <div class="fb-stage">
         <canvas aria-label="El grafo de conocimiento: arrastra los nodos"></canvas>
         <div class="note-card" aria-live="polite"></div>
+        <ol class="flow-steps" aria-label="Cómo llega un apunte al grafo"><li class="on">Tus apuntes</li><li>Información anónima</li><li>El grafo de conocimiento</li></ol>
         <div class="graph-hud"><button class="button primary" data-feed>Aportar este apunte</button><span class="muted"><b data-count>3</b> conceptos en el grafo</span></div>
       </div>
       <div class="fb-copy">
@@ -211,7 +212,6 @@
   </section>
 
   <section class="band">
-    <h2>Dos espacios, una sola cuenta.</h2>
     <div class="duo">
       <article class="duo-card blue" data-tilt="5"><div class="ruled-bg"></div>
         <p class="kicker d">Tu espacio</p><h3 class="d" style="--d:30">Cómodo, y a tu manera.</h3>
@@ -323,6 +323,7 @@
     <select id="map-semester" aria-label="Tu semestre"></select>
     <select id="map-prof" aria-label="Profesor"></select>
     <button class="button ghost" id="map-grow">Ver cómo creció</button>
+    <span class="map-links"><button class="link" id="map-info-open">¿Para qué sirve?</button><a class="link" href="#/fuentes">Créditos</a></span>
   </div>
   <div class="map-legend" id="map-legend"></div>
   <aside class="map-panel glass" id="map-panel" hidden></aside>
@@ -337,6 +338,21 @@
     <a class="button primary" href="#/aportar">Aportar material</a>
   </div>
 </main>
+
+<!-- Why a knowledge graph helps -->
+<dialog class="sheet-dialog" id="map-info">
+  <form method="dialog">
+    <h2>¿Para qué sirve el mapa?</h2>
+    <p>Cada punto es un concepto y cada línea, una relación: qué necesitas saber antes, qué se parece, qué se usa junto. Sale de los apuntes y exámenes que la comunidad aporta, sin datos personales.</p>
+    <ul class="why">
+      <li><strong>Por dónde empezar.</strong> Ves qué conceptos vienen antes de lo que tienes que estudiar.</li>
+      <li><strong>Qué pesa más.</strong> Los puntos más grandes son los que más aparecen en los exámenes.</li>
+      <li><strong>Dónde está explicado.</strong> Cada concepto lleva a las guías y al material que lo explican, y muestra con qué otras materias se conecta.</li>
+    </ul>
+    <p class="fine">Entre más aportamos, más completo queda para todos.</p>
+    <div class="actions"><button class="button primary" value="close">Entendido</button></div>
+  </form>
+</dialog>
 
 <!-- What students know about their professors -->
 <main class="view page wide" id="view-profes" hidden>
@@ -526,11 +542,6 @@
     <div class="manifesto-in">
       <p class="kicker red">Comunidad USFQ</p>
       <h2>Lo que sabe el pasillo, <span class="scribble">ahora por escrito</span>.</h2>
-      <div class="manifesto-cols">
-        <p>Con quién tomar Redes. Quién da puntos extra. Qué profe toma asistencia y qué examen se parece a los deberes. Nada de eso está en el sílabo: siempre se pasó de boca en boca, en los pasillos y en los grupos de WhatsApp.</p>
-        <p>Guías de estudio, material de clases, ejercicios, exámenes de práctica, proyectos finales. Úsalo para tus clases o tus hobbies, y aporta al crecimiento de la comunidad de Studium.</p>
-      </div>
-      <div class="motto"><p>Hecho por estudiantes, para estudiantes.</p><p class="motto-hand">Gratis, no vendo nada jaja</p></div>
       <ol class="house">
         <li><strong>Aquí solo se suma.</strong>No hay comentarios ni calificaciones: solo agradecimientos, datos útiles y material.</li>
         <li><strong>Lo personal se queda contigo.</strong>Antes de publicar, Studium busca notas, nombres y correos en lo que subes y te ofrece quitarlos. Lo tuyo lo cambias o lo borras cuando quieras.</li>
@@ -565,7 +576,7 @@
 <div class="toast glass" id="toast" role="status" hidden></div>
 <!-- A message from the admins to every member (settings/app) -->
 <div class="announce" id="announce" role="status" hidden><p id="announce-text"></p><button class="icon" id="announce-close" aria-label="Cerrar el anuncio"><svg><use href="#i-x"/></svg></button></div>
-<footer class="foot" id="foot"><span>Studium, hecho por estudiantes. Lo creó Alexander Kholodov.</span><a href="#/acerca">Acerca</a><a href="#/fuentes" id="foot-sources" hidden>Fuentes y agradecimientos</a></footer>
+<footer class="foot" id="foot"><span>Studium, hecho por estudiantes. Lo creó Alexander Kholodov.</span><a href="#/acerca">Acerca</a></footer>
 <script type="module" src="/studium/assets/app.js"></script>
 </body>
 </html>
