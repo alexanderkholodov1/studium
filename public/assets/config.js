@@ -20,6 +20,7 @@ export const communities = [
 
 // Sign-up flow: whether an account confirms its address through an e-mailed link, and may recover its password by
 // e-mail. firestore.rules follows the same setting; tools/check.mjs fails if the two ever differ.
-export const confirmEmail = true;
+// Off since 0.4.5: Microsoft 365 holds the confirmation e-mails, so requiring them only kept students out.
+export const confirmEmail = false;
 // The address those e-mails come from, as the confirmation screen names it (tools/set-smtp.mjs sets the sender).
 export const mailFrom = 'studiumplatform@gmail.com';
