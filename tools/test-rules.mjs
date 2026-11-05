@@ -380,6 +380,8 @@ try {
     expect('with its community off, student cannot list the catalog', await publicList(s.token, 'catalog'), 403);
     expect('with every community off, the admin still reads', await list(A.token, 'catalog'), 200);
     expect('admin restores the settings', await commit(A.token, [put('settings/app', signedSettings(A.email))]), 200);
+    // The counter starts from nothing, whatever the emulators held before.
+    await call(admin, 'POST', `${firestore}:commit`, { writes: [remove('eggs/radio')] });
     expect('a member counts a found easter egg', await commit(s.token, [put('eggs/radio', { count: 1 }, { stamp: false, create: true })]), 200);
     expect('the count goes up by one', await commit(c.token, [put('eggs/radio', { count: 2 }, { stamp: false })]), 200);
     expect('the count cannot jump', await commit(c.token, [put('eggs/radio', { count: 9 }, { stamp: false })]), 403);
