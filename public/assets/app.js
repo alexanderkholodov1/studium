@@ -5,7 +5,7 @@ import {
   onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification,
   sendPasswordResetEmail, signOut,
 } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js';
-import { allowedDomain, confirmEmail } from './config.js';
+import { allowedDomain, confirmEmail, mailFrom } from './config.js';
 import { auth, loadAll, loadGuide, loadLibrary } from './data.js';
 import { keyOf, themeStyle, courseThemes } from './themes.js';
 import { LEVELS, QUESTION_KINDS, RELATIONS, countKind } from './prompts.js';
@@ -525,7 +525,7 @@ async function route() {
     $('#denied-text').textContent = `Esta sesión es de ${user.email ?? 'otra cuenta'}, que no pertenece a ninguna comunidad de Studium. Por ahora existe una sola, y se entra con el correo de estudiante de esa universidad.`;
     show('denied'); return;
   }
-  if (confirmEmail && !user.emailVerified) { $('#verify-email').textContent = user.email; say('#verify-msg', verifyNote); show('verify'); return; }
+  if (confirmEmail && !user.emailVerified) { $('#verify-email').textContent = user.email; $('#verify-from').textContent = mailFrom; say('#verify-msg', verifyNote); show('verify'); return; }
   if (pending) { const to = pending; pending = ''; if (location.hash !== to) { location.hash = to; return; } }
   if (page === 'entrar') { location.hash = '#/'; return; }
   try {

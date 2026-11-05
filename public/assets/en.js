@@ -118,8 +118,8 @@ export const EN = {
   'Tu cuenta no tiene permiso para esto. Recarga la página; si sigue igual, sal y vuelve a entrar.': 'Your account isn’t allowed to do this. Reload the page; if it persists, sign out and back in.',
   'Confirma tu correo': 'Confirm your e-mail', 'Enviamos un enlace a': 'We sent a link to',
   '. Ábrelo, pulsa el botón para completar la verificación y vuelve a esta página: se abrirá sola.': '. Open it, press the button to complete the verification and come back to this page: it will open by itself.',
-  'Si no aparece en un par de minutos, revisa': 'If it doesn’t show up in a couple of minutes, check', 'Correo no deseado': 'Spam',
-  '. El remitente es noreply@studium101.firebaseapp.com.': '.', 'Ya lo confirmé': 'I confirmed it', 'Reenviar enlace': 'Resend link', 'Usar otra cuenta': 'Use another account',
+  '¿No aparece en un par de minutos? Revisa': 'Not there after a couple of minutes? Check', 'Correo no deseado': 'Junk Email',
+  '. Si está ahí, muévelo a la bandeja de entrada antes de abrir el enlace: en esa carpeta Outlook lo desactiva. Remitente:': '. If it is there, move it to your inbox before opening the link: Outlook disables links in that folder. Sender:', 'Ya lo confirmé': 'I confirmed it', 'Reenviar enlace': 'Resend link', 'Usar otra cuenta': 'Use another account',
   'Todavía no aparece confirmado. Abre el enlace del correo y vuelve a pulsar.': 'It doesn’t show as confirmed yet. Open the link in the e-mail and press again.',
   'Listo: enviamos otro enlace.': 'Done: we sent another link.', 'Esta cuenta no está en ninguna comunidad': 'This account isn’t in any community',
 
