@@ -219,7 +219,7 @@ export function renderSettings() {
     <section class="set glass"><h2>Día o noche</h2>
       <fieldset class="seg"><legend class="sr">Tema</legend>${Object.entries(THEMES).map(([id, name]) => `<label><input type="radio" name="theme" value="${id}" data-pref="theme" ${p.theme === id ? 'checked' : ''}><span>${esc(name)}</span></label>`).join('')}</fieldset></section>
     <section class="set glass"><h2>Tu comunidad</h2>
-      <p>Perteneces a la comunidad <strong>USFQ</strong>. Lo que aportas se ve sin tu nombre; tus ajustes, metas y progreso se guardan en tu cuenta y solo los ves tú.</p></section>`;
+      <p>Perteneces a la comunidad <strong>USFQ</strong>. Tus ajustes, metas y progreso se guardan en tu cuenta y solo los ves tú.</p></section>`;
   renderAmbiences($('#settings [data-ambience-picker]'));
   rise($('#settings'));
 }
