@@ -424,8 +424,9 @@ input[type="range"] { padding: 0; border: 0; background: none; accent-color: var
 .house li::before { content: counter(rule); display: block; font: 600 40px/1 var(--hand); color: #ff7a6a; margin-bottom: 4px; }
 .house strong { display: block; color: #fff; font: 800 19px var(--display); margin-bottom: 4px; }
 .manifesto .fine { color: #8b95ad; }
-.manifesto .stamp { position: absolute; right: clamp(16px, 4vw, 54px); top: clamp(16px, 4vw, 46px); margin: 0; rotate: 9deg; padding: 8px 14px; border: 3px solid #ff5241; border-radius: 10px;
-  color: #ff5241; font: 800 15px/1.1 var(--display); letter-spacing: .08em; text-transform: uppercase; opacity: .85; text-align: center; }
+.manifesto .motto { display: grid; gap: 4px; justify-items: start; }
+.manifesto .motto p:first-child { font: 800 clamp(28px, 3.4vw, 44px)/1.05 var(--display); letter-spacing: -.035em; color: #fff; }
+.manifesto .motto-hand { font: 600 clamp(28px, 3vw, 40px)/1 var(--hand); color: #ff7a6a; rotate: -2.5deg; margin-left: .6em; }
 /* The person behind it */
 .creator { max-width: 1240px; margin: 0 auto; padding: 50px 28px 30px; }
 .creator-card { display: grid; grid-template-columns: auto 1fr; gap: 34px; align-items: center; padding: clamp(24px, 4vw, 44px); border-radius: 36px; }
