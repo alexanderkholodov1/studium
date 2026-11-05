@@ -1185,3 +1185,17 @@ html.has-announce .page { padding-top: 170px; }
   .scene .stars, .scene .floor { display: none; }
   .sheet { opacity: .4; }
 }
+
+/* ---------- your AI: keys, and the choice at the moment of use ---------- */
+.ai-keys { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.ai-key { display: grid; gap: 10px; align-content: start; padding: 16px; border-radius: 22px; background: var(--well); box-shadow: inset 0 0 0 1px var(--line); }
+.ai-key.on { box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--ok) 55%, transparent); }
+.ai-key h3 { font-size: 19px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ai-key h3 small { color: var(--muted); font: 650 13.5px var(--display); }
+.ai-key .badge { font-size: 12px; padding: 2px 9px; }
+.ai-pick { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: end; min-width: 0; }
+.ai-pick .field { flex: 1 1 120px; }
+.ai-pick .field.model { flex: 2 1 190px; }
+.ai-pick .fine { flex-basis: 100%; }
+.ai-pick .field > span { font-size: 12.5px; }
+.ai-pick select, .ai-pick input { padding-top: 8px; padding-bottom: 8px; font-size: 14.5px; }

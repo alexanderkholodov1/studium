@@ -393,6 +393,8 @@ try {
 
   expect('nobody writes elsewhere', await status(s.token, 'PATCH', `/other/${tag}`, write), 403);
 } finally {
+  // The settings stay: the emulators keep the defaults the tests wrote, and live they were never touched.
+  touched.delete('settings/app');
   for (const localId of created) await call(admin, 'POST', `${identity}/projects/${id}/accounts:delete`, { localId }).catch(() => { failures += 1; console.log('FAIL could not delete a test account'); });
   await call(admin, 'POST', `${firestore}:commit`, { writes: [...touched].map(remove) }).catch(() => { failures += 1; console.log('FAIL could not delete the test documents'); });
   console.log(`Cleaned up ${created.length} test accounts and ${touched.size} test documents`);

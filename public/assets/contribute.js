@@ -92,8 +92,9 @@ function aiStep(zone) {
       <div class="actions"><a class="button primary" href="#/ajustes">Conectar mi IA</a></div></li>`;
   }
   return `<li class="step glass ai-step"><h2>Con tu IA, sin copiar ni pegar</h2>
-    <p>Usará <strong>${esc(ai.label())}</strong>. Suelta uno o varios archivos, o una carpeta entera: cada archivo va a
-      tu IA con las instrucciones de Studium y vuelve aquí para que lo revises.</p>
+    <p>Suelta uno o varios archivos, o una carpeta entera: cada archivo va a tu IA con las instrucciones de Studium y
+      vuelve aquí para que lo revises.</p>
+    ${ai.pickerHTML('material')}
     <div class="dropzone" data-ai-drop="${zone}">
       <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 14a4 4 0 0 1 4-4h8l4 4h12a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4Z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M24 30V20m0 0-5 5m5-5 5 5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <p><strong>Suelta aquí tus archivos o una carpeta</strong>: PDF, fotos o texto.</p>
@@ -128,7 +129,7 @@ async function work() {
       const v = materialValues();
       const system = v.kind === 'curriculum' ? curriculumInstructions(v) : contributionInstructions(v);
       const res = await ai.run({
-        system, files: [file], maxTokens: 32000,
+        system, files: [file], maxTokens: 32000, use: ai.picked('material'),
         text: 'Procesa el material adjunto siguiendo las instrucciones de Studium. Responde solo con el JSON, en un bloque de código.',
         onProgress: (n) => setRow(job.id, n < 0 ? 'Tu IA está escribiendo…' : `Tu IA está escribiendo… ${n.toLocaleString('es')} caracteres`, 'busy'),
       });
@@ -306,7 +307,8 @@ function guidePane(preset = {}) {
       <div class="ways">
         <section class="way ${ai.ready() ? 'ready' : ''}">
           <h3>Con tu IA conectada</h3>
-          <p>${ai.ready() ? `Usará <strong>${esc(ai.label())}</strong>. Studium le pasa tus apuntes y las instrucciones; tú solo revisas el resultado.` : 'Conecta Claude, ChatGPT o Gemini con tu clave y Studium hace todo el camino, sin copiar ni pegar.'}</p>
+          <p>${ai.ready() ? 'Studium le pasa tus apuntes y las instrucciones; tú solo revisas el resultado.' : 'Conecta Claude, ChatGPT o Gemini con tu clave y Studium hace todo el camino, sin copiar ni pegar.'}</p>
+          ${ai.pickerHTML('guide')}
           ${ai.ready() ? '<button type="button" class="button primary" id="g-ai">Crear con mi IA</button>' : '<a class="button ghost" href="#/ajustes">Conectar mi IA</a>'}
         </section>
         <section class="way">
@@ -461,6 +463,7 @@ async function generateGuide() {
       if (read.skipped) ctx.toast(`${file.name}: ${read.skipped}.`); else files.push(read);
     }
     out.textContent = 'Tu IA está leyendo…';
+    const use = ai.picked('guide');
     const r = guideRequest();
     const context = r.graph ? guideContext() : '';
     const res = await ai.run({
@@ -468,7 +471,7 @@ async function generateGuide() {
       files,
       text: [files.length ? 'Te adjunto mis apuntes.' : '', context ? `El contexto de Studium:\n\n${context}` : '',
         'Escribe la guía completa. Responde solo con el HTML completo, desde <!doctype html> hasta </html>.'].filter(Boolean).join('\n\n'),
-      maxTokens: ai.config().provider === 'anthropic' ? 64000 : 32000,
+      maxTokens: ai.longest(use), use,
       signal: making.signal,
       onProgress: (n) => { out.textContent = n < 0 ? 'Tu IA está escribiendo la guía…' : `Tu IA está escribiendo la guía… ${n.toLocaleString('es')} caracteres`; },
     });

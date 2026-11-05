@@ -105,7 +105,7 @@ async function identify(file) {
       const res = await ai.run({
         system: 'Identificas documentos de cursos universitarios. Respondes solo con un objeto JSON, sin texto alrededor.',
         text: `Nombre del archivo: «${file.name}». Primeras páginas:\n\n${text.slice(0, 12000)}\n\nDevuelve {"kind": uno de "syllabus", "reading", "lab", "assignment", "slides", "other"; "course": nombre de la materia; "code": código como MAT-1101; "professor": nombre del profesor; "term": semestre o periodo; "title": un título corto y claro del documento}. Usa "" en lo que no se sepa.`,
-        maxTokens: 1200,
+        maxTokens: 1200, use: ai.picked('identify', $('#doc-dialog')),
       });
       const json = JSON.parse(res.text.slice(res.text.indexOf('{'), res.text.lastIndexOf('}') + 1));
       for (const k of ['kind', 'course', 'code', 'professor', 'term', 'title']) if (typeof json[k] === 'string' && json[k].trim()) found[k] = json[k].trim();
@@ -124,7 +124,8 @@ async function identify(file) {
 function openShare() {
   const form = $('#doc-form');
   form.reset();
-  $('#doc-id-status').textContent = ai.ready() ? `Lo lee tu navegador y ${ai.PROVIDERS[ai.config().provider].name}; el archivo no se sube a Studium.` : 'Lo lee tu navegador; el archivo no se sube a Studium.';
+  $('#doc-id-status').textContent = ai.ready() ? 'Lo leen tu navegador y tu IA; el archivo no se sube a Studium.' : 'Lo lee tu navegador; el archivo no se sube a Studium.';
+  $('#doc-ai').innerHTML = ai.pickerHTML('identify');
   $('#doc-msg').textContent = '';
   $('#doc-sign-wrap').innerHTML = prefs.get().name
     ? `<label class="check"><input type="checkbox" name="sign"> Firmar con mi nombre: <strong>${esc(prefs.get().name)}</strong></label>`

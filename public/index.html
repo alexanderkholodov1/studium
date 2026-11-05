@@ -391,6 +391,7 @@
       <p><strong>Suelta aquí el archivo</strong> y Studium lo identifica solo.</p>
       <label class="button ghost">Elegir el archivo<input type="file" id="doc-file" hidden accept=".pdf,.txt,.md,.tex,.doc,.docx,.ppt,.pptx,.xls,.xlsx"></label>
       <p class="hint" id="doc-id-status"></p>
+      <div id="doc-ai"></div>
     </div>
     <div class="grid">
       <label class="field"><span>Tipo</span><select name="kind"><option value="syllabus">Sílabo</option><option value="reading">Texto de apoyo</option><option value="lab">Guía de laboratorio</option><option value="assignment">Enunciado</option><option value="slides">Diapositivas</option><option value="other">Otro</option></select></label>
@@ -417,7 +418,7 @@
 <dialog class="sheet-dialog wide" id="edit-dialog">
   <form id="edit-form" method="dialog">
     <h2>Editar con tu IA</h2>
-    <p class="hint" id="edit-who"></p>
+    <div id="edit-who"></div>
     <p class="note" id="edit-noai">Conecta tu IA en <a href="#/ajustes">Ajustes</a> para editar tus guías por partes.</p>
     <fieldset class="seg"><legend>Qué quieres hacer</legend>
       <label><input type="radio" name="emode" value="change" checked><span>Cambiar una sección</span></label>
