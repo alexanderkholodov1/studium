@@ -55,6 +55,8 @@ function translateTree(rootNode) {
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
     if (n.nodeType === Node.TEXT_NODE) translateNode(n); else translateAttrs(n);
   }
+  // What a person writes in a text area stays as written, but its placeholder is part of the page.
+  for (const area of rootNode.querySelectorAll('textarea[placeholder]')) if (!area.closest('.no-i18n, #guide-frame')) translateAttrs(area);
 }
 
 export function setLang(lang) {

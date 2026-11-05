@@ -22,8 +22,10 @@ tools.
 
 ## Your own AI
 
-Each person can connect Claude, ChatGPT or Gemini in Settings with their own API key (`public/assets/ai.js`). The key is
-kept only in that browser; Studium charges nothing and the provider bills its own usage. With it, Studium:
+Each person can connect Claude, ChatGPT and Gemini in Settings, each with its own API key (`public/assets/ai.js`). The
+keys are kept only in that browser; Studium charges nothing and each provider bills its own usage. Provider, model and
+effort are chosen when the AI is used, with a recommendation per task (the strongest model to create a guide, a light
+one to identify a document), and the last choice per task is remembered. With it, Studium:
 - turns files, or a whole folder, into contributions with Studium's instructions (`contribute.js`);
 - creates guides from the map's context, with the student's goal, level, language, style and extra sections;
 - identifies documents shared in the library (`library.js`, with pdf.js reading the first pages in the browser);
@@ -35,10 +37,20 @@ file. Professors' cards open their question bank, grouped by evaluation.
 
 The interface is in Spanish and English (`i18n.js`, `en.js`): the page is written in Spanish and translated as it renders.
 
-## Communities
+## Communities and admins
 
-Today there is one, USFQ (`communities` in `public/assets/config.js`). A second one needs its domain in `config.js` and
-`firestore.rules`, and a `community` field on what its members publish so that each pool reads only its own.
+The live settings are one document, `settings/app`, which the rules read: the communities and the address domains of
+each (USFQ: `estud.usfq.edu.ec` and `alumni.usfq.edu.ec`), whether a confirmed address is required, the page's switches,
+the AI providers offered and an announcement. `public/assets/config.js` holds their defaults, and
+`tools/deploy-rules.mjs` creates the document from them when it is missing.
+
+Admins are accounts with the custom claim `admin: true` (`tools/set-admin.mjs`). They read everything whatever their
+address and use the admin panel (`#/admin`, `admin.js`): settings and communities, content moderation, presence and
+counts, the easter eggs, the audit log, and, with their own Google sign-in from the browser, the accounts and
+Firestore's usage. Everything in the panel is fetched on demand; nothing runs on a timer.
+
+Today all communities share one pool of content. A pool per community needs a `community` field on what members
+publish, and the rules and queries to match it.
 
 ## How content gets in
 
@@ -82,11 +94,15 @@ A curriculum lays its courses out by semester and shows what comes next.
   `profiles`, `kudos`, `tips`), what a
   document may contain, and how public and private documents are listed.
 - `tools/check.mjs`: checks `public/` before a release. Only the app may ship (no guide pages), every root-absolute
-  resource stays inside `/studium/`, no key material except the web key in `config.js`, and the domain and
-  `confirmEmail` in `config.js` match what the rules enforce.
+  resource stays inside `/studium/`, no key material except the web key in `config.js`, the default settings have an
+  active community, and the rules read the live ones.
 - `tools/test-rules.mjs`: tests the rules with temporary accounts and documents, and deletes them afterwards; with
   `--emulators`, against the local emulators instead of the live project.
-- `tools/deploy-rules.mjs`: publishes `firestore.rules` (skipped when the live rules are identical).
+- `tools/deploy-rules.mjs`: publishes `firestore.rules` (skipped when the live rules are identical), creating
+  `settings/app` with the defaults first when it is missing.
+- `tools/set-admin.mjs <email> [--remove]`: makes an account an admin (creating it if needed, with a random password
+  written to `private/`), or takes the role away.
+- `tools/set-email-links.mjs <url> | --default`: where the links of the account e-mails open (Firebase may refuse it).
 - `tools/upload-guide.mjs <meta.json> <guide.html>`: publishes or replaces a guide as an administrator;
   `--remove <id>` takes one down.
 - `tools/upload-contribution.mjs <aporte.json> [--source <id>]`: publishes a contribution as an administrator, read
@@ -106,8 +122,18 @@ print it.
 
 ## Working locally
 
+A private preview, with its own emulated database, demo data and accounts (never the live project):
+
 ```sh
-firebase emulators:start --only auth,firestore     # Java 21 and firebase-tools
+node tools/preview.mjs                     # http://localhost:5173/studium/ ; Java 21 for the emulators
+node tools/preview.mjs --guide guia.html   # with that file as one of the demo guides
+```
+
+Accounts, all with the password `prueba123`: `prueba@estud.usfq.edu.ec` (a student), `otra@estud.usfq.edu.ec`, and
+`studiumplatform@gmail.com` (an admin). Or step by step:
+
+```sh
+firebase emulators:start --only auth,firestore
 node tools/test-rules.mjs --emulators
 node tools/dev.mjs --emulators
 ```
