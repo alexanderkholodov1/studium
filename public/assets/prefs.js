@@ -10,7 +10,7 @@ export const MODES = {
   metas: { name: 'Paso a paso', text: 'Metas pequeñas, tu progreso a la vista y un sonido cada vez que cumples una.' },
 };
 export const AMBIENCES = {
-  jugueton: { name: 'Juguetón', text: 'Un compañero tierno, burbujas que revientas y objetos que puedes lanzar.' },
+  jugueton: { name: 'Juguetón', text: 'Un compañero de vidrio que flota, burbujas para reventar y objetos que puedes mover.' },
   vivo: { name: 'Vivo', text: 'Profundidad, hojas que flotan y objetos con física.' },
   sereno: { name: 'Sereno', text: 'Todo se mueve lento. Sin sonidos.' },
   enfoque: { name: 'Enfoque', text: 'Blanco y negro, nada que se mueva. Solo lo esencial.' },
@@ -19,7 +19,12 @@ export const THEMES = { auto: 'Como tu sistema', light: 'Día', dark: 'Noche' };
 
 export const AVATARS = ['blue', 'red', 'teal', 'butter', 'sky', 'peach'];
 const LANG = /^en\b/i.test(globalThis.navigator?.language ?? '') ? 'en' : 'es';
-const DEFAULTS = { mode: 'examenes', ambience: 'vivo', sound: false, theme: 'auto', lang: LANG, avatar: 'blue', semester: 0, career: '', nickname: '', name: '', goals: [], progress: {} };
+const DEFAULTS = { mode: 'examenes', ambience: 'vivo', sound: false, theme: 'auto', lang: LANG, avatar: 'blue', semester: 0, career: '', nickname: '', name: '', goals: [], progress: {},
+  deadlines: [], tiles: [], notes: '', links: [], focus: { study: 25, rest: 5 } };
+// The tiles the home page can show (space.js draws them).
+const TILE_IDS = ['countdown', 'deadlines', 'week', 'goals', 'timer', 'notes', 'links', 'recent', 'news', 'explore'];
+const rid = () => Math.random().toString(36).slice(2, 10);
+const range = (v, lo, hi, d) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d; };
 const KEYS = Object.keys(DEFAULTS);
 const LOCAL = 'studium-prefs';
 const root = document.documentElement;
@@ -40,6 +45,20 @@ const clean = (p) => {
   out.goals = (Array.isArray(out.goals) ? out.goals : []).slice(0, 60)
     .map((g) => ({ id: String(g.id ?? Math.random().toString(36).slice(2, 10)).slice(0, 16), text: String(g.text ?? '').slice(0, 140), done: !!g.done, ...(g.guide ? { guide: String(g.guide).slice(0, 100) } : {}) }))
     .filter((g) => g.text);
+  out.deadlines = (Array.isArray(out.deadlines) ? out.deadlines : []).slice(0, 60)
+    .map((d) => ({ id: String(d.id ?? rid()).slice(0, 16), text: String(d.text ?? '').slice(0, 100), date: /^\d{4}-\d{2}-\d{2}$/.test(d.date) ? d.date : '', ...(d.course ? { course: String(d.course).slice(0, 80) } : {}) }))
+    .filter((d) => d.text && d.date);
+  const tiles = new Set();
+  out.tiles = (Array.isArray(out.tiles) ? out.tiles : []).map(String).filter((t) => {
+    const [id, size] = t.split(':');
+    if (!TILE_IDS.includes(id) || (size && !['s', 'l'].includes(size)) || tiles.has(id)) return false;
+    tiles.add(id); return true;
+  }).slice(0, 16);
+  out.notes = String(out.notes ?? '').slice(0, 4000);
+  out.links = (Array.isArray(out.links) ? out.links : []).slice(0, 12)
+    .map((l) => ({ id: String(l.id ?? rid()).slice(0, 16), label: String(l.label ?? '').slice(0, 40), url: /^https?:\/\//i.test(l.url ?? '') ? String(l.url).slice(0, 300) : '' }))
+    .filter((l) => l.label && l.url);
+  out.focus = { study: range(out.focus?.study, 5, 90, 25), rest: range(out.focus?.rest, 1, 30, 5) };
   out.progress = Object.fromEntries(Object.entries(out.progress && typeof out.progress === 'object' ? out.progress : {})
     .filter(([, v]) => v === 'reading' || v === 'done').slice(0, 300));
   return out;

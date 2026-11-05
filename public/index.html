@@ -18,14 +18,18 @@
 <body>
 <svg class="sprite" aria-hidden="true">
   <defs>
-    <linearGradient id="mark-ink" x1="46" y1="12" x2="18" y2="52" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#7cc4ff"/><stop offset="1" stop-color="#2f5bff"/></linearGradient>
+    <linearGradient id="mark-tile" x1="12" y1="4" x2="52" y2="60" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b97ff"/><stop offset=".55" stop-color="#2f5bff"/><stop offset="1" stop-color="#1b36b8"/></linearGradient>
+    <linearGradient id="mark-gloss" x1="0" y1="4" x2="0" y2="36" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity=".42"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <!-- The mark: a page of a notebook (its ruled lines and red margin) as a glass tile, with an S and the red dot of the wordmark -->
     <symbol id="mark" viewBox="0 0 64 64">
-      <path class="mark-s" d="M46 14C34 7 16 12 19 24c2 8 26 8 27 18 1 11-17 15-28 9" fill="none" stroke="url(#mark-ink)" stroke-width="6" stroke-linecap="round"/>
-      <path class="mark-link" d="m33 32.3 17-6.3" stroke="#ff5241" stroke-width="2.4" stroke-linecap="round"/>
-      <circle class="mark-node" cx="46" cy="14" r="5" fill="#7cc4ff"/>
-      <circle class="mark-node" cx="33" cy="32.3" r="5.6" fill="#ff5241"/>
-      <circle class="mark-node" cx="18" cy="51" r="5" fill="#2f5bff"/>
-      <circle class="mark-node" cx="50" cy="26" r="3.2" fill="#ffd166"/>
+      <rect x="3" y="3" width="58" height="58" rx="18" fill="url(#mark-tile)"/>
+      <path d="M3 22.5h58M3 32h58M3 41.5h58" stroke="#fff" stroke-opacity=".12" stroke-width="1.4"/>
+      <path d="M15.5 3v58" stroke="#ff5241" stroke-opacity=".75" stroke-width="1.6"/>
+      <rect x="3" y="3" width="58" height="58" rx="18" fill="url(#mark-gloss)"/>
+      <rect x="3.7" y="3.7" width="56.6" height="56.6" rx="17.3" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1.4"/>
+      <path class="mark-s" d="M41.5 22.4c-2.4-3.2-6.2-4.9-10.4-4.9-6.1 0-10.3 3.2-10.3 7.8 0 10.4 22.4 6.3 22.4 15.9 0 5-4.7 8.4-11.1 8.4-5 0-9.1-1.9-11.6-5.3" fill="none" stroke="#fff" stroke-width="5.4" stroke-linecap="round"/>
+      <circle class="mark-dot" cx="46" cy="16.5" r="4.4" fill="#ff5241"/>
+      <circle cx="44.9" cy="15.3" r="1.3" fill="#fff" fill-opacity=".7"/>
     </symbol>
     <symbol id="k-salvo" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="m5.6 5.6 3.6 3.6m5.6 5.6 3.6 3.6m0-12.8-3.6 3.6m-5.6 5.6-3.6 3.6"/></g></symbol>
     <symbol id="k-entendi" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3Z"/></g></symbol>
@@ -46,7 +50,7 @@
 <div class="play" id="play" aria-hidden="true"></div>
 
 <header class="nav glass" id="nav" data-mode="public" hidden data-liquid='{"radius":30,"depth":22,"scale":38}'>
-  <a class="brand" href="#/" aria-label="Studium, inicio"><svg><use href="#mark"/></svg><span>studium</span></a>
+  <a class="brand" href="#/bienvenida" aria-label="Studium: la portada"><svg><use href="#mark"/></svg><span>studium</span></a>
   <nav class="tabs member-only" aria-label="Secciones">
     <span class="drop" aria-hidden="true"></span>
     <a href="#/" data-tab="home">Inicio</a>
@@ -286,7 +290,8 @@
 <main class="view page wide" id="view-home" hidden>
   <header class="home-head">
     <div><p class="kicker" id="home-where"></p><h1 id="home-hello"></h1><p class="lede-small" id="home-sub"></p></div>
-    <div class="ambiences mini" data-ambience-picker="mini" aria-label="Ambiente"></div>
+    <div class="home-tools"><div class="ambiences mini" data-ambience-picker="mini" aria-label="Ambiente"></div>
+      <button class="button ghost small" id="home-edit" aria-pressed="false">Personalizar</button></div>
   </header>
   <div class="dash" id="dash"></div>
 </main>
@@ -294,6 +299,7 @@
 <main class="view page wide" id="view-catalog" hidden>
   <div class="page-head">
     <h1>Guías</h1>
+    <a class="button primary" href="#/aportar/guia"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>Crear una guía</a>
     <label class="search glass"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><input id="q" type="search" placeholder="Busca una materia, un tema o un profe" aria-label="Buscar guías"></label>
   </div>
   <fieldset class="seg filters" id="g-filter"><legend class="sr">Mostrar</legend>
@@ -339,6 +345,17 @@
   <div class="actions" style="margin:20px 0 26px"><button class="button primary red" id="tip-new">Contar lo que sé de un profe</button></div>
   <div class="profs" id="profs"></div>
 </main>
+<!-- The link of a password-reset e-mail opens Studium itself, which asks for the new password here -->
+<dialog class="sheet-dialog" id="reset-dialog">
+  <form id="reset-form" method="dialog">
+    <h2>Elige una contraseña nueva</h2>
+    <p class="muted">Para <strong id="reset-email"></strong>.</p>
+    <label class="field"><span>Contraseña nueva</span><input name="password" type="password" minlength="6" autocomplete="new-password" required></label>
+    <p class="msg" id="reset-msg" role="alert"></p>
+    <div class="actions"><button class="button primary" id="reset-save" value="save">Guardar y entrar</button><button class="button ghost" value="cancel" formnovalidate>Cancelar</button></div>
+  </form>
+</dialog>
+
 <dialog class="sheet-dialog" id="tip-dialog">
   <form id="tip-form" method="dialog">
     <h2 id="tip-title">Lo que sabes de un profe</h2>
@@ -478,7 +495,9 @@
     <button class="button ghost" id="guide-done" aria-pressed="false">La terminé</button>
     <a class="button ghost" id="guide-map" href="#/mapa">Mapa</a>
     <button class="button ghost" id="guide-full">Pantalla completa</button>
+    <button class="icon" id="guide-hide" title="Ocultar esta barra" aria-label="Ocultar esta barra"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
   </div>
+  <button class="reader-pill glass" id="guide-show" hidden title="Mostrar la barra de Studium" aria-label="Mostrar la barra de Studium"><svg aria-hidden="true"><use href="#mark"/></svg></button>
   <p class="status" id="guide-status"></p>
   <iframe id="guide-frame" title="Guía de estudio" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-downloads"></iframe>
 </section>

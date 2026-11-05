@@ -3,7 +3,7 @@
 // nothing of their content is in this bundle.
 import {
   onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification,
-  sendPasswordResetEmail, signOut,
+  sendPasswordResetEmail, signOut, applyActionCode, verifyPasswordResetCode, confirmPasswordReset,
 } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js';
 import { allowedDomain, confirmEmail, mailFrom } from './config.js';
 import { auth, loadAll, loadGuide, loadLibrary } from './data.js';
@@ -24,6 +24,8 @@ import { mountLibrary, renderLibrary } from './library.js';
 import { mountEditor, openEditor } from './editor.js';
 import * as ai from './ai.js';
 import { setLang, t } from './i18n.js';
+import { mountHints } from './hints.js';
+import { mountEggs } from './eggs.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -43,6 +45,7 @@ for (const el of document.querySelectorAll('[data-liquid]')) liquid(el, JSON.par
 springLetters($('#wordmark'));
 mountDemos();
 mountScenes();
+mountHints();
 for (const el of document.querySelectorAll('[data-ambience-picker]')) renderAmbiences(el);
 
 /* ---------- the person's choices, applied everywhere ---------- */
@@ -58,7 +61,7 @@ prefs.on((p) => applyPrefs(p));
 document.querySelectorAll('[data-sound-toggle]').forEach((b) => b.addEventListener('click', () => {
   const on = !prefs.get().sound;
   prefs.set({ sound: on });
-  if (on) sfx.chime();
+  if (on) sfx.toggle(true);
   toast(on ? 'Sonidos activados.' : 'Sonidos apagados.');
 }));
 document.querySelectorAll('[data-lang-toggle]').forEach((b) => b.addEventListener('click', () => {
@@ -70,6 +73,24 @@ document.querySelectorAll('[data-theme-toggle]').forEach((b) => b.addEventListen
   prefs.set({ theme: dark ? 'light' : 'dark' });
   sfx.tick();
 }));
+/* ---------- the sound of the pointer on glass ---------- */
+// A faint glass note when the pointer arrives on a card, a panel, a row or a button (never twice for the same one),
+// and a soft tap when something is pressed. Not in the calm ambiences.
+const HOVERED = '[data-tilt], .tile, .gcard, .doc, .prof, .mini-guide, .set, .step, .pick, .amb, .source, tr, .chip, .button, .tabs a, .icon, .kudo, .seg span';
+let hovered = null;
+const calmAmbience = () => ['sereno', 'enfoque'].includes(root.dataset.ambience);
+document.addEventListener('pointerover', (e) => {
+  if (e.pointerType !== 'mouse' || !sfx.on || calmAmbience()) return;
+  const el = e.target instanceof Element ? e.target.closest(HOVERED) : null;
+  if (!el || el === hovered) return;
+  hovered = el;
+  sfx.hover(el.matches('.chip, .button, .tabs a, .icon, .kudo, .seg span') ? 'button' : 'card');
+}, { passive: true });
+document.addEventListener('pointerdown', (e) => {
+  if (!sfx.on || calmAmbience() || !(e.target instanceof Element)) return;
+  if (e.target.closest('button, .button, a[href], .chip, [role="tab"], .seg label')) sfx.press();
+}, { passive: true });
+
 document.addEventListener('click', (e) => {
   const a = e.target.closest('[data-scroll]');
   if (!a) return;
@@ -99,10 +120,11 @@ function show(view) {
     const user = auth.currentUser;
     $('#who-email').textContent = user?.email ?? '';
     $('#initial').textContent = (prefs.get().nickname || user?.email || '?')[0].toUpperCase();
+    for (const a of document.querySelectorAll('#view-landing a[href="#/entrar"]')) a.textContent = t(member ? 'Ir a mi inicio' : 'Entrar');
     current = view;
     requestAnimationFrame(moveDrop);
   };
-  if (view === current) swap(); else { transition(swap); if (view !== 'map' && view !== 'guide') scrollTo({ top: 0, behavior: 'instant' }); }
+  if (view === current) swap(); else { if (current !== 'boot' && !calmAmbience()) sfx.open(); transition(swap); if (view !== 'map' && view !== 'guide') scrollTo({ top: 0, behavior: 'instant' }); }
 }
 // The tab indicator: a drop of glass that slides to the current tab.
 function moveDrop() {
@@ -265,6 +287,7 @@ async function refresh() {
 }
 const context = { state, get user() { return { uid: auth.currentUser?.uid, email: auth.currentUser?.email ?? '' }; }, refresh, toast, explain };
 mountSpace(context);
+mountEggs({ toast });
 mountCommunity(context);
 mountLibrary(context);
 mountEditor();
@@ -516,7 +539,7 @@ async function route() {
     document.title = 'Studium';
     if (page === 'entrar') { document.title = `${t('Entrar')} · Studium`; show('auth'); }
     else if (page === 'acerca') { document.title = `${t('Acerca')} · Studium`; show('about'); }
-    else if (!page) show('landing');
+    else if (!page || page === 'bienvenida') show('landing');
     // A link to something inside: sign in first, then go there.
     else { pending = location.hash; show('auth'); }
     return;
@@ -567,6 +590,8 @@ async function route() {
       ajustes: ['settings', 'Ajustes', renderSettings],
       acerca: ['about', 'Acerca', null],
       guias: ['catalog', 'Guías', renderCatalog],
+      // The logo: the public page, also for members, who reach their own space from «Inicio».
+      bienvenida: ['landing', 'Qué es', null],
       '': ['home', 'Inicio', renderHome],
     };
     if (page === 'aportar' || page === 'mis-aportes') {
@@ -596,9 +621,62 @@ async function route() {
     $(where).textContent = explain(error);
   }
 }
+// The guide's bar can be hidden; the choice is remembered on this device.
+function bareReader(on) {
+  $('#view-guide').classList.toggle('bare', on);
+  $('#guide-show').hidden = !on;
+  try { localStorage.setItem('studium-reader-bare', on ? '1' : ''); } catch { /* not remembered */ }
+}
+$('#guide-hide').addEventListener('click', () => bareReader(true));
+$('#guide-show').addEventListener('click', () => bareReader(false));
+try { bareReader(localStorage.getItem('studium-reader-bare') === '1'); } catch { /* the bar stays */ }
+
 document.querySelectorAll('[data-pane]').forEach((b) => b.addEventListener('click', () => {
   location.hash = { material: '#/aportar', guide: '#/aportar/guia', mine: '#/mis-aportes' }[b.dataset.pane];
 }));
+/* ---------- the links of the account e-mails ---------- */
+// They open Studium itself (?mode=…&oobCode=…), on the site students already use: confirming the address happens
+// here, and so does choosing a new password.
+async function handleEmailLink() {
+  const q = new URLSearchParams(location.search);
+  const mode = q.get('mode'); const code = q.get('oobCode');
+  if (!mode || !code) return;
+  history.replaceState(null, '', location.pathname + location.hash);
+  try {
+    if (mode === 'verifyEmail') {
+      await applyActionCode(auth, code);
+      toast('Correo confirmado. Bienvenido a Studium.');
+      await auth.authStateReady?.();
+      const user = auth.currentUser;
+      if (user) { await user.reload(); await user.getIdToken(true); await route(); } else location.hash = '#/entrar';
+    } else if (mode === 'resetPassword') {
+      const email = await verifyPasswordResetCode(auth, code);
+      $('#reset-email').textContent = email;
+      $('#reset-msg').textContent = '';
+      $('#reset-form').dataset.code = code;
+      $('#reset-form').dataset.email = email;
+      $('#reset-dialog').showModal();
+    }
+  } catch (error) {
+    toast(['auth/invalid-action-code', 'auth/expired-action-code'].includes(error.code) ? 'Ese enlace ya se usó o venció. Pide otro desde Studium.' : explain(error));
+  }
+}
+$('#reset-form').addEventListener('submit', async (e) => {
+  if (e.submitter?.value !== 'save') return;
+  e.preventDefault();
+  const form = e.target;
+  const password = form.password.value;
+  const button = $('#reset-save');
+  button.disabled = true;
+  try {
+    await confirmPasswordReset(auth, form.dataset.code, password);
+    await signInWithEmailAndPassword(auth, form.dataset.email, password);
+    $('#reset-dialog').close();
+    toast('Listo: tienes contraseña nueva.');
+  } catch (error) { say('#reset-msg', explain(error)); } finally { button.disabled = false; }
+});
+handleEmailLink();
+
 addEventListener('hashchange', () => route());
 onAuthStateChanged(auth, async (user) => {
   Object.assign(state, { catalog: [], contributions: [], tips: [], graph: null, loaded: false });

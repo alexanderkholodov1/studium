@@ -265,6 +265,13 @@ try {
   expect('student takes back its tip', await commit(s.token, [remove(`tips/${prof}__${s.uid}`)]), 200);
   expect('student saves its language and avatar color', await commit(s.token, [put(`profiles/${s.uid}`, profile({ lang: 'en', avatar: 'red', name: 'Nombre de Prueba' }))]), 200);
   expect('a profile with an unknown avatar color is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ avatar: 'purple' }))]), 403);
+  const home = { deadlines: [{ id: 'd1', text: 'Entrega del proyecto', date: '2026-12-01', course: 'Redes' }], tiles: ['deadlines', 'notes:l', 'goals'],
+    notes: 'El aula del examen es la 204.', links: [{ id: 'l1', label: 'Aula virtual', url: 'https://example.org' }], focus: { study: 50, rest: 10 } };
+  expect('student saves its home page (dates, tiles, notes, links, timer)', await commit(s.token, [put(`profiles/${s.uid}`, profile(home))]), 200);
+  expect('a notepad over 4000 characters is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ notes: 'x'.repeat(4001) }))]), 403);
+  expect('more than 12 quick links are refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ links: Array.from({ length: 13 }, (_, i) => ({ id: `l${i}`, label: 'x', url: 'https://example.org' })) }))]), 403);
+  expect('a focus timer outside its range is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ focus: { study: 300, rest: 5 } }))]), 403);
+  expect('a focus timer with other fields is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ focus: { study: 25, rest: 5, nap: 60 } }))]), 403);
   expect('student deletes its profile', await commit(s.token, [remove(`profiles/${s.uid}`)]), 200);
 
   // The library: course documents as links

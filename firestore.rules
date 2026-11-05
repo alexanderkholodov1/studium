@@ -114,7 +114,7 @@ service cloud.firestore {
     // The person's own space.
     function profile(d) {
       return d.keys().hasOnly(['nickname', 'name', 'career', 'semester', 'mode', 'ambience', 'sound', 'theme', 'lang', 'avatar',
-          'goals', 'progress', 'updated'])
+          'goals', 'progress', 'deadlines', 'tiles', 'notes', 'links', 'focus', 'updated'])
         && optional(d, 'nickname', 40) && optional(d, 'name', 60) && optional(d, 'career', 80)
         && (!('lang' in d) || d.lang in ['es', 'en'])
         && (!('avatar' in d) || d.avatar in ['blue', 'red', 'teal', 'butter', 'sky', 'peach'])
@@ -125,6 +125,14 @@ service cloud.firestore {
         && (!('theme' in d) || d.theme in ['auto', 'light', 'dark'])
         && (!('goals' in d) || (d.goals is list && d.goals.size() <= 60))
         && (!('progress' in d) || (d.progress is map && d.progress.size() <= 300))
+        // The home page: the person's own dates, which tiles it shows, a notepad, quick links and the focus timer.
+        && (!('deadlines' in d) || (d.deadlines is list && d.deadlines.size() <= 60))
+        && (!('tiles' in d) || (d.tiles is list && d.tiles.size() <= 16))
+        && (!('notes' in d) || (d.notes is string && d.notes.size() <= 4000))
+        && (!('links' in d) || (d.links is list && d.links.size() <= 12))
+        && (!('focus' in d) || (d.focus is map && d.focus.keys().hasOnly(['study', 'rest'])
+          && d.focus.study is int && d.focus.study >= 5 && d.focus.study <= 90
+          && d.focus.rest is int && d.focus.rest >= 1 && d.focus.rest <= 30))
         && d.updated == request.time;
     }
     match /profiles/{uid} {

@@ -213,79 +213,10 @@ function materialValues() {
 const materialPrompt = () => { const v = materialValues(); return v.kind === 'curriculum' ? curriculumInstructions(v) : contributionInstructions(v); };
 
 /* ---------- guide ---------- */
-function coursesWithMaterial() {
-  const g = ctx.state.graph;
-  return g.nodes.filter((n) => n.type === 'course' && (n.contributions.length || n.guides.length))
-    .sort((a, b) => b.contributions.length - a.contributions.length || a.name.localeCompare(b.name, 'es'));
-}
-function guidePane(preset = {}) {
-  const courses = coursesWithMaterial();
-  const d = { level: 'standard', length: 'medium', practice: 'normal', challenge: 'same', examples: 'normal', language: 'C++', ...(store.get('studium-draft-guide') ?? {}), ...preset };
-  if (!courses.length) {
-    return `<div class="empty glass"><h2>Todavía no hay material para crear guías</h2>
-      <p>Una guía se crea con lo que otros aportaron de una materia. Aporta el primer material y vuelve aquí.</p>
-      <a class="button primary" href="#/aportar">Aportar material</a></div>`;
-  }
-  const chosen = courses.find((c) => c.id === d.course) ?? courses[0];
-  return `<ol class="flow">
-    <li class="step glass" style="${themeStyle(chosen.theme)}">
-      <h2>Elige qué vas a estudiar</h2>
-      <form class="grid" id="g-form">
-        <label class="field wide"><span>Materia o competencia</span><select name="course">${courses.map((c) => `<option value="${esc(c.id)}" ${c === chosen ? 'selected' : ''}>${esc(c.name)} (${c.contributions.length} ${c.contributions.length === 1 ? 'aporte' : 'aportes'})</option>`).join('')}</select></label>
-        <label class="field"><span>Profesor</span><select name="professor"><option value="">Todos</option>${[...chosen.professors.keys()].sort().map((p) => `<option ${p === d.professor ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></label>
-        <label class="field"><span>Semestre o edición</span><select name="term"><option value="">Todos</option>${[...chosen.terms].sort().map((t) => `<option ${t === d.term ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
-        ${input('title', 'Evaluación', d.title ?? '', 'placeholder="Examen final, Parcial 2, Ronda 1…"')}
-        ${input('date', 'Fecha', d.date ?? '', 'type="date"')}
-        <div class="wide"><h3>Hazla a tu medida</h3></div>
-        ${segmented('level', LEVELS, d.level, 'Nivel de explicación')}
-        ${segmented('length', { short: 'Repaso corto', medium: 'Media', complete: 'Completa' }, d.length, 'Extensión')}
-        ${segmented('practice', { few: 'Poca', normal: 'Normal', lots: 'Mucha' }, d.practice, 'Práctica')}
-        ${segmented('challenge', { easier: 'Más fácil', same: 'Como la evaluación', harder: 'Más difícil' }, d.challenge, 'Dificultad de la práctica')}
-        ${segmented('examples', { few: 'Pocos', normal: 'Normal', lots: 'Muchos' }, d.examples, 'Ejemplos resueltos')}
-        ${chosen.theme === 'algoritmos' || chosen.contributions.some((c) => c.kind === 'contest') ? segmented('language', { 'C++': 'C++', Python: 'Python', Java: 'Java' }, d.language, 'Lenguaje del código') : ''}
-        ${input('focus', 'Quiero reforzar (opcional)', d.focus ?? '', 'placeholder="Ej.: demostraciones, programación dinámica…"')}
-        ${input('goal', 'Tu objetivo con esta guía (opcional)', d.goal ?? '', 'placeholder="Sacar más de 18, entender desde cero, repasar en una noche…"')}
-        ${segmented('lang', { es: 'Español', en: 'English' }, d.lang ?? (prefs.get().lang || 'es'), 'Idioma de la guía')}
-        ${segmented('decor', DECOR, d.decor ?? 'notebook', 'Estilo y decoración')}
-        <fieldset class="tagpick wide"><legend>Secciones extra: cada una suma instrucciones para tu IA</legend><div>${Object.entries(SECTIONS).map(([k, label]) => {
-          const rec = (RECOMMENDED[prefs.get().mode] ?? []).includes(k);
-          const on = d.sections ? d.sections.includes(k) : rec;
-          return `<label><input type="checkbox" name="sections" value="${k}" ${on ? 'checked' : ''}><span>${esc(label)}${rec ? ' <small>· recomendada para ti</small>' : ''}</span></label>`;
-        }).join('')}</div></fieldset>
-      </form>
-      <div class="scope">
-        <div class="scope-head"><h3>Conceptos que entran</h3><button class="link" data-scope="all">Todos</button><button class="link" data-scope="none">Ninguno</button></div>
-        <div class="chips" id="g-scope"></div>
-      </div>
-      <p class="note" id="g-summary"></p>
-    </li>
-    <li class="step glass">
-      <h2>Pídesela a tu IA</h2>
-      ${ai.ready() ? `<div class="ai-make"><button class="button primary big" id="g-ai">Crear con mi IA</button>
-        <span class="hint">Usará ${esc(ai.label())}. Una guía larga puede tardar varios minutos; no cierres la página.</span>
-        <p class="ai-progress" id="g-ai-progress" role="status" hidden></p></div>
-        <p class="note">O hazlo a mano con cualquier IA:</p>`
-        : '<p class="note">Con tu IA conectada en <a href="#/ajustes">Ajustes</a>, Studium la crea por ti sin copiar ni pegar. Mientras, hazlo a mano:</p>'}
-      <div class="actions">
-        <button class="button ${ai.ready() ? 'ghost' : 'primary'}" id="g-download">Descargar contexto</button>
-        <button class="button ghost" id="g-copy">Copiar instrucciones</button>
-      </div>
-      <ol class="howto">
-        <li>Abre un chat nuevo en tu IA.</li>
-        <li>Adjunta el archivo de contexto que descargaste (y tu propio material, si quieres).</li>
-        <li>Pega las instrucciones y envía.</li>
-        <li>Descarga el archivo <code>guia.html</code> que te devuelve.</li>
-      </ol>
-      <p class="note">Para escribir la guía conviene una IA que cree archivos o escriba mucho código seguido, como ChatGPT,
-        Claude o Gemini. NotebookLM sirve para aportar material y para estudiar el contexto en audio o con tarjetas.</p>
-      <details class="prompt"><summary>Ver las instrucciones</summary><pre id="g-prompt"></pre></details>
-    </li>
-    <li class="step glass">
-      <h2>Sube la guía</h2>
-      ${dropzone('guide')}
-    </li>
-  </ol>`;
-}
+// A guide starts from what the person is studying (any subject, known to Studium or not) and from their own notes,
+// which go only to their AI. What the community already knows of that subject (the map) is an extra they can add. The
+// details are optional and folded away. Three ways to make it: the AI connected with a key, the person's own
+// subscription in the provider's page, or by hand with any AI.
 const SECTIONS = {
   flashcards: 'Tarjetas de términos para repasar',
   mock: 'Simulacro de la prueba, con tiempo',
@@ -298,64 +229,245 @@ const SECTIONS = {
 // What fits each way of studying (the person's setting), checked by default.
 const RECOMMENDED = { examenes: ['mock', 'cheatsheet', 'mistakes'], gusto: ['conceptmap', 'solved'], intensivo: ['flashcards', 'mock'], metas: ['selfcheck', 'flashcards'] };
 const DECOR = { notebook: 'Cuaderno', minimal: 'Minimal', playful: 'Tierna', night: 'Nocturna' };
+// The chat pages where a subscription works. Studium copies the instructions and opens a new chat there.
+const CHATS = {
+  claude: { name: 'Claude', url: 'https://claude.ai/new' },
+  chatgpt: { name: 'ChatGPT', url: 'https://chatgpt.com/' },
+  gemini: { name: 'Gemini', url: 'https://gemini.google.com/app' },
+};
+const NOTE_TYPES = '.pdf,image/*,.txt,.md,.tex,.csv,.py,.c,.cpp,.java,.js';
+let notes = []; // the person's own files for this guide: read in this browser, sent only to their AI
 let scope = null;
+
+function courseNode(name) {
+  return name ? ctx.state.graph?.byId.get(`course:${keyOf(name)}`) ?? null : null;
+}
+function guidePane(preset = {}) {
+  const d = { level: 'standard', length: 'medium', practice: 'normal', challenge: 'same', examples: 'normal', language: 'C++', ...(store.get('studium-draft-guide') ?? {}), ...preset };
+  // Links from the map and the home page name the course by its node.
+  if (String(d.course ?? '').startsWith('course:')) d.course = ctx.state.graph?.byId.get(d.course)?.name ?? '';
+  const node = courseNode(d.course);
+  const contest = node?.theme === 'algoritmos' || node?.contributions.some((c) => c.kind === 'contest');
+  const mode = prefs.get().mode;
+  const custom = store.get('studium-guide-custom');
+  return `${datalists()}
+  <form id="g-form" autocomplete="off" novalidate><ol class="flow">
+    <li class="step glass">
+      <h2>¿Qué vas a estudiar?</h2>
+      <div class="grid">
+        <label class="field wide"><span>Materia o tema</span><input name="course" value="${esc(d.course ?? '')}" list="dl-courses" maxlength="80" placeholder="Redes de Computadores, Cálculo II, la Revolución francesa…"></label>
+        ${input('title', 'Para qué (opcional)', d.title ?? '', 'maxlength="80" placeholder="Examen 2, el final, entenderlo de una vez…"')}
+        ${input('date', 'Fecha (opcional)', d.date ?? '', 'type="date"')}
+        <details class="more wide" ${d.professor || d.term || d.code ? 'open' : ''}><summary>Más datos, si los tienes: profesor, semestre, código</summary>
+          <div class="grid">${input('professor', 'Profesor', d.professor ?? '', 'list="dl-profs" maxlength="80"')}${input('term', 'Semestre o edición', d.term ?? '', 'list="dl-terms" maxlength="40" placeholder="202610"')}${input('code', 'Código', d.code ?? '', 'maxlength="20" placeholder="CMP-4005"')}</div>
+        </details>
+      </div>
+    </li>
+    <li class="step glass">
+      <h2>¿De dónde sale?</h2>
+      <p>De tus apuntes: PDF, fotos del cuaderno, diapositivas o deberes. Van solo a tu IA; a Studium no llegan.</p>
+      <div class="dropzone notes" data-notes-drop>
+        <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M14 6h14l10 10v24a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M28 6v10h10M18 26h12M18 33h8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <p><strong>Suelta aquí tus apuntes</strong>, o</p>
+        <label class="button ghost">Elegir archivos<input type="file" multiple hidden data-notes accept="${NOTE_TYPES}"></label>
+      </div>
+      <ul class="notes-list" id="g-notes"></ul>
+      <label class="toggle"><input type="checkbox" name="graph" ${d.graph ? 'checked' : ''}><span class="knob"></span>Sumar lo que la comunidad ya sabe de esta materia (el mapa de conocimiento)</label>
+      <div class="scope" id="g-scope-wrap" hidden>
+        <div class="scope-head"><h3>Conceptos del mapa que entran</h3><button type="button" class="link" data-scope="all">Todos</button><button type="button" class="link" data-scope="none">Ninguno</button></div>
+        <div class="chips" id="g-scope"></div>
+      </div>
+      <p class="note" id="g-summary"></p>
+    </li>
+    <li class="step glass">
+      <details class="custom" id="g-custom" ${custom ? 'open' : ''}>
+        <summary><span class="custom-title">Hazla a tu medida</span><span class="muted">Opcional: nivel, extensión, práctica, idioma, estilo y secciones extra.</span></summary>
+        <div class="grid">
+          ${segmented('level', LEVELS, d.level, 'Nivel de explicación')}
+          ${segmented('length', { short: 'Repaso corto', medium: 'Media', complete: 'Completa' }, d.length, 'Extensión')}
+          ${segmented('practice', { few: 'Poca', normal: 'Normal', lots: 'Mucha' }, d.practice, 'Práctica')}
+          ${segmented('challenge', { easier: 'Más fácil', same: 'Como la evaluación', harder: 'Más difícil' }, d.challenge, 'Dificultad de la práctica')}
+          ${segmented('examples', { few: 'Pocos', normal: 'Normal', lots: 'Muchos' }, d.examples, 'Ejemplos resueltos')}
+          ${contest ? segmented('language', { 'C++': 'C++', Python: 'Python', Java: 'Java' }, d.language, 'Lenguaje del código') : ''}
+          ${segmented('lang', { es: 'Español', en: 'English' }, d.lang ?? (prefs.get().lang || 'es'), 'Idioma de la guía')}
+          ${segmented('decor', DECOR, d.decor ?? 'notebook', 'Estilo y decoración')}
+          ${input('focus', 'Quiero reforzar', d.focus ?? '', 'maxlength="160" placeholder="Ej.: demostraciones, subredes, programación dinámica…"')}
+          ${input('goal', 'Mi objetivo con esta guía', d.goal ?? '', 'maxlength="160" placeholder="Sacar más de 18, entender desde cero, repasar en una noche…"')}
+          <fieldset class="tagpick wide"><legend>Secciones extra</legend><div>${Object.entries(SECTIONS).map(([k, label]) => {
+            const rec = (RECOMMENDED[mode] ?? []).includes(k);
+            const on = d.sections ? d.sections.includes(k) : rec;
+            return `<label><input type="checkbox" name="sections" value="${k}" ${on ? 'checked' : ''}><span>${esc(label)}${rec ? ' <small>· recomendada para ti</small>' : ''}</span></label>`;
+          }).join('')}</div></fieldset>
+        </div>
+      </details>
+    </li>
+    <li class="step glass">
+      <h2>Créala</h2>
+      <div class="ways">
+        <section class="way ${ai.ready() ? 'ready' : ''}">
+          <h3>Con tu IA conectada</h3>
+          <p>${ai.ready() ? `Usará <strong>${esc(ai.label())}</strong>. Studium le pasa tus apuntes y las instrucciones; tú solo revisas el resultado.` : 'Conecta Claude, ChatGPT o Gemini con tu clave y Studium hace todo el camino, sin copiar ni pegar.'}</p>
+          ${ai.ready() ? '<button type="button" class="button primary" id="g-ai">Crear con mi IA</button>' : '<a class="button ghost" href="#/ajustes">Conectar mi IA</a>'}
+        </section>
+        <section class="way">
+          <h3>Con tu suscripción</h3>
+          <p>En la página de Claude, ChatGPT o Gemini, con tu cuenta de siempre. Studium copia las instrucciones y abre un chat nuevo.</p>
+          <div class="actions">${Object.entries(CHATS).map(([k, c]) => `<button type="button" class="button ${ai.ready() ? 'ghost' : k === 'claude' ? 'primary' : 'ghost'}" data-chat="${k}">Abrir ${c.name}</button>`).join('')}</div>
+        </section>
+        <section class="way">
+          <h3>A mano</h3>
+          <p>Con cualquier otra IA: copia o descarga las instrucciones y pégalas junto con tus apuntes.</p>
+          <div class="actions"><button type="button" class="button ghost" id="g-copy">Copiar</button><button type="button" class="button ghost" id="g-download">Descargar</button></div>
+        </section>
+      </div>
+      <p class="ai-progress" id="g-ai-progress" role="status" hidden></p>
+      <ol class="howto" id="g-howto" hidden></ol>
+      <details class="prompt"><summary>Ver las instrucciones que recibe tu IA</summary><pre id="g-prompt"></pre></details>
+    </li>
+  </ol></form>
+  <ol class="flow after">
+    <li class="step glass">
+      <h2>Sube la guía que te devolvió</h2>
+      ${dropzone('guide')}
+    </li>
+  </ol>`;
+}
 function guideValues() {
   const form = $('#g-form');
   if (!form) return null;
   const f = new FormData(form);
   const v = Object.fromEntries(f.entries());
   v.sections = f.getAll('sections');
+  v.graph = f.has('graph');
+  v.course = String(v.course ?? '').trim();
   store.set('studium-draft-guide', v);
+  const course = courseNode(v.course);
   const g = ctx.state.graph;
-  const course = g.byId.get(v.course);
-  const concepts = g.links.filter((l) => l.kind === 'in' && l.source === course).map((l) => l.target)
+  const concepts = !course ? [] : g.links.filter((l) => l.kind === 'in' && l.source === course).map((l) => l.target)
     .concat(g.links.filter((l) => l.kind === 'has' && l.source === course).flatMap((l) => g.links.filter((m) => m.source === l.target).map((m) => m.target)))
     .filter((n, i, all) => n.type === 'concept' && all.indexOf(n) === i);
   return { v, course, concepts };
+}
+function renderNotes() {
+  const list = $('#g-notes');
+  if (!list) return;
+  list.innerHTML = notes.map((f, i) => `<li><span>${esc(f.name)}</span><small>${kb(f.size)}</small><button type="button" class="icon x" data-note-remove="${i}" aria-label="Quitar ${esc(f.name)}"><svg><use href="#i-x"/></svg></button></li>`).join('');
+}
+function addNotes(files) {
+  for (const file of files) {
+    if (file.size > ai.MAX_FILE) { ctx.toast(`${file.name} pesa más de 25 MB.`); continue; }
+    if (!notes.some((n) => n.name === file.name && n.size === file.size)) notes.push(file);
+  }
+  notes = notes.slice(0, 20);
+  renderNotes();
+  renderScope();
 }
 function renderScope() {
   const values = guideValues();
   if (!values) return;
   const { v, course, concepts } = values;
-  const key = `${course.id}`;
-  if (!scope || scope.key !== key) scope = { key, off: new Set() };
-  const ranked = [...concepts].sort((a, b) => b.questions.length - a.questions.length || a.name.localeCompare(b.name, 'es'));
-  $('#g-scope').innerHTML = ranked.map((n) => `<button type="button" class="chip ${scope.off.has(n.key) ? '' : 'on'}" data-concept="${esc(n.key)}">${esc(n.name)}${n.questions.length ? `<small>${n.questions.length}</small>` : ''}</button>`).join('');
-  const lessons = course.contributions;
-  const qs = lessons.reduce((s, c) => s + (c.data.questions?.length ?? 0), 0);
-  const ex = lessons.reduce((s, c) => s + (c.data.examples?.length ?? 0), 0);
-  const prof = v.professor ? lessons.filter((c) => c.professor === v.professor).length : 0;
-  $('#g-summary').textContent = `Studium tiene ${concepts.length} conceptos, ${qs} preguntas y ${ex} ejemplos de ${course.name}${v.professor ? `; ${prof} de esos aportes son de ${v.professor}` : ''}.`;
-  $('#g-prompt').textContent = guidePrompt();
+  const wrap = $('#g-scope-wrap');
+  const summary = $('#g-summary');
+  const mine = notes.length ? `Tu IA leerá ${notes.length === 1 ? 'tu archivo' : `tus ${notes.length} archivos`}.` : 'Sin apuntes, tu IA usará lo que sabe del tema.';
+  if (!v.graph || !course) {
+    wrap.hidden = true;
+    const known = course ? ` En el mapa hay ${course.contributions.length} ${course.contributions.length === 1 ? 'aporte' : 'aportes'} de ${course.name}: actívalo si quieres sumarlos.` : '';
+    summary.textContent = v.graph && v.course && !course ? `${mine} Todavía no hay aportes de «${v.course}» en el mapa: la guía saldrá de tus apuntes.` : `${mine}${known}`;
+  } else {
+    if (!scope || scope.key !== course.id) scope = { key: course.id, off: new Set() };
+    wrap.hidden = !concepts.length;
+    const ranked = [...concepts].sort((a, b) => b.questions.length - a.questions.length || a.name.localeCompare(b.name, 'es'));
+    $('#g-scope').innerHTML = ranked.map((n) => `<button type="button" class="chip ${scope.off.has(n.key) ? '' : 'on'}" data-concept="${esc(n.key)}">${esc(n.name)}${n.questions.length ? `<small>${n.questions.length}</small>` : ''}</button>`).join('');
+    const lessons = course.contributions;
+    const qs = lessons.reduce((s, c) => s + (c.data.questions?.length ?? 0), 0);
+    const prof = v.professor ? lessons.filter((c) => keyOf(c.professor) === keyOf(v.professor)).length : 0;
+    summary.textContent = `${mine} Del mapa suma ${concepts.length} conceptos y ${qs} preguntas de ${course.name}${v.professor ? `; ${prof} de esos aportes son de ${v.professor}` : ''}.`;
+  }
+  $('#g-prompt').textContent = guidePrompt({ inline: true });
 }
 function guideRequest() {
   const { v, course, concepts } = guideValues();
   const picked = concepts.filter((n) => !scope?.off.has(n.key));
-  const contest = course.theme === 'algoritmos' || course.contributions.some((c) => c.kind === 'contest');
-  const file = `studium-contexto-${keyOf(course.name).slice(0, 40)}.md`;
-  return { v, course, picked, contest, file };
+  const theme = course?.theme ?? guessTheme(v.course);
+  const contest = theme === 'algoritmos' || !!course?.contributions.some((c) => c.kind === 'contest');
+  const file = `studium-contexto-${keyOf(v.course || 'guia').slice(0, 40)}.md`;
+  return { v, course, picked, contest, theme, file, graph: v.graph && !!course };
 }
-function guidePrompt(api = false) {
-  const { v, course, contest, file } = guideRequest();
+function guidePrompt({ api = false, inline = false } = {}) {
+  const r = guideRequest();
   return guideInstructions({
-    ...v, course: course.name, code: course.code, university: course.contributions.find((c) => c.university)?.university ?? '',
-    theme: course.theme, contest, contextFile: file, api, mode: prefs.get().mode,
+    ...r.v, course: r.v.course || 'el tema que te indico', code: r.v.code || r.course?.code || '',
+    university: r.course?.contributions.find((c) => c.university)?.university ?? '', theme: r.theme, contest: r.contest,
+    graph: r.graph, contextFile: inline ? '' : r.file, api, notes: notes.length, mode: prefs.get().mode,
   });
+}
+function guideContext() {
+  const { v, course, picked, contest } = guideRequest();
+  if (!course) return '';
+  return contextPack({
+    course: { name: course.name, code: course.code, university: course.contributions.find((c) => c.university)?.university ?? '' },
+    professor: v.professor, term: v.term, contest,
+    concepts: picked.map((n) => ({ key: n.key, name: n.name, summaries: n.summaries.map((s) => s.text), relations: n.relations })),
+    contributions: course.contributions, guides: course.guides,
+  });
+}
+// The course is the one thing a guide needs.
+function guideReady() {
+  const field = $('#g-form [name="course"]');
+  if (field?.value.trim()) return true;
+  ctx.toast('Escribe primero qué vas a estudiar.');
+  field?.focus();
+  return false;
+}
+// The instructions with the map's context inline, for a chat or for any AI.
+function fullPrompt() {
+  const r = guideRequest();
+  const context = r.graph ? guideContext() : '';
+  return guidePrompt({ inline: true }) + (context ? `\n\n---\n\n# Contexto de Studium: ${r.course.name}\n\n${context}` : '');
+}
+// With a subscription: the instructions go to the clipboard, a new chat opens in the provider's page, and the steps
+// stay here.
+async function openChat(key) {
+  if (!guideReady()) return;
+  const chat = CHATS[key];
+  const text = fullPrompt();
+  let copied = true;
+  try { await navigator.clipboard.writeText(text); } catch { copied = false; download('studium-instrucciones-guia.md', text); }
+  window.open(chat.url, '_blank', 'noopener');
+  const howto = $('#g-howto');
+  howto.hidden = false;
+  howto.innerHTML = [
+    copied ? `En ${chat.name}, pega las instrucciones: <kbd>Ctrl</kbd> + <kbd>V</kbd> (en Mac, <kbd>⌘</kbd> + <kbd>V</kbd>).` : `Se descargó el archivo de instrucciones: adjúntalo en ${chat.name}.`,
+    notes.length ? `Adjunta tus apuntes: ${notes.map((n) => `<strong>${esc(n.name)}</strong>`).join(', ')}.` : 'Adjunta tus apuntes, si tienes.',
+    'Envía. Cuando termine, descarga el archivo <code>.html</code> o copia todo su código.',
+    'Vuelve aquí y súbelo en el paso de abajo.',
+  ].map((x) => `<li>${x}</li>`).join('');
+  ctx.toast(copied ? `Instrucciones copiadas. Pégalas en ${chat.name}.` : 'Instrucciones descargadas.');
 }
 let making = null;
 async function generateGuide() {
   const button = $('#g-ai');
   const out = $('#g-ai-progress');
   if (making) { making.abort(); return; }
+  if (!guideReady()) return;
   making = new AbortController();
   button.textContent = 'Cancelar';
   out.hidden = false;
-  out.textContent = 'Tu IA está leyendo el contexto…';
   try {
-    const { file } = guideRequest();
+    const files = [];
+    for (const file of notes) {
+      out.textContent = `Leyendo ${file.name}…`;
+      const read = await ai.readFile(file);
+      if (read.skipped) ctx.toast(`${file.name}: ${read.skipped}.`); else files.push(read);
+    }
+    out.textContent = 'Tu IA está leyendo…';
+    const r = guideRequest();
+    const context = r.graph ? guideContext() : '';
     const res = await ai.run({
-      system: guidePrompt(true),
-      text: `Este es el archivo ${file}, con el contexto de Studium:\n\n${guideContext()}\n\nEscribe la guía completa. Responde solo con el HTML completo, desde <!doctype html> hasta </html>.`,
+      system: guidePrompt({ api: true, inline: true }),
+      files,
+      text: [files.length ? 'Te adjunto mis apuntes.' : '', context ? `El contexto de Studium:\n\n${context}` : '',
+        'Escribe la guía completa. Responde solo con el HTML completo, desde <!doctype html> hasta </html>.'].filter(Boolean).join('\n\n'),
       maxTokens: ai.config().provider === 'anthropic' ? 64000 : 32000,
       signal: making.signal,
       onProgress: (n) => { out.textContent = n < 0 ? 'Tu IA está escribiendo la guía…' : `Tu IA está escribiendo la guía… ${n.toLocaleString('es')} caracteres`; },
@@ -372,15 +484,6 @@ async function generateGuide() {
     button.textContent = 'Crear con mi IA';
   }
 }
-function guideContext() {
-  const { v, course, picked, contest } = guideRequest();
-  return contextPack({
-    course: { name: course.name, code: course.code, university: course.contributions.find((c) => c.university)?.university ?? '' },
-    professor: v.professor, term: v.term, contest,
-    concepts: picked.map((n) => ({ key: n.key, name: n.name, summaries: n.summaries.map((s) => s.text), relations: n.relations })),
-    contributions: course.contributions, guides: course.guides,
-  });
-}
 
 /* ---------- review ---------- */
 const reviews = new Map(); // review id -> item
@@ -396,8 +499,8 @@ function addReview(zone, text, name, made = null) {
   const html = /^\s*<!doctype html/i.test(text.replace(/^﻿/, ''));
   const preset = zone === 'guide' ? guideValues() : null;
   const fallback = zone === 'guide' && preset
-    ? { course: preset.course.name, code: preset.course.code, professor: preset.v.professor, term: preset.v.term, title: preset.v.title, date: preset.v.date, level: preset.v.level, theme: preset.course.theme }
-    : materialValues();
+    ? { course: preset.course?.name ?? preset.v.course, code: preset.v.code || preset.course?.code || '', professor: preset.v.professor ?? '', term: preset.v.term ?? '', title: preset.v.title, date: preset.v.date, level: preset.v.level, theme: preset.course?.theme ?? guessTheme(preset.v.course) }
+    : $('#m-form') ? materialValues() : {};
   const parsed = html ? parseGuide(text, fallback) : parseContribution(text, fallback);
   const id = `r${serial += 1}`;
   const item = { id, zone, name, html, text, parsed, visibility: 'public', confirmed: false, replace: zone.startsWith('replace:') ? zone.slice(8) : '', ai: made, sign: false };
@@ -554,10 +657,7 @@ export function mountContribute(context) {
 
   view.addEventListener('input', (e) => {
     if (e.target.closest('#m-form')) $('#m-prompt').textContent = materialPrompt();
-    if (e.target.closest('#g-form')) {
-      if (e.target.name === 'course') { store.set('studium-draft-guide', { ...(store.get('studium-draft-guide') ?? {}), course: e.target.value, professor: '', term: '' }); renderPane('guide'); return; }
-      renderScope();
-    }
+    if (e.target.closest('#g-form')) renderScope();
     const meta = e.target.closest('[data-meta]');
     if (meta) {
       const item = reviews.get(meta.dataset.meta);
@@ -569,6 +669,7 @@ export function mountContribute(context) {
   view.addEventListener('change', async (e) => {
     const files = e.target.dataset.files;
     if (files) { await readFiles(files, e.target.files); e.target.value = ''; }
+    if (e.target.dataset.notes !== undefined) { addNotes([...e.target.files]); e.target.value = ''; }
     const aiFiles = e.target.dataset.aiFiles;
     if (aiFiles) { enqueue(aiFiles, [...e.target.files]); e.target.value = ''; }
     const sign = e.target.dataset.sign;
@@ -591,9 +692,11 @@ export function mountContribute(context) {
     if (!t) return;
     if (t.id === 'm-copy') copy(materialPrompt(), 'Instrucciones');
     if (t.id === 'm-download') download(materialValues().kind === 'curriculum' ? 'studium-instrucciones-malla.md' : 'studium-instrucciones-aporte.md', materialPrompt());
-    if (t.id === 'g-copy') copy(guidePrompt(), 'Instrucciones');
+    if (t.id === 'g-copy' && guideReady()) copy(fullPrompt(), 'Instrucciones');
     if (t.id === 'g-ai') generateGuide();
-    if (t.id === 'g-download') { const r = guideRequest(); download(r.file, guideContext()); }
+    if (t.id === 'g-download' && guideReady()) download('studium-instrucciones-guia.md', fullPrompt());
+    if (t.dataset.chat) openChat(t.dataset.chat);
+    if (t.dataset.noteRemove) { notes.splice(Number(t.dataset.noteRemove), 1); renderNotes(); renderScope(); }
     if (t.dataset.concept) { scope.off.has(t.dataset.concept) ? scope.off.delete(t.dataset.concept) : scope.off.add(t.dataset.concept); renderScope(); }
     if (t.dataset.scope) {
       const { concepts } = guideValues();
@@ -624,9 +727,14 @@ export function mountContribute(context) {
       catch (error) { t.disabled = false; ctx.toast(ctx.explain(error)); }
     }
   });
-  for (const type of ['dragenter', 'dragover']) view.addEventListener(type, (e) => { const z = e.target.closest('[data-drop], [data-ai-drop]'); if (z) { e.preventDefault(); z.classList.add('over'); } });
-  view.addEventListener('dragleave', (e) => e.target.closest('[data-drop], [data-ai-drop]')?.classList.remove('over'));
+  view.addEventListener('submit', (e) => { if (e.target.id === 'g-form') e.preventDefault(); });
+  // Whether «Hazla a tu medida» is open is remembered.
+  view.addEventListener('toggle', (e) => { if (e.target.id === 'g-custom') store.set('studium-guide-custom', e.target.open); }, true);
+  for (const type of ['dragenter', 'dragover']) view.addEventListener(type, (e) => { const z = e.target.closest('[data-drop], [data-ai-drop], [data-notes-drop]'); if (z) { e.preventDefault(); z.classList.add('over'); } });
+  view.addEventListener('dragleave', (e) => e.target.closest('[data-drop], [data-ai-drop], [data-notes-drop]')?.classList.remove('over'));
   view.addEventListener('drop', async (e) => {
+    const notesZone = e.target.closest('[data-notes-drop]');
+    if (notesZone) { e.preventDefault(); notesZone.classList.remove('over'); addNotes(await droppedFiles(e.dataTransfer)); return; }
     const zone = e.target.closest('[data-ai-drop]');
     if (zone) { e.preventDefault(); zone.classList.remove('over'); enqueue(zone.dataset.aiDrop, await droppedFiles(e.dataTransfer)); return; }
     const z = e.target.closest('[data-drop]');
@@ -651,6 +759,6 @@ export function renderPane(pane, preset) {
     if (list) { list.insertAdjacentHTML('beforeend', `<article class="review glass" id="${item.id}"></article>`); renderReview(item); }
   }
   if (pane === 'material') $('#m-prompt').textContent = materialPrompt();
-  if (pane === 'guide' && $('#g-form')) renderScope();
+  if (pane === 'guide' && $('#g-form')) { renderNotes(); renderScope(); }
   rise(el, '.flow > li, .mine > li, .empty');
 }
