@@ -6,6 +6,8 @@ import { sfx } from './sfx.js';
 import { celebrate } from './play.js';
 import { themeStyle, keyOf } from './themes.js';
 import { rise } from './fx.js';
+import { auth } from './data.js';
+import { communityLabel, communityOf, flag, settings } from './settings.js';
 import { seen, markSeen, hintsOn, setHints } from './hints.js';
 import { luckyHit, found, radioOn, openRadio } from './eggs.js';
 
@@ -253,7 +255,7 @@ const eggTray = () => (found().has('radio') && !radioOn() ? '<button class="chip
 export function renderHome() {
   const p = prefs.get();
   $('#home-hello').textContent = `${hello()}${p.nickname ? `, ${p.nickname}` : ''}.`;
-  $('#home-where').textContent = ['Comunidad USFQ', p.semester ? `${p.semester}.º semestre` : '', p.career].filter(Boolean).join(' · ');
+  $('#home-where').textContent = [communityLabel(auth.currentUser?.email), p.semester ? `${p.semester}.º semestre` : '', p.career].filter(Boolean).join(' · ');
   $('#home-sub').textContent = SUB[p.mode];
   const list = chosen();
   const tiles = list.map((t, i) => RENDER[tileId(t)]?.(spanOf(t)).replace(/^<section /, `<section data-i="${i}" `).replace(/(data-tile="[a-z]+"[^>]*>)/, `$1${tools(t, i, list.length)}`) ?? '').join('');
@@ -325,7 +327,8 @@ export function renderSettings() {
     ${aiSettings()}
     <section class="set glass"><h2>Cómo estudias</h2><p>Cambia el orden de tu inicio.</p>
       <div class="picks" role="radiogroup">${Object.entries(MODES).map(([id, m]) => `<button type="button" class="pick" role="radio" aria-checked="${p.mode === id}" data-set-mode="${id}"><strong>${esc(m.name)}</strong><span>${esc(m.text)}</span></button>`).join('')}</div></section>
-    <section class="set glass"><h2>Ambiente</h2><p>Cuánto se mueve la página, y qué tan tierna se pone.</p><div class="ambiences" data-ambience-picker></div></section>
+    <section class="set glass"><h2>Ambiente</h2><p>Cuánto se mueve la página, y qué tan tierna se pone.</p><div class="ambiences" data-ambience-picker></div>
+      ${flag('bubbles') ? `<label class="toggle"><input type="checkbox" data-pref="bubbles" ${p.bubbles ? 'checked' : ''}><span class="knob"></span>Burbujas para reventar, en el ambiente juguetón</label>` : ''}</section>
     <section class="set glass"><h2>Sonidos</h2>
       <label class="toggle"><input type="checkbox" data-pref="sound" ${p.sound ? 'checked' : ''}><span class="knob"></span>Sonidos al lanzar cosas, al cumplir una meta y al terminar un bloque de enfoque</label>
       <div class="actions"><button class="button ghost" data-sound-test>Probar</button></div></section>
@@ -334,49 +337,47 @@ export function renderSettings() {
     <section class="set glass"><h2>Día o noche</h2>
       <fieldset class="seg"><legend class="sr">Tema</legend>${Object.entries(THEMES).map(([id, name]) => `<label><input type="radio" name="theme" value="${id}" data-pref="theme" ${p.theme === id ? 'checked' : ''}><span>${esc(name)}</span></label>`).join('')}</fieldset></section>
     <section class="set glass"><h2>Tu comunidad</h2>
-      <p>Perteneces a la comunidad <strong>USFQ</strong>. Tus ajustes, metas y progreso se guardan en tu cuenta y solo los ves tú.</p></section>`;
+      <p>${communityOf(auth.currentUser?.email) ? `Perteneces a la comunidad <strong>${esc(communityOf(auth.currentUser?.email).name)}</strong>.` : 'Entras como admin de Studium.'} Tus ajustes, metas y progreso se guardan en tu cuenta y solo los ves tú.</p></section>`;
   renderAmbiences($('#settings [data-ambience-picker]'));
   rise($('#settings'));
 }
 
 /* ---------- your AI ---------- */
+// One key per provider, as many providers as the person wants. Which one, which model and how much effort is chosen
+// each time the AI is used.
 function aiSettings() {
-  const c = ai.config();
-  const pr = ai.PROVIDERS[c.provider];
+  const offered = Object.keys(ai.PROVIDERS).filter((k) => settings.get().providers.includes(k));
   return `<section class="set glass" id="set-ai"><h2>Tu IA</h2>
-    <p>Conecta tu propia IA y Studium la usa para procesar tu material, crear guías a tu medida, identificar documentos y
-      editar tus guías por partes. <strong>Studium no cobra nada</strong>: tu proveedor cobra lo que use tu clave, según su tarifa.</p>
-    <div class="grid3">
-      <label class="field"><span>Proveedor</span><select data-ai="provider">${Object.entries(ai.PROVIDERS).map(([k, v]) => `<option value="${k}" ${k === c.provider ? 'selected' : ''}>${esc(v.name)} (${esc(v.by)})</option>`).join('')}</select></label>
-      <label class="field"><span>Tu clave de API</span><input data-ai="key" type="password" autocomplete="off" spellcheck="false" value="${esc(c.key)}" placeholder="${esc(pr.keyHint)}"></label>
-      <label class="field"><span>Esfuerzo</span><select data-ai="effort">${Object.entries(ai.EFFORTS).map(([k, v]) => `<option value="${k}" ${k === c.effort ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></label>
-    </div>
-    <div class="grid3">
-      <label class="field" style="grid-column:span 2"><span>Modelo</span><input data-ai="model" list="ai-models" value="${esc(c.model || pr.model)}" placeholder="Pulsa «Probar» para ver los modelos de tu cuenta"><datalist id="ai-models"></datalist></label>
-      <div class="actions" style="align-self:end"><button class="button primary" data-ai-test>Probar</button><button class="link" data-ai-forget>Borrar mi clave</button></div>
-    </div>
-    <p class="msg" id="ai-msg" role="status"></p>
-    <p class="hint">La clave se guarda solo en este navegador: no llega a la base de datos de Studium ni a su creador. En un
-      computador compartido, bórrala al terminar. <a href="${esc(pr.keys)}" target="_blank" rel="noopener noreferrer">¿Dónde consigo una clave de ${esc(pr.name)}?</a></p>
+    <p>Conecta una o varias IA con tus propias claves, y Studium las usa para procesar tu material, crear guías a tu
+      medida, identificar documentos y editar tus guías por partes. <strong>Studium no cobra nada</strong>: cada proveedor
+      cobra lo que use su clave, según su tarifa.</p>
+    <p class="fine">El modelo y el esfuerzo se eligen cada vez que usas la IA: para crear una guía conviene el modelo más
+      potente; para identificar un documento basta uno ligero. Studium recuerda tu última elección para cada cosa.</p>
+    <div class="ai-keys">${offered.map((k) => {
+      const pr = ai.PROVIDERS[k]; const key = ai.keyOf(k); const n = ai.cachedModels(k).length;
+      return `<article class="ai-key ${key ? 'on' : ''}">
+        <h3>${esc(pr.name)} <small>${esc(pr.by)}</small>${key ? ' <span class="badge ok">conectada</span>' : ''}</h3>
+        <label class="field"><span>Tu clave de API</span><input type="password" data-ai-key="${k}" value="${esc(key)}" placeholder="${esc(pr.keyHint)}" autocomplete="off" spellcheck="false"></label>
+        <div class="actions"><button class="button ghost small" data-ai-test="${k}" ${key ? '' : 'disabled'}>Probar</button>
+          ${key ? `<button class="link" data-ai-forget="${k}">Borrar la clave</button>` : ''}
+          <a class="link" href="${esc(pr.keys)}" target="_blank" rel="noopener noreferrer">¿Dónde la consigo?</a></div>
+        <p class="msg" data-ai-msg="${k}" role="status">${key && n ? `${n} ${n === 1 ? 'modelo' : 'modelos'} en tu cuenta.` : ''}</p>
+      </article>`;
+    }).join('')}</div>
+    <p class="hint">Las claves se guardan solo en este navegador: no llegan a la base de datos de Studium ni a su creador.
+      En un computador compartido, bórralas al terminar.</p>
     <p class="fine">¿Prefieres tu suscripción de Claude, ChatGPT o Gemini, sin clave? Al crear una guía, «Con tu suscripción» copia las instrucciones y abre el chat en su página.</p>
   </section>`;
 }
-async function testAI() {
-  const msg = $('#ai-msg');
+async function testAI(provider) {
+  const msg = document.querySelector(`[data-ai-msg="${provider}"]`);
+  if (!msg) return;
   msg.classList.remove('ok');
   msg.textContent = 'Probando…';
   try {
-    const list = await ai.models();
-    $('#ai-models').innerHTML = list.map((m) => `<option value="${esc(m)}">`).join('');
-    const c = ai.config();
-    if (!c.model || !list.includes(c.model)) {
-      const pick = list.includes(ai.PROVIDERS[c.provider].model) ? ai.PROVIDERS[c.provider].model : list[0];
-      ai.save({ ...c, model: pick ?? '' });
-      const input = document.querySelector('[data-ai="model"]');
-      if (input) input.value = pick ?? '';
-    }
+    const list = await ai.models(provider);
     msg.classList.add('ok');
-    msg.textContent = `Conectada: tu cuenta tiene ${list.length} ${list.length === 1 ? 'modelo' : 'modelos'}. Usará ${ai.label()}.`;
+    msg.textContent = `Conectada: ${list.length} ${list.length === 1 ? 'modelo' : 'modelos'} en tu cuenta. Para crear guías se recomienda ${ai.recommend('guide', provider) || list[0]}.`;
     sfx.chime();
   } catch (error) { msg.textContent = error.message; }
 }
@@ -405,8 +406,8 @@ export function mountSpace(context) {
     }
     if (t.dataset.goalRemove) { prefs.set({ goals: prefs.get().goals.filter((g) => g.id !== t.dataset.goalRemove) }); renderHome(); }
     if (t.dataset.reroll !== undefined) renderHome();
-    if (t.dataset.aiTest !== undefined) testAI();
-    if (t.dataset.aiForget !== undefined) { ai.forget(); renderSettings(); ctx?.toast('Tu clave se borró de este navegador.'); }
+    if (t.dataset.aiTest) testAI(t.dataset.aiTest);
+    if (t.dataset.aiForget) { ai.forget(t.dataset.aiForget); renderSettings(); ctx?.toast('La clave se borró de este navegador.'); }
     if (t.dataset.soundTest !== undefined) { sfx.enable(true); sfx.chime(); if (!prefs.get().sound) setTimeout(() => sfx.enable(false), 900); }
     if (t.id === 'timer-go') {
       timer.running = !timer.running;
@@ -456,11 +457,10 @@ export function mountSpace(context) {
       }
       setTimeout(renderHome, t.checked ? 650 : 0);
     }
-    if (t.dataset.ai) {
-      const c = ai.config();
-      const next = ai.save({ ...c, [t.dataset.ai]: t.value, ...(t.dataset.ai === 'provider' ? { model: '' } : {}) });
-      if (t.dataset.ai === 'provider') renderSettings();
-      else if (t.dataset.ai === 'key' && next.key) testAI();
+    if (t.dataset.aiKey) {
+      ai.setKey(t.dataset.aiKey, t.value);
+      renderSettings();
+      if (ai.keyOf(t.dataset.aiKey)) testAI(t.dataset.aiKey);
     }
     if (t.dataset.focus) {
       const f = { ...prefs.get().focus, [t.dataset.focus]: Number(t.value) };

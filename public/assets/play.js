@@ -59,6 +59,8 @@ let bodies = [];
 let bubbles = [];
 let nodo = null;
 let ambience = 'vivo';
+// Bubbles to pop: only in the playful ambience, when the person turned them on in Settings and the admins allow them.
+let bubblesOn = false;
 let quiet = false;
 let raf = 0;
 let last = 0;
@@ -148,8 +150,9 @@ export function say(text, ms = 2600) {
 function bubble(x, y) {
   const el = document.createElement('div');
   el.className = 'bub';
-  const r = rand(11, 27);
+  const r = rand(14, 30);
   el.style.width = el.style.height = `${Math.round(r * 2)}px`;
+  el.innerHTML = '<i></i>';
   front.append(el);
   const b = { el, x, y, r, vx: rand(-10, 10), vy: rand(-60, -35), born: performance.now(), life: rand(12000, 18000), phase: rand(0, 6.28) };
   const burst = (e) => { e?.preventDefault?.(); pop(b); };
@@ -209,6 +212,9 @@ export function celebrate(x, y, all = false) {
 }
 
 /* ---------- grabbing ---------- */
+// Phones and tablets: the layer is part of the page (see play.start), so a touch is measured from the page's top.
+const inPage = () => matchMedia('(pointer: coarse)').matches || innerWidth < 760;
+const pageY = (y) => y + (back?.classList.contains('in-page') ? scrollY : 0);
 function hit(x, y) {
   let best = null; let dist = Infinity;
   for (const b of bodies) {
@@ -221,7 +227,8 @@ function hit(x, y) {
 function grab(b, e) {
   drag = { body: b, id: e.pointerId, ox: e.clientX - b.x, oy: e.clientY - b.y, moved: 0 };
   root.classList.add('grabbing');
-  if (b.kind === 'nodo') { mood('glad', 99999); sfx.pick(); } else sfx.pick();
+  if (b.kind === 'nodo') mood('glad', 99999);
+  sfx.grab(b.r * 2);
   idleSince = performance.now();
   wake();
 }
@@ -232,25 +239,25 @@ function release() {
   const k = speed > 1100 ? 1100 / speed : 1;
   b.vx = pointer.vx * k * 0.8; b.vy = pointer.vy * k * 0.8;
   b.va += (pointer.vx / b.r) * 0.004;
-  if (b.kind === 'nodo') { mood('glad', 900); sfx.drop(); }
-  else if (drag.moved < 4) { b.vy -= 160; b.va += rand(-1, 1); sfx.boing(Math.floor(rand(0, 5))); }
-  else sfx.drop();
+  if (b.kind === 'nodo') mood('glad', 900);
+  else if (drag.moved < 4) { b.vy -= 160; b.va += rand(-1, 1); }
+  sfx.release(drag.moved < 4 ? 600 : speed, b.r * 2);
   drag = null;
   root.classList.remove('grabbing');
 }
 // Touch screens scroll with the same gesture, so there a tap flicks a token instead of dragging it.
-function flick(b) { b.vy -= rand(180, 280); b.vx += rand(-90, 90); b.va += rand(-1.5, 1.5); b.sq = 0.08; sfx.boing(Math.floor(rand(0, 5))); wake(); }
+function flick(b) { b.vy -= rand(180, 280); b.vx += rand(-90, 90); b.va += rand(-1.5, 1.5); b.sq = 0.08; sfx.release(600, b.r * 2); wake(); }
 
 function onDown(e) {
   if (!running() || e.button > 0) return;
   if (e.target instanceof Element && e.target.closest(SOLID)) return;
-  const b = hit(e.clientX, e.clientY);
+  const b = hit(e.clientX, pageY(e.clientY));
   if (b) {
     if (e.pointerType === 'touch') { flick(b); return; }
     e.preventDefault();
     grab(b, e);
   } else if (ambience === 'jugueton' && e.pointerType !== 'touch') {
-    for (let i = 0; i < 3; i += 1) bubble(e.clientX + rand(-14, 14), e.clientY + rand(-8, 8));
+    if (bubblesOn && bubbles.length < 6) for (let i = 0; i < 2; i += 1) bubble(e.clientX + rand(-14, 14), e.clientY + rand(-8, 8));
     wake();
   }
 }
@@ -261,7 +268,7 @@ function onMove(e) {
   const first = pointer.trail[0];
   const dt = (now - first.t) / 1000;
   if (dt > 0.008) { pointer.vx = (e.clientX - first.x) / dt; pointer.vy = (e.clientY - first.y) / dt; }
-  if (drag) drag.moved += Math.abs(e.clientX - pointer.x) + Math.abs(e.clientY - pointer.y);
+  if (drag) { drag.moved += Math.abs(e.clientX - pointer.x) + Math.abs(e.clientY - pointer.y); sfx.drag(Math.hypot(pointer.vx, pointer.vy), pointer.vx); }
   pointer.x = e.clientX; pointer.y = e.clientY;
   pointer.px = e.clientX / W - 0.5; pointer.py = e.clientY / H - 0.5;
   idleSince = now;
@@ -275,11 +282,17 @@ function onMove(e) {
 }
 
 /* ---------- the simulation ---------- */
-function impact(b, speed, angle) {
+// A collision squashes a little and sounds by size and speed. What is held makes no sound when it pushes: dragging
+// something through the others is silent, and only throws and falls ring.
+function impact(b, speed, angle, other = null) {
   if (speed < 160) return;
   b.sq = Math.min(0.1, Math.max(b.sq, speed / 6000));
   b.sqa = angle;
-  if (speed > 380 && ambience !== 'sereno') sfx.knock(b.r, speed);
+  if (ambience === 'sereno' || drag?.body === b || (other && drag?.body === other)) return;
+  const now = performance.now();
+  if (now - (b.rang ?? 0) < 250) return;
+  b.rang = now;
+  sfx.impact(b.r * 2, speed);
 }
 
 function step(h, now) {
@@ -338,7 +351,7 @@ function step(h, now) {
       const vt = rvx * -ny + rvy * nx;
       p.va -= (vt / p.r) * 0.08; q.va += (vt / q.r) * 0.08;
       const angle = Math.atan2(ny, nx);
-      impact(p, -vn, angle); impact(q, -vn, angle);
+      impact(p, -vn, angle, q); impact(q, -vn, angle, p);
     }
   }
   // Bubbles rise and sway, slowly.
@@ -380,16 +393,22 @@ function render() {
   }
 }
 
+// While the page scrolls, nothing here moves: the browser only has to scroll. At rest, when nothing is held, thrown
+// or popping, the slow drift is drawn at half the frame rate.
+let scrollingUntil = 0;
+let parity = 0;
+const busy = () => !!drag || bubbles.length > 0 || bodies.some((b) => Math.abs(b.vx) + Math.abs(b.vy) > 40 || b.sq > 0.01);
 function frame(now) {
   raf = 0;
   if (!running()) return;
-  const dt = Math.min(0.034, (now - last) / 1000 || 0.016);
+  if ((now < scrollingUntil && !drag) || (!busy() && (parity ^= 1))) { last = now; raf = requestAnimationFrame(frame); return; }
+  const dt = Math.min(0.05, (now - last) / 1000 || 0.016);
   last = now;
   const n = 2;
   for (let i = 0; i < n; i += 1) step(dt / n, now);
-  if (ambience === 'jugueton' && now > nextBubble) {
+  if (ambience === 'jugueton' && bubblesOn && now > nextBubble && bubbles.length < 3) {
     bubble(rand(40, W - 40), H + 30);
-    nextBubble = now + rand(9000, 16000);
+    nextBubble = now + rand(20000, 35000);
   }
   render();
   raf = requestAnimationFrame(frame);
@@ -400,7 +419,9 @@ export const play = {
   start(backLayer, frontLayer) {
     back = backLayer; front = frontLayer;
     ambience = root.dataset.ambience || 'vivo';
+    back.classList.toggle('in-page', inPage());
     build();
+    addEventListener('scroll', () => { scrollingUntil = performance.now() + 180; }, { passive: true });
     addEventListener('pointerdown', onDown, { passive: false });
     addEventListener('pointermove', onMove, { passive: true });
     addEventListener('pointerup', (e) => { if (drag && e.pointerId === drag.id) release(); });
@@ -414,6 +435,7 @@ export const play = {
     matchMedia('(prefers-reduced-motion: reduce)').addEventListener?.('change', () => { build(); wake(); });
     wake();
   },
+  setBubbles(on) { bubblesOn = !!on; if (!on) for (const b of [...bubbles]) pop(b, true); },
   setAmbience(name) {
     if (name === ambience) return;
     ambience = name;
@@ -452,7 +474,7 @@ export function springLetters(el) {
       L.g.setPointerCapture(e.pointerId);
       start = { x: e.clientX - L.x, y: e.clientY - L.y, moved: 0 };
       L.hold = { x: L.x, y: L.y };
-      sfx.pick(); go();
+      sfx.grab(30); go();
     });
     L.g.addEventListener('pointermove', (e) => {
       if (!L.hold) return;
@@ -460,12 +482,14 @@ export function springLetters(el) {
       const d = Math.hypot(x, y); const max = 240;
       if (d > max) { x = (x / d) * (max + (d - max) * 0.2); y = (y / d) * (max + (d - max) * 0.2); }
       start.moved += Math.abs(x - L.hold.x) + Math.abs(y - L.hold.y);
+      sfx.drag(Math.hypot(x - L.hold.x, y - L.hold.y) * 60, (x - L.hold.x) * 60);
       L.hold = { x, y };
     });
     const let_go = () => {
       if (!L.hold) return;
       if (start.moved < 4) L.vy = -520;
       L.hold = null;
+      sfx.release(0, 30);
       sfx.note(L.i);
       go();
     };

@@ -1,7 +1,8 @@
 // The community's positive side: thanks for guides (four fixed reactions, no comments) and what students know about
 // their professors (fixed constructive tags, counted, never signed). There is no way to write anything negative here:
 // the database only accepts the kinds and tags listed below.
-import { KUDOS, loadKudos, setKudos, loadTips, setTip } from './data.js';
+import { KUDOS, loadKudos, setKudos, loadTips, setTip, auth } from './data.js';
+import { communityLabel } from './settings.js';
 import { QUESTION_KINDS } from './prompts.js';
 import { keyOf, themeStyle } from './themes.js';
 import { sfx } from './sfx.js';
@@ -115,7 +116,7 @@ function profCard(p) {
   </article>`;
 }
 export function renderProfes() {
-  $('#profes-where').textContent = 'Comunidad USFQ';
+  $('#profes-where').textContent = communityLabel(auth.currentUser?.email);
   const q = keyOf($('#p-q').value);
   const list = professors().filter((p) => !q || keyOf(`${p.name} ${[...p.courses].join(' ')}`).includes(q));
   $('#profs').innerHTML = list.length ? list.map(profCard).join('')

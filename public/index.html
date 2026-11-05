@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Studium</title>
-<meta name="description" content="Tu espacio para estudiar lo que sea, y una comunidad de estudiantes que se pasa guías, apuntes y lo que sabe de cada profe.">
+<meta name="description" content="Hecho por estudiantes, para estudiantes. Guías de estudio, material de clases, ejercicios, exámenes de práctica, proyectos finales.">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="theme-color" content="#0a0e1a">
 <link rel="icon" href="/studium/assets/logo.svg" type="image/svg+xml">
@@ -49,7 +49,7 @@
 </div>
 <div class="play" id="play" aria-hidden="true"></div>
 
-<header class="nav glass" id="nav" data-mode="public" hidden data-liquid='{"radius":30,"depth":22,"scale":38}'>
+<header class="nav glass" id="nav" data-mode="public" hidden>
   <a class="brand" href="#/bienvenida" aria-label="Studium: la portada"><svg><use href="#mark"/></svg><span>studium</span></a>
   <nav class="tabs member-only" aria-label="Secciones">
     <span class="drop" aria-hidden="true"></span>
@@ -59,6 +59,7 @@
     <a href="#/biblioteca" data-tab="library">Biblioteca</a>
     <a href="#/profes" data-tab="profes">Profes</a>
     <a href="#/aportar" data-tab="contribute">Aportar</a>
+    <a href="#/admin" data-tab="admin" class="admin-only">Admin</a>
   </nav>
   <nav class="tabs public-only" aria-label="Secciones">
     <span class="drop" aria-hidden="true"></span>
@@ -79,9 +80,9 @@
     <button class="avatar member-only" id="account" aria-haspopup="menu" aria-expanded="false" aria-label="Tu cuenta"><span id="initial"></span></button>
     <div class="menu glass" id="account-menu" role="menu" hidden>
       <p id="who-email"></p>
+      <a role="menuitem" href="#/admin" class="admin-only">Panel de admin</a>
       <a role="menuitem" href="#/ajustes">Ajustes</a>
       <a role="menuitem" href="#/mis-aportes">Mis aportes</a>
-      <a role="menuitem" href="#/fuentes">Fuentes y agradecimientos</a>
       <a role="menuitem" href="#/acerca">Acerca de Studium</a>
       <button role="menuitem" id="sign-out">Salir</button>
     </div>
@@ -95,6 +96,7 @@
   <a href="#/biblioteca" data-tab="library"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4v16H5ZM10 4h4v16h-4ZM15.5 4.5l3.8-1 4 15.5-3.8 1Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>Biblioteca</a>
   <a href="#/profes" data-tab="profes"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Profes</a>
   <a href="#/aportar" data-tab="contribute"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>Aportar</a>
+  <a href="#/admin" data-tab="admin" class="admin-only"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 6v6c0 4.4 3.2 7.7 7.5 9 4.3-1.3 7.5-4.6 7.5-9V6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="11" r="2.4" fill="none" stroke="currentColor" stroke-width="2"/></svg>Admin</a>
 </nav>
 
 <main class="view boot" id="view-boot"><svg class="pulse"><use href="#mark"/></svg></main>
@@ -105,7 +107,8 @@
     <div class="hero2-copy">
       <p class="note-hand">guías, apuntes y datos de cada profe, hechos por estudiantes</p>
       <h1 class="wordmark" id="wordmark" aria-label="studium"><span class="l" style="--i:0"><span class="g">s</span></span><span class="l" style="--i:1"><span class="g">t</span></span><span class="l" style="--i:2"><span class="g">u</span></span><span class="l" style="--i:3"><span class="g">d</span></span><span class="l i" style="--i:4"><span class="g">ı<b></b></span></span><span class="l" style="--i:5"><span class="g">u</span></span><span class="l" style="--i:6"><span class="g">m</span></span></h1>
-      <p class="lede">Tu espacio para estudiar lo que sea. Y una comunidad que se pasa los apuntes.</p>
+      <div class="motto hero-motto"><p>Hecho por estudiantes, para estudiantes.</p><p class="motto-hand">Gratis, no vendo nada jaja</p></div>
+      <p class="lede hero-what">Guías de estudio, material de clases, ejercicios, exámenes de práctica, proyectos finales. Úsalo para tus clases o tus hobbies, y aporta al crecimiento de la comunidad de Studium.</p>
       <div class="actions"><a class="button primary big" href="#/entrar">Entrar</a><a class="button ghost big" href="#/" data-scroll="que-es">Cómo es por dentro</a></div>
       <p class="drag-hint"><svg viewBox="0 0 46 30" aria-hidden="true"><path d="M3 24C12 6 26 2 41 9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="m34 3 7 6-8 4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>psst: lo que flota se puede lanzar. Las letras también.</p>
     </div>
@@ -172,6 +175,7 @@
       <div class="fb-stage">
         <canvas aria-label="El grafo de conocimiento: arrastra los nodos"></canvas>
         <div class="note-card" aria-live="polite"></div>
+        <ol class="flow-steps" aria-label="Cómo llega un apunte al grafo"><li class="on">Tus apuntes</li><li>Información anónima</li><li>El grafo de conocimiento</li></ol>
         <div class="graph-hud"><button class="button primary" data-feed>Aportar este apunte</button><span class="muted"><b data-count>3</b> conceptos en el grafo</span></div>
       </div>
       <div class="fb-copy">
@@ -208,7 +212,6 @@
   </section>
 
   <section class="band">
-    <h2>Dos espacios, una sola cuenta.</h2>
     <div class="duo">
       <article class="duo-card blue" data-tilt="5"><div class="ruled-bg"></div>
         <p class="kicker d">Tu espacio</p><h3 class="d" style="--d:30">Cómodo, y a tu manera.</h3>
@@ -245,7 +248,7 @@
       <h1>Entra a tu espacio.</h1>
       <p class="lede-small">Tus guías, tus metas y el ambiente que elegiste te esperan. También tu comunidad, con su mapa y lo que sabe de cada profe.</p>
     </div>
-    <section class="auth-card glass" data-liquid='{"radius":30,"depth":30,"scale":46}'>
+    <section class="auth-card glass">
       <div class="switch" role="tablist">
         <button role="tab" id="tab-in" aria-selected="true">Entrar</button>
         <button role="tab" id="tab-up" aria-selected="false">Crear cuenta</button>
@@ -320,6 +323,7 @@
     <select id="map-semester" aria-label="Tu semestre"></select>
     <select id="map-prof" aria-label="Profesor"></select>
     <button class="button ghost" id="map-grow">Ver cómo creció</button>
+    <span class="map-links"><button class="link" id="map-info-open">¿Para qué sirve?</button><a class="link" href="#/fuentes">Créditos</a></span>
   </div>
   <div class="map-legend" id="map-legend"></div>
   <aside class="map-panel glass" id="map-panel" hidden></aside>
@@ -334,6 +338,21 @@
     <a class="button primary" href="#/aportar">Aportar material</a>
   </div>
 </main>
+
+<!-- Why a knowledge graph helps -->
+<dialog class="sheet-dialog" id="map-info">
+  <form method="dialog">
+    <h2>¿Para qué sirve el mapa?</h2>
+    <p>Cada punto es un concepto y cada línea, una relación: qué necesitas saber antes, qué se parece, qué se usa junto. Sale de los apuntes y exámenes que la comunidad aporta, sin datos personales.</p>
+    <ul class="why">
+      <li><strong>Por dónde empezar.</strong> Ves qué conceptos vienen antes de lo que tienes que estudiar.</li>
+      <li><strong>Qué pesa más.</strong> Los puntos más grandes son los que más aparecen en los exámenes.</li>
+      <li><strong>Dónde está explicado.</strong> Cada concepto lleva a las guías y al material que lo explican, y muestra con qué otras materias se conecta.</li>
+    </ul>
+    <p class="fine">Entre más aportamos, más completo queda para todos.</p>
+    <div class="actions"><button class="button primary" value="close">Entendido</button></div>
+  </form>
+</dialog>
 
 <!-- What students know about their professors -->
 <main class="view page wide" id="view-profes" hidden>
@@ -373,7 +392,7 @@
 
 <main class="view page wide" id="view-library" hidden>
   <div class="page-head">
-    <div><p class="kicker">Comunidad USFQ</p><h1>Biblioteca</h1></div>
+    <div><p class="kicker" data-community>Comunidad USFQ</p><h1>Biblioteca</h1></div>
     <label class="search glass"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><input id="l-q" type="search" placeholder="Busca una materia, un profe o un documento" aria-label="Buscar en la biblioteca"></label>
   </div>
   <p class="lede-small">Sílabos, guías de laboratorio, enunciados y el material que reparten los profes, tal como vienen. Studium guarda solo el enlace: el archivo vive donde lo compartiste.</p>
@@ -388,6 +407,7 @@
       <p><strong>Suelta aquí el archivo</strong> y Studium lo identifica solo.</p>
       <label class="button ghost">Elegir el archivo<input type="file" id="doc-file" hidden accept=".pdf,.txt,.md,.tex,.doc,.docx,.ppt,.pptx,.xls,.xlsx"></label>
       <p class="hint" id="doc-id-status"></p>
+      <div id="doc-ai"></div>
     </div>
     <div class="grid">
       <label class="field"><span>Tipo</span><select name="kind"><option value="syllabus">Sílabo</option><option value="reading">Texto de apoyo</option><option value="lab">Guía de laboratorio</option><option value="assignment">Enunciado</option><option value="slides">Diapositivas</option><option value="other">Otro</option></select></label>
@@ -414,7 +434,7 @@
 <dialog class="sheet-dialog wide" id="edit-dialog">
   <form id="edit-form" method="dialog">
     <h2>Editar con tu IA</h2>
-    <p class="hint" id="edit-who"></p>
+    <div id="edit-who"></div>
     <p class="note" id="edit-noai">Conecta tu IA en <a href="#/ajustes">Ajustes</a> para editar tus guías por partes.</p>
     <fieldset class="seg"><legend>Qué quieres hacer</legend>
       <label><input type="radio" name="emode" value="change" checked><span>Cambiar una sección</span></label>
@@ -439,6 +459,16 @@
   <section id="pane-material"></section>
   <section id="pane-guide" hidden></section>
   <section id="pane-mine" hidden></section>
+</main>
+
+<!-- The admin panel: only for accounts with the admin role (see admin.js) -->
+<main class="view page wide" id="view-admin" hidden>
+  <div class="page-head">
+    <div><p class="kicker">Studium</p><h1>Panel de administración</h1></div>
+    <div class="actions"><span class="fine" id="adm-refreshed"></span><button class="button ghost" id="adm-refresh">Actualizar</button></div>
+  </div>
+  <nav class="adm-tabs" id="adm-tabs" aria-label="Secciones del panel"></nav>
+  <div class="adm-body" id="adm-body"></div>
 </main>
 
 <main class="view page" id="view-settings" hidden>
@@ -512,11 +542,6 @@
     <div class="manifesto-in">
       <p class="kicker red">Comunidad USFQ</p>
       <h2>Lo que sabe el pasillo, <span class="scribble">ahora por escrito</span>.</h2>
-      <div class="manifesto-cols">
-        <p>Con quién tomar Redes. Quién da puntos extra. Qué profe toma asistencia y qué examen se parece a los deberes. Nada de eso está en el sílabo: siempre se pasó de boca en boca, en los pasillos y en los grupos de WhatsApp.</p>
-        <p>Guías de estudio, material de clases, ejercicios, exámenes de práctica, proyectos finales. Úsalo para tus clases o tus hobbies, y aporta al crecimiento de la comunidad de Studium.</p>
-      </div>
-      <div class="motto"><p>Hecho por estudiantes, para estudiantes.</p><p class="motto-hand">Gratis, no vendo nada jaja</p></div>
       <ol class="house">
         <li><strong>Aquí solo se suma.</strong>No hay comentarios ni calificaciones: solo agradecimientos, datos útiles y material.</li>
         <li><strong>Lo personal se queda contigo.</strong>Antes de publicar, Studium busca notas, nombres y correos en lo que subes y te ofrece quitarlos. Lo tuyo lo cambias o lo borras cuando quieras.</li>
@@ -549,7 +574,9 @@
 
 <div class="fx-top" id="fx-top" aria-hidden="true"></div>
 <div class="toast glass" id="toast" role="status" hidden></div>
-<footer class="foot" id="foot"><span>Studium, hecho por estudiantes. Lo creó Alexander Kholodov.</span><a href="#/acerca">Acerca</a><a href="#/fuentes" id="foot-sources" hidden>Fuentes y agradecimientos</a></footer>
+<!-- A message from the admins to every member (settings/app) -->
+<div class="announce" id="announce" role="status" hidden><p id="announce-text"></p><button class="icon" id="announce-close" aria-label="Cerrar el anuncio"><svg><use href="#i-x"/></svg></button></div>
+<footer class="foot" id="foot"><span>Studium, hecho por estudiantes. Lo creó Alexander Kholodov.</span><a href="#/acerca">Acerca</a></footer>
 <script type="module" src="/studium/assets/app.js"></script>
 </body>
 </html>

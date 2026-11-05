@@ -14,7 +14,6 @@
   --display: "Bricolage Grotesque", system-ui, sans-serif; --body: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif;
   --hand: "Caveat", "Segoe Print", cursive;
   --spring: linear(0, .009, .035 2.1%, .141, .281 6.7%, .723 12.9%, .938 16.7%, 1.017, 1.077, 1.121, 1.149 24.3%, 1.159, 1.163, 1.161, 1.154 29.9%, 1.129 32.8%, 1.051 39.6%, 1.017 43.1%, .991, .977 51%, .974 53.8%, .975 57.1%, .997 69.8%, 1.003 76.9%, 1);
-  --sy: 0; --px: 0; --py: 0;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {
@@ -69,37 +68,37 @@ mark.hl.teal { background-image: linear-gradient(100deg, transparent .2em, color
 /* ---------- the scene: light, a graph-paper floor and sheets floating in depth ---------- */
 .scene { position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; perspective: 1100px; perspective-origin: 50% 42%;
   background: radial-gradient(120% 90% at 50% -20%, var(--bg-2), var(--bg) 62%); }
-.scene .stars { position: absolute; inset: -20%; opacity: .7;
+.scene .stars { position: absolute; inset: -3%; opacity: .7; will-change: transform;
   background-image: radial-gradient(1.2px 1.2px at 24px 40px, var(--star) 60%, transparent 62%), radial-gradient(1px 1px at 130px 90px, var(--star) 60%, transparent 62%),
     radial-gradient(1.4px 1.4px at 190px 170px, color-mix(in oklab, var(--sky) 70%, transparent) 60%, transparent 62%), radial-gradient(1px 1px at 70px 210px, var(--star) 60%, transparent 62%);
-  background-size: 240px 240px; transform: translate3d(calc(var(--px) * -6px), calc(var(--sy) * -.03px + var(--py) * -6px), 0); }
-.glow { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .34; animation: glow 60s ease-in-out infinite alternate; will-change: transform; }
-.glow.g1 { width: 58vmax; height: 58vmax; left: -18vmax; top: -24vmax; background: radial-gradient(circle, var(--blue), transparent 66%); }
-.glow.g2 { width: 50vmax; height: 50vmax; right: -16vmax; bottom: -22vmax; background: radial-gradient(circle, var(--red), transparent 66%); opacity: .24; animation-duration: 74s; }
-.glow.g3 { width: 26vmax; height: 26vmax; left: 8vmax; bottom: 6vmax; background: radial-gradient(circle, var(--teal), transparent 66%); opacity: .1; animation-duration: 52s; }
-.glow.g4 { width: 22vmax; height: 22vmax; right: 14vmax; top: 10vmax; background: radial-gradient(circle, var(--butter), transparent 66%); opacity: .06; animation-duration: 80s; }
+  background-size: 240px 240px; }
+.glow { position: absolute; border-radius: 50%; opacity: .34; }
+.glow.g1 { width: 58vmax; height: 58vmax; left: -18vmax; top: -24vmax; background: radial-gradient(circle, color-mix(in oklab, var(--blue) 80%, transparent), color-mix(in oklab, var(--blue) 30%, transparent) 38%, transparent 70%); }
+.glow.g2 { width: 50vmax; height: 50vmax; right: -16vmax; bottom: -22vmax; background: radial-gradient(circle, color-mix(in oklab, var(--red) 80%, transparent), color-mix(in oklab, var(--red) 30%, transparent) 38%, transparent 70%); opacity: .24; }
+.glow.g3 { width: 26vmax; height: 26vmax; left: 8vmax; bottom: 6vmax; background: radial-gradient(circle, var(--teal), transparent 70%); opacity: .1; }
+.glow.g4 { width: 22vmax; height: 22vmax; right: 14vmax; top: 10vmax; background: radial-gradient(circle, var(--butter), transparent 70%); opacity: .06; }
 :root[data-theme="light"] .glow { opacity: .17; } :root[data-theme="light"] .glow.g2 { opacity: .13; }
 @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .glow { opacity: .17; } :root:not([data-theme="dark"]) .glow.g2 { opacity: .13; } }
-@keyframes glow { to { transform: translate3d(3vmax, 2vmax, 0) scale(1.06); } }
 .rig { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .9s cubic-bezier(.2, .8, .3, 1);
-  transform: rotateX(calc(var(--py) * 1.6deg)) rotateY(calc(var(--px) * -2.4deg)); }
+  will-change: transform; }
 .floor { position: absolute; left: -60%; right: -60%; bottom: -8%; height: 62%; transform-origin: 50% 100%; transform: rotateX(76deg);
   background-image: linear-gradient(var(--grid) 1.5px, transparent 1.5px), linear-gradient(90deg, var(--grid) 1.5px, transparent 1.5px);
-  background-size: 64px 64px; background-position: 0 calc(var(--sy) * .5px);
+  background-size: 64px 64px;
   -webkit-mask-image: linear-gradient(to bottom, transparent, #000 45%, #000 80%, transparent); mask-image: linear-gradient(to bottom, transparent, #000 45%, #000 80%, transparent); }
 .sheet { position: absolute; left: calc(var(--x) * 1%); top: calc(var(--y) * 1%); width: calc(var(--w) * 1px); height: calc(var(--h) * 1px); border-radius: 6px;
-  transform: translate3d(-50%, calc(-50% + var(--sy) * var(--k) * -1px), calc(var(--z) * 1px)) rotateX(calc(var(--rx) * 1deg)) rotateY(calc(var(--ry) * 1deg)) rotateZ(calc(var(--rz) * 1deg));
+  transform: translate3d(-50%, -50%, calc(var(--z) * 1px)) rotateX(calc(var(--rx) * 1deg)) rotateY(calc(var(--ry) * 1deg)) rotateZ(calc(var(--rz) * 1deg));
   box-shadow: 0 30px 50px -30px rgba(0, 0, 0, .45), inset 0 0 0 1px var(--rule);
-  opacity: .62; animation: sheet 30s ease-in-out infinite alternate; animation-delay: calc(var(--i) * -5s); }
+  opacity: .62; }
 .sheet.ruled { background: linear-gradient(90deg, transparent 30px, var(--margin) 30px 31.5px, transparent 31.5px), repeating-linear-gradient(180deg, transparent 0 21px, var(--rule) 21px 22px) 0 34px / 100% calc(100% - 34px) no-repeat, var(--paper); }
 .sheet.grid { background: linear-gradient(var(--rule) 1px, transparent 1px) 0 0 / 15px 15px, linear-gradient(90deg, var(--rule) 1px, transparent 1px) 0 0 / 15px 15px, var(--paper); }
 .sheet.dots { background: radial-gradient(circle, var(--rule) 1.3px, transparent 1.6px) 0 0 / 16px 16px, var(--paper); }
 .sheet span { position: absolute; left: 40px; top: 44px; right: 14px; font: 600 25px/1.05 var(--hand); color: color-mix(in oklab, var(--blue) 70%, var(--ink)); opacity: .4; white-space: pre-line; }
 .sheet span em { font-style: normal; color: var(--red); }
-@keyframes sheet { to { translate: 0 -10px; rotate: 1deg; } }
 
 /* ---------- things that float (play.js) ---------- */
 .play { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; transition: opacity .6s; }
+/* Phones and tablets: the floating things stay at the top of the page and scroll away with it. */
+.play.in-page { position: absolute; bottom: auto; height: 100svh; }
 .fx-top { position: fixed; inset: 0; z-index: 45; pointer-events: none; overflow: hidden; }
 .tok { position: absolute; left: 0; top: 0; display: grid; place-items: center; border-radius: 50%; color: var(--c); will-change: transform;
   background: radial-gradient(120% 120% at 30% 22%, rgba(255, 255, 255, .5), rgba(255, 255, 255, .07) 42%, color-mix(in oklab, var(--c) 30%, transparent) 100%);
@@ -128,9 +127,13 @@ html.grabbing, html.grabbing * { cursor: grabbing !important; user-select: none;
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, .5), inset 0 0 0 1px var(--line); white-space: nowrap; animation: pop .45s var(--spring); }
 .speech.out { opacity: 0; transition: opacity .3s; }
 .bub { position: absolute; left: 0; top: 0; border-radius: 50%; pointer-events: auto; cursor: pointer;
-  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, .85) 0 6%, transparent 13%), radial-gradient(circle, transparent 58%, rgba(255, 255, 255, .22) 74%, rgba(255, 255, 255, .55) 100%),
-    conic-gradient(from 40deg, color-mix(in oklab, var(--sky) 40%, transparent), color-mix(in oklab, var(--teal) 30%, transparent), color-mix(in oklab, var(--butter) 30%, transparent), color-mix(in oklab, var(--peach) 35%, transparent), color-mix(in oklab, var(--sky) 40%, transparent));
-  -webkit-mask: radial-gradient(circle, #000 69%, transparent 71%); mask: radial-gradient(circle, #000 69%, transparent 71%); opacity: .9; }
+  background:
+    radial-gradient(circle at 30% 26%, rgba(255, 255, 255, .95) 0 7%, rgba(255, 255, 255, .25) 13%, transparent 22%),
+    radial-gradient(circle at 70% 78%, rgba(255, 255, 255, .45) 0 4%, transparent 12%),
+    radial-gradient(circle at 50% 50%, transparent 52%, color-mix(in oklab, var(--sky) 35%, transparent) 66%, rgba(255, 255, 255, .55) 76%, color-mix(in oklab, var(--peach) 30%, transparent) 86%, transparent 100%),
+    conic-gradient(from 200deg, color-mix(in oklab, var(--sky) 22%, transparent), color-mix(in oklab, var(--teal) 18%, transparent), color-mix(in oklab, var(--butter) 18%, transparent), color-mix(in oklab, var(--peach) 22%, transparent), color-mix(in oklab, var(--blue) 20%, transparent), color-mix(in oklab, var(--sky) 22%, transparent));
+  box-shadow: inset 0 -6px 14px rgba(255, 255, 255, .22), inset 0 4px 10px rgba(255, 255, 255, .18), 0 14px 22px -14px rgba(20, 40, 90, .35); }
+.bub i { position: absolute; left: 18%; top: 14%; width: 30%; height: 18%; border-radius: 50%; background: rgba(255, 255, 255, .7); filter: blur(1px); rotate: -28deg; }
 .bub.popped { transition: transform .2s, opacity .2s; opacity: 0; }
 .drop, .confetti { position: absolute; left: 0; top: 0; width: 6px; height: 6px; border-radius: 50%; background: color-mix(in oklab, var(--sky) 70%, white); pointer-events: none; }
 .confetti { width: 9px; height: 13px; border-radius: 2px; }
@@ -138,8 +141,6 @@ html.grabbing, html.grabbing * { cursor: grabbing !important; user-select: none;
 .quiet .play, .quiet .fx-top .nodo, .quiet .fx-top .speech, .quiet .fx-top .bub { opacity: 0; visibility: hidden; }
 :root[data-ambience="enfoque"] .play, :root[data-ambience="enfoque"] .scene .rig, :root[data-ambience="enfoque"] .glow, :root[data-ambience="enfoque"] .stars { display: none; }
 :root[data-ambience="enfoque"] .scene { background: var(--bg); }
-:root[data-ambience="sereno"] .glow { animation-duration: 70s; }
-:root[data-ambience="sereno"] .sheet { animation-duration: 30s; }
 
 /* ---------- glass ---------- */
 .glass { position: relative; isolation: isolate; border-radius: 24px;
@@ -152,9 +153,6 @@ html.grabbing, html.grabbing * { cursor: grabbing !important; user-select: none;
 .glass::after, .lit::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .35s;
   background: radial-gradient(320px circle at var(--mx, 30%) var(--my, -30%), rgba(255, 255, 255, .14), transparent 62%); }
 .glass:hover::after, .lit:hover::after { opacity: 1; }
-.glass.liquid { background: linear-gradient(140deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .025) 60%); }
-:root[data-theme="light"] .glass.liquid { background: linear-gradient(140deg, rgba(255, 255, 255, .62), rgba(255, 255, 255, .3) 60%); }
-@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .glass.liquid { background: linear-gradient(140deg, rgba(255, 255, 255, .62), rgba(255, 255, 255, .3) 60%); } }
 :root[data-ambience="enfoque"] .glass { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--card); }
 
 /* Cards that lean toward the pointer, with layers that come forward. */
@@ -324,7 +322,7 @@ input[type="range"] { padding: 0; border: 0; background: none; accent-color: var
 /* The stack: four cards of the app in depth */
 .stack { position: relative; height: min(600px, 70svh); perspective: 1300px; }
 .stack-rig { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform 1s cubic-bezier(.2, .8, .3, 1);
-  transform: rotateY(calc(-16deg + var(--px) * 16deg)) rotateX(calc(8deg + var(--py) * -10deg)); }
+  transform: rotateY(-16deg) rotateX(8deg); will-change: transform; }
 .sk { position: absolute; border-radius: 26px; padding: 18px; background: var(--card); color: var(--ink);
   box-shadow: inset 0 0 0 1px var(--line), inset 0 1px 0 rgba(255, 255, 255, .14), 0 40px 70px -30px rgba(0, 0, 0, .55);
   transform: translateZ(calc(var(--z) * 1px)); animation: bob 8s ease-in-out infinite alternate; animation-delay: calc(var(--z) * -40ms); }
@@ -470,7 +468,7 @@ input[type="range"] { padding: 0; border: 0; background: none; accent-color: var
 .auth-side { display: grid; gap: 18px; }
 .auth-side h1 { font-size: clamp(48px, 7vw, 92px); font-weight: 800; letter-spacing: -.05em; line-height: .92; }
 .auth-card { padding: 28px; border-radius: 32px; display: grid; gap: 16px; animation: card-in 1s .2s var(--spring) both; }
-.auth-card.glass, .auth-card.glass.liquid { background: linear-gradient(140deg, color-mix(in oklab, var(--card) 86%, transparent), color-mix(in oklab, var(--card) 72%, transparent)); }
+.auth-card.glass { background: linear-gradient(140deg, color-mix(in oklab, var(--card) 86%, transparent), color-mix(in oklab, var(--card) 72%, transparent)); }
 @keyframes card-in { from { opacity: 0; transform: translateY(40px) scale(.94); } }
 .auth-card .switch { justify-self: start; background: var(--well); }
 .auth-card .lead { color: var(--ink-2); }
@@ -945,7 +943,7 @@ mark:not(.hl) { background: color-mix(in oklab, var(--danger) 30%, transparent);
 .hero2-copy { position: relative; isolation: isolate; }
 .hero2-copy::before { content: ""; position: absolute; inset: -14% -18% -16% -20%; z-index: -1; pointer-events: none;
   background: radial-gradient(closest-side, color-mix(in oklab, var(--bg) 72%, transparent), transparent); }
-.view h1, .view h2, .lede, .lede-small, .note-hand { text-shadow: 0 1px 18px color-mix(in oklab, var(--bg) 80%, transparent), 0 0 2px color-mix(in oklab, var(--bg) 60%, transparent); }
+.page-head h1, .home-head h1, .home-head .lede-small, .hero2-copy .note-hand, .hero2-copy .lede, .hero-motto p, .band > h2, .band > .kicker, .band > .lede-small { text-shadow: 0 1px 18px color-mix(in oklab, var(--bg) 80%, transparent), 0 0 2px color-mix(in oklab, var(--bg) 60%, transparent); }
 .view .glass h1, .view .glass h2, .view .tile h2, .view .wordmark { text-shadow: none; }
 
 /* ---------- creating a guide ---------- */
@@ -1041,16 +1039,24 @@ kbd { font: 700 .85em var(--display); padding: 1px 7px; border-radius: 6px; back
 .timer-set .grid { margin-top: 10px; grid-template-columns: 1fr 1fr; }
 
 /* ---------- hints ---------- */
-.hint-bubble { position: fixed; z-index: 40; left: max(16px, env(safe-area-inset-left)); bottom: max(20px, env(safe-area-inset-bottom)); width: min(340px, calc(100% - 32px));
-  padding: 16px 18px 10px; border-radius: 22px 22px 22px 6px; display: grid; gap: 6px; font-size: 15.5px; color: var(--ink-2);
-  animation: hint-in 1.2s cubic-bezier(.2, .8, .2, 1) both; }
+/* A bubble next to its subject, with a little arrow that points at it; it rises in and sinks out. */
+.hint-bubble { position: absolute; z-index: 40; width: min(320px, calc(100vw - 24px)); padding: 14px 16px 8px; border-radius: 20px;
+  display: grid; gap: 6px; font-size: 15px; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line), 0 22px 50px -20px rgba(0, 0, 0, .45);
+  transform-origin: var(--arrow, 50%) top; animation: hint-in .7s cubic-bezier(.2, .9, .3, 1.15) both; }
+.hint-bubble.above { transform-origin: var(--arrow, 50%) bottom; }
+.hint-bubble::before { content: ""; position: absolute; top: -7px; left: calc(var(--arrow, 50%) - 7px); width: 14px; height: 14px; rotate: 45deg; border-radius: 3px 0 0 0;
+  background: inherit; box-shadow: -1px -1px 0 var(--line); }
+.hint-bubble.above::before { top: auto; bottom: -7px; border-radius: 0 0 3px 0; box-shadow: 1px 1px 0 var(--line); }
 .hint-bubble p::before { content: "💡 "; }
 .hint-bubble .actions { gap: 14px; }
 .hint-bubble .link { font-size: 13.5px; }
-.hint-bubble.out { opacity: 0; translate: 0 8px; transition: opacity .5s, translate .5s; }
-.hint-bubble.still { animation: none; }
-@keyframes hint-in { from { opacity: 0; translate: 0 10px; } }
-@media (max-width: 760px) { .hint-bubble { bottom: calc(86px + env(safe-area-inset-bottom)); } }
+.hint-bubble.out { animation: hint-out .45s ease-in forwards; }
+/* Serene: it fades in and out without moving. */
+.hint-bubble.still { animation: hint-fade 1s ease both; }
+.hint-bubble.still.out { animation: hint-fade .8s ease reverse forwards; }
+@keyframes hint-fade { from { opacity: 0; } }
+@keyframes hint-in { from { opacity: 0; transform: translateY(8px) scale(.92); } }
+@keyframes hint-out { to { opacity: 0; transform: translateY(6px) scale(.96); } }
 
 /* ---------- easter eggs ---------- */
 .egg-crit { position: fixed; z-index: 60; pointer-events: none; translate: -50% -100%; font: 800 26px/1 var(--display); letter-spacing: .02em; color: #3ddc97;
@@ -1089,3 +1095,143 @@ kbd { font: 700 .85em var(--display); padding: 1px 7px; border-radius: 6px; back
 .egg-radio .rplay .s, .egg-radio.playing .rplay .p { display: none; }
 .egg-radio.playing .rplay .s { display: inline; }
 :root[data-ambience="enfoque"] .egg-radio { filter: grayscale(1); }
+
+/* ---------- the account menu: opaque, so its text never mixes with what is behind ---------- */
+.menu.glass { background: var(--card); -webkit-backdrop-filter: none; backdrop-filter: none;
+  box-shadow: inset 0 0 0 1px var(--line), 0 24px 60px -18px rgba(0, 0, 0, .45); }
+.menu.glass::before, .menu.glass::after { display: none; }
+
+/* ---------- admins only ---------- */
+.admin-only { display: none !important; }
+html.is-admin .admin-only { display: revert !important; }
+html.is-admin .tabbar .admin-only { display: grid !important; }
+
+/* ---------- the announcement ---------- */
+.announce { position: fixed; z-index: 29; top: calc(max(12px, env(safe-area-inset-top)) + 70px); left: 50%; translate: -50% 0; width: min(760px, calc(100% - 24px));
+  display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 18px; border-radius: 18px; font: 650 15px/1.4 var(--display);
+  color: var(--ink); background: var(--card); box-shadow: inset 0 0 0 1px var(--line), inset 4px 0 0 var(--blue), 0 18px 40px -20px rgba(0, 0, 0, .5); }
+.announce p { flex: 1; }
+.announce.good { box-shadow: inset 0 0 0 1px var(--line), inset 4px 0 0 var(--ok), 0 18px 40px -20px rgba(0, 0, 0, .5); }
+.announce.warn { box-shadow: inset 0 0 0 1px var(--line), inset 4px 0 0 var(--red), 0 18px 40px -20px rgba(0, 0, 0, .5); }
+.announce .icon { width: 32px; height: 32px; flex: none; }
+.announce .icon svg { width: 14px; height: 14px; }
+.announce.preview { position: static; translate: none; width: auto; }
+
+/* ---------- the admin panel ---------- */
+.adm-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 4px; margin: 0 0 22px; border-radius: 999px; background: var(--well); scrollbar-width: none; }
+.adm-tabs a { flex: none; padding: 9px 16px; border-radius: 999px; text-decoration: none; color: var(--ink-2); font: 700 14.5px var(--display); }
+.adm-tabs a[aria-current="true"] { color: var(--on-accent); background: var(--blue); }
+.adm-body { display: grid; gap: 18px; }
+.adm-body .set > h2 small { font: 650 14px var(--display); color: var(--muted); letter-spacing: 0; margin-left: 8px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.stat { display: grid; gap: 2px; padding: 16px 18px; border-radius: 22px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line); min-width: 0; }
+.stat span { font: 650 13.5px var(--display); color: var(--muted); }
+.stat b { font: 800 30px/1.1 var(--display); letter-spacing: -.03em; overflow-wrap: anywhere; }
+.stat small { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.meter { display: grid; gap: 6px; }
+.meter-head { display: flex; justify-content: space-between; gap: 10px; font: 650 15px var(--display); }
+.meter-head small { color: var(--muted); font-weight: 600; }
+.meter i { display: block; height: 10px; border-radius: 999px; background: linear-gradient(90deg, var(--blue) var(--p), var(--well) var(--p)); box-shadow: inset 0 0 0 1px var(--line); }
+.meter.mid i { background: linear-gradient(90deg, var(--butter) var(--p), var(--well) var(--p)); }
+.meter.high i { background: linear-gradient(90deg, var(--red) var(--p), var(--well) var(--p)); }
+.bars { display: flex; align-items: end; gap: 10px; height: 160px; }
+.bar { flex: 1; height: 100%; display: grid; grid-template-rows: 1fr auto; gap: 6px; text-align: center; }
+.bar i { align-self: end; height: max(3px, var(--h)); border-radius: 10px 10px 4px 4px; background: linear-gradient(180deg, var(--sky), var(--blue)); }
+.bar span { font: 650 12.5px var(--display); color: var(--muted); text-transform: capitalize; }
+.table-wrap { overflow-x: auto; }
+.adm-table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.adm-table th { text-align: left; font: 700 13px var(--display); color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.adm-table td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.adm-table td small { color: var(--muted); }
+.adm-table tr:hover td { background: color-mix(in oklab, var(--ink) 3%, transparent); }
+.row-actions { white-space: nowrap; text-align: right; }
+.row-actions .link { margin-left: 12px; font-size: 13.5px; }
+.link.danger, .row-actions .danger { color: var(--danger); }
+.badge.ok { background: color-mix(in oklab, var(--ok) 85%, black); color: #fff; }
+.adm-table .badge { font-size: 12px; padding: 2px 9px; }
+.table-tools { display: flex; gap: 10px; }
+.table-tools input { max-width: 360px; }
+.communities { display: grid; gap: 14px; }
+.community { display: grid; gap: 12px; padding: 18px; border-radius: 22px; background: var(--well); box-shadow: inset 0 0 0 1px var(--line); }
+.community.off { opacity: .72; }
+.community .actions { justify-content: space-between; }
+.domains { display: grid; gap: 8px; }
+.domains .chip .x { border: 0; background: none; color: inherit; cursor: pointer; font: 700 15px var(--display); padding: 0 0 0 4px; }
+.inline-form { display: flex; gap: 8px; flex-wrap: wrap; }
+.inline-form input { flex: 1; min-width: 200px; }
+.switches { display: grid; gap: 12px; }
+.switches .toggle { font-weight: 650; }
+textarea.plain { font: 16px/1.5 var(--body); }
+.save-bar { position: sticky; bottom: 16px; z-index: 5; display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 20px; border-radius: 999px;
+  background: var(--card); box-shadow: inset 0 0 0 1px var(--line), 0 18px 40px -18px rgba(0, 0, 0, .5); }
+.save-bar span { flex: 1; color: var(--muted); font: 650 14.5px var(--display); }
+.save-bar.dirty span { color: var(--ink); }
+.adm-sub { margin-bottom: 4px; }
+.audit { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.audit li { display: grid; grid-template-columns: 130px 1fr; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.audit time { color: var(--muted); font: 650 13.5px var(--display); }
+.audit p { color: var(--ink-2); font-size: 14.5px; overflow-wrap: anywhere; }
+.audit small { color: var(--muted); font-size: 13px; }
+.google-link { grid-template-columns: 1fr auto; align-items: center; }
+@media (max-width: 760px) { .google-link { grid-template-columns: 1fr; } .audit li { grid-template-columns: 1fr; gap: 2px; } .set .grid3 { grid-template-columns: 1fr; } }
+html.has-announce .page { padding-top: 170px; }
+
+/* ---------- glass that costs nothing to scroll ---------- */
+/* A live blur makes the browser redraw what is behind every panel on every frame of scrolling. The panels of the
+   pages are frosted glass that is drawn once: nearly opaque, with the same light and rim. The live blur stays on
+   what floats above the page: the bar, the menus, dialogs and notices. */
+.view .glass, .view.page .glass, .hint-bubble.glass, .egg-radio.glass { -webkit-backdrop-filter: none; backdrop-filter: none;
+  background: linear-gradient(150deg, color-mix(in oklab, var(--card) 92%, white 8%), color-mix(in oklab, var(--card) 86%, transparent) 70%); }
+:root[data-theme="dark"] .view .glass, :root[data-theme="dark"] .hint-bubble.glass, :root[data-theme="dark"] .egg-radio.glass {
+  background: linear-gradient(150deg, color-mix(in oklab, var(--card-2) 94%, white 6%), color-mix(in oklab, var(--card) 90%, transparent) 70%); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .view .glass, :root:not([data-theme="light"]) .hint-bubble.glass, :root:not([data-theme="light"]) .egg-radio.glass {
+  background: linear-gradient(150deg, color-mix(in oklab, var(--card-2) 94%, white 6%), color-mix(in oklab, var(--card) 90%, transparent) 70%); } }
+.nav.glass, .tabbar.glass { -webkit-backdrop-filter: blur(18px) saturate(1.6); backdrop-filter: blur(18px) saturate(1.6); }
+
+/* Phones and tablets: a still background, without stars or the floor in perspective. */
+@media (pointer: coarse), (max-width: 760px) {
+  .scene .stars, .scene .floor { display: none; }
+  .sheet { opacity: .4; }
+}
+
+/* ---------- your AI: keys, and the choice at the moment of use ---------- */
+.ai-keys { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.ai-key { display: grid; gap: 10px; align-content: start; padding: 16px; border-radius: 22px; background: var(--well); box-shadow: inset 0 0 0 1px var(--line); }
+.ai-key.on { box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--ok) 55%, transparent); }
+.ai-key h3 { font-size: 19px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ai-key h3 small { color: var(--muted); font: 650 13.5px var(--display); }
+.ai-key .badge { font-size: 12px; padding: 2px 9px; }
+.ai-pick { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: end; min-width: 0; }
+.ai-pick .field { flex: 1 1 120px; }
+.ai-pick .field.model { flex: 2 1 190px; }
+.ai-pick .fine { flex-basis: 100%; }
+.ai-pick .field > span { font-size: 12.5px; }
+.ai-pick select, .ai-pick input { padding-top: 8px; padding-bottom: 8px; font-size: 14.5px; }
+
+/* ---------- the map's light links ---------- */
+.map-links { display: inline-flex; gap: 14px; align-items: center; padding: 0 6px; }
+.map-links .link { font-size: 14px; }
+#map-info .why { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; color: var(--ink-2); }
+#map-info p { color: var(--ink-2); }
+
+/* ---------- the note that feeds the graph: three stages, shown ---------- */
+.note-card.anon { border-color: color-mix(in oklab, var(--teal) 50%, transparent); }
+.note-card.anon .note-title { color: var(--teal); }
+.note-card .chips { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+.note-card.anon { background: #fffdf6; }
+.flow-steps { position: absolute; left: 50%; bottom: 74px; translate: -50% 0; display: flex; gap: 6px; margin: 0; padding: 4px; list-style: none; border-radius: 999px;
+  background: color-mix(in oklab, var(--card) 88%, transparent); box-shadow: inset 0 0 0 1px var(--line); white-space: nowrap; }
+.flow-steps li { padding: 5px 12px; border-radius: 999px; font: 700 12.5px var(--display); color: var(--muted); transition: background .4s, color .4s; }
+.flow-steps li + li::before { content: "→ "; color: var(--muted); }
+.flow-steps li.on { color: var(--on-accent); background: var(--blue); }
+.flow-steps li.on::before { color: inherit; }
+.flow-steps li.done { color: var(--ink); }
+@media (max-width: 760px) { .flow-steps { bottom: 64px; } .flow-steps li { padding: 4px 8px; font-size: 11.5px; } }
+
+/* ---------- the first section, in the operator's words ---------- */
+.hero-motto { display: grid; gap: 2px; justify-items: start; margin: 8px 0 4px; }
+.hero-motto p:first-child { font: 750 clamp(22px, 2.3vw, 30px)/1.2 var(--display); letter-spacing: -.02em; color: var(--ink); }
+.hero-motto .motto-hand { font: 600 clamp(24px, 2.4vw, 32px)/1 var(--hand); color: var(--red); rotate: -2.5deg; margin-left: .6em; }
+.hero2 .lede.hero-what { max-width: 44ch; font-size: clamp(16px, 1.35vw, 19px); line-height: 1.5; }
+/* The note card is paper in day and night: its chips keep the paper's colors. */
+.note-card .chip { color: #1b2233; background: #e7edff; border-color: #c4d2ff; font: 700 12.5px var(--display); }

@@ -7,10 +7,22 @@
 //   · now and then, a goal checked off is a lucky hit.
 import { sfx } from './sfx.js';
 import { t } from './i18n.js';
+import { auth, countEgg } from './data.js';
+import { flag } from './settings.js';
 
 const FOUND = 'studium-eggs';
 const RADIO = 'studium-radio';
-const ALL = ['radio', 'portal', 'cake', 'medic', 'crit'];
+// Every easter egg, as the admin panel lists them. The ids are the ones the rules accept for the counters (eggs/{id}).
+export const EGGS = [
+  { id: 'radio', name: 'La radio', how: 'Escribir «radio» en cualquier página, fuera de un campo de texto, o el código ↑ ↑ ↓ ↓ ← → ← → B A.',
+    what: 'Una radio de bossa generada en vivo, que se queda donde la sueltes. Una vez encontrada, también se agrega desde «Personalizar».' },
+  { id: 'portal', name: 'Portales', how: 'Pulsar tres veces seguidas el punto rojo de «studium» en la portada.',
+    what: 'Un portal azul y uno rojo, y una canica de vidrio que entra por uno y sale por el otro.' },
+  { id: 'cake', name: 'La torta', how: 'Escribir «torta» o «cake».', what: 'Un aviso: «La torta es una mentira. Las guías, no».' },
+  { id: 'medic', name: '¡Médico!', how: 'Escribir «medico» o «medic».', what: 'Un pulso verde de +25 de ánimo.' },
+  { id: 'crit', name: 'Golpe crítico', how: 'Marcar una meta como cumplida: una de cada diez veces.', what: '«¡CRÍTICO!» en verde y una celebración doble.' },
+];
+const ALL = EGGS.map((e) => e.id);
 let toast = () => {};
 const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.ambience === 'enfoque';
 const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k) ?? 'null') ?? d; } catch { return d; } };
@@ -20,7 +32,11 @@ export const found = () => new Set(read(FOUND, []));
 function discover(id, message) {
   const s = found();
   const fresh = !s.has(id);
-  if (fresh) { s.add(id); write(FOUND, [...s]); sfx.secret(); }
+  if (fresh) {
+    s.add(id); write(FOUND, [...s]); sfx.secret();
+    // Counted once per browser, anonymously, for the admin panel.
+    if (auth.currentUser) countEgg(id).catch(() => {});
+  }
   toast(fresh ? `${t(message)} · ${t('Secreto')} ${s.size}/${ALL.length}` : t(message));
 }
 
@@ -29,7 +45,7 @@ const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'Ar
 let typed = '';
 let keys = [];
 function onKey(e) {
-  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.ctrlKey || e.metaKey || e.altKey || !flag('eggs')) return;
   const el = e.target;
   if (el instanceof Element && el.closest('input, textarea, select, [contenteditable="true"]')) return;
   keys = [...keys, e.key.length === 1 ? e.key.toLowerCase() : e.key].slice(-KONAMI.length);
@@ -53,7 +69,7 @@ function heal() {
 /* ---------- a lucky hit ---------- */
 // Called when a goal is checked off. About one in ten is a lucky hit.
 export function luckyHit(x, y) {
-  if (Math.random() > 0.1 || still()) return false;
+  if (Math.random() > 0.1 || still() || !flag('eggs')) return false;
   sfx.crit();
   const el = document.createElement('div');
   el.className = 'egg-crit';
@@ -68,6 +84,7 @@ export function luckyHit(x, y) {
 /* ---------- portals ---------- */
 let dotClicks = [];
 function onDot(e) {
+  if (!flag('eggs')) return;
   const now = performance.now();
   dotClicks = [...dotClicks.filter((t0) => now - t0 < 1600), now];
   if (dotClicks.length < 3) return;
@@ -190,6 +207,7 @@ function place(el, pos) {
 }
 export function radioOn() { return !!read(RADIO, {}).on; }
 export function openRadio(discovered = false) {
+  if (!flag('radio')) return;
   if (discovered) discover('radio', 'Encontraste la radio. Ponla donde quieras.');
   const state = read(RADIO, {});
   write(RADIO, { ...state, on: true });
@@ -218,11 +236,16 @@ export function openRadio(discovered = false) {
   let drag = null;
   el.addEventListener('pointerdown', (e) => {
     if (e.target.closest('button, input')) return;
-    drag = { dx: e.clientX - el.offsetLeft, dy: e.clientY - el.offsetTop };
-    el.setPointerCapture(e.pointerId); el.classList.add('held');
+    drag = { dx: e.clientX - el.offsetLeft, dy: e.clientY - el.offsetTop, x: e.clientX, t: performance.now() };
+    el.setPointerCapture(e.pointerId); el.classList.add('held'); sfx.grab(140);
   });
-  el.addEventListener('pointermove', (e) => { if (drag) place(el, { x: e.clientX - drag.dx, y: e.clientY - drag.dy }); });
-  const drop = () => { if (!drag) return; drag = null; el.classList.remove('held'); write(RADIO, { ...read(RADIO, {}), x: el.offsetLeft, y: el.offsetTop }); sfx.drop(); };
+  el.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const t = performance.now(); const vx = ((e.clientX - drag.x) / Math.max(1, t - drag.t)) * 1000;
+    sfx.drag(Math.abs(vx), vx); drag.x = e.clientX; drag.t = t;
+    place(el, { x: e.clientX - drag.dx, y: e.clientY - drag.dy });
+  });
+  const drop = () => { if (!drag) return; drag = null; el.classList.remove('held'); write(RADIO, { ...read(RADIO, {}), x: el.offsetLeft, y: el.offsetTop }); sfx.release(0, 140); };
   el.addEventListener('pointerup', drop);
   el.addEventListener('pointercancel', drop);
 }

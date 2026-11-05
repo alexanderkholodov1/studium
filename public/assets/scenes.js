@@ -41,16 +41,24 @@ function aiScene(el) {
   seed();
   const frame = (now) => {
     raf = requestAnimationFrame(frame);
-    const t = (now - t0) / 1000;
+    const time = (now - t0) / 1000;
     const { ctx, w, h } = size;
     const cx = w / 2; const cy = h / 2;
     ctx.clearRect(0, 0, w, h);
     const colors = palette.map(css);
     // The core: a soft sphere that breathes.
-    const R = 34 + Math.sin(t * 1.6) * 3;
+    const R = 34 + Math.sin(time * 1.6) * 3;
     const g = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.35, 2, cx, cy, R * 2.6);
     g.addColorStop(0, '#ffffff'); g.addColorStop(0.18, colors[0]); g.addColorStop(0.55, `${colors[0]}33`); g.addColorStop(1, 'transparent');
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R * 2.6, 0, Math.PI * 2); ctx.fill();
+    // What the light is: your AI.
+    ctx.save();
+    ctx.font = `800 ${Math.round(R * 0.9)}px ${css('--display') || 'sans-serif'}`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.shadowColor = colors[0]; ctx.shadowBlur = 18;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(t('IA'), cx, cy + 1);
+    ctx.restore();
     ctx.globalCompositeOperation = 'lighter';
     for (const p of parts) {
       p.a += p.s * 0.01 * (1.4 - p.z);
@@ -91,23 +99,24 @@ function aiScene(el) {
       hold = null;
       el.classList.remove('shield'); void el.offsetWidth; el.classList.add('shield');
       note.classList.remove('show'); void note.offsetWidth; note.classList.add('show');
-      sfx.boing(0);
+      sfx.release(900, 60);
+      sfx.impact(160, 1200);
       cancelAnimationFrame(spring);
       const back = () => { pos.x *= 0.82; pos.y *= 0.82; place(); if (Math.abs(pos.x) + Math.abs(pos.y) > 0.5) spring = requestAnimationFrame(back); else { pos = { x: 0, y: 0 }; place(); } };
       back();
     }
   });
-  const drop = () => { hold = null; };
+  const drop = () => { if (hold) sfx.release(0, 60); hold = null; };
   me.addEventListener('pointerup', drop); me.addEventListener('pointercancel', drop);
 }
 
-/* ---------- 2. the graph: a note goes in anonymous and comes out as concepts ---------- */
+/* ---------- 2. the graph: your notes become anonymous information, which feeds the graph ---------- */
 const NOTES = [
-  { title: 'Apuntes · Redes de Computadores', lines: [['Nombre: Camila R.', true], ['Nota del parcial: 17/20', true], ['Una /26 deja 64 direcciones: 62 para hosts.', false], ['OSPF usa Dijkstra; RIP, vector de distancia.', false]],
+  { title: 'Redes de Computadores', lines: ['Una /26 deja 64 direcciones: 62 para hosts.', 'OSPF usa Dijkstra; RIP, vector de distancia.', 'La máscara separa red y host.'],
     concepts: ['Subredes', 'Máscara /26', 'OSPF', 'Dijkstra', 'RIP'], links: [[0, 1], [2, 3], [2, 4], [0, 2]] },
-  { title: 'Deber · Biología Celular', lines: [['Estudiante: J. Pérez · 00213', true], ['Comentario del profe: «revisa la fase 3»', true], ['Mitosis: profase, metafase, anafase, telofase.', false], ['La meiosis reduce a la mitad los cromosomas.', false]],
+  { title: 'Biología Celular', lines: ['Mitosis: profase, metafase, anafase, telofase.', 'La meiosis reduce a la mitad los cromosomas.', 'En la metafase se alinean en el ecuador.'],
     concepts: ['Mitosis', 'Metafase', 'Meiosis', 'Cromosomas'], links: [[0, 1], [2, 3], [0, 3]] },
-  { title: 'Examen · Estadística', lines: [['Correo: alumno@universidad.edu', true], ['Calificación: 8,5', true], ['IC 95 %: media ± 1,96·σ/√n.', false], ['p < 0,05 → se rechaza H0.', false]],
+  { title: 'Estadística', lines: ['IC 95 %: media ± 1,96·σ/√n.', 'p < 0,05 → se rechaza H0.', 'El error estándar baja con n.'],
     concepts: ['Intervalo de confianza', 'Valor p', 'Hipótesis nula', 'Error estándar'], links: [[0, 3], [1, 2], [0, 1]] },
 ];
 function graphScene(el) {
@@ -180,10 +189,13 @@ function graphScene(el) {
     if (before.w < 10) for (const n of nodes) { n.x = rand(size.w * 0.25, size.w * 0.85); n.y = rand(size.h * 0.35, size.h * 0.8); }
     if (calm()) draw(performance.now() + 1e4);
   }).observe(canvas);
+  const steps = el.querySelectorAll('.flow-steps li');
+  const stage = (k) => steps.forEach((li, i) => { li.classList.toggle('on', i === k); li.classList.toggle('done', i < k); });
   const showNote = () => {
     const n = NOTES[noteAt % NOTES.length];
-    paper.innerHTML = `<p class="note-title">${n.title}</p>${n.lines.map(([t, personal]) => `<p class="${personal ? 'pii' : ''}"><span>${t}</span></p>`).join('')}`;
-    paper.classList.remove('gone', 'redacted');
+    paper.innerHTML = `<p class="note-title">${t('Tus apuntes')} · ${n.title}</p>${n.lines.map((line) => `<p><span>${line}</span></p>`).join('')}`;
+    paper.classList.remove('gone', 'anon');
+    stage(0);
   };
   showNote();
   const at = (e) => { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
@@ -197,10 +209,14 @@ function graphScene(el) {
   button.addEventListener('click', async () => {
     button.disabled = true;
     const n = NOTES[noteAt % NOTES.length];
-    paper.classList.add('redacted');
+    // Your notes become anonymous information: only what is studied, as concepts.
+    paper.classList.add('anon');
+    paper.innerHTML = `<p class="note-title">${t('Información anónima')}</p><div class="chips small">${n.concepts.map((c) => `<span class="chip on">${t(c)}</span>`).join('')}</div>`;
+    stage(1);
     sfx.tick();
-    await new Promise((r) => setTimeout(r, calm() ? 0 : 1100));
+    await new Promise((r) => setTimeout(r, calm() ? 0 : 1400));
     paper.classList.add('gone');
+    stage(2);
     const pr = paper.getBoundingClientRect(); const cr = canvas.getBoundingClientRect();
     const base = nodes.length;
     const anchor = nodes[Math.floor(Math.random() * nodes.length)];

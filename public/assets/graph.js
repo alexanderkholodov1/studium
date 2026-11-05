@@ -74,7 +74,7 @@ export function buildGraph({ catalog, contributions }) {
       }
     }
     for (const q of item.data.questions ?? []) {
-      for (const name of q.concepts) {
+      for (const name of Array.isArray(q.concepts) ? q.concepts : []) {
         const n = concept(name);
         if (!n) continue;
         n.questions.push({ ...q, ...where });

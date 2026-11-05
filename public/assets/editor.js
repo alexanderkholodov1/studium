@@ -42,7 +42,7 @@ export function openEditor(options) {
   job = { ...options, next: null };
   const doc = parse(job.html);
   const list = parts(doc);
-  $('#edit-who').textContent = ai.ready() ? `Usará ${ai.label()}. Solo tú puedes editar esta guía.` : '';
+  $('#edit-who').innerHTML = ai.ready() ? `${ai.pickerHTML('edit')}<p class="fine">Solo tú puedes editar esta guía.</p>` : '';
   $('#edit-section').innerHTML = list.map((p) => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join('');
   $('#edit-what').value = '';
   $('#edit-progress').hidden = true;
@@ -79,6 +79,7 @@ async function run() {
   button.disabled = true;
   out.hidden = false;
   out.textContent = 'Tu IA está trabajando…';
+  const use = ai.picked('edit', $('#edit-dialog'));
   const onProgress = (n) => { out.textContent = n < 0 ? 'Tu IA está escribiendo…' : `Tu IA está escribiendo… ${n.toLocaleString('es')} caracteres`; };
   try {
     let next;
@@ -86,7 +87,7 @@ async function run() {
       const res = await ai.run({
         system: 'Editas guías de estudio de Studium: páginas HTML autocontenidas. Mantienes el bloque <script type="application/json" id="studium">, las secciones con id y todo lo que funciona; cambias solo lo que el estudiante pide. Respondes solo con el HTML completo, desde <!doctype html> hasta </html>.',
         text: `Pedido del estudiante: ${what}\n\nLa guía actual:\n\n${job.html}`,
-        maxTokens: ai.config().provider === 'anthropic' ? 64000 : 32000, onProgress,
+        maxTokens: ai.longest(use), onProgress, use,
       });
       next = ai.htmlFrom(res.text);
       if (!next) throw new Error('Tu IA no devolvió una página completa. Vuelve a intentarlo.');
@@ -101,7 +102,7 @@ async function run() {
         text: mode === 'add'
           ? `Guía: «${title}». Escribe una sección nueva, como un único <section id="${fresh}"> con un solo <h2>, que va justo después de esta:\n\n${target.html}\n\nLo que debe tener: ${what}\n\nEstilos de la guía, para usar sus clases:\n${styles(doc)}`
           : `Guía: «${title}». Reescribe esta sección según el pedido. Conserva su id «${id}» en el primer elemento.\n\nPedido: ${what}\n\nSección actual:\n${target.html}\n\nEstilos de la guía, para usar sus clases:\n${styles(doc)}`,
-        maxTokens: 16000, onProgress,
+        maxTokens: 16000, onProgress, use,
       });
       const nodes = fragment(res.text);
       if (!nodes.length) throw new Error('Tu IA no devolvió HTML. Vuelve a intentarlo.');

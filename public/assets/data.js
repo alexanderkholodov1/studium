@@ -4,7 +4,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.8.0/firebas
 import { getAuth, connectAuthEmulator } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js';
 import {
   getFirestore, connectFirestoreEmulator, collection, query, where, getDocs, doc, getDoc, setDoc, deleteDoc, writeBatch,
-  serverTimestamp, Bytes,
+  serverTimestamp, Bytes, increment,
 } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-lite.js';
 import { firebaseConfig } from './config.js';
 import { keyOf } from './themes.js';
@@ -208,4 +208,23 @@ export async function setTip(uid, tip) {
   if (tip.tags.length) {
     await setDoc(ref, { prof: tip.prof, professor: tip.professor, ...(tip.course ? { course: tip.course } : {}), tags: tip.tags, updated: serverTimestamp() });
   } else await deleteDoc(ref);
+}
+
+/* ---------- presence: when an account was last seen ---------- */
+// Written on real events only (signing in, opening the page, coming back to it, changing page), at most once every five
+// minutes, and never by a timer. «since» keeps the first time the account was seen.
+const SEEN_EVERY = 5 * 60_000;
+let lastSeen = 0;
+export async function markPresence(uid, community) {
+  if (!uid || Date.now() - lastSeen < SEEN_EVERY) return;
+  lastSeen = Date.now();
+  const ref = doc(db, 'presence', uid);
+  let since = null;
+  try { const snap = await getDoc(ref); since = snap.exists() ? snap.data().since ?? null : null; } catch { /* first time */ }
+  await setDoc(ref, { at: serverTimestamp(), community: String(community ?? '').slice(0, 30), since: since ?? serverTimestamp() });
+}
+
+/* ---------- easter eggs: how many people found each one ---------- */
+export async function countEgg(id) {
+  await setDoc(doc(db, 'eggs', id), { count: increment(1) }, { merge: true });
 }

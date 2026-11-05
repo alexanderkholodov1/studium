@@ -20,7 +20,7 @@ export const THEMES = { auto: 'Como tu sistema', light: 'Día', dark: 'Noche' };
 export const AVATARS = ['blue', 'red', 'teal', 'butter', 'sky', 'peach'];
 const LANG = /^en\b/i.test(globalThis.navigator?.language ?? '') ? 'en' : 'es';
 const DEFAULTS = { mode: 'examenes', ambience: 'vivo', sound: false, theme: 'auto', lang: LANG, avatar: 'blue', semester: 0, career: '', nickname: '', name: '', goals: [], progress: {},
-  deadlines: [], tiles: [], notes: '', links: [], focus: { study: 25, rest: 5 } };
+  deadlines: [], tiles: [], notes: '', links: [], focus: { study: 25, rest: 5 }, bubbles: false };
 // The tiles the home page can show (space.js draws them).
 const TILE_IDS = ['countdown', 'deadlines', 'week', 'goals', 'timer', 'notes', 'links', 'recent', 'news', 'explore'];
 const rid = () => Math.random().toString(36).slice(2, 10);
@@ -36,6 +36,7 @@ const clean = (p) => {
   if (!(out.ambience in AMBIENCES)) out.ambience = DEFAULTS.ambience;
   if (!(out.theme in THEMES)) out.theme = DEFAULTS.theme;
   out.sound = !!out.sound;
+  out.bubbles = !!out.bubbles;
   out.semester = Math.max(0, Math.min(20, Number(out.semester) || 0));
   out.career = String(out.career ?? '').slice(0, 80);
   out.nickname = String(out.nickname ?? '').slice(0, 40);
