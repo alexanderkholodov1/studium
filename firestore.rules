@@ -10,6 +10,9 @@ rules_version = '2';
 // - owners/{id}: the account that may replace or delete the guide or contribution with the same id; only that account
 //   can read it. Guides published with the admin tool have no owner, so no browser can change them.
 // - sources/{id}: the collections that material comes from, with their credits; published with the admin tools.
+// - profiles/{uid}: the person's own settings, goals and progress; only that account reads or writes it.
+// - kudos/{guide}__{uid}: the thanks an account gives a guide. Only fixed, positive kinds: nobody can write a comment.
+// - tips/{professor}__{uid}: what an account knows about a professor, as fixed constructive tags; no free text.
 // A guide or contribution is public, or private to its owner. Lists return public documents only (a list query must
 // ask for visibility == 'public'); the owner opens its private ones one by one.
 service cloud.firestore {
@@ -97,6 +100,61 @@ service cloud.firestore {
     // An owner is recorded only together with the guide or contribution it creates, which must not exist yet.
     match /sources/{id} {
       allow read: if student();
+    }
+
+    // The person's own space.
+    function profile(d) {
+      return d.keys().hasOnly(['nickname', 'career', 'semester', 'mode', 'ambience', 'sound', 'theme', 'goals', 'progress', 'updated'])
+        && optional(d, 'nickname', 40) && optional(d, 'career', 80)
+        && (!('semester' in d) || (d.semester is int && d.semester >= 0 && d.semester <= 20))
+        && (!('mode' in d) || d.mode in ['examenes', 'gusto', 'intensivo', 'metas'])
+        && (!('ambience' in d) || d.ambience in ['jugueton', 'vivo', 'sereno', 'enfoque'])
+        && (!('sound' in d) || d.sound is bool)
+        && (!('theme' in d) || d.theme in ['auto', 'light', 'dark'])
+        && (!('goals' in d) || (d.goals is list && d.goals.size() <= 60))
+        && (!('progress' in d) || (d.progress is map && d.progress.size() <= 300))
+        && d.updated == request.time;
+    }
+    match /profiles/{uid} {
+      allow get, delete: if student() && request.auth.uid == uid;
+      allow create, update: if student() && request.auth.uid == uid && profile(request.resource.data);
+    }
+
+    // A list without repeated values, all of them from the allowed ones.
+    function picked(value, allowed, max) {
+      return value is list && value.size() > 0 && value.size() <= max && value.toSet().size() == value.size() && value.hasOnly(allowed);
+    }
+
+    function kudo(id, d) {
+      return d.keys().hasOnly(['guide', 'kinds', 'updated']) && d.keys().hasAll(['guide', 'kinds', 'updated'])
+        && d.guide is string && d.guide.matches('[A-Za-z0-9-]{3,100}') && id == d.guide + '__' + request.auth.uid
+        && exists(at('catalog', d.guide))
+        && picked(d.kinds, ['salvo', 'entendi', 'examen', 'gracias'], 4)
+        && d.updated == request.time;
+    }
+    match /kudos/{id} {
+      allow read: if student();
+      allow create, update: if student() && kudo(id, request.resource.data);
+      allow delete: if student() && id == resource.data.guide + '__' + request.auth.uid;
+    }
+
+    // A professor's name or a course: text without digits, addresses or markup.
+    function name(value, max) { return text(value, max) && value.size() >= 3 && !value.matches('.*[0-9@/<>{}].*'); }
+    function tip(id, d) {
+      return d.keys().hasOnly(['prof', 'professor', 'course', 'tags', 'updated']) && d.keys().hasAll(['prof', 'professor', 'tags', 'updated'])
+        && d.prof is string && d.prof.matches('[a-z0-9-]{2,90}') && id == d.prof + '__' + request.auth.uid
+        && name(d.professor, 80) && (!('course' in d) || name(d.course, 80))
+        && picked(d.tags, ['explica-claro', 'ejemplos', 'practico', 'teorico', 'responde', 'tutorias',
+          'examen-deberes', 'examen-clase', 'examenes-largos', 'procedimiento', 'formato', 'participacion', 'proyectos',
+          'puntos-extra', 'recuperar', 'reclamos', 'material',
+          'asistencia', 'puntual', 'sin-formulas', 'leer-antes', 'ritmo', 'exigente',
+          'ideal-teoria', 'ideal-practica', 'ideal-autonomo', 'ideal-guiado'], 27)
+        && d.updated == request.time;
+    }
+    match /tips/{id} {
+      allow read: if student();
+      allow create, update: if student() && tip(id, request.resource.data);
+      allow delete: if student() && id == resource.data.prof + '__' + request.auth.uid;
     }
 
     match /owners/{id} {

@@ -142,7 +142,7 @@ export function buildGraph({ catalog, contributions }) {
   for (const n of all) {
     const c = n.type === 'course' ? n : n.type === 'guide' ? n.course : nodes.get([...(n.courses ?? [])][0] ?? '');
     const theme = themeOf(c?.theme);
-    n.color = n.type === 'guide' ? theme.b : n.type === 'career' ? '#f4f1ff' : theme.a;
+    n.color = n.type === 'guide' ? theme.b : n.type === 'career' ? '#f1f4fb' : theme.a;
     n.bridge = n.type === 'concept' && n.courses.size > 1;
     n.planned = n.type === 'course' && !n.contributions.length && !n.guides.length;
     n.r = n.type === 'career' ? 20 : n.type === 'course' ? 13 + Math.min(14, Math.sqrt(n.degree) * 1.6)
@@ -210,9 +210,9 @@ export class GraphView {
 
   colors() {
     const css = getComputedStyle(document.documentElement);
-    this.ink = css.getPropertyValue('--ink').trim() || '#f3f0ff';
-    this.muted = css.getPropertyValue('--muted').trim() || '#9a92c9';
-    this.halo = css.getPropertyValue('--bg').trim() || '#120d31';
+    this.ink = css.getPropertyValue('--ink').trim() || '#f1f4fb';
+    this.muted = css.getPropertyValue('--muted').trim() || '#8b95ad';
+    this.halo = css.getPropertyValue('--bg').trim() || '#0a0e1a';
     this.dark = css.getPropertyValue('color-scheme').trim() !== 'light';
   }
 

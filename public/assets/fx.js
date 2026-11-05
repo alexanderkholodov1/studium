@@ -1,78 +1,64 @@
-// Motion and depth: the sky behind every page (layers that move at different speeds with scroll and pointer),
-// liquid glass on the floating panels, the light that follows the pointer on glass, and view transitions.
-// Everything stays still when the person prefers reduced motion.
+// Motion and depth: the scene behind every page (light, a graph-paper floor and notebook sheets at different depths),
+// cards that lean toward the pointer, liquid glass on the floating panels, the light that follows the pointer on glass,
+// and view transitions. Everything stays still when the person prefers reduced motion or the focus ambience.
 
 const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const root = document.documentElement;
 
-/* ---------- parallax sky ---------- */
-export function startSky() {
+/* ---------- the scene ---------- */
+// Sheets of a notebook floating at different depths; the whole scene leans a little toward the pointer and the
+// sheets drift with the scroll, each at its own speed.
+const SHEETS = [
+  { x: 9, y: 22, z: -300, rx: 12, ry: -26, rz: -8, w: 210, h: 280, kind: 'ruled', k: 0.12, text: '∫ f(x) dx\n= <em>F(b) − F(a)</em>' },
+  { x: 88, y: 16, z: -520, rx: -8, ry: 30, rz: 7, w: 190, h: 250, kind: 'grid', k: 0.06, text: '192.168.1.0/24\n<em>/26</em> → 64' },
+  { x: 84, y: 68, z: -260, rx: 16, ry: 32, rz: -9, w: 180, h: 230, kind: 'ruled', k: 0.16, text: 'mitosis\n→ <em>2n</em>' },
+  { x: 16, y: 78, z: -640, rx: -14, ry: -18, rz: 12, w: 240, h: 300, kind: 'grid', k: 0.05, text: 'p < 0.05 ✓' },
+  { x: 50, y: 104, z: -820, rx: 34, ry: 0, rz: 3, w: 280, h: 200, kind: 'dots', k: 0.03, text: '' },
+  { x: 58, y: -4, z: -940, rx: -22, ry: 10, rz: -4, w: 250, h: 330, kind: 'ruled', k: 0.02, text: 'TCP ≠ UDP' },
+];
+export function startScene() {
+  const rig = document.getElementById('rig');
+  if (rig) {
+    rig.insertAdjacentHTML('beforeend', SHEETS.map((s, i) => `<div class="sheet ${s.kind}" style="--i:${i};--x:${s.x};--y:${s.y};--z:${s.z};--rx:${s.rx};--ry:${s.ry};--rz:${s.rz};--w:${s.w};--h:${s.h};--k:${s.k}">${s.text ? `<span>${s.text}</span>` : ''}</div>`).join(''));
+  }
   let sy = 0; let px = 0; let py = 0; let tx = 0; let ty = 0; let frame = 0;
   const paint = () => {
     frame = 0;
     px += (tx - px) * 0.08; py += (ty - py) * 0.08;
-    root.style.setProperty('--sy', String(sy));
+    root.style.setProperty('--sy', String(Math.round(sy)));
     root.style.setProperty('--px', px.toFixed(4));
     root.style.setProperty('--py', py.toFixed(4));
     if (Math.abs(tx - px) > 0.001 || Math.abs(ty - py) > 0.001) frame = requestAnimationFrame(paint);
   };
-  const ask = () => { if (!frame && !still()) frame = requestAnimationFrame(paint); };
+  const calm = () => still() || root.dataset.ambience === 'enfoque';
+  const ask = () => { if (!frame && !calm()) frame = requestAnimationFrame(paint); };
   addEventListener('scroll', () => { sy = scrollY; ask(); }, { passive: true });
   addEventListener('pointermove', (e) => {
     if (e.pointerType !== 'mouse') return;
     tx = e.clientX / innerWidth - 0.5; ty = e.clientY / innerHeight - 0.5; ask();
   }, { passive: true });
-  constellation(document.getElementById('sky-graph'));
 }
 
-// The nearest sky layer: a slow constellation of points that link when they come close.
-function constellation(canvas) {
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  let w = 0; let h = 0; let dots = []; let frame = 0; let last = 0;
-  const size = () => {
-    const dpr = Math.min(2, devicePixelRatio || 1);
-    w = innerWidth; h = innerHeight * 1.4;
-    canvas.width = w * dpr; canvas.height = h * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const count = Math.round(Math.min(70, (w * h) / 26000));
-    dots = Array.from({ length: count }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - 0.5) * 0.12, vy: (Math.random() - 0.5) * 0.12, r: 0.8 + Math.random() * 1.8 }));
-  };
-  const draw = (now) => {
-    frame = 0;
-    if (document.hidden || canvas.closest('[hidden]') || root.classList.contains('quiet')) return;
-    if (now - last < 33) { frame = requestAnimationFrame(draw); return; }
-    last = now;
-    const css = getComputedStyle(root);
-    const a = css.getPropertyValue('--sky-a').trim() || '#8d63ff';
-    const b = css.getPropertyValue('--sky-b').trim() || '#22e5c9';
-    ctx.clearRect(0, 0, w, h);
-    for (const d of dots) {
-      if (!still()) { d.x = (d.x + d.vx + w) % w; d.y = (d.y + d.vy + h) % h; }
-    }
-    for (let i = 0; i < dots.length; i += 1) {
-      for (let j = i + 1; j < dots.length; j += 1) {
-        const p = dots[i]; const q = dots[j];
-        const d = Math.hypot(p.x - q.x, p.y - q.y);
-        if (d > 150) continue;
-        ctx.globalAlpha = (1 - d / 150) * 0.35;
-        ctx.strokeStyle = i % 3 ? a : b;
-        ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
-      }
-    }
-    dots.forEach((d, i) => {
-      ctx.globalAlpha = 0.85; ctx.fillStyle = i % 3 ? a : b;
-      ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2); ctx.fill();
-    });
-    if (!still()) frame = requestAnimationFrame(draw);
-  };
-  const wake = () => { if (!frame) frame = requestAnimationFrame(draw); };
-  size();
-  addEventListener('resize', () => { size(); wake(); });
-  document.addEventListener('visibilitychange', wake);
-  new MutationObserver(wake).observe(root, { attributes: true, attributeFilter: ['class', 'data-theme', 'style'] });
-  wake();
+/* ---------- cards that lean toward the pointer ---------- */
+export function tilt() {
+  let current = null;
+  const reset = (el) => { el.classList.remove('tilting'); el.style.setProperty('--rx', '0deg'); el.style.setProperty('--ry', '0deg'); };
+  addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse' || still() || root.dataset.ambience === 'enfoque') return;
+    const el = e.target instanceof Element ? e.target.closest('[data-tilt]') : null;
+    if (current && current !== el) { reset(current); current = null; }
+    if (!el) return;
+    current = el;
+    el.classList.add('tilting');
+    const r = el.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - 0.5; const y = (e.clientY - r.top) / r.height - 0.5;
+    const max = Number(el.dataset.tilt) || 7;
+    el.style.setProperty('--rx', `${(-y * max).toFixed(2)}deg`);
+    el.style.setProperty('--ry', `${(x * max).toFixed(2)}deg`);
+    el.style.setProperty('--gx', `${((x + 0.5) * 100).toFixed(1)}%`);
+    el.style.setProperty('--gy', `${((y + 0.5) * 100).toFixed(1)}%`);
+  }, { passive: true });
+  document.documentElement.addEventListener('pointerleave', () => { if (current) reset(current); current = null; });
 }
 
 /* ---------- liquid glass ---------- */
@@ -168,7 +154,7 @@ export function transition(update) {
 
 // One orchestrated entrance per render: the children rise in sequence.
 export function rise(container, selector = ':scope > *') {
-  if (still()) return;
+  if (still() || root.dataset.ambience === 'enfoque') return;
   container.querySelectorAll(selector).forEach((el, i) => {
     el.animate([{ opacity: 0, transform: 'translateY(18px) scale(.98)' }, { opacity: 1, transform: 'none' }], {
       duration: 620, delay: Math.min(i, 12) * 55, easing: 'cubic-bezier(.2,.9,.25,1.15)', fill: 'backwards',

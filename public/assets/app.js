@@ -1,17 +1,24 @@
-// Studium: sign-in for accounts of one domain, the guides by course, the knowledge map, contributing, and the viewer.
-// Guides and contributions live only in the database; nothing of their content is in this bundle.
+// Studium: what it is (open to anyone), sign-in for the members of a community, the person's own space, the guides,
+// the knowledge map, professors, contributing and the viewer. Guides and contributions live only in the database;
+// nothing of their content is in this bundle.
 import {
   onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification,
   sendPasswordResetEmail, signOut,
 } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js';
-import { allowedDomain, audience, confirmEmail } from './config.js';
+import { allowedDomain, confirmEmail } from './config.js';
 import { auth, loadAll, loadGuide } from './data.js';
 import { keyOf, themeStyle, courseThemes } from './themes.js';
 import { LEVELS, QUESTION_KINDS, RELATIONS, countKind } from './prompts.js';
 import { buildGraph, upcoming, GraphView } from './graph.js';
 import { prepareGuide, showAnchor } from './viewer.js';
-import { startSky, liquid, glassLight, transition, rise } from './fx.js';
+import { startScene, tilt, liquid, glassLight, transition, rise } from './fx.js';
 import { mountContribute, renderPane } from './contribute.js';
+import { prefs } from './prefs.js';
+import { sfx } from './sfx.js';
+import { play, springLetters, celebrate } from './play.js';
+import { mountSpace, renderHome, renderSettings, renderAmbiences, remember, soonLabel, daysTo } from './space.js';
+import { mountCommunity, loadCommunity, kudosRow, renderKudos, renderProfes } from './community.js';
+import { mountDemos } from './demos.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -20,39 +27,81 @@ const allowed = (email) => typeof email === 'string' && email.toLowerCase().ends
 const returnUrl = () => location.href.split('#')[0];
 const root = document.documentElement;
 
-startSky();
-glassLight();
-for (const el of document.querySelectorAll('[data-liquid]')) liquid(el, JSON.parse(el.dataset.liquid || '{}'));
+/* ---------- the shared pieces of the landing and the about page ---------- */
+for (const slot of document.querySelectorAll('[data-template]')) slot.replaceWith($(`#tpl-${slot.dataset.template}`).content.cloneNode(true));
 
-const VIEWS = ['boot', 'auth', 'verify', 'denied', 'catalog', 'map', 'contribute', 'sources', 'guide'];
-const TABS = { catalog: 'guides', map: 'map', contribute: 'contribute' };
-const INSIDE = ['catalog', 'map', 'contribute', 'sources'];
+startScene();
+tilt();
+glassLight();
+play.start($('#play'), $('#fx-top'));
+for (const el of document.querySelectorAll('[data-liquid]')) liquid(el, JSON.parse(el.dataset.liquid || '{}'));
+springLetters($('#wordmark'));
+mountDemos();
+for (const el of document.querySelectorAll('[data-ambience-picker]')) renderAmbiences(el);
+
+/* ---------- the person's choices, applied everywhere ---------- */
+function applyPrefs(p) {
+  sfx.enable(p.sound);
+  play.setAmbience(p.ambience);
+  for (const b of document.querySelectorAll('[data-sound-toggle]')) b.setAttribute('aria-pressed', String(p.sound));
+}
+applyPrefs(prefs.get());
+prefs.on((p) => applyPrefs(p));
+document.querySelectorAll('[data-sound-toggle]').forEach((b) => b.addEventListener('click', () => {
+  const on = !prefs.get().sound;
+  prefs.set({ sound: on });
+  if (on) sfx.chime();
+  toast(on ? 'Sonidos activados.' : 'Sonidos apagados.');
+}));
+document.querySelectorAll('[data-theme-toggle]').forEach((b) => b.addEventListener('click', () => {
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  prefs.set({ theme: dark ? 'light' : 'dark' });
+  sfx.tick();
+}));
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('[data-scroll]');
+  if (!a) return;
+  e.preventDefault();
+  document.getElementById(a.dataset.scroll)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+/* ---------- views ---------- */
+const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'catalog', 'map', 'profes', 'contribute', 'settings', 'about', 'sources', 'guide'];
+const TABS = { home: 'home', catalog: 'catalog', map: 'map', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about' };
+const PUBLIC = ['landing', 'auth', 'about', 'denied', 'verify'];
 let current = 'boot';
 function show(view) {
   const swap = () => {
     for (const v of VIEWS) $(`#view-${v}`).hidden = v !== view;
-    $('#nav').hidden = !INSIDE.includes(view);
-    $('#tabbar').hidden = !INSIDE.includes(view);
-    $('#foot-sources').hidden = !INSIDE.includes(view);
-    $('#foot').hidden = view === 'guide' || view === 'map';
-    root.classList.toggle('quiet', view === 'map' || view === 'guide');
+    const member = isMember(auth.currentUser);
+    const nav = $('#nav');
+    nav.dataset.mode = member ? 'member' : 'public';
+    nav.hidden = view === 'boot' || view === 'guide';
+    $('#tabbar').hidden = !member || PUBLIC.includes(view) && view !== 'about' || view === 'guide' || view === 'boot';
+    $('#foot-sources').hidden = !member;
+    $('#foot').hidden = ['guide', 'map', 'boot'].includes(view);
+    const quiet = view === 'map' || view === 'guide';
+    root.classList.toggle('quiet', quiet);
+    play.setQuiet(quiet);
     for (const a of document.querySelectorAll('[data-tab]')) a.setAttribute('aria-current', String(a.dataset.tab === TABS[view]));
-    moveDrop();
     const user = auth.currentUser;
     $('#who-email').textContent = user?.email ?? '';
-    $('#initial').textContent = (user?.email ?? '?')[0].toUpperCase();
+    $('#initial').textContent = (prefs.get().nickname || user?.email || '?')[0].toUpperCase();
     current = view;
+    requestAnimationFrame(moveDrop);
   };
-  if (view === current) swap(); else transition(swap);
+  if (view === current) swap(); else { transition(swap); if (view !== 'map' && view !== 'guide') scrollTo({ top: 0, behavior: 'instant' }); }
 }
 // The tab indicator: a drop of glass that slides to the current tab.
 function moveDrop() {
-  const tab = document.querySelector('#nav [aria-current="true"]');
-  const drop = $('#nav .drop');
-  if (!tab || !drop) { if (drop) drop.style.opacity = '0'; return; }
-  drop.style.opacity = '1';
-  drop.style.width = `${tab.offsetWidth}px`;
-  drop.style.transform = `translateX(${tab.offsetLeft}px)`;
+  for (const tabs of document.querySelectorAll('#nav .tabs')) {
+    const tab = tabs.querySelector('[aria-current="true"]');
+    const drop = tabs.querySelector('.drop');
+    if (!tab || !drop) { if (drop) drop.style.opacity = '0'; continue; }
+    drop.style.opacity = '1';
+    drop.style.width = `${tab.offsetWidth}px`;
+    drop.style.transform = `translateX(${tab.offsetLeft - 4}px)`;
+  }
 }
 addEventListener('resize', moveDrop);
 
@@ -82,20 +131,15 @@ function toast(text) {
   toastTimer = setTimeout(() => { el.classList.add('out'); setTimeout(() => { el.hidden = true; }, 400); }, 3600);
 }
 
-/* ---------- theme ---------- */
-document.querySelectorAll('[data-theme-toggle]').forEach((b) => b.addEventListener('click', () => {
-  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-  root.dataset.theme = dark ? 'light' : 'dark';
-  try { localStorage.setItem('studium-theme', root.dataset.theme); } catch { /* the choice just is not remembered */ }
-}));
-
 /* ---------- account menu ---------- */
 const menu = $('#account-menu');
 $('#account').addEventListener('click', () => { menu.hidden = !menu.hidden; $('#account').setAttribute('aria-expanded', String(!menu.hidden)); });
 document.addEventListener('click', (e) => { if (!menu.hidden && !e.target.closest('.account')) { menu.hidden = true; $('#account').setAttribute('aria-expanded', 'false'); } });
 menu.addEventListener('click', (e) => { if (e.target.closest('a, button')) menu.hidden = true; });
 
-/* ---------- sign in / create account ---------- */
+/* ---------- sign in / create an account ---------- */
+// Members of a community know which address to use; the page never names the domain.
+const NOT_MEMBER = 'Ese correo no pertenece a ninguna comunidad de Studium. Si tu universidad ya está, entra con tu correo de estudiante.';
 let mode = 'in';
 function setMode(next) {
   mode = next;
@@ -106,15 +150,14 @@ function setMode(next) {
   $('#pw-hint').hidden = mode === 'in';
   // Password recovery is part of the e-mail flow.
   $('#forgot').hidden = mode === 'up' || !confirmEmail;
-  $('#auth-lead').innerHTML = mode === 'in'
-    ? `Entra con tu correo <strong>@${esc(allowedDomain)}</strong>.`
-    : `Crea tu cuenta con tu correo <strong>@${esc(allowedDomain)}</strong>.${confirmEmail ? ' Te enviaremos un enlace para confirmar que es tuyo.' : ''}`;
+  $('#auth-lead').textContent = mode === 'in'
+    ? 'Entra con el correo de tu comunidad.'
+    : `Crea tu cuenta con el correo de tu comunidad.${confirmEmail ? ' Te enviaremos un enlace para confirmar que es tuyo.' : ''}`;
   $('#auth-msg').textContent = '';
 }
 $('#tab-in').addEventListener('click', () => setMode('in'));
 $('#tab-up').addEventListener('click', () => setMode('up'));
 setMode('in');
-$('#auth-audience').textContent = `Para ${audience}.`;
 
 const say = (sel, text, ok = false) => { const el = $(sel); el.textContent = text; el.classList.toggle('ok', ok); };
 async function busy(button, work) {
@@ -125,7 +168,7 @@ $('#auth-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const email = $('#email').value.trim();
   const password = $('#password').value;
-  if (!allowed(email)) return say('#auth-msg', `Usa tu correo estudiantil: termina en @${allowedDomain}.`);
+  if (!allowed(email)) return say('#auth-msg', NOT_MEMBER);
   if (password.length < 6) return say('#auth-msg', 'La contraseña debe tener al menos 6 caracteres.');
   say('#auth-msg', '');
   busy($('#auth-submit'), async () => {
@@ -140,7 +183,7 @@ $('#auth-form').addEventListener('submit', (event) => {
 });
 $('#forgot').addEventListener('click', () => {
   const email = $('#email').value.trim();
-  if (!allowed(email)) return say('#auth-msg', `Escribe arriba tu correo @${allowedDomain} y vuelve a pulsar «Olvidé mi contraseña».`);
+  if (!allowed(email)) return say('#auth-msg', 'Escribe arriba el correo de tu comunidad y vuelve a pulsar «Olvidé mi contraseña».');
   busy($('#forgot'), async () => {
     try {
       await sendPasswordResetEmail(auth, email, { url: returnUrl() });
@@ -181,16 +224,16 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && !$('#view-verify').hidden) recheck().catch(() => {});
 });
 
-const leave = () => signOut(auth).then(() => { location.hash = ''; });
+const leave = () => signOut(auth).then(() => { prefs.detach(); location.hash = '#/'; });
 for (const id of ['#sign-out', '#verify-other', '#denied-out']) $(id).addEventListener('click', leave);
 
 /* ---------- data ---------- */
-const state = { catalog: [], contributions: [], graph: null, themes: new Map(), loaded: false };
+const state = { catalog: [], contributions: [], sources: [], tips: [], graph: null, themes: new Map(), loaded: false };
 let loading = null;
 async function load(force = false) {
   if (state.loaded && !force) return state;
   loading ??= (async () => {
-    const data = await loadAll(auth.currentUser?.uid);
+    const [data] = await Promise.all([loadAll(auth.currentUser?.uid), loadCommunity(force)]);
     Object.assign(state, data, {
       graph: buildGraph(data),
       themes: courseThemes([...data.catalog, ...data.contributions.filter((c) => c.kind !== 'curriculum')]),
@@ -203,58 +246,54 @@ async function load(force = false) {
 async function refresh() {
   await load(true);
   if (current === 'catalog') renderCatalog();
+  if (current === 'home') renderHome();
+  if (current === 'profes') renderProfes();
   if (map) map.setGraph(state.graph, { animate: false });
 }
 const context = { state, get user() { return { uid: auth.currentUser?.uid, email: auth.currentUser?.email ?? '' }; }, refresh, toast, explain };
+mountSpace(context);
+mountCommunity(context);
 
-/* ---------- guides by course ---------- */
+/* ---------- guides ---------- */
 const day = (d) => (d ? new Date(`${d}T12:00:00`) : null);
-const monthDay = (d) => {
-  const date = day(d);
-  return date ? `<span class="d">${date.getDate()}</span><span class="m">${date.toLocaleDateString('es-EC', { month: 'short' }).replace('.', '')}</span>` : '';
-};
-let courseFilter = '';
+function guideCard(g) {
+  const theme = state.themes.get(keyOf(g.course)) ?? g.theme;
+  const date = day(g.date);
+  const soon = soonLabel(g.date);
+  const n = daysTo(g.date);
+  const done = prefs.get().progress[g.id] === 'done';
+  return `<a class="gcard" data-tilt="6" href="#/guia/${encodeURIComponent(g.id)}" style="${themeStyle(theme)}">
+    <div class="art" aria-hidden="true"></div>
+    ${soon ? `<span class="soon ${n <= 2 ? 'hot' : ''}">${esc(soon)}</span>` : ''}
+    ${date ? `<span class="when d" style="--d:34"><b>${date.getDate()}</b><small>${date.toLocaleDateString('es-EC', { month: 'short' }).replace('.', '')}</small></span>` : ''}
+    <div class="body d" style="--d:16">
+      <p class="course">${esc([g.code, g.course].filter(Boolean).join(' · '))}</p>
+      <h3>${esc(g.title)}</h3>
+      <p class="who">${esc([g.professor, g.term].filter(Boolean).join(' · '))}</p>
+      <div class="flags">${g.level ? `<span class="level">${esc(LEVELS[g.level])}</span>` : ''}${g.visibility === 'private' ? '<span class="level private">Solo tú</span>' : ''}${g.mine ? '<span class="level private">Tuya</span>' : ''}${done ? '<span class="level done">La terminaste</span>' : ''}</div>
+      <div class="tags">${(g.topics?.length ? g.topics : g.concepts ?? []).slice(0, 5).map((t) => `<span>${esc(t)}</span>`).join('')}</div>
+      ${kudosRow(g.id)}
+    </div>
+  </a>`;
+}
 function renderCatalog() {
   const q = keyOf($('#q').value);
-  const courses = state.graph.nodes.filter((n) => n.type === 'course' && (n.guides.length || n.contributions.length));
-  const matches = (x) => !q || keyOf(JSON.stringify([x.course, x.title, x.professor, x.term, x.topics, x.concepts, x.code])).includes(q);
-  $('#course-chips').innerHTML = courses.length > 1
-    ? [`<button class="chip ${courseFilter ? '' : 'on'}" data-course="">Todas</button>`, ...courses.map((c) => `<button class="chip ${courseFilter === c.id ? 'on' : ''}" data-course="${esc(c.id)}" style="${themeStyle(c.theme)}"><i></i>${esc(c.name)}</button>`)].join('')
-    : '';
-  const shown = courses.filter((c) => (!courseFilter || c.id === courseFilter) && (matches({ course: c.name, code: c.code }) || c.guides.some(matches)));
-  $('#courses').innerHTML = shown.length ? shown.map((c) => {
-    const guides = c.guides.filter((g) => matches(g) || matches({ course: c.name })).sort((a, b) => String(b.date).localeCompare(String(a.date)));
-    const concepts = state.graph.links.filter((l) => l.kind === 'in' && l.source === c).length;
-    const people = [...c.professors.keys()];
-    return `<section class="course" style="${themeStyle(c.theme)}">
-      <div class="course-art" aria-hidden="true"></div>
-      <header>
-        <div>
-          <p class="course-code">${esc([c.code, c.contributions.find((x) => x.university)?.university ?? c.guides.find((x) => x.university)?.university].filter(Boolean).join(' · '))}</p>
-          <h2>${esc(c.name)}</h2>
-          <p class="course-meta">${people.length ? `${esc(people.slice(0, 3).join(', '))}${people.length > 3 ? ` y ${people.length - 3} más` : ''}. ` : ''}${c.contributions.length} ${c.contributions.length === 1 ? 'aporte' : 'aportes'}, ${concepts} conceptos.${creditLine(c.contributions)}</p>
-        </div>
-        <div class="course-actions">
-          <a class="button ghost" href="#/mapa/${encodeURIComponent(c.id)}">Ver en el mapa</a>
-          <a class="button primary" href="#/aportar/guia/${encodeURIComponent(c.id)}">Crear una guía</a>
-        </div>
-      </header>
-      ${guides.length ? `<ul class="guides">${guides.map((g) => `<li><a class="guide-row lit" href="#/guia/${encodeURIComponent(g.id)}">
-          <span class="when">${monthDay(g.date)}</span>
-          <span class="body"><strong>${esc(g.title)}</strong>
-            <span class="muted">${esc([g.professor, g.term].filter(Boolean).join(', '))}${g.level ? ` <span class="level">${esc(LEVELS[g.level])}</span>` : ''}${g.visibility === 'private' ? ' <span class="level private">Solo tú</span>' : ''}</span>
-            <span class="tags">${(g.topics?.length ? g.topics : g.concepts ?? []).slice(0, 6).map((t) => `<span>${esc(t)}</span>`).join('')}</span></span>
-          <svg class="go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </a></li>`).join('')}</ul>`
-        : `<p class="no-guides">Todavía no hay guías de ${esc(c.name)}. Con ${c.contributions.length === 1 ? 'el aporte que hay' : `los ${c.contributions.length} aportes que hay`}, tu IA puede crear la primera.</p>`}
-    </section>`;
-  }).join('') : `<div class="empty glass">${courses.length
-    ? '<h2>Nada coincide con esa búsqueda</h2><p>Prueba con otra materia, tema o profesor.</p>'
-    : '<h2>Studium está empezando</h2><p>Aporta tus exámenes, deberes o apuntes: con ellos se arma el mapa de tu materia y se crean las guías.</p><a class="button primary" href="#/aportar">Aportar material</a>'}</div>`;
-  rise($('#courses'));
+  const filter = document.querySelector('#g-filter input:checked')?.value ?? 'all';
+  const progress = prefs.get().progress;
+  let list = state.catalog.filter((g) => !q || keyOf(JSON.stringify([g.course, g.title, g.professor, g.term, g.topics, g.concepts, g.code])).includes(q));
+  if (filter === 'soon') list = list.filter((g) => (daysTo(g.date) ?? -1) >= 0);
+  if (filter === 'mine') list = list.filter((g) => g.mine);
+  if (filter === 'done') list = list.filter((g) => progress[g.id] === 'done');
+  // What is coming goes first, the closest at the top; then the rest, newest first.
+  const rank = (g) => { const n = daysTo(g.date); return n !== null && n >= 0 ? n : 1e6 - (day(g.date)?.getTime() ?? 0) / 1e9; };
+  list.sort((a, b) => rank(a) - rank(b));
+  $('#gallery').innerHTML = list.length ? list.map(guideCard).join('') : `<div class="empty glass">${state.catalog.length
+    ? `<h2>Nada por aquí</h2><p>${filter === 'all' ? 'Prueba con otra materia, tema o profe.' : 'Cambia el filtro para ver más guías.'}</p>`
+    : '<h2>Studium está empezando</h2><p>Aporta tus exámenes, deberes o apuntes: con ellos se arma el mapa y se crean las guías.</p><a class="button primary" href="#/aportar">Aportar material</a>'}</div>`;
+  rise($('#gallery'));
 }
 $('#q').addEventListener('input', renderCatalog);
-$('#course-chips').addEventListener('click', (e) => { const b = e.target.closest('[data-course]'); if (b) { courseFilter = b.dataset.course; renderCatalog(); } });
+$('#g-filter').addEventListener('change', () => { sfx.tick(); renderCatalog(); });
 
 /* ---------- sources and credits ---------- */
 const sourceOf = (id) => state.sources.find((x) => x.id === id);
@@ -271,7 +310,7 @@ function renderSources() {
       <h2>${esc(src.name)}</h2>
       ${src.thanks ? `<div class="thanks">${paras(src.thanks)}</div>` : ''}
       ${paras(src.description)}
-      <p class="muted">${items.length ? `En Studium: ${items.length} ${items.length === 1 ? 'aporte' : 'aportes'} de ${courses.size} ${courses.size === 1 ? 'materia' : 'materias'},.` : 'Su material se está incorporando al mapa.'}</p>
+      <p class="muted">${items.length ? `En Studium: ${items.length} ${items.length === 1 ? 'aporte' : 'aportes'} de ${courses.size} ${courses.size === 1 ? 'materia' : 'materias'}.` : 'Su material se está incorporando al mapa.'}</p>
       ${src.url ? `<div class="actions"><a class="button primary" href="${esc(src.url)}" target="_blank" rel="noopener noreferrer">${esc(src.linkLabel ?? 'Ver la fuente original')}</a></div>` : ''}
     </article>`;
   }).join('');
@@ -300,16 +339,18 @@ async function openMap(nodeId) {
   const node = nodeId && state.graph.byId.get(nodeId);
   if (node) setTimeout(() => map.select(node, { fly: true }), 300);
 }
-const prefs = { get() { try { return JSON.parse(localStorage.getItem('studium-map') ?? '{}'); } catch { return {}; } }, set(v) { try { localStorage.setItem('studium-map', JSON.stringify(v)); } catch { /* not remembered */ } } };
+const mapPrefs = { get() { try { return JSON.parse(localStorage.getItem('studium-map') ?? '{}'); } catch { return {}; } }, set(v) { try { localStorage.setItem('studium-map', JSON.stringify(v)); } catch { /* not remembered */ } } };
 function fillTools() {
   const g = state.graph;
   const careers = g.nodes.filter((n) => n.type === 'career');
-  const p = prefs.get();
+  const p = mapPrefs.get();
+  // The semester the person set in their settings is the default here.
+  const semester = p.semester ?? prefs.get().semester;
   $('#map-career').innerHTML = `<option value="">Todas las carreras</option>${careers.map((c) => `<option value="${esc(c.id)}" ${p.career === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}`;
   $('#map-career').hidden = !careers.length;
   const plan = g.byId.get($('#map-career').value);
   const count = plan ? plan.semesters.length - 1 : 0;
-  $('#map-semester').innerHTML = `<option value="0">Mi semestre</option>${Array.from({ length: Math.max(0, count) }, (_, i) => `<option value="${i + 1}" ${p.semester === i + 1 ? 'selected' : ''}>Estoy en ${i + 1}.º</option>`).join('')}`;
+  $('#map-semester').innerHTML = `<option value="0">Mi semestre</option>${Array.from({ length: Math.max(0, count) }, (_, i) => `<option value="${i + 1}" ${semester === i + 1 ? 'selected' : ''}>Estoy en ${i + 1}.º</option>`).join('')}`;
   $('#map-semester').hidden = !plan;
   const profs = [...new Set(g.nodes.filter((n) => n.type === 'course').flatMap((n) => [...n.professors.keys()]))].sort();
   $('#map-prof').innerHTML = `<option value="">Todos los profesores</option>${profs.map((x) => `<option>${esc(x)}</option>`).join('')}`;
@@ -323,11 +364,11 @@ function applyTools() {
   const all = state.graph.nodes.filter((n) => n.type === 'course').map((n) => n.id);
   const career = $('#map-career').value;
   const semester = Number($('#map-semester').value) || 0;
-  prefs.set({ career, semester });
+  mapPrefs.set({ career, semester });
   map?.setFilter({ courses: off.size ? new Set(all.filter((id) => !off.has(id))) : null, professor: $('#map-prof').value, career, semester });
 }
 function mapTools() {
-  $('#map-career').addEventListener('change', () => { prefs.set({ career: $('#map-career').value, semester: 0 }); fillTools(); setTimeout(() => map.fit(), 900); });
+  $('#map-career').addEventListener('change', () => { mapPrefs.set({ career: $('#map-career').value, semester: 0 }); fillTools(); setTimeout(() => map.fit(), 900); });
   $('#map-semester').addEventListener('change', applyTools);
   $('#map-prof').addEventListener('change', applyTools);
   $('#map-legend').addEventListener('click', (e) => { const b = e.target.closest('[data-legend]'); if (b) { b.classList.toggle('on'); applyTools(); } });
@@ -389,7 +430,7 @@ function panel(n) {
       ${before.length ? `<h3>Se necesita antes</h3><div class="chips small">${chipsOf(before)}</div>` : ''}
       ${next.length ? `<h3>Lo que viene después</h3><ul class="next">${next.map((x) => `<li><button class="link" data-node="${esc(x.course.id)}">${esc(x.course.name)}</button>${x.shared.length ? `<span class="muted"> usa ${esc(x.shared.slice(0, 5).map((s) => s.name).join(', '))}${x.shared.length > 5 ? ` y ${x.shared.length - 5} más` : ''}</span>` : ''}</li>`).join('')}</ul>` : ''}
       ${concepts.length ? `<h3>Conceptos más evaluados</h3><div class="chips small">${chipsOf(concepts.slice(0, 18))}</div>` : ''}
-      <div class="actions">${n.guides.length ? `<a class="button ghost" href="#/">Ver ${plural(n.guides.length, 'guía', 'guías')}</a>` : ''}${n.contributions.length ? `<a class="button primary" href="#/aportar/guia/${encodeURIComponent(n.id)}">Crear una guía</a>` : '<a class="button primary" href="#/aportar">Aportar material</a>'}</div>`;
+      <div class="actions">${n.guides.length ? `<a class="button ghost" href="#/guias">Ver ${plural(n.guides.length, 'guía', 'guías')}</a>` : ''}${n.contributions.length ? `<a class="button primary" href="#/aportar/guia/${encodeURIComponent(n.id)}">Crear una guía</a>` : '<a class="button primary" href="#/aportar">Aportar material</a>'}</div>`;
   } else if (n.type === 'guide') {
     const e = n.entry;
     html = `<p class="kicker">Guía</p><h2>${esc(e.title)}</h2><p class="muted">${esc([n.course.name, e.professor, e.term].filter(Boolean).join(', '))}</p>
@@ -407,30 +448,67 @@ function panel(n) {
 
 /* ---------- guide viewer ---------- */
 const guides = new Map();
+let openGuide = '';
 $('#guide-full').addEventListener('click', () => $('#guide-frame').requestFullscreen?.());
+function syncDone() {
+  const done = prefs.get().progress[openGuide] === 'done';
+  $('#guide-done').setAttribute('aria-pressed', String(done));
+  $('#guide-done').textContent = done ? 'Terminada ✓' : 'La terminé';
+}
+$('#guide-done').addEventListener('click', (e) => {
+  const progress = { ...prefs.get().progress };
+  const done = progress[openGuide] !== 'done';
+  progress[openGuide] = done ? 'done' : 'reading';
+  // A goal tied to this guide is met with it.
+  const goals = prefs.get().goals.map((g) => (g.guide === openGuide ? { ...g, done } : g));
+  prefs.set({ progress, goals });
+  syncDone();
+  if (done) {
+    const r = e.currentTarget.getBoundingClientRect();
+    celebrate(r.left + r.width / 2, r.bottom, goals.length > 0 && goals.every((g) => g.done));
+    toast('¡Guía terminada!');
+  }
+});
 
 /* ---------- routing ---------- */
+const isMember = (user) => !!user && allowed(user.email) && (!confirmEmail || user.emailVerified);
 let routing = 0;
+let pending = '';
 async function route() {
   const ticket = ++routing;
   const user = auth.currentUser;
-  if (!user) { show('auth'); return; }
+  const [, page = '', ...rest] = location.hash.replace(/^#\/?/, '#/').split('/');
+  const arg = rest.map(decodeURIComponent);
+  root.style.removeProperty('--a');
+  if (!user) {
+    document.title = 'Studium';
+    if (page === 'entrar') { document.title = 'Entrar · Studium'; show('auth'); }
+    else if (page === 'acerca') { document.title = 'Acerca · Studium'; show('about'); }
+    else if (!page) show('landing');
+    // A link to something inside: sign in first, then go there.
+    else { pending = location.hash; show('auth'); }
+    return;
+  }
   if (!allowed(user.email)) {
-    $('#denied-text').textContent = `Studium es para ${audience}: entra con un correo que termine en @${allowedDomain}. Esta sesión es de ${user.email ?? 'otra cuenta'}.`;
+    $('#denied-text').textContent = `Esta sesión es de ${user.email ?? 'otra cuenta'}, que no pertenece a ninguna comunidad de Studium. Por ahora existe una sola, y se entra con el correo de estudiante de esa universidad.`;
     show('denied'); return;
   }
   if (confirmEmail && !user.emailVerified) { $('#verify-email').textContent = user.email; say('#verify-msg', verifyNote); show('verify'); return; }
-  const [, page = '', ...rest] = location.hash.replace(/^#\/?/, '#/').split('/');
-  const arg = rest.map(decodeURIComponent);
-  root.style.removeProperty('--sky-a'); root.style.removeProperty('--sky-b');
+  if (pending) { const to = pending; pending = ''; if (location.hash !== to) { location.hash = to; return; } }
+  if (page === 'entrar') { location.hash = '#/'; return; }
   try {
     if (page === 'guia' && arg[0]) {
       const id = arg[0];
+      openGuide = id;
       show('guide');
       const known = state.catalog.find((g) => g.id === id);
       $('#guide-title').textContent = known ? `${known.course}: ${known.title}` : '';
       $('#guide-map').href = `#/mapa/guide:${encodeURIComponent(id)}`;
       $('#guide-status').textContent = 'Abriendo la guía…'; $('#guide-status').hidden = false;
+      remember(id);
+      if (!prefs.get().progress[id]) prefs.set({ progress: { ...prefs.get().progress, [id]: 'reading' } });
+      syncDone();
+      load().then(() => { if (openGuide === id) renderKudos(id); }).catch(() => {});
       const guide = guides.get(id) ?? await loadGuide(id);
       if (ticket !== routing) return;
       if (!guide) { $('#guide-status').textContent = 'Esa guía no existe o ya no está publicada.'; $('#guide-frame').removeAttribute('srcdoc'); return; }
@@ -448,22 +526,15 @@ async function route() {
       } else showAnchor(frame, arg[1]);
       return;
     }
-    if (page === 'mapa') {
-      document.title = 'Mapa · Studium';
-      show('map');
-      await load();
-      if (ticket !== routing) return;
-      await openMap(arg.join('/'));
-      return;
-    }
-    if (page === 'fuentes') {
-      document.title = 'Fuentes · Studium';
-      show('sources');
-      await load();
-      if (ticket !== routing) return;
-      renderSources();
-      return;
-    }
+    const views = {
+      mapa: ['map', 'Mapa', () => openMap(arg.join('/'))],
+      fuentes: ['sources', 'Fuentes', renderSources],
+      profes: ['profes', 'Profes', renderProfes],
+      ajustes: ['settings', 'Ajustes', renderSettings],
+      acerca: ['about', 'Acerca', null],
+      guias: ['catalog', 'Guías', renderCatalog],
+      '': ['home', 'Inicio', renderHome],
+    };
     if (page === 'aportar' || page === 'mis-aportes') {
       document.title = 'Aportar · Studium';
       show('contribute');
@@ -474,16 +545,19 @@ async function route() {
       renderPane(pane, arg[1] ? { course: arg[1] } : undefined);
       return;
     }
-    document.title = 'Studium';
-    show('catalog');
-    if (!state.loaded) $('#courses').innerHTML = '<p class="status">Cargando…</p>';
+    const [view, title, render] = views[page] ?? views[''];
+    document.title = `${title} · Studium`;
+    show(view);
+    if (!render) return;
+    if (!state.loaded && view === 'catalog') $('#gallery').innerHTML = '<p class="status">Cargando…</p>';
+    if (!state.loaded && view === 'home') $('#dash').innerHTML = '<p class="status" style="grid-column:1/-1">Cargando tu espacio…</p>';
     await load();
     if (ticket !== routing) return;
-    renderCatalog();
+    await render();
   } catch (error) {
     if (ticket !== routing) return;
     console.error(error);
-    const where = page === 'guia' ? '#guide-status' : page === 'mapa' ? '#map-empty' : page === 'aportar' ? '#pane-material' : '#courses';
+    const where = page === 'guia' ? '#guide-status' : page === 'mapa' ? '#map-empty' : page === 'aportar' ? '#pane-material' : page === 'guias' ? '#gallery' : page === 'profes' ? '#profs' : '#dash';
     $(where).hidden = false;
     $(where).textContent = explain(error);
   }
@@ -493,9 +567,10 @@ document.querySelectorAll('[data-pane]').forEach((b) => b.addEventListener('clic
 }));
 addEventListener('hashchange', () => route());
 onAuthStateChanged(auth, async (user) => {
-  Object.assign(state, { catalog: [], contributions: [], graph: null, loaded: false });
+  Object.assign(state, { catalog: [], contributions: [], tips: [], graph: null, loaded: false });
   guides.clear();
   // A token minted before the address was confirmed still says email_verified=false: refresh it once.
   if (confirmEmail && user?.emailVerified && !(await user.getIdTokenResult()).claims.email_verified) await user.getIdToken(true);
+  if (isMember(user)) await prefs.attach(user.uid); else prefs.detach();
   await route();
 });
