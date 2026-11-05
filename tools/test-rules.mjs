@@ -6,12 +6,10 @@ import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { accessToken, call, project } from './google.mjs';
+import { DEFAULT_SETTINGS, domainsOf, fromFields, toFields } from './settings.mjs';
 
 const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 const config = read('public/assets/config.js');
-const domain = config.match(/allowedDomain\s*=\s*'([a-z0-9.-]+)'/)[1];
-// What an unconfirmed account of the domain may do follows the confirmEmail setting.
-const confirmEmail = config.match(/confirmEmail\s*=\s*(true|false)/)[1] === 'true';
 
 const emulated = process.argv.includes('--emulators');
 const ports = JSON.parse(read('firebase.json')).emulators;
@@ -23,6 +21,22 @@ const webKey = emulated ? 'emulator' : config.match(/apiKey:\s*'(AIza[0-9A-Za-z_
 // The emulators accept "owner" as the administrator's token.
 const admin = emulated ? 'owner' : await accessToken();
 
+// The settings the rules read (settings/app): in the emulators the defaults of config.js are written first; live, the
+// project's own are only read, never changed. The test accounts use the accepted domains, and what an unconfirmed
+// account may do follows the confirmation setting.
+const settingsPath = `${firestore}/settings/app`;
+const settingsDoc = (over = {}) => {
+  const next = { ...DEFAULT_SETTINGS, ...over };
+  return { ...next, domains: over.domains ?? domainsOf(next) };
+};
+let settings;
+if (emulated) {
+  settings = settingsDoc();
+  await call(admin, 'PATCH', settingsPath, { fields: toFields({ ...settings, by: 'test', updated: new Date() }) });
+} else settings = fromFields((await call(admin, 'GET', settingsPath)).fields);
+const [domain, second] = settings.domains;
+const confirmEmail = settings.confirmEmail === true;
+
 const tag = `rules-test-${randomBytes(4).toString('hex')}`;
 const password = randomBytes(12).toString('base64url');
 const appId = () => [...randomBytes(20)].map((b) => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[b % 62]).join('');
@@ -33,6 +47,10 @@ const accounts = {
   unverified: { email: `${tag}-u@${domain}`, emailVerified: false },
   otherDomain: { email: `${tag}@example.com`, emailVerified: true },
   lookalike: { email: `${tag}@${domain}.example.com`, emailVerified: true },
+  // An admin: an address of no community, with the custom claim admin: true.
+  admin: { email: `${tag}-admin@example.com`, emailVerified: true, claims: { admin: true } },
+  // A second accepted domain, when there is one (USFQ's alumni).
+  ...(second ? { second: { email: `${tag}-2@${second}`, emailVerified: true } } : {}),
 };
 const created = [];
 const touched = new Set();
@@ -61,16 +79,19 @@ const value = (v) => {
   if (Buffer.isBuffer(v)) return { bytesValue: v.toString('base64') };
   if (Array.isArray(v)) return { arrayValue: { values: v.map(value) } };
   if (Number.isInteger(v)) return { integerValue: String(v) };
+  if (v instanceof Date) return { timestampValue: v.toISOString() };
   if (typeof v === 'boolean') return { booleanValue: v };
   if (v && typeof v === 'object') return { mapValue: { fields: fields(v) } };
   return { stringValue: String(v) };
 };
 const fields = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, value(v)]));
-function put(path, data, { stamp = true, create = false } = {}) {
+// stamp: the field that gets the request's time ('updated' unless told otherwise); mask: change only these fields.
+function put(path, data, { stamp = 'updated', create = false, mask = null } = {}) {
   touched.add(path);
   return {
     update: { name: `${base}/${path}`, fields: fields(data) },
-    ...(stamp ? { updateTransforms: [{ fieldPath: 'updated', setToServerValue: 'REQUEST_TIME' }] } : {}),
+    ...(mask ? { updateMask: { fieldPaths: [...mask, ...(stamp ? [stamp] : [])] } } : {}),
+    ...(stamp ? { updateTransforms: [{ fieldPath: stamp, setToServerValue: 'REQUEST_TIME' }] } : {}),
     ...(create ? { currentDocument: { exists: false } } : {}),
   };
 }
@@ -112,6 +133,7 @@ try {
     const user = await call(admin, 'POST', `${identity}/projects/${id}/accounts`, { email: account.email, emailVerified: account.emailVerified, password });
     created.push(user.localId);
     account.uid = user.localId;
+    if (account.claims) await call(admin, 'POST', `${identity}/projects/${id}/accounts:update`, { localId: user.localId, customAttributes: JSON.stringify(account.claims) });
     account.token = await signIn(account.email);
   }
   const write = { fields: { title: { stringValue: 'x' } } };
@@ -129,13 +151,14 @@ try {
   expect('student lists the sources', await list(s.token, 'sources'), 200);
   expect('student cannot write a source', await status(s.token, 'PATCH', `/sources/${tag}`, write), 403);
   expect('otherDomain cannot list the sources', await list(accounts.otherDomain.token, 'sources'), 403);
-  for (const [name, account] of Object.entries(accounts).filter(([name]) => !['student', 'classmate'].includes(name))) {
+  for (const [name, account] of Object.entries(accounts).filter(([name]) => !['student', 'classmate', 'admin', 'second'].includes(name))) {
     const allowedToo = name === 'unverified' && !confirmEmail;
     const verb = allowedToo ? 'can' : 'cannot';
     expect(`${name} ${verb} list the catalog`, await publicList(account.token, 'catalog'), allowedToo ? 200 : 403);
     expect(`${name} ${verb} open a guide`, await status(account.token, 'GET', `/guides/${tag}`), allowedToo ? 200 : 403);
     expect(`${name} ${verb} list the contributions`, await publicList(account.token, 'contributions'), allowedToo ? 200 : 403);
   }
+  if (accounts.second) expect('an account of the second accepted domain lists the catalog', await publicList(accounts.second.token, 'catalog'), 200);
   expect('no account cannot list the catalog', await publicList(null, 'catalog'), 403);
   expect('no account cannot open a guide', await status(null, 'GET', `/guides/${tag}`), 403);
   expect('no account cannot list the contributions', await publicList(null, 'contributions'), 403);
@@ -295,6 +318,76 @@ try {
   expect('classmate cannot delete the document', await commit(c.token, [remove(`library/${lib}`)]), 403);
   expect('student changes its document', await commit(s.token, [put(`library/${lib}`, shared({ title: 'Sílabo corregido' }))]), 200);
   expect('student deletes its document', await commit(s.token, [remove(`library/${lib}`), remove(`owners/${lib}`)]), 200);
+
+  // Admins, the settings, presence and the easter eggs
+  // Fresh items for the admin to see and moderate: earlier sections already deleted theirs.
+  const g2 = appId(); const pg = appId(); const m2 = appId(); const p2 = appId();
+  expect('student publishes a guide for the admin checks', await commit(s.token, [
+    put(`guides/${g2}`, guide(), { create: true }), put(`catalog/${g2}`, entry(), { create: true }), put(`owners/${g2}`, owner(s.uid), { stamp: false, create: true })]), 200);
+  expect('student publishes a private guide for the admin checks', await commit(s.token, [
+    put(`guides/${pg}`, guide(undefined, 'private'), { create: true }), put(`catalog/${pg}`, entry('private'), { create: true }), put(`owners/${pg}`, owner(s.uid), { stamp: false, create: true })]), 200);
+  expect('student publishes contributions for the admin checks', await commit(s.token, [
+    put(`contributions/${m2}`, contribution(), { create: true }), put(`owners/${m2}`, owner(s.uid), { stamp: false, create: true }),
+    put(`contributions/${p2}`, contribution({ visibility: 'private' }), { create: true }), put(`owners/${p2}`, owner(s.uid), { stamp: false, create: true })]), 200);
+  const A = accounts.admin;
+  const signedSettings = (by, over = {}) => ({ ...settingsDoc(over), by });
+  expect('student reads the settings', await status(s.token, 'GET', '/settings/app'), 200);
+  expect('otherDomain reads the settings (to learn it is not a member)', await status(accounts.otherDomain.token, 'GET', '/settings/app'), 200);
+  expect('no account cannot read the settings', await status(null, 'GET', '/settings/app'), 403);
+  expect('student cannot change the settings', await commit(s.token, [put('settings/app', signedSettings(s.email))]), 403);
+  expect('admin lists the whole catalog, private entries too', await list(A.token, 'catalog'), 200);
+  expect('admin opens a private contribution', await status(A.token, 'GET', `/contributions/${p2}`), 200);
+  expect('admin opens a private guide', await status(A.token, 'GET', `/guides/${pg}`), 200);
+  expect('admin lists the library', await list(A.token, 'library'), 200);
+  expect('admin lists its own owner records (the app loads them)', await list(A.token, 'owners', where('uid', A.uid)), 200);
+  expect('admin cannot publish as a student', await commit(A.token, [
+    put(`contributions/${tag}x`, contribution(), { create: true })]), 403);
+  expect('admin hides a guide, entry and page together', await commit(A.token, [
+    put(`catalog/${g2}`, { visibility: 'private' }, { mask: ['visibility'] }), put(`guides/${g2}`, { visibility: 'private' }, { mask: ['visibility'] })]), 200);
+  expect('admin cannot hide only half of a guide', await commit(A.token, [put(`catalog/${g2}`, { visibility: 'public' }, { mask: ['visibility'] })]), 403);
+  expect('admin cannot change anything else of a guide', await commit(A.token, [
+    put(`catalog/${g2}`, { visibility: 'public', title: 'otra' }, { mask: ['visibility', 'title'] }), put(`guides/${g2}`, { visibility: 'public' }, { mask: ['visibility'] })]), 403);
+  expect('student cannot hide a classmate\'s contribution', await commit(c.token, [put(`contributions/${m2}`, { visibility: 'private' }, { mask: ['visibility'] })]), 403);
+  expect('admin hides a contribution', await commit(A.token, [put(`contributions/${m2}`, { visibility: 'private' }, { mask: ['visibility'] })]), 200);
+  expect('admin deletes a student\'s contribution with its owner record', await commit(A.token, [remove(`contributions/${m2}`), remove(`owners/${m2}`)]), 200);
+  expect('admin cannot read a student\'s profile', await status(A.token, 'GET', `/profiles/${s.uid}`), 403);
+  // The audit log
+  expect('admin writes the audit log', await commit(A.token, [put(`audit/${tag}`, { action: 'prueba', detail: 'una prueba', by: A.email }, { stamp: 'at', create: true })]), 200);
+  expect('an audit entry signed by another address is refused', await commit(A.token, [put(`audit/${tag}b`, { action: 'prueba', detail: '', by: s.email }, { stamp: 'at', create: true })]), 403);
+  expect('admin cannot rewrite the audit log', await commit(A.token, [put(`audit/${tag}`, { action: 'otra', detail: '', by: A.email }, { stamp: 'at' })]), 403);
+  expect('student cannot write the audit log', await commit(s.token, [put(`audit/${tag}c`, { action: 'prueba', detail: '', by: s.email }, { stamp: 'at', create: true })]), 403);
+  expect('student cannot read the audit log', await status(s.token, 'GET', `/audit/${tag}`), 403);
+  expect('admin reads the audit log', await list(A.token, 'audit'), 200);
+  // Presence: written by each account for itself, on real events; counted by admins.
+  const seen = (since = new Date()) => ({ community: 'usfq', since });
+  expect('student records its presence', await commit(s.token, [put(`presence/${s.uid}`, seen(), { stamp: 'at' })]), 200);
+  expect('student reads its presence', await status(s.token, 'GET', `/presence/${s.uid}`), 200);
+  expect('student cannot record presence for another account', await commit(s.token, [put(`presence/${c.uid}`, seen(), { stamp: 'at' })]), 403);
+  expect('a presence with a made-up time is refused', await commit(s.token, [put(`presence/${s.uid}`, { ...seen(), at: new Date(0) }, { stamp: false })]), 403);
+  expect('student cannot list presence', await list(s.token, 'presence'), 403);
+  expect('admin counts presence', await list(A.token, 'presence'), 200);
+  expect('otherDomain cannot record presence', await commit(accounts.otherDomain.token, [put(`presence/${accounts.otherDomain.uid}`, seen(), { stamp: 'at' })]), 403);
+  if (emulated) {
+    // Only in the emulators: these change the live settings and counters.
+    expect('admin changes the settings', await commit(A.token, [put('settings/app', signedSettings(A.email))]), 200);
+    expect('settings signed by another address are refused', await commit(A.token, [put('settings/app', signedSettings(s.email))]), 403);
+    expect('settings without a community are refused', await commit(A.token, [put('settings/app', signedSettings(A.email, { communities: [] }))]), 403);
+    expect('settings with an unknown field are refused', await commit(A.token, [put('settings/app', { ...signedSettings(A.email), secret: 'x' })]), 403);
+    expect('admin turns the confirmation on', await commit(A.token, [put('settings/app', signedSettings(A.email, { confirmEmail: true }))]), 200);
+    expect('with the confirmation on, unverified cannot list the catalog', await publicList(accounts.unverified.token, 'catalog'), 403);
+    expect('with the confirmation on, student still lists the catalog', await publicList(s.token, 'catalog'), 200);
+    expect('admin turns a community off', await commit(A.token, [put('settings/app', signedSettings(A.email, { communities: DEFAULT_SETTINGS.communities.map((x) => ({ ...x, active: false })) }))]), 200);
+    expect('with its community off, student cannot list the catalog', await publicList(s.token, 'catalog'), 403);
+    expect('with every community off, the admin still reads', await list(A.token, 'catalog'), 200);
+    expect('admin restores the settings', await commit(A.token, [put('settings/app', signedSettings(A.email))]), 200);
+    expect('a member counts a found easter egg', await commit(s.token, [put('eggs/radio', { count: 1 }, { stamp: false, create: true })]), 200);
+    expect('the count goes up by one', await commit(c.token, [put('eggs/radio', { count: 2 }, { stamp: false })]), 200);
+    expect('the count cannot jump', await commit(c.token, [put('eggs/radio', { count: 9 }, { stamp: false })]), 403);
+    expect('an unknown egg is refused', await commit(s.token, [put(`eggs/${tag}`, { count: 1 }, { stamp: false, create: true })]), 403);
+    expect('otherDomain cannot count an egg', await commit(accounts.otherDomain.token, [put('eggs/portal', { count: 1 }, { stamp: false, create: true })]), 403);
+    expect('student cannot read the counts', await status(s.token, 'GET', '/eggs/radio'), 403);
+    expect('admin reads the counts', await list(A.token, 'eggs'), 200);
+  }
 
   expect('nobody writes elsewhere', await status(s.token, 'PATCH', `/other/${tag}`, write), 403);
 } finally {

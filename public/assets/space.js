@@ -6,6 +6,8 @@ import { sfx } from './sfx.js';
 import { celebrate } from './play.js';
 import { themeStyle, keyOf } from './themes.js';
 import { rise } from './fx.js';
+import { auth } from './data.js';
+import { communityLabel, communityOf } from './settings.js';
 import { seen, markSeen, hintsOn, setHints } from './hints.js';
 import { luckyHit, found, radioOn, openRadio } from './eggs.js';
 
@@ -253,7 +255,7 @@ const eggTray = () => (found().has('radio') && !radioOn() ? '<button class="chip
 export function renderHome() {
   const p = prefs.get();
   $('#home-hello').textContent = `${hello()}${p.nickname ? `, ${p.nickname}` : ''}.`;
-  $('#home-where').textContent = ['Comunidad USFQ', p.semester ? `${p.semester}.º semestre` : '', p.career].filter(Boolean).join(' · ');
+  $('#home-where').textContent = [communityLabel(auth.currentUser?.email), p.semester ? `${p.semester}.º semestre` : '', p.career].filter(Boolean).join(' · ');
   $('#home-sub').textContent = SUB[p.mode];
   const list = chosen();
   const tiles = list.map((t, i) => RENDER[tileId(t)]?.(spanOf(t)).replace(/^<section /, `<section data-i="${i}" `).replace(/(data-tile="[a-z]+"[^>]*>)/, `$1${tools(t, i, list.length)}`) ?? '').join('');
@@ -334,7 +336,7 @@ export function renderSettings() {
     <section class="set glass"><h2>Día o noche</h2>
       <fieldset class="seg"><legend class="sr">Tema</legend>${Object.entries(THEMES).map(([id, name]) => `<label><input type="radio" name="theme" value="${id}" data-pref="theme" ${p.theme === id ? 'checked' : ''}><span>${esc(name)}</span></label>`).join('')}</fieldset></section>
     <section class="set glass"><h2>Tu comunidad</h2>
-      <p>Perteneces a la comunidad <strong>USFQ</strong>. Tus ajustes, metas y progreso se guardan en tu cuenta y solo los ves tú.</p></section>`;
+      <p>${communityOf(auth.currentUser?.email) ? `Perteneces a la comunidad <strong>${esc(communityOf(auth.currentUser?.email).name)}</strong>.` : 'Entras como admin de Studium.'} Tus ajustes, metas y progreso se guardan en tu cuenta y solo los ves tú.</p></section>`;
   renderAmbiences($('#settings [data-ambience-picker]'));
   rise($('#settings'));
 }

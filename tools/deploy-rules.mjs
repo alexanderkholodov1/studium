@@ -1,14 +1,27 @@
 // Publishes firestore.rules to the project in .firebaserc. Creating the ruleset compiles it on the server, so a
 // rule that does not compile is reported and nothing changes. Publishing is skipped when the live rules are already
-// identical. Usage: node tools/deploy-rules.mjs
+// identical. The rules read the app's settings (settings/app): when that document does not exist yet, it is created
+// first with the defaults of public/assets/config.js; an existing one is never changed here.
+// Usage: node tools/deploy-rules.mjs
 import { readFileSync } from 'node:fs';
 import { accessToken, call, project } from './google.mjs';
+import { defaultDocument, toFields } from './settings.mjs';
 
 const id = project();
 const api = 'https://firebaserules.googleapis.com/v1';
 const content = readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8');
 const release = `projects/${id}/releases/cloud.firestore`;
 const token = await accessToken();
+
+const settingsUrl = `https://firestore.googleapis.com/v1/projects/${id}/databases/(default)/documents/settings/app`;
+const found = await fetch(settingsUrl, { headers: { authorization: `Bearer ${token}` } });
+if (found.status === 404) {
+  await call(token, 'PATCH', `${settingsUrl}?currentDocument.exists=false`, { fields: toFields(defaultDocument('tools/deploy-rules.mjs')) });
+  console.log(`Created settings/app in ${id} with the defaults of public/assets/config.js`);
+} else if (!found.ok) {
+  console.error(`Could not read settings/app: HTTP ${found.status}`);
+  process.exit(1);
+}
 
 const live = await call(token, 'GET', `${api}/${release}`);
 const current = await call(token, 'GET', `${api}/${live.rulesetName}`);

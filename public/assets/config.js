@@ -7,20 +7,29 @@ export const firebaseConfig = {
   appId: '1:921417767106:web:15e83839e0a7216dc8435b',
 };
 
-// Only accounts of this domain can read guides. firestore.rules enforces the same domain;
-// tools/check.mjs fails if the two ever differ. The site never shows it: members of a community already know it.
-export const allowedDomain = 'estud.usfq.edu.ec';
+// The settings the page starts with. The live ones are a document in Firestore (settings/app) that the admins change
+// from the admin panel, and the database rules read only that document. tools/deploy-rules.mjs creates it from these
+// defaults when it does not exist yet. The site never lists the accepted domains: members already know them.
+export const DEFAULT_SETTINGS = {
+  // Each community is a group of students, with the address domains that belong to it.
+  communities: [
+    { id: 'usfq', name: 'USFQ', full: 'Universidad San Francisco de Quito', domains: ['estud.usfq.edu.ec', 'alumni.usfq.edu.ec'], active: true },
+  ],
+  // Whether an account must confirm its address before it can read. Off since 0.4.5: Microsoft 365 holds the
+  // confirmation e-mails, so the requirement only kept students out.
+  confirmEmail: false,
+  // Switches of the page, for everyone.
+  flags: { hints: true, eggs: true, radio: true, bubbles: false },
+  // The AI providers members may connect.
+  providers: ['anthropic', 'openai', 'gemini'],
+  // A message shown to every member at the top of the page.
+  announcement: { on: false, text: '', level: 'info' },
+  // The OAuth client ID that lets the admin panel read Google Cloud data (accounts, usage) with the admin's own Google
+  // sign-in. Public by design, like the web API key; set from the panel.
+  googleClientId: '',
+};
+// Every accepted domain of the active communities: the list the rules check.
+export const domainsOf = (s) => [...new Set(s.communities.filter((c) => c.active).flatMap((c) => c.domains.map((d) => d.toLowerCase())))];
 
-// The communities: each one is the pool of students that share guides, the map and what they know of their professors.
-// Today there is one. A second one needs its own domain here and in firestore.rules, and a community field on what its
-// members publish, so that each pool reads only its own.
-export const communities = [
-  { id: 'usfq', name: 'USFQ', full: 'Universidad San Francisco de Quito', domain: allowedDomain },
-];
-
-// Sign-up flow: whether an account confirms its address through an e-mailed link, and may recover its password by
-// e-mail. firestore.rules follows the same setting; tools/check.mjs fails if the two ever differ.
-// Off since 0.4.5: Microsoft 365 holds the confirmation e-mails, so requiring them only kept students out.
-export const confirmEmail = false;
-// The address those e-mails come from, as the confirmation screen names it (tools/set-smtp.mjs sets the sender).
+// The address the account e-mails come from, as the confirmation screen names it (tools/set-smtp.mjs sets the sender).
 export const mailFrom = 'studiumplatform@gmail.com';

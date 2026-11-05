@@ -5,8 +5,9 @@ import {
   onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification,
   sendPasswordResetEmail, signOut, applyActionCode, verifyPasswordResetCode, confirmPasswordReset,
 } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js';
-import { allowedDomain, confirmEmail, mailFrom } from './config.js';
-import { auth, loadAll, loadGuide, loadLibrary } from './data.js';
+import { mailFrom } from './config.js';
+import { auth, loadAll, loadGuide, loadLibrary, markPresence } from './data.js';
+import { settings, communityOf, communityLabel } from './settings.js';
 import { keyOf, themeStyle, courseThemes } from './themes.js';
 import { LEVELS, QUESTION_KINDS, RELATIONS, countKind } from './prompts.js';
 import { buildGraph, upcoming, GraphView } from './graph.js';
@@ -26,10 +27,14 @@ import * as ai from './ai.js';
 import { setLang, t } from './i18n.js';
 import { mountHints } from './hints.js';
 import { mountEggs } from './eggs.js';
+import { mountAdmin, renderAdmin } from './admin.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const allowed = (email) => typeof email === 'string' && email.toLowerCase().endsWith(`@${allowedDomain}`) && email.indexOf('@') > 0;
+// An address of an active community (settings/app). Admins are members whatever their address.
+const allowed = (email) => typeof email === 'string' && email.indexOf('@') > 0 && !!communityOf(email);
+const role = { admin: false };
+const confirmEmail = () => settings.get().confirmEmail;
 // Where the e-mail links send the person back: this page, without the route.
 const returnUrl = () => location.href.split('#')[0];
 const root = document.documentElement;
@@ -99,8 +104,8 @@ document.addEventListener('click', (e) => {
 });
 
 /* ---------- views ---------- */
-const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'catalog', 'map', 'library', 'profes', 'contribute', 'settings', 'about', 'sources', 'guide'];
-const TABS = { home: 'home', catalog: 'catalog', map: 'map', library: 'library', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about' };
+const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'catalog', 'map', 'library', 'profes', 'contribute', 'settings', 'about', 'sources', 'guide', 'admin'];
+const TABS = { home: 'home', catalog: 'catalog', map: 'map', library: 'library', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', admin: 'admin' };
 const PUBLIC = ['landing', 'auth', 'about', 'denied', 'verify'];
 let current = 'boot';
 function show(view) {
@@ -121,6 +126,7 @@ function show(view) {
     $('#who-email').textContent = user?.email ?? '';
     $('#initial').textContent = (prefs.get().nickname || user?.email || '?')[0].toUpperCase();
     for (const a of document.querySelectorAll('#view-landing a[href="#/entrar"]')) a.textContent = t(member ? 'Ir a mi inicio' : 'Entrar');
+    for (const el of document.querySelectorAll('[data-community]')) el.textContent = t(communityLabel(user?.email));
     current = view;
     requestAnimationFrame(moveDrop);
   };
@@ -144,7 +150,7 @@ const MESSAGES = {
   'auth/wrong-password': 'Correo o contraseña incorrectos.',
   'auth/user-not-found': 'Correo o contraseña incorrectos.',
   'auth/invalid-email': 'Ese correo no es válido.',
-  'auth/email-already-in-use': `Ya existe una cuenta con ese correo. Entra con tu contraseña${confirmEmail ? ' o usa «Olvidé mi contraseña»' : ''}.`,
+  'auth/email-already-in-use': 'Ya existe una cuenta con ese correo. Entra con tu contraseña o usa «Olvidé mi contraseña».',
   'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres.',
   'auth/password-does-not-meet-requirements': 'La contraseña debe tener al menos 6 caracteres.',
   'auth/too-many-requests': 'Demasiados intentos seguidos. Espera unos minutos y vuelve a probar.',
@@ -182,11 +188,10 @@ function setMode(next) {
   $('#auth-submit').textContent = mode === 'in' ? 'Entrar' : 'Crear cuenta';
   $('#password').autocomplete = mode === 'in' ? 'current-password' : 'new-password';
   $('#pw-hint').hidden = mode === 'in';
-  // Password recovery is part of the e-mail flow.
-  $('#forgot').hidden = mode === 'up' || !confirmEmail;
+  $('#forgot').hidden = mode === 'up';
   $('#auth-lead').textContent = mode === 'in'
     ? 'Entra con el correo de tu comunidad.'
-    : `Crea tu cuenta con el correo de tu comunidad.${confirmEmail ? ' Te enviaremos un enlace para confirmar que es tuyo.' : ''}`;
+    : `Crea tu cuenta con el correo de tu comunidad.${confirmEmail() ? ' Te enviaremos un enlace para confirmar que es tuyo.' : ''}`;
   $('#auth-msg').textContent = '';
 }
 $('#tab-in').addEventListener('click', () => setMode('in'));
@@ -202,7 +207,8 @@ $('#auth-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const email = $('#email').value.trim();
   const password = $('#password').value;
-  if (!allowed(email)) return say('#auth-msg', NOT_MEMBER);
+  // The accepted domains are read only after signing in, so that the page never reveals them: a new account is
+  // checked right after it is created, and deleted at once when its address belongs to no community.
   if (password.length < 6) return say('#auth-msg', 'La contraseña debe tener al menos 6 caracteres.');
   say('#auth-msg', '');
   busy($('#auth-submit'), async () => {
@@ -210,14 +216,16 @@ $('#auth-form').addEventListener('submit', (event) => {
       if (mode === 'in') await signInWithEmailAndPassword(auth, email, password);
       else {
         const { user } = await createUserWithEmailAndPassword(auth, email, password);
-        if (confirmEmail) await sendConfirmation(user);
+        await settings.load();
+        if (!allowed(email)) { await user.delete().catch(() => signOut(auth)); say('#auth-msg', NOT_MEMBER); return; }
+        if (confirmEmail()) await sendConfirmation(user);
       }
     } catch (error) { say('#auth-msg', explain(error)); }
   });
 });
 $('#forgot').addEventListener('click', () => {
   const email = $('#email').value.trim();
-  if (!allowed(email)) return say('#auth-msg', 'Escribe arriba el correo de tu comunidad y vuelve a pulsar «Olvidé mi contraseña».');
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return say('#auth-msg', 'Escribe arriba tu correo y vuelve a pulsar «Olvidé mi contraseña».');
   busy($('#forgot'), async () => {
     try {
       await sendPasswordResetEmail(auth, email, { url: returnUrl() });
@@ -288,6 +296,7 @@ async function refresh() {
 const context = { state, get user() { return { uid: auth.currentUser?.uid, email: auth.currentUser?.email ?? '' }; }, refresh, toast, explain };
 mountSpace(context);
 mountEggs({ toast });
+mountAdmin(context);
 mountCommunity(context);
 mountLibrary(context);
 mountEditor();
@@ -525,8 +534,21 @@ $('#guide-edit').addEventListener('click', () => {
   });
 });
 
+/* ---------- the admins' announcement ---------- */
+// Shown to members while it is on; closing it hides that text for the rest of the visit.
+function showAnnouncement() {
+  const a = settings.get().announcement;
+  const el = $('#announce');
+  const closed = sessionStorage.getItem('studium-announce-closed') === a.text;
+  el.hidden = !(a.on && a.text && !closed && isMember(auth.currentUser));
+  root.classList.toggle('has-announce', !el.hidden);
+  el.className = `announce ${a.level}`;
+  $('#announce-text').textContent = a.text;
+}
+$('#announce-close').addEventListener('click', () => { sessionStorage.setItem('studium-announce-closed', settings.get().announcement.text); $('#announce').hidden = true; root.classList.remove('has-announce'); });
+
 /* ---------- routing ---------- */
-const isMember = (user) => !!user && allowed(user.email) && (!confirmEmail || user.emailVerified);
+const isMember = (user) => !!user && (role.admin || (allowed(user.email) && (!confirmEmail() || user.emailVerified)));
 let routing = 0;
 let pending = '';
 async function route() {
@@ -544,13 +566,14 @@ async function route() {
     else { pending = location.hash; show('auth'); }
     return;
   }
-  if (!allowed(user.email)) {
-    $('#denied-text').textContent = `Esta sesión es de ${user.email ?? 'otra cuenta'}, que no pertenece a ninguna comunidad de Studium. Por ahora existe una sola, y se entra con el correo de estudiante de esa universidad.`;
+  if (!role.admin && !allowed(user.email)) {
+    $('#denied-text').textContent = `Esta sesión es de ${user.email ?? 'otra cuenta'}, que no pertenece a ninguna comunidad de Studium. Se entra con el correo de estudiante de tu universidad.`;
     show('denied'); return;
   }
-  if (confirmEmail && !user.emailVerified) { $('#verify-email').textContent = user.email; $('#verify-from').textContent = mailFrom; say('#verify-msg', verifyNote); show('verify'); return; }
+  if (!role.admin && confirmEmail() && !user.emailVerified) { $('#verify-email').textContent = user.email; $('#verify-from').textContent = mailFrom; say('#verify-msg', verifyNote); show('verify'); return; }
   if (pending) { const to = pending; pending = ''; if (location.hash !== to) { location.hash = to; return; } }
-  if (page === 'entrar') { location.hash = '#/'; return; }
+  if (page === 'entrar' || (page === 'admin' && !role.admin)) { location.hash = '#/'; return; }
+  showAnnouncement();
   try {
     if (page === 'guia' && arg[0]) {
       const id = arg[0];
@@ -592,6 +615,7 @@ async function route() {
       guias: ['catalog', 'Guías', renderCatalog],
       // The logo: the public page, also for members, who reach their own space from «Inicio».
       bienvenida: ['landing', 'Qué es', null],
+      admin: ['admin', 'Admin', () => renderAdmin(arg[0])],
       '': ['home', 'Inicio', renderHome],
     };
     if (page === 'aportar' || page === 'mis-aportes') {
@@ -681,8 +705,22 @@ addEventListener('hashchange', () => route());
 onAuthStateChanged(auth, async (user) => {
   Object.assign(state, { catalog: [], contributions: [], tips: [], graph: null, loaded: false });
   guides.clear();
-  // A token minted before the address was confirmed still says email_verified=false: refresh it once.
-  if (confirmEmail && user?.emailVerified && !(await user.getIdTokenResult()).claims.email_verified) await user.getIdToken(true);
-  if (isMember(user)) await prefs.attach(user.uid); else prefs.detach();
+  role.admin = false;
+  if (user) {
+    const claims = (await user.getIdTokenResult()).claims;
+    role.admin = claims.admin === true;
+    await settings.load();
+    // A token minted before the address was confirmed still says email_verified=false: refresh it once.
+    if (confirmEmail() && user.emailVerified && !claims.email_verified) await user.getIdToken(true);
+  }
+  document.documentElement.classList.toggle('is-admin', role.admin);
+  if (isMember(user)) { await prefs.attach(user.uid); seen(); } else prefs.detach();
   await route();
 });
+// Presence, on real events only: signing in (above), changing page and coming back to the tab.
+function seen() {
+  const user = auth.currentUser;
+  if (isMember(user)) markPresence(user.uid, role.admin && !allowed(user.email) ? 'admin' : communityOf(user.email)?.id).catch(() => {});
+}
+addEventListener('hashchange', seen);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') seen(); });

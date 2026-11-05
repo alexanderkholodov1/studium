@@ -2,10 +2,11 @@
 // - only the app shell ships: public/index.html and public/assets/ (guides live in the database, never here);
 // - every root-absolute resource stays inside the /studium/ mount (the portfolio's rule for mounted apps);
 // - no key material, except the public Firebase web key, and only in public/assets/config.js;
-// - the domain in config.js is the one firestore.rules enforces;
+// - config.js has default settings with at least one active community, and firestore.rules reads the live ones;
 // - no symbolic links.
 import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const ROOT = 'public';
 const MOUNT = 'studium';
@@ -48,15 +49,14 @@ if (existsSync(CONFIG)) {
   const config = readFileSync(CONFIG, 'utf8');
   if ((config.match(WEB_KEY) ?? []).length > 1) errors.push(`${CONFIG} holds more than one web API key`);
   if (!/apiKey:\s*'AIza[0-9A-Za-z_-]{30,}'/.test(config)) errors.push(`${CONFIG} has no apiKey`);
-  const domain = config.match(/allowedDomain\s*=\s*'([a-z0-9.-]+)'/)?.[1];
+  // The communities and the confirmation live in settings/app, which the rules read; config.js holds their defaults.
   const rules = readFileSync('firestore.rules', 'utf8');
-  if (!domain) errors.push(`${CONFIG} has no allowedDomain`);
-  else if (!rules.includes(`'[^@]+@${domain.replaceAll('.', '[.]')}'`)) errors.push(`firestore.rules does not enforce the domain ${domain} of ${CONFIG}`);
-  // The app and the rules must agree on whether a confirmed address is required.
-  const confirm = config.match(/confirmEmail\s*=\s*(true|false)/)?.[1];
-  const requiresVerified = /^\s*&&\s*request\.auth\.token\.email_verified\s*==\s*true/m.test(rules);
-  if (!confirm) errors.push(`${CONFIG} has no confirmEmail`);
-  else if ((confirm === 'true') !== requiresVerified) errors.push(`confirmEmail is ${confirm} in ${CONFIG} but firestore.rules ${requiresVerified ? 'requires' : 'does not require'} email_verified`);
+  const { DEFAULT_SETTINGS, domainsOf } = await import(pathToFileURL(path.resolve(CONFIG)).href);
+  if (!DEFAULT_SETTINGS?.communities?.length) errors.push(`${CONFIG} has no default communities`);
+  else if (!domainsOf(DEFAULT_SETTINGS).length) errors.push(`${CONFIG}: no active default community has a domain`);
+  if (typeof DEFAULT_SETTINGS?.confirmEmail !== 'boolean') errors.push(`${CONFIG}: confirmEmail is not true or false`);
+  if (!rules.includes('in settings().domains')) errors.push('firestore.rules does not take the accepted domains from settings/app');
+  if (!rules.includes("settings().get('confirmEmail', false)")) errors.push('firestore.rules does not take the confirmation from settings/app');
 } else errors.push(`${CONFIG} is missing`);
 
 if (errors.length) {
