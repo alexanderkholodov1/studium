@@ -14,7 +14,6 @@
   --display: "Bricolage Grotesque", system-ui, sans-serif; --body: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif;
   --hand: "Caveat", "Segoe Print", cursive;
   --spring: linear(0, .009, .035 2.1%, .141, .281 6.7%, .723 12.9%, .938 16.7%, 1.017, 1.077, 1.121, 1.149 24.3%, 1.159, 1.163, 1.161, 1.154 29.9%, 1.129 32.8%, 1.051 39.6%, 1.017 43.1%, .991, .977 51%, .974 53.8%, .975 57.1%, .997 69.8%, 1.003 76.9%, 1);
-  --sy: 0; --px: 0; --py: 0;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {
@@ -69,37 +68,37 @@ mark.hl.teal { background-image: linear-gradient(100deg, transparent .2em, color
 /* ---------- the scene: light, a graph-paper floor and sheets floating in depth ---------- */
 .scene { position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; perspective: 1100px; perspective-origin: 50% 42%;
   background: radial-gradient(120% 90% at 50% -20%, var(--bg-2), var(--bg) 62%); }
-.scene .stars { position: absolute; inset: -20%; opacity: .7;
+.scene .stars { position: absolute; inset: -3%; opacity: .7; will-change: transform;
   background-image: radial-gradient(1.2px 1.2px at 24px 40px, var(--star) 60%, transparent 62%), radial-gradient(1px 1px at 130px 90px, var(--star) 60%, transparent 62%),
     radial-gradient(1.4px 1.4px at 190px 170px, color-mix(in oklab, var(--sky) 70%, transparent) 60%, transparent 62%), radial-gradient(1px 1px at 70px 210px, var(--star) 60%, transparent 62%);
-  background-size: 240px 240px; transform: translate3d(calc(var(--px) * -6px), calc(var(--sy) * -.03px + var(--py) * -6px), 0); }
-.glow { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .34; animation: glow 60s ease-in-out infinite alternate; will-change: transform; }
-.glow.g1 { width: 58vmax; height: 58vmax; left: -18vmax; top: -24vmax; background: radial-gradient(circle, var(--blue), transparent 66%); }
-.glow.g2 { width: 50vmax; height: 50vmax; right: -16vmax; bottom: -22vmax; background: radial-gradient(circle, var(--red), transparent 66%); opacity: .24; animation-duration: 74s; }
-.glow.g3 { width: 26vmax; height: 26vmax; left: 8vmax; bottom: 6vmax; background: radial-gradient(circle, var(--teal), transparent 66%); opacity: .1; animation-duration: 52s; }
-.glow.g4 { width: 22vmax; height: 22vmax; right: 14vmax; top: 10vmax; background: radial-gradient(circle, var(--butter), transparent 66%); opacity: .06; animation-duration: 80s; }
+  background-size: 240px 240px; }
+.glow { position: absolute; border-radius: 50%; opacity: .34; }
+.glow.g1 { width: 58vmax; height: 58vmax; left: -18vmax; top: -24vmax; background: radial-gradient(circle, color-mix(in oklab, var(--blue) 80%, transparent), color-mix(in oklab, var(--blue) 30%, transparent) 38%, transparent 70%); }
+.glow.g2 { width: 50vmax; height: 50vmax; right: -16vmax; bottom: -22vmax; background: radial-gradient(circle, color-mix(in oklab, var(--red) 80%, transparent), color-mix(in oklab, var(--red) 30%, transparent) 38%, transparent 70%); opacity: .24; }
+.glow.g3 { width: 26vmax; height: 26vmax; left: 8vmax; bottom: 6vmax; background: radial-gradient(circle, var(--teal), transparent 70%); opacity: .1; }
+.glow.g4 { width: 22vmax; height: 22vmax; right: 14vmax; top: 10vmax; background: radial-gradient(circle, var(--butter), transparent 70%); opacity: .06; }
 :root[data-theme="light"] .glow { opacity: .17; } :root[data-theme="light"] .glow.g2 { opacity: .13; }
 @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .glow { opacity: .17; } :root:not([data-theme="dark"]) .glow.g2 { opacity: .13; } }
-@keyframes glow { to { transform: translate3d(3vmax, 2vmax, 0) scale(1.06); } }
 .rig { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .9s cubic-bezier(.2, .8, .3, 1);
-  transform: rotateX(calc(var(--py) * 1.6deg)) rotateY(calc(var(--px) * -2.4deg)); }
+  will-change: transform; }
 .floor { position: absolute; left: -60%; right: -60%; bottom: -8%; height: 62%; transform-origin: 50% 100%; transform: rotateX(76deg);
   background-image: linear-gradient(var(--grid) 1.5px, transparent 1.5px), linear-gradient(90deg, var(--grid) 1.5px, transparent 1.5px);
-  background-size: 64px 64px; background-position: 0 calc(var(--sy) * .5px);
+  background-size: 64px 64px;
   -webkit-mask-image: linear-gradient(to bottom, transparent, #000 45%, #000 80%, transparent); mask-image: linear-gradient(to bottom, transparent, #000 45%, #000 80%, transparent); }
 .sheet { position: absolute; left: calc(var(--x) * 1%); top: calc(var(--y) * 1%); width: calc(var(--w) * 1px); height: calc(var(--h) * 1px); border-radius: 6px;
-  transform: translate3d(-50%, calc(-50% + var(--sy) * var(--k) * -1px), calc(var(--z) * 1px)) rotateX(calc(var(--rx) * 1deg)) rotateY(calc(var(--ry) * 1deg)) rotateZ(calc(var(--rz) * 1deg));
+  transform: translate3d(-50%, -50%, calc(var(--z) * 1px)) rotateX(calc(var(--rx) * 1deg)) rotateY(calc(var(--ry) * 1deg)) rotateZ(calc(var(--rz) * 1deg));
   box-shadow: 0 30px 50px -30px rgba(0, 0, 0, .45), inset 0 0 0 1px var(--rule);
-  opacity: .62; animation: sheet 30s ease-in-out infinite alternate; animation-delay: calc(var(--i) * -5s); }
+  opacity: .62; }
 .sheet.ruled { background: linear-gradient(90deg, transparent 30px, var(--margin) 30px 31.5px, transparent 31.5px), repeating-linear-gradient(180deg, transparent 0 21px, var(--rule) 21px 22px) 0 34px / 100% calc(100% - 34px) no-repeat, var(--paper); }
 .sheet.grid { background: linear-gradient(var(--rule) 1px, transparent 1px) 0 0 / 15px 15px, linear-gradient(90deg, var(--rule) 1px, transparent 1px) 0 0 / 15px 15px, var(--paper); }
 .sheet.dots { background: radial-gradient(circle, var(--rule) 1.3px, transparent 1.6px) 0 0 / 16px 16px, var(--paper); }
 .sheet span { position: absolute; left: 40px; top: 44px; right: 14px; font: 600 25px/1.05 var(--hand); color: color-mix(in oklab, var(--blue) 70%, var(--ink)); opacity: .4; white-space: pre-line; }
 .sheet span em { font-style: normal; color: var(--red); }
-@keyframes sheet { to { translate: 0 -10px; rotate: 1deg; } }
 
 /* ---------- things that float (play.js) ---------- */
 .play { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; transition: opacity .6s; }
+/* Phones and tablets: the floating things stay at the top of the page and scroll away with it. */
+.play.in-page { position: absolute; bottom: auto; height: 100svh; }
 .fx-top { position: fixed; inset: 0; z-index: 45; pointer-events: none; overflow: hidden; }
 .tok { position: absolute; left: 0; top: 0; display: grid; place-items: center; border-radius: 50%; color: var(--c); will-change: transform;
   background: radial-gradient(120% 120% at 30% 22%, rgba(255, 255, 255, .5), rgba(255, 255, 255, .07) 42%, color-mix(in oklab, var(--c) 30%, transparent) 100%);
@@ -138,8 +137,6 @@ html.grabbing, html.grabbing * { cursor: grabbing !important; user-select: none;
 .quiet .play, .quiet .fx-top .nodo, .quiet .fx-top .speech, .quiet .fx-top .bub { opacity: 0; visibility: hidden; }
 :root[data-ambience="enfoque"] .play, :root[data-ambience="enfoque"] .scene .rig, :root[data-ambience="enfoque"] .glow, :root[data-ambience="enfoque"] .stars { display: none; }
 :root[data-ambience="enfoque"] .scene { background: var(--bg); }
-:root[data-ambience="sereno"] .glow { animation-duration: 70s; }
-:root[data-ambience="sereno"] .sheet { animation-duration: 30s; }
 
 /* ---------- glass ---------- */
 .glass { position: relative; isolation: isolate; border-radius: 24px;
@@ -152,9 +149,6 @@ html.grabbing, html.grabbing * { cursor: grabbing !important; user-select: none;
 .glass::after, .lit::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .35s;
   background: radial-gradient(320px circle at var(--mx, 30%) var(--my, -30%), rgba(255, 255, 255, .14), transparent 62%); }
 .glass:hover::after, .lit:hover::after { opacity: 1; }
-.glass.liquid { background: linear-gradient(140deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .025) 60%); }
-:root[data-theme="light"] .glass.liquid { background: linear-gradient(140deg, rgba(255, 255, 255, .62), rgba(255, 255, 255, .3) 60%); }
-@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .glass.liquid { background: linear-gradient(140deg, rgba(255, 255, 255, .62), rgba(255, 255, 255, .3) 60%); } }
 :root[data-ambience="enfoque"] .glass { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--card); }
 
 /* Cards that lean toward the pointer, with layers that come forward. */
@@ -324,7 +318,7 @@ input[type="range"] { padding: 0; border: 0; background: none; accent-color: var
 /* The stack: four cards of the app in depth */
 .stack { position: relative; height: min(600px, 70svh); perspective: 1300px; }
 .stack-rig { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform 1s cubic-bezier(.2, .8, .3, 1);
-  transform: rotateY(calc(-16deg + var(--px) * 16deg)) rotateX(calc(8deg + var(--py) * -10deg)); }
+  transform: rotateY(-16deg) rotateX(8deg); will-change: transform; }
 .sk { position: absolute; border-radius: 26px; padding: 18px; background: var(--card); color: var(--ink);
   box-shadow: inset 0 0 0 1px var(--line), inset 0 1px 0 rgba(255, 255, 255, .14), 0 40px 70px -30px rgba(0, 0, 0, .55);
   transform: translateZ(calc(var(--z) * 1px)); animation: bob 8s ease-in-out infinite alternate; animation-delay: calc(var(--z) * -40ms); }
@@ -470,7 +464,7 @@ input[type="range"] { padding: 0; border: 0; background: none; accent-color: var
 .auth-side { display: grid; gap: 18px; }
 .auth-side h1 { font-size: clamp(48px, 7vw, 92px); font-weight: 800; letter-spacing: -.05em; line-height: .92; }
 .auth-card { padding: 28px; border-radius: 32px; display: grid; gap: 16px; animation: card-in 1s .2s var(--spring) both; }
-.auth-card.glass, .auth-card.glass.liquid { background: linear-gradient(140deg, color-mix(in oklab, var(--card) 86%, transparent), color-mix(in oklab, var(--card) 72%, transparent)); }
+.auth-card.glass { background: linear-gradient(140deg, color-mix(in oklab, var(--card) 86%, transparent), color-mix(in oklab, var(--card) 72%, transparent)); }
 @keyframes card-in { from { opacity: 0; transform: translateY(40px) scale(.94); } }
 .auth-card .switch { justify-self: start; background: var(--well); }
 .auth-card .lead { color: var(--ink-2); }
@@ -1169,3 +1163,21 @@ textarea.plain { font: 16px/1.5 var(--body); }
 .google-link { grid-template-columns: 1fr auto; align-items: center; }
 @media (max-width: 760px) { .google-link { grid-template-columns: 1fr; } .audit li { grid-template-columns: 1fr; gap: 2px; } .set .grid3 { grid-template-columns: 1fr; } }
 html.has-announce .page { padding-top: 170px; }
+
+/* ---------- glass that costs nothing to scroll ---------- */
+/* A live blur makes the browser redraw what is behind every panel on every frame of scrolling. The panels of the
+   pages are frosted glass that is drawn once: nearly opaque, with the same light and rim. The live blur stays on
+   what floats above the page: the bar, the menus, dialogs and notices. */
+.view .glass, .view.page .glass, .hint-bubble.glass, .egg-radio.glass { -webkit-backdrop-filter: none; backdrop-filter: none;
+  background: linear-gradient(150deg, color-mix(in oklab, var(--card) 92%, white 8%), color-mix(in oklab, var(--card) 86%, transparent) 70%); }
+:root[data-theme="dark"] .view .glass, :root[data-theme="dark"] .hint-bubble.glass, :root[data-theme="dark"] .egg-radio.glass {
+  background: linear-gradient(150deg, color-mix(in oklab, var(--card-2) 94%, white 6%), color-mix(in oklab, var(--card) 90%, transparent) 70%); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .view .glass, :root:not([data-theme="light"]) .hint-bubble.glass, :root:not([data-theme="light"]) .egg-radio.glass {
+  background: linear-gradient(150deg, color-mix(in oklab, var(--card-2) 94%, white 6%), color-mix(in oklab, var(--card) 90%, transparent) 70%); } }
+.nav.glass, .tabbar.glass { -webkit-backdrop-filter: blur(18px) saturate(1.6); backdrop-filter: blur(18px) saturate(1.6); }
+
+/* Phones and tablets: a still background, without stars or the floor in perspective. */
+@media (pointer: coarse), (max-width: 760px) {
+  .scene .stars, .scene .floor { display: none; }
+  .sheet { opacity: .4; }
+}

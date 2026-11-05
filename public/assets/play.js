@@ -209,6 +209,9 @@ export function celebrate(x, y, all = false) {
 }
 
 /* ---------- grabbing ---------- */
+// Phones and tablets: the layer is part of the page (see play.start), so a touch is measured from the page's top.
+const inPage = () => matchMedia('(pointer: coarse)').matches || innerWidth < 760;
+const pageY = (y) => y + (back?.classList.contains('in-page') ? scrollY : 0);
 function hit(x, y) {
   let best = null; let dist = Infinity;
   for (const b of bodies) {
@@ -244,7 +247,7 @@ function flick(b) { b.vy -= rand(180, 280); b.vx += rand(-90, 90); b.va += rand(
 function onDown(e) {
   if (!running() || e.button > 0) return;
   if (e.target instanceof Element && e.target.closest(SOLID)) return;
-  const b = hit(e.clientX, e.clientY);
+  const b = hit(e.clientX, pageY(e.clientY));
   if (b) {
     if (e.pointerType === 'touch') { flick(b); return; }
     e.preventDefault();
@@ -380,10 +383,16 @@ function render() {
   }
 }
 
+// While the page scrolls, nothing here moves: the browser only has to scroll. At rest, when nothing is held, thrown
+// or popping, the slow drift is drawn at half the frame rate.
+let scrollingUntil = 0;
+let parity = 0;
+const busy = () => !!drag || bubbles.length > 0 || bodies.some((b) => Math.abs(b.vx) + Math.abs(b.vy) > 40 || b.sq > 0.01);
 function frame(now) {
   raf = 0;
   if (!running()) return;
-  const dt = Math.min(0.034, (now - last) / 1000 || 0.016);
+  if ((now < scrollingUntil && !drag) || (!busy() && (parity ^= 1))) { last = now; raf = requestAnimationFrame(frame); return; }
+  const dt = Math.min(0.05, (now - last) / 1000 || 0.016);
   last = now;
   const n = 2;
   for (let i = 0; i < n; i += 1) step(dt / n, now);
@@ -400,7 +409,9 @@ export const play = {
   start(backLayer, frontLayer) {
     back = backLayer; front = frontLayer;
     ambience = root.dataset.ambience || 'vivo';
+    back.classList.toggle('in-page', inPage());
     build();
+    addEventListener('scroll', () => { scrollingUntil = performance.now() + 180; }, { passive: true });
     addEventListener('pointerdown', onDown, { passive: false });
     addEventListener('pointermove', onMove, { passive: true });
     addEventListener('pointerup', (e) => { if (drag && e.pointerId === drag.id) release(); });
