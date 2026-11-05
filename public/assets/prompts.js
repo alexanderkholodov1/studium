@@ -276,68 +276,72 @@ const DECOR_TEXT = {
   night: 'Nocturna: fondo oscuro profundo, acentos brillantes y brillos suaves alrededor de lo importante.',
 };
 
+// The instructions for a guide. They name only what the student gave: the subject, and the evaluation, date,
+// professor or term when there are any. The student's own notes come first; the map's context is an extra.
+// o.api: the AI is called from Studium (o.notes says how many files are attached); otherwise the text goes to a chat.
+// o.graph: the map's context goes along, inline or as o.contextFile.
 export function guideInstructions(o) {
   const contest = o.contest;
   const theme = THEMES[o.theme] ?? THEMES.estrellas;
-  const who = [o.professor && `profesor ${o.professor}`, o.term && (contest ? `edición ${o.term}` : `semestre ${o.term}`)].filter(Boolean).join(', ');
+  const what = o.title ? `«${o.title}» de ${o.course}` : o.course;
+  const about = [o.professor && `con ${o.professor}`, o.term && (contest ? `edición ${o.term}` : `semestre ${o.term}`), o.date && `es el ${o.date}`].filter(Boolean);
   const meta = {
-    studium: 'guia', version: 1, course: o.course, code: o.code ?? '', university: o.university ?? '', professor: o.professor ?? '',
-    term: o.term ?? '', title: o.title || 'Guía de estudio', date: o.date || '', theme: o.theme, level: o.level,
+    studium: 'guia', version: 1, course: o.course, title: o.title || 'Guía de estudio', theme: o.theme, level: o.level,
+    ...(o.code ? { code: o.code } : {}), ...(o.university ? { university: o.university } : {}), ...(o.professor ? { professor: o.professor } : {}),
+    ...(o.term ? { term: o.term } : {}), ...(o.date ? { date: o.date } : {}),
     topics: ['…'], concepts: [{ name: '…', anchor: '…' }],
   };
-  return `# Instrucciones de Studium: crear una guía de estudio
+  const sources = [];
+  if (!o.api || o.notes) sources.push(`${o.api ? 'Te adjunto mis apuntes' : 'Te adjunto mis apuntes (PDF, fotos o texto)'}: son la fuente principal. Cubre lo que contienen, con su notación, su orden y su nivel.`);
+  if (o.graph) {
+    sources.push(`${o.contextFile ? `También te adjunto \`${o.contextFile}\` con` : 'Al final va'} el contexto de Studium: lo que otros estudiantes aportaron de esta ${contest ? 'competencia' : 'materia'}, de forma anónima (conceptos, relaciones y preguntas reales en paráfrasis${o.professor ? `, y cómo evalúa ${o.professor}` : ''}). Úsalo para decidir qué pesa más y para practicar con preguntas del mismo estilo, sin copiarlas.`);
+  }
+  if (o.api && !o.notes && !o.graph) sources.push('No hay apuntes: usa lo que sabes del tema, al nivel de un curso universitario.');
+  else if (!o.api) sources.push('Si no adjunto nada, usa lo que sabes del tema, al nivel de un curso universitario.');
+  if (o.focus) sources.push(`Quiero reforzar: ${o.focus}.`);
+  if (o.goal) sources.push(`Mi objetivo: ${o.goal}.`);
+  const sections = (o.sections ?? []).filter((k) => SECTION_TEXT[k]);
+  const english = o.lang === 'en';
+  return `# Una guía de estudio de ${what}
 
-Escribe una guía de estudio interactiva para «${meta.title}» de ${o.course}${who ? ` (${who})` : ''}${o.date ? `, que es el ${o.date}` : ''}.
-Te adjunto \`${o.contextFile}\`: lo que Studium sabe de esta ${contest ? 'competencia' : 'materia'}, sacado de material que
-aportaron estudiantes de forma anónima: conceptos, relaciones, preguntas reales en paráfrasis y ${contest ? 'cómo son los problemas' : 'cómo evalúa el profesor'}.
-Si adjunto más material mío, úsalo también.${o.focus ? `\n\nEnfócate en: ${o.focus}.` : ''}${o.goal ? `\n\nEl objetivo del estudiante con esta guía: ${o.goal}.` : ''}
+Hazme una guía de estudio interactiva de ${what}${about.length ? ` (${about.join(', ')})` : ''}.
 
-## Para quién es
+## De dónde sale
+${sources.map((x) => `- ${x}`).join('\n')}
+
+## Para mí
 - Nivel: ${AUDIENCE[o.level] ?? AUDIENCE.standard}
 - Extensión: ${LENGTH[o.length] ?? LENGTH.medium}.
 - Práctica: ${PRACTICE[o.practice] ?? PRACTICE.normal}, ${CHALLENGE[o.challenge] ?? CHALLENGE.same}.
 - Ejemplos: ${EXAMPLES[o.examples] ?? EXAMPLES.normal}.
-- Idioma: ${o.lang === 'en' ? 'inglés. Write the whole guide in English (lang="en"), keeping the technical terms the course uses.' : 'español.'}
-
-## Estilo y decoración
-${DECOR_TEXT[o.decor] ?? DECOR_TEXT.notebook}
-${(o.sections ?? []).filter((k) => SECTION_TEXT[k]).length ? `
-## Secciones extra que pidió el estudiante
-${o.sections.filter((k) => SECTION_TEXT[k]).map((k) => `- ${SECTION_TEXT[k]}`).join('\n')}
-` : ''}
-## Cómo debe ser
-1. Explica cada término en el momento en que aparece: primero la definición formal y técnica, después, si ayuda, una
-   analogía. Da el término original en inglés cuando sea el usual.
-2. Concisa: sin índice, sin «cómo usar esta guía», sin introducciones que anuncian lo que viene. Si al borrar una frase
-   no cambia nada, bórrala.
-3. Autocontenida: nunca escribas «en la diapositiva», «el PDF» o «la pregunta 8»; describe la figura o el problema.
-4. Calibrada: dedica más espacio a lo que ${contest ? 'más aparece en los problemas' : 'el profesor evalúa más'} (el contexto dice cuántas preguntas tiene cada
-   concepto) y practica con preguntas del mismo tipo y estilo. No copies preguntas del contexto: escribe otras parecidas.
-5. La práctica va dentro del texto, justo después de cada idea: preguntas cortas y directas, como las de un
-   ${contest ? 'juez de competencia' : 'profesor'}, cada una con un botón «Comprobar» (que corrige la respuesta cuando se puede: opción múltiple,
-   número, verdadero o falso) y un botón «Ver respuesta» con la solución explicada.
-6. Aprovecha el medio: diagramas SVG, animaciones paso a paso con controles de velocidad, pausa y paso atrás,
-   simulaciones cuando ayuden, y descripciones al pasar el cursor sobre términos y partes de figuras. Pon una
-   definición breve antes de cada figura; la figura y su explicación caben en la misma pantalla.
-7. Sin datos personales: ningún nombre de estudiante ni dato que identifique a alguien.${contest ? `
+- Idioma: ${english ? 'inglés. Write the whole guide in English, keeping the technical terms the course uses.' : 'español.'}
+- Estilo: ${DECOR_TEXT[o.decor] ?? DECOR_TEXT.notebook}
+${sections.length ? sections.map((k) => `- ${SECTION_TEXT[k]}`).join('\n') + '\n' : ''}
+## Cómo escribirla
+1. Cada término se explica cuando aparece: primero la definición precisa, después, si ayuda, una analogía. Da el
+   término en inglés cuando es el usual.
+2. Sin relleno: nada de índice, «cómo usar esta guía» ni introducciones que anuncian lo que viene.
+3. Autocontenida: nunca «en la diapositiva», «el PDF» o «la pregunta 8»; describe la figura o el problema.
+4. ${o.graph ? `Más espacio para lo que ${contest ? 'más aparece en los problemas' : 'más se evalúa'} (el contexto dice cuántas preguntas tiene cada concepto).` : 'Más espacio para lo que más pesa en mis apuntes y en una evaluación típica del tema.'}
+5. La práctica va dentro del texto, justo después de cada idea: preguntas cortas, cada una con «Comprobar» (cuando
+   se puede corregir sola: opción múltiple, número, verdadero o falso) y «Ver respuesta» con la solución explicada.
+6. Aprovecha que es una página: diagramas SVG, animaciones paso a paso con pausa y paso atrás, simulaciones cuando
+   ayuden y descripciones al pasar el cursor. Cada figura cabe en la misma pantalla que su explicación.
+7. Ningún dato personal: ni nombres de estudiantes, ni notas, ni nada que identifique a alguien.${contest ? `
 8. Programación competitiva: para cada técnica, un problema modelo con enunciado, entrada, salida y restricciones;
-   la idea, la complejidad, el código completo en ${o.language || 'C++'} con resaltado, casos de prueba y errores típicos
-   (desbordamiento, límites, casos borde).` : ''}
+   la idea, la complejidad, el código completo en ${o.language || 'C++'} con resaltado, casos de prueba y errores
+   típicos (desbordamiento, límites, casos borde).` : ''}
 
-## Requisitos técnicos de Studium
-- Un solo archivo HTML completo que empieza con <!doctype html>, ${o.lang === 'en' ? 'en inglés (lang="en")' : 'en español (lang="es")'}, con todo dentro: CSS,
+## Formato, para que Studium la muestre
+- Un solo archivo HTML que empieza con <!doctype html>, ${english ? 'en inglés (lang="en")' : 'en español (lang="es")'}, con todo dentro: CSS,
   JavaScript e imágenes (SVG o data: URLs).
-- Bibliotecas externas solo de cdnjs.cloudflare.com, cdn.jsdelivr.net o unpkg.com (por ejemplo KaTeX para
-  matemáticas o highlight.js para código) y fuentes solo de Google Fonts. Nada más se carga.
-- localStorage solo dura mientras la guía está abierta. No uses formularios que envíen datos.
-- Funciona en celular y computadora, sin desplazamiento horizontal, en modo claro y oscuro.
-- Usa como colores característicos los del tema «${theme.name}»: ${theme.a} y ${theme.b}, más los neutros que necesites.
-- Menos de 2 MB.
-- Cada concepto que la guía explica tiene su sección con un atributo id (usa el id que da el contexto).
-- Cada parte de la guía va en su propio elemento <section id="…"> con un único <h2>: así el estudiante puede pedirle
-  a su IA que cambie o agregue una sección sin rehacer la guía entera.
-- Al inicio de <head>, este bloque con los datos de la guía, completado ("concepts" lista cada concepto que la guía
-  explica con el id de su sección; "topics", los temas en pocas palabras):
+- Bibliotecas solo de cdnjs.cloudflare.com, cdn.jsdelivr.net o unpkg.com (KaTeX, highlight.js…) y fuentes solo de
+  Google Fonts. Sin formularios que envíen datos; localStorage dura solo mientras la guía está abierta.
+- Celular y computadora, sin desplazamiento horizontal, en modo claro y oscuro. Menos de 2 MB.
+- Colores característicos: ${theme.a} y ${theme.b}, más los neutros que necesites.
+- Cada parte en su propio <section id="…"> con un solo <h2>${o.graph ? '; para un concepto del contexto, usa el id que da el contexto' : ''}.
+- Al inicio de <head>, este bloque, completado ("concepts": cada concepto que explica la guía, con el id de su
+  sección; "topics": los temas en pocas palabras):
 
 <script type="application/json" id="studium">
 ${JSON.stringify(meta, null, 2)}

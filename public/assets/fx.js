@@ -24,7 +24,7 @@ export function startScene() {
   let sy = 0; let px = 0; let py = 0; let tx = 0; let ty = 0; let frame = 0;
   const paint = () => {
     frame = 0;
-    px += (tx - px) * 0.08; py += (ty - py) * 0.08;
+    px += (tx - px) * 0.045; py += (ty - py) * 0.045;
     root.style.setProperty('--sy', String(Math.round(sy)));
     root.style.setProperty('--px', px.toFixed(4));
     root.style.setProperty('--py', py.toFixed(4));
@@ -52,7 +52,7 @@ export function tilt() {
     el.classList.add('tilting');
     const r = el.getBoundingClientRect();
     const x = (e.clientX - r.left) / r.width - 0.5; const y = (e.clientY - r.top) / r.height - 0.5;
-    const max = Number(el.dataset.tilt) || 7;
+    const max = (Number(el.dataset.tilt) || 4) * 0.5;
     el.style.setProperty('--rx', `${(-y * max).toFixed(2)}deg`);
     el.style.setProperty('--ry', `${(x * max).toFixed(2)}deg`);
     el.style.setProperty('--gx', `${((x + 0.5) * 100).toFixed(1)}%`);
@@ -149,15 +149,17 @@ export function glassLight() {
 /* ---------- transitions ---------- */
 export function transition(update) {
   if (still() || !document.startViewTransition) { update(); return; }
-  document.startViewTransition(update);
+  // A transition interrupted by the next one is not an error.
+  const vt = document.startViewTransition(update);
+  for (const p of [vt.ready, vt.finished, vt.updateCallbackDone]) p?.catch(() => {});
 }
 
 // One orchestrated entrance per render: the children rise in sequence.
 export function rise(container, selector = ':scope > *') {
   if (still() || root.dataset.ambience === 'enfoque') return;
   container.querySelectorAll(selector).forEach((el, i) => {
-    el.animate([{ opacity: 0, transform: 'translateY(18px) scale(.98)' }, { opacity: 1, transform: 'none' }], {
-      duration: 620, delay: Math.min(i, 12) * 55, easing: 'cubic-bezier(.2,.9,.25,1.15)', fill: 'backwards',
+    el.animate([{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], {
+      duration: 560, delay: Math.min(i, 12) * 45, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards',
     });
   });
 }

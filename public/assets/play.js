@@ -32,17 +32,23 @@ const TOKENS = [
 ];
 
 const NODO = `<svg viewBox="0 0 100 100" aria-hidden="true">
-  <defs><radialGradient id="nodo-skin" cx="36%" cy="30%" r="80%"><stop offset="0" stop-color="#c3d5ff"/><stop offset=".42" stop-color="#4f7dff"/><stop offset="1" stop-color="#1b3aa6"/></radialGradient></defs>
-  <path d="M50 20C50 11 54 7 59 4" fill="none" stroke="#1b3aa6" stroke-width="3.4" stroke-linecap="round"/>
-  <circle class="ball" cx="60" cy="4" r="6.5" fill="#ff5241"/>
-  <ellipse cx="50" cy="58" rx="44" ry="40" fill="url(#nodo-skin)"/>
-  <ellipse cx="34" cy="36" rx="12" ry="6.5" fill="#fff" opacity=".38" transform="rotate(-24 34 36)"/>
-  <g class="open"><g class="eye"><ellipse cx="36" cy="57" rx="7.6" ry="9.6" fill="#fff"/><circle class="pupil" cx="36" cy="58.5" r="4.7" fill="#0b1020"/><circle class="glint" cx="37.8" cy="55.6" r="1.5" fill="#fff"/></g>
-    <g class="eye"><ellipse cx="64" cy="57" rx="7.6" ry="9.6" fill="#fff"/><circle class="pupil" cx="64" cy="58.5" r="4.7" fill="#0b1020"/><circle class="glint" cx="65.8" cy="55.6" r="1.5" fill="#fff"/></g></g>
-  <path class="glad" d="M29 59q7-8 14 0M57 59q7-8 14 0" fill="none" stroke="#0b1020" stroke-width="3.4" stroke-linecap="round"/>
-  <path class="shut" d="M29 60h14M57 60h14" stroke="#0b1020" stroke-width="3.4" stroke-linecap="round"/>
-  <ellipse cx="24" cy="71" rx="6" ry="3.4" fill="#ff5241" opacity=".42"/><ellipse cx="76" cy="71" rx="6" ry="3.4" fill="#ff5241" opacity=".42"/>
-  <path class="mouth" d="M45 72q5 5 10 0" fill="none" stroke="#0b1020" stroke-width="3" stroke-linecap="round"/>
+  <defs>
+    <radialGradient id="nodo-glass" cx="36%" cy="28%" r="78%"><stop offset="0" stop-color="#f4f7ff" stop-opacity=".95"/><stop offset=".32" stop-color="#a9c0ff" stop-opacity=".62"/><stop offset=".78" stop-color="#4f7dff" stop-opacity=".72"/><stop offset="1" stop-color="#1b3aa6" stop-opacity=".95"/></radialGradient>
+    <radialGradient id="nodo-core" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ff8a6b" stop-opacity=".7"/><stop offset=".6" stop-color="#ff5241" stop-opacity=".16"/><stop offset="1" stop-color="#ff5241" stop-opacity="0"/></radialGradient>
+    <linearGradient id="nodo-rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".5" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity=".5"/></linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="45" fill="url(#nodo-glass)"/>
+  <circle class="ball" cx="50" cy="64" r="24" fill="url(#nodo-core)"/>
+  <ellipse cx="50" cy="87" rx="25" ry="5" fill="#fff" opacity=".22"/>
+  <circle cx="50" cy="50" r="44.3" fill="none" stroke="url(#nodo-rim)" stroke-width="1.5"/>
+  <ellipse cx="33" cy="25" rx="14" ry="6.5" fill="#fff" opacity=".6" transform="rotate(-30 33 25)"/>
+  <circle cx="63" cy="17" r="2.6" fill="#fff" opacity=".8"/>
+  <g class="open"><g class="eye"><g class="pupil"><rect x="34.5" y="42" width="9" height="15" rx="4.5" fill="#0b1020" opacity=".86"/><circle class="glint" cx="40.6" cy="46" r="1.7" fill="#fff"/></g></g>
+    <g class="eye"><g class="pupil"><rect x="56.5" y="42" width="9" height="15" rx="4.5" fill="#0b1020" opacity=".86"/><circle class="glint" cx="62.6" cy="46" r="1.7" fill="#fff"/></g></g></g>
+  <path class="glad" d="M34 51q5-6 10 0M56 51q5-6 10 0" fill="none" stroke="#0b1020" stroke-opacity=".86" stroke-width="3.2" stroke-linecap="round"/>
+  <path class="shut" d="M34 51h10M56 51h10" stroke="#0b1020" stroke-opacity=".86" stroke-width="3.2" stroke-linecap="round"/>
+  <ellipse cx="29" cy="61" rx="5" ry="2.8" fill="#ff5241" opacity=".35"/><ellipse cx="71" cy="61" rx="5" ry="2.8" fill="#ff5241" opacity=".35"/>
+  <path class="mouth" d="M46 63q4 3.5 8 0" fill="none" stroke="#0b1020" stroke-opacity=".8" stroke-width="2.6" stroke-linecap="round"/>
 </svg>`;
 
 let back = null;
@@ -60,12 +66,10 @@ let drag = null;
 let idleSince = performance.now();
 let nextBubble = 0;
 const pointer = { x: -999, y: -999, px: 0, py: 0, vx: 0, vy: 0, trail: [] };
-// Scrolling drags the floating things along for a moment, on a spring, and lets them settle back where they were.
-const lag = { y: 0, v: 0 };
 const rand = (a, b) => a + Math.random() * (b - a);
 
 const running = () => !!back && !quiet && !still() && ambience !== 'enfoque' && !document.hidden;
-const wander = () => (ambience === 'sereno' ? 6 : ambience === 'jugueton' ? 18 : 13);
+const wander = () => (ambience === 'sereno' ? 2.5 : ambience === 'jugueton' ? 6 : 4.5);
 
 function token(spec, r, tier) {
   const el = document.createElement('div');
@@ -102,7 +106,7 @@ function build() {
     const { x, y } = place(r, tier);
     const el = token(pool[i % pool.length], r, tier);
     back.append(el);
-    bodies.push({ el, x, y, vx: rand(-20, 20), vy: rand(-20, 20), r, m: r * r, a: rand(-0.4, 0.4), va: rand(-0.2, 0.2), tier, phase: rand(0, 6.28), sq: 0, sqa: 0 });
+    bodies.push({ el, x, y, vx: rand(-6, 6), vy: rand(-6, 6), r, m: r * r, a: rand(-0.3, 0.3), va: rand(-0.05, 0.05), tier, phase: rand(0, 6.28), sq: 0, sqa: 0 });
   }
   if (ambience === 'jugueton') makeNodo();
   render();
@@ -117,11 +121,11 @@ function makeNodo() {
   front.append(el);
   const r = W < 720 ? 30 : 38;
   el.style.width = el.style.height = `${r * 2}px`;
-  nodo = { el, x: Math.min(W - r - 20, Math.max(r + 20, W * 0.12)), y: H - r, vx: 0, vy: 0, r, m: r * r * 1.4, a: 0, va: 0, tier: 0, phase: 0, sq: 0, sqa: 0, kind: 'nodo',
+  nodo = { el, x: Math.min(W - r - 20, Math.max(r + 20, W * 0.12)), y: H - r - 34, vx: 0, vy: 0, r, m: r * r * 1.4, a: 0, va: 0, tier: 0, phase: 0, sq: 0, sqa: 0, kind: 'nodo',
     hop: performance.now() + rand(3000, 6000), blink: performance.now() + rand(1500, 4000), mood: '', moodUntil: 0, pupils: [...el.querySelectorAll('.pupil')] };
   bodies.push(nodo);
   el.addEventListener('pointerdown', (e) => { e.preventDefault(); grab(nodo, e); });
-  setTimeout(() => say('¡Hola! Me puedes lanzar.'), 1200);
+  setTimeout(() => say('Hola. Puedes moverme.'), 1600);
 }
 function mood(name, ms) {
   if (!nodo) return;
@@ -147,7 +151,7 @@ function bubble(x, y) {
   const r = rand(11, 27);
   el.style.width = el.style.height = `${Math.round(r * 2)}px`;
   front.append(el);
-  const b = { el, x, y, r, vx: rand(-25, 25), vy: rand(-140, -70), born: performance.now(), life: rand(7000, 12000), phase: rand(0, 6.28) };
+  const b = { el, x, y, r, vx: rand(-10, 10), vy: rand(-60, -35), born: performance.now(), life: rand(12000, 18000), phase: rand(0, 6.28) };
   const burst = (e) => { e?.preventDefault?.(); pop(b); };
   el.addEventListener('pointerenter', burst);
   el.addEventListener('pointerdown', burst);
@@ -197,7 +201,7 @@ export function celebrate(x, y, all = false) {
   burst(x, y, all ? 60 : 30);
   if (all) sfx.fanfare(); else sfx.chime();
   if (nodo) {
-    nodo.vy = -rand(700, 900); nodo.va = rand(-9, 9);
+    nodo.vy = -rand(160, 220);
     mood('glad', 1800);
     say(all ? '¡Todas tus metas! 🎉' : ['¡Bien!', '¡Una menos!', '¡Eso!', '¡Sigue así!'][Math.floor(Math.random() * 4)]);
     wake();
@@ -217,7 +221,7 @@ function hit(x, y) {
 function grab(b, e) {
   drag = { body: b, id: e.pointerId, ox: e.clientX - b.x, oy: e.clientY - b.y, moved: 0 };
   root.classList.add('grabbing');
-  if (b.kind === 'nodo') { mood('glad', 99999); sfx.boing(3); } else sfx.pick();
+  if (b.kind === 'nodo') { mood('glad', 99999); sfx.pick(); } else sfx.pick();
   idleSince = performance.now();
   wake();
 }
@@ -225,17 +229,17 @@ function release() {
   if (!drag) return;
   const b = drag.body;
   const speed = Math.hypot(pointer.vx, pointer.vy);
-  const k = speed > 2600 ? 2600 / speed : 1;
-  b.vx = pointer.vx * k; b.vy = pointer.vy * k;
-  b.va += (pointer.vx / b.r) * 0.012;
-  if (b.kind === 'nodo') { mood('glad', 900); if (speed > 900) say(['¡Wiii!', '¡Otra vez!', '¡Vuelo!'][Math.floor(Math.random() * 3)], 1600); }
-  else if (drag.moved < 4) { b.vy -= 420; b.va += rand(-6, 6); sfx.boing(Math.floor(rand(0, 5))); }
+  const k = speed > 1100 ? 1100 / speed : 1;
+  b.vx = pointer.vx * k * 0.8; b.vy = pointer.vy * k * 0.8;
+  b.va += (pointer.vx / b.r) * 0.004;
+  if (b.kind === 'nodo') { mood('glad', 900); sfx.drop(); }
+  else if (drag.moved < 4) { b.vy -= 160; b.va += rand(-1, 1); sfx.boing(Math.floor(rand(0, 5))); }
   else sfx.drop();
   drag = null;
   root.classList.remove('grabbing');
 }
 // Touch screens scroll with the same gesture, so there a tap flicks a token instead of dragging it.
-function flick(b) { b.vy -= rand(500, 800); b.vx += rand(-260, 260); b.va += rand(-8, 8); b.sq = 0.18; sfx.boing(Math.floor(rand(0, 5))); wake(); }
+function flick(b) { b.vy -= rand(180, 280); b.vx += rand(-90, 90); b.va += rand(-1.5, 1.5); b.sq = 0.08; sfx.boing(Math.floor(rand(0, 5))); wake(); }
 
 function onDown(e) {
   if (!running() || e.button > 0) return;
@@ -266,25 +270,16 @@ function onMove(e) {
   if (!drag) {
     const air = !(e.target instanceof Element && e.target.closest(SOLID));
     root.classList.toggle('can-grab', air && !!hit(e.clientX, e.clientY));
-    // The pointer passing fast pushes what it brushes, like a breeze.
-    const speed = Math.hypot(pointer.vx, pointer.vy);
-    if (air && speed > 300) {
-      for (const b of bodies) {
-        if (b.tier || b.kind === 'nodo') continue;
-        const d = Math.hypot(b.x - e.clientX, b.y - e.clientY);
-        if (d < b.r + 50) { b.vx += pointer.vx * 0.06; b.vy += pointer.vy * 0.06; }
-      }
-    }
   }
   wake();
 }
 
 /* ---------- the simulation ---------- */
 function impact(b, speed, angle) {
-  if (speed < 120) return;
-  b.sq = Math.min(0.24, Math.max(b.sq, speed / 2800));
+  if (speed < 160) return;
+  b.sq = Math.min(0.1, Math.max(b.sq, speed / 6000));
   b.sqa = angle;
-  if (speed > 200 && ambience !== 'sereno') sfx.knock(b.r, speed);
+  if (speed > 380 && ambience !== 'sereno') sfx.knock(b.r, speed);
 }
 
 function step(h, now) {
@@ -295,24 +290,27 @@ function step(h, now) {
       b.vx = (pointer.x - drag.ox - b.x) * 22;
       b.vy = (pointer.y - drag.oy - b.y) * 22;
     } else if (b.kind === 'nodo') {
-      b.vy += 1700 * h;
-      b.va += -b.a * 40 * h; b.va *= Math.exp(-5 * h);
+      // Nodo floats: it rests a little above the bottom edge, bobbing, and glides back there as if under water.
+      const rest = H - b.r - 34 + Math.sin(t * 0.9) * 5;
+      b.vy += (rest - b.y) * 5 * h;
+      b.vx += ((b.home ?? b.x) - b.x) * 0.6 * h;
+      const k = Math.exp(-2.4 * h); b.vx *= k; b.vy *= k;
+      b.a = 0; b.va = 0;
     } else {
       const wx = Math.sin(t * 0.21 + b.phase) * wv; const wy = Math.cos(t * 0.17 + b.phase * 1.3) * wv;
       const ease = Math.min(1, 0.55 * h * (b.tier ? 1.6 : 1));
       b.vx += (wx - b.vx) * ease; b.vy += (wy - b.vy) * ease;
-      b.va *= Math.exp(-0.8 * h);
+      b.va *= Math.exp(-1.6 * h);
     }
     b.x += b.vx * h; b.y += b.vy * h; b.a += b.va * h;
     b.sq *= Math.exp(-11 * h);
-    const e = b.kind === 'nodo' ? 0.42 : 0.72;
+    const e = b.kind === 'nodo' ? 0.2 : 0.5;
     if (b.x < b.r) { b.x = b.r; if (b.vx < 0) { impact(b, -b.vx, 0); b.vx = -b.vx * e; } }
     if (b.x > W - b.r) { b.x = W - b.r; if (b.vx > 0) { impact(b, b.vx, 0); b.vx = -b.vx * e; } }
     if (b.y < b.r) { b.y = b.r; if (b.vy < 0) { impact(b, -b.vy, Math.PI / 2); b.vy = -b.vy * e; } }
     if (b.y > H - b.r) {
       b.y = H - b.r;
       if (b.vy > 0) { impact(b, b.vy, Math.PI / 2); b.vy = -b.vy * e; }
-      if (b.kind === 'nodo') { b.vx *= Math.exp(-5 * h); if (Math.abs(b.vy) < 40) b.vy = 0; }
     }
   }
   // Collisions inside each depth; what is held pushes without being pushed.
@@ -334,29 +332,27 @@ function step(h, now) {
       const rvx = q.vx - p.vx; const rvy = q.vy - p.vy;
       const vn = rvx * nx + rvy * ny;
       if (vn >= 0) continue;
-      const jn = (-(1 + 0.82) * vn) / (ip + iq);
+      const jn = (-(1 + 0.55) * vn) / (ip + iq);
       p.vx -= jn * nx * ip; p.vy -= jn * ny * ip;
       q.vx += jn * nx * iq; q.vy += jn * ny * iq;
       const vt = rvx * -ny + rvy * nx;
-      p.va -= (vt / p.r) * 0.25; q.va += (vt / q.r) * 0.25;
+      p.va -= (vt / p.r) * 0.08; q.va += (vt / q.r) * 0.08;
       const angle = Math.atan2(ny, nx);
       impact(p, -vn, angle); impact(q, -vn, angle);
     }
   }
-  lag.v += (-lag.y * 70 - lag.v * 11) * h;
-  lag.y += lag.v * h;
-  // Bubbles rise and sway.
+  // Bubbles rise and sway, slowly.
   for (const b of [...bubbles]) {
-    b.vy -= 12 * h;
-    b.x += (b.vx + Math.sin(t * 2.2 + b.phase) * 26) * h;
+    b.vy = Math.max(b.vy - 4 * h, -70);
+    b.x += (b.vx + Math.sin(t * 1.3 + b.phase) * 12) * h;
     b.y += b.vy * h;
     if (b.y < -b.r * 2 || now - b.born > b.life) pop(b, b.y < 0);
   }
   if (nodo) {
-    if (!drag && nodo.y >= H - nodo.r - 1 && now > nodo.hop && nodo.mood !== 'sleep') {
-      nodo.vy = -rand(420, 720); nodo.vx = rand(-1, 1) * rand(60, 240) + (W / 2 - nodo.x) * 0.15;
-      nodo.hop = now + rand(4500, 11000);
-      if (Math.random() < 0.3) sfx.boing(Math.floor(rand(0, 4)));
+    // Now and then it drifts to another spot along the bottom, slowly.
+    if (!drag && now > nodo.hop && nodo.mood !== 'sleep') {
+      nodo.home = Math.max(nodo.r + 20, Math.min(W - nodo.r - 20, (nodo.home ?? nodo.x) + rand(-160, 160)));
+      nodo.hop = now + rand(9000, 18000);
     }
     if (now > nodo.blink) { nodo.el.classList.add('blink'); setTimeout(() => nodo?.el.classList.remove('blink'), 140); nodo.blink = now + rand(2200, 6000); }
     if (nodo.mood && nodo.mood !== 'sleep' && now > nodo.moodUntil) { nodo.mood = ''; nodo.el.dataset.mood = ''; }
@@ -366,10 +362,13 @@ function step(h, now) {
 
 function render() {
   for (const b of bodies) {
-    let x = b.x - b.r; let y = b.y - b.r + (b.kind === 'nodo' ? 0 : lag.y * (b.tier ? 0.45 : 1) * (40 / b.r));
-    if (b.tier === 1) { x -= pointer.px * 28; y -= pointer.py * 20; }
+    let x = b.x - b.r; let y = b.y - b.r;
+    // A very slight parallax with the pointer: the far ones move a bit more.
+    if (b.kind !== 'nodo') { const k = b.tier ? 14 : 6; x -= pointer.px * k; y -= pointer.py * k * 0.7; }
     const squash = b.sq > 0.003 ? ` rotate(${b.sqa.toFixed(3)}rad) scale(${(1 + b.sq).toFixed(3)}, ${(1 - b.sq).toFixed(3)}) rotate(${(-b.sqa).toFixed(3)}rad)` : '';
-    b.el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)${squash} rotate(${b.a.toFixed(3)}rad)`;
+    b.el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)${squash}`;
+    // Only the glyph turns; the light and the shadow of the glass stay where the light is.
+    if (Math.abs((b.shownA ?? 0) - b.a) > 0.01) { b.shownA = b.a; b.el.style.setProperty('--a', `${b.a.toFixed(3)}rad`); }
   }
   for (const b of bubbles) b.el.style.transform = `translate3d(${(b.x - b.r).toFixed(1)}px, ${(b.y - b.r).toFixed(1)}px, 0)`;
   if (nodo) {
@@ -390,7 +389,7 @@ function frame(now) {
   for (let i = 0; i < n; i += 1) step(dt / n, now);
   if (ambience === 'jugueton' && now > nextBubble) {
     bubble(rand(40, W - 40), H + 30);
-    nextBubble = now + rand(5000, 11000);
+    nextBubble = now + rand(9000, 16000);
   }
   render();
   raf = requestAnimationFrame(frame);
@@ -406,14 +405,6 @@ export const play = {
     addEventListener('pointermove', onMove, { passive: true });
     addEventListener('pointerup', (e) => { if (drag && e.pointerId === drag.id) release(); });
     addEventListener('pointercancel', () => release());
-    let lastY = scrollY;
-    addEventListener('scroll', () => {
-      const dy = scrollY - lastY; lastY = scrollY;
-      if (!running()) return;
-      const k = ambience === 'sereno' ? 6 : 16;
-      lag.v = Math.max(-2600, Math.min(2600, lag.v - dy * k));
-      wake();
-    }, { passive: true });
     addEventListener('resize', () => {
       const grew = Math.abs(innerWidth - W) > 160;
       W = innerWidth; H = innerHeight;
