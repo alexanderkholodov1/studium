@@ -410,6 +410,18 @@ input[type="range"] { padding: 0; border: 0; background: none; accent-color: var
 .ambiences.mini .amb .art, .ambiences.mini .amb span { display: none; }
 .ambiences.mini .amb strong { font-size: 14px; }
 .ambiences.mini .amb:hover { transform: translateY(-2px); }
+/* What is inside: a serious line, then the aside in the margin */
+.feats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.feat { position: relative; padding: 28px; border-radius: 30px; display: grid; gap: 12px; align-content: start; }
+.feat-ico { width: 46px; height: 46px; }
+.feat h3 { font-size: clamp(26px, 2.4vw, 34px); font-weight: 800; letter-spacing: -.035em; }
+.feat h3 em { font-style: normal; color: var(--red); text-transform: uppercase; letter-spacing: -.01em; }
+.feat > p { color: var(--ink-2); font-size: 18px; }
+.feat .aside { font: 600 24px/1.15 var(--hand); color: var(--red); rotate: -1.2deg; }
+.feat .feat-note { font-size: 14px; color: var(--muted); }
+.feat .feat-note a { color: var(--ink-2); }
+.soon-pill { position: absolute; top: 22px; right: 22px; padding: 4px 11px; border-radius: 999px; font: 750 12.5px var(--display); color: #fff; background: var(--blue); }
+@media (max-width: 1000px) { .feats { grid-template-columns: 1fr; } }
 /* The community manifesto: the back cover of the notebook */
 .manifesto { padding: 40px 20px; }
 .manifesto-in { position: relative; max-width: 1240px; margin: 0 auto; padding: clamp(28px, 5vw, 64px); border-radius: 40px; overflow: hidden; isolation: isolate; color: #f3f5fb;
@@ -419,7 +431,7 @@ input[type="range"] { padding: 0; border: 0; background: none; accent-color: var
 .manifesto h2 { font-size: clamp(38px, 5.6vw, 80px); font-weight: 800; letter-spacing: -.05em; max-width: 16ch; }
 .manifesto .kicker.red { color: #ff7a6a; }
 .manifesto-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; font-size: 19px; color: #c6cee2; }
-.house { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; counter-reset: rule; }
+.house { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; counter-reset: rule; }
 .house li { counter-increment: rule; padding: 20px; border-radius: 22px; background: rgba(255, 255, 255, .05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1); color: #c6cee2; }
 .house li::before { content: counter(rule); display: block; font: 600 40px/1 var(--hand); color: #ff7a6a; margin-bottom: 4px; }
 .house strong { display: block; color: #fff; font: 800 19px var(--display); margin-bottom: 4px; }
