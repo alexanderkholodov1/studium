@@ -236,11 +236,16 @@ export function openRadio(discovered = false) {
   let drag = null;
   el.addEventListener('pointerdown', (e) => {
     if (e.target.closest('button, input')) return;
-    drag = { dx: e.clientX - el.offsetLeft, dy: e.clientY - el.offsetTop };
-    el.setPointerCapture(e.pointerId); el.classList.add('held');
+    drag = { dx: e.clientX - el.offsetLeft, dy: e.clientY - el.offsetTop, x: e.clientX, t: performance.now() };
+    el.setPointerCapture(e.pointerId); el.classList.add('held'); sfx.grab(140);
   });
-  el.addEventListener('pointermove', (e) => { if (drag) place(el, { x: e.clientX - drag.dx, y: e.clientY - drag.dy }); });
-  const drop = () => { if (!drag) return; drag = null; el.classList.remove('held'); write(RADIO, { ...read(RADIO, {}), x: el.offsetLeft, y: el.offsetTop }); sfx.drop(); };
+  el.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const t = performance.now(); const vx = ((e.clientX - drag.x) / Math.max(1, t - drag.t)) * 1000;
+    sfx.drag(Math.abs(vx), vx); drag.x = e.clientX; drag.t = t;
+    place(el, { x: e.clientX - drag.dx, y: e.clientY - drag.dy });
+  });
+  const drop = () => { if (!drag) return; drag = null; el.classList.remove('held'); write(RADIO, { ...read(RADIO, {}), x: el.offsetLeft, y: el.offsetTop }); sfx.release(0, 140); };
   el.addEventListener('pointerup', drop);
   el.addEventListener('pointercancel', drop);
 }

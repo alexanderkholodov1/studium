@@ -91,13 +91,14 @@ function aiScene(el) {
       hold = null;
       el.classList.remove('shield'); void el.offsetWidth; el.classList.add('shield');
       note.classList.remove('show'); void note.offsetWidth; note.classList.add('show');
-      sfx.boing(0);
+      sfx.release(900, 60);
+      sfx.impact(160, 1200);
       cancelAnimationFrame(spring);
       const back = () => { pos.x *= 0.82; pos.y *= 0.82; place(); if (Math.abs(pos.x) + Math.abs(pos.y) > 0.5) spring = requestAnimationFrame(back); else { pos = { x: 0, y: 0 }; place(); } };
       back();
     }
   });
-  const drop = () => { hold = null; };
+  const drop = () => { if (hold) sfx.release(0, 60); hold = null; };
   me.addEventListener('pointerup', drop); me.addEventListener('pointercancel', drop);
 }
 

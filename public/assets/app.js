@@ -77,22 +77,24 @@ document.querySelectorAll('[data-theme-toggle]').forEach((b) => b.addEventListen
   prefs.set({ theme: dark ? 'light' : 'dark' });
   sfx.tick();
 }));
-/* ---------- the sound of the pointer on glass ---------- */
-// A faint glass note when the pointer arrives on a card, a panel, a row or a button (never twice for the same one),
-// and a soft tap when something is pressed. Not in the calm ambiences.
-const HOVERED = '[data-tilt], .tile, .gcard, .doc, .prof, .mini-guide, .set, .step, .pick, .amb, .source, tr, .chip, .button, .tabs a, .icon, .kudo, .seg span';
+/* ---------- the sound of the pointer ---------- */
+// Arriving on a panel (a card, a tile, a section) is a deep breath, barely there, once per panel: moving onto a button
+// inside it, or around it, makes no sound. Pressing makes a soft tap. Not in the calm ambiences.
+const PANELS = '[data-tilt], .tile, .gcard, .doc, .prof, .set, .step, .mini-guide, .amb, .pick, .way, .community, .review, .creator-card, .duo-card, .demo';
 let hovered = null;
 const calmAmbience = () => ['sereno', 'enfoque'].includes(root.dataset.ambience);
 document.addEventListener('pointerover', (e) => {
   if (e.pointerType !== 'mouse' || !sfx.on || calmAmbience()) return;
-  const el = e.target instanceof Element ? e.target.closest(HOVERED) : null;
-  if (!el || el === hovered) return;
-  hovered = el;
-  sfx.hover(el.matches('.chip, .button, .tabs a, .icon, .kudo, .seg span') ? 'button' : 'card');
+  const panel = e.target instanceof Element ? e.target.closest(PANELS) : null;
+  if (panel === hovered) return;
+  hovered = panel;
+  if (!panel) return;
+  const r = panel.getBoundingClientRect();
+  sfx.hover(Math.sqrt(r.width * r.height));
 }, { passive: true });
 document.addEventListener('pointerdown', (e) => {
   if (!sfx.on || calmAmbience() || !(e.target instanceof Element)) return;
-  if (e.target.closest('button, .button, a[href], .chip, [role="tab"], .seg label')) sfx.press();
+  if (e.target.closest('button, .button, a[href], .chip, [role="tab"], .seg label, .toggle')) sfx.press();
 }, { passive: true });
 
 document.addEventListener('click', (e) => {
