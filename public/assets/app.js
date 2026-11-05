@@ -7,7 +7,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js';
 import { mailFrom } from './config.js';
 import { auth, loadAll, loadGuide, loadLibrary, markPresence } from './data.js';
-import { settings, communityOf, communityLabel } from './settings.js';
+import { settings, communityOf, communityLabel, flag } from './settings.js';
 import { keyOf, themeStyle, courseThemes } from './themes.js';
 import { LEVELS, QUESTION_KINDS, RELATIONS, countKind } from './prompts.js';
 import { buildGraph, upcoming, GraphView } from './graph.js';
@@ -58,6 +58,7 @@ function applyPrefs(p) {
   if (p.lang !== shownLang) { shownLang = p.lang; setLang(p.lang); }
   sfx.enable(p.sound);
   play.setAmbience(p.ambience);
+  play.setBubbles(p.bubbles && flag('bubbles'));
   for (const b of document.querySelectorAll('[data-sound-toggle]')) b.setAttribute('aria-pressed', String(p.sound));
 }
 applyPrefs(prefs.get());
@@ -711,6 +712,7 @@ onAuthStateChanged(auth, async (user) => {
     const claims = (await user.getIdTokenResult()).claims;
     role.admin = claims.admin === true;
     await settings.load();
+    play.setBubbles(prefs.get().bubbles && flag('bubbles'));
     // A token minted before the address was confirmed still says email_verified=false: refresh it once.
     if (confirmEmail() && user.emailVerified && !claims.email_verified) await user.getIdToken(true);
   }

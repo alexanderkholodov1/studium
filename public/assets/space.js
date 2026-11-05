@@ -7,7 +7,7 @@ import { celebrate } from './play.js';
 import { themeStyle, keyOf } from './themes.js';
 import { rise } from './fx.js';
 import { auth } from './data.js';
-import { communityLabel, communityOf } from './settings.js';
+import { communityLabel, communityOf, flag } from './settings.js';
 import { seen, markSeen, hintsOn, setHints } from './hints.js';
 import { luckyHit, found, radioOn, openRadio } from './eggs.js';
 
@@ -327,7 +327,8 @@ export function renderSettings() {
     ${aiSettings()}
     <section class="set glass"><h2>Cómo estudias</h2><p>Cambia el orden de tu inicio.</p>
       <div class="picks" role="radiogroup">${Object.entries(MODES).map(([id, m]) => `<button type="button" class="pick" role="radio" aria-checked="${p.mode === id}" data-set-mode="${id}"><strong>${esc(m.name)}</strong><span>${esc(m.text)}</span></button>`).join('')}</div></section>
-    <section class="set glass"><h2>Ambiente</h2><p>Cuánto se mueve la página, y qué tan tierna se pone.</p><div class="ambiences" data-ambience-picker></div></section>
+    <section class="set glass"><h2>Ambiente</h2><p>Cuánto se mueve la página, y qué tan tierna se pone.</p><div class="ambiences" data-ambience-picker></div>
+      ${flag('bubbles') ? `<label class="toggle"><input type="checkbox" data-pref="bubbles" ${p.bubbles ? 'checked' : ''}><span class="knob"></span>Burbujas para reventar, en el ambiente juguetón</label>` : ''}</section>
     <section class="set glass"><h2>Sonidos</h2>
       <label class="toggle"><input type="checkbox" data-pref="sound" ${p.sound ? 'checked' : ''}><span class="knob"></span>Sonidos al lanzar cosas, al cumplir una meta y al terminar un bloque de enfoque</label>
       <div class="actions"><button class="button ghost" data-sound-test>Probar</button></div></section>

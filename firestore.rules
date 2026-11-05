@@ -129,7 +129,7 @@ service cloud.firestore {
     // The person's own space.
     function profile(d) {
       return d.keys().hasOnly(['nickname', 'name', 'career', 'semester', 'mode', 'ambience', 'sound', 'theme', 'lang', 'avatar',
-          'goals', 'progress', 'deadlines', 'tiles', 'notes', 'links', 'focus', 'updated'])
+          'goals', 'progress', 'deadlines', 'tiles', 'notes', 'links', 'focus', 'bubbles', 'updated'])
         && optional(d, 'nickname', 40) && optional(d, 'name', 60) && optional(d, 'career', 80)
         && (!('lang' in d) || d.lang in ['es', 'en'])
         && (!('avatar' in d) || d.avatar in ['blue', 'red', 'teal', 'butter', 'sky', 'peach'])
@@ -137,6 +137,7 @@ service cloud.firestore {
         && (!('mode' in d) || d.mode in ['examenes', 'gusto', 'intensivo', 'metas'])
         && (!('ambience' in d) || d.ambience in ['jugueton', 'vivo', 'sereno', 'enfoque'])
         && (!('sound' in d) || d.sound is bool)
+        && (!('bubbles' in d) || d.bubbles is bool)
         && (!('theme' in d) || d.theme in ['auto', 'light', 'dark'])
         && (!('goals' in d) || (d.goals is list && d.goals.size() <= 60))
         && (!('progress' in d) || (d.progress is map && d.progress.size() <= 300))

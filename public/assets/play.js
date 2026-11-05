@@ -59,6 +59,8 @@ let bodies = [];
 let bubbles = [];
 let nodo = null;
 let ambience = 'vivo';
+// Bubbles to pop: only in the playful ambience, when the person turned them on in Settings and the admins allow them.
+let bubblesOn = false;
 let quiet = false;
 let raf = 0;
 let last = 0;
@@ -148,8 +150,9 @@ export function say(text, ms = 2600) {
 function bubble(x, y) {
   const el = document.createElement('div');
   el.className = 'bub';
-  const r = rand(11, 27);
+  const r = rand(14, 30);
   el.style.width = el.style.height = `${Math.round(r * 2)}px`;
+  el.innerHTML = '<i></i>';
   front.append(el);
   const b = { el, x, y, r, vx: rand(-10, 10), vy: rand(-60, -35), born: performance.now(), life: rand(12000, 18000), phase: rand(0, 6.28) };
   const burst = (e) => { e?.preventDefault?.(); pop(b); };
@@ -254,7 +257,7 @@ function onDown(e) {
     e.preventDefault();
     grab(b, e);
   } else if (ambience === 'jugueton' && e.pointerType !== 'touch') {
-    for (let i = 0; i < 3; i += 1) bubble(e.clientX + rand(-14, 14), e.clientY + rand(-8, 8));
+    if (bubblesOn && bubbles.length < 6) for (let i = 0; i < 2; i += 1) bubble(e.clientX + rand(-14, 14), e.clientY + rand(-8, 8));
     wake();
   }
 }
@@ -403,9 +406,9 @@ function frame(now) {
   last = now;
   const n = 2;
   for (let i = 0; i < n; i += 1) step(dt / n, now);
-  if (ambience === 'jugueton' && now > nextBubble) {
+  if (ambience === 'jugueton' && bubblesOn && now > nextBubble && bubbles.length < 3) {
     bubble(rand(40, W - 40), H + 30);
-    nextBubble = now + rand(9000, 16000);
+    nextBubble = now + rand(20000, 35000);
   }
   render();
   raf = requestAnimationFrame(frame);
@@ -432,6 +435,7 @@ export const play = {
     matchMedia('(prefers-reduced-motion: reduce)').addEventListener?.('change', () => { build(); wake(); });
     wake();
   },
+  setBubbles(on) { bubblesOn = !!on; if (!on) for (const b of [...bubbles]) pop(b, true); },
   setAmbience(name) {
     if (name === ambience) return;
     ambience = name;

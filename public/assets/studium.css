@@ -127,9 +127,13 @@ html.grabbing, html.grabbing * { cursor: grabbing !important; user-select: none;
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, .5), inset 0 0 0 1px var(--line); white-space: nowrap; animation: pop .45s var(--spring); }
 .speech.out { opacity: 0; transition: opacity .3s; }
 .bub { position: absolute; left: 0; top: 0; border-radius: 50%; pointer-events: auto; cursor: pointer;
-  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, .85) 0 6%, transparent 13%), radial-gradient(circle, transparent 58%, rgba(255, 255, 255, .22) 74%, rgba(255, 255, 255, .55) 100%),
-    conic-gradient(from 40deg, color-mix(in oklab, var(--sky) 40%, transparent), color-mix(in oklab, var(--teal) 30%, transparent), color-mix(in oklab, var(--butter) 30%, transparent), color-mix(in oklab, var(--peach) 35%, transparent), color-mix(in oklab, var(--sky) 40%, transparent));
-  -webkit-mask: radial-gradient(circle, #000 69%, transparent 71%); mask: radial-gradient(circle, #000 69%, transparent 71%); opacity: .9; }
+  background:
+    radial-gradient(circle at 30% 26%, rgba(255, 255, 255, .95) 0 7%, rgba(255, 255, 255, .25) 13%, transparent 22%),
+    radial-gradient(circle at 70% 78%, rgba(255, 255, 255, .45) 0 4%, transparent 12%),
+    radial-gradient(circle at 50% 50%, transparent 52%, color-mix(in oklab, var(--sky) 35%, transparent) 66%, rgba(255, 255, 255, .55) 76%, color-mix(in oklab, var(--peach) 30%, transparent) 86%, transparent 100%),
+    conic-gradient(from 200deg, color-mix(in oklab, var(--sky) 22%, transparent), color-mix(in oklab, var(--teal) 18%, transparent), color-mix(in oklab, var(--butter) 18%, transparent), color-mix(in oklab, var(--peach) 22%, transparent), color-mix(in oklab, var(--blue) 20%, transparent), color-mix(in oklab, var(--sky) 22%, transparent));
+  box-shadow: inset 0 -6px 14px rgba(255, 255, 255, .22), inset 0 4px 10px rgba(255, 255, 255, .18), 0 14px 22px -14px rgba(20, 40, 90, .35); }
+.bub i { position: absolute; left: 18%; top: 14%; width: 30%; height: 18%; border-radius: 50%; background: rgba(255, 255, 255, .7); filter: blur(1px); rotate: -28deg; }
 .bub.popped { transition: transform .2s, opacity .2s; opacity: 0; }
 .drop, .confetti { position: absolute; left: 0; top: 0; width: 6px; height: 6px; border-radius: 50%; background: color-mix(in oklab, var(--sky) 70%, white); pointer-events: none; }
 .confetti { width: 9px; height: 13px; border-radius: 2px; }
