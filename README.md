@@ -20,6 +20,21 @@ tools.
   (`#/profes`). Interactions are only positive: guides get four fixed kinds of thanks and professors get fixed,
   constructive tags, counted and never signed. The database accepts nothing else, so nobody can write anything negative.
 
+## Your own AI
+
+Each person can connect Claude, ChatGPT or Gemini in Settings with their own API key (`public/assets/ai.js`). The key is
+kept only in that browser; Studium charges nothing and the provider bills its own usage. With it, Studium:
+- turns files, or a whole folder, into contributions with Studium's instructions (`contribute.js`);
+- creates guides from the map's context, with the student's goal, level, language, style and extra sections;
+- identifies documents shared in the library (`library.js`, with pdf.js reading the first pages in the browser);
+- edits the owner's guides piece by piece: one section, a new section, or the whole guide (`editor.js`).
+Guides record who signed them (optional) and which AI, model and effort made them.
+
+The library (`#/biblioteca`) holds shared course documents as links only (Drive, OneDrive, Dropbox): Studium stores no
+file. Professors' cards open their question bank, grouped by evaluation.
+
+The interface is in Spanish and English (`i18n.js`, `en.js`): the page is written in Spanish and translated as it renders.
+
 ## Communities
 
 Today there is one, USFQ (`communities` in `public/assets/config.js`). A second one needs its domain in `config.js` and
@@ -77,6 +92,8 @@ A curriculum lays its courses out by semester and shows what comes next.
 - `tools/upload-contribution.mjs <aporte.json> [--source <id>]`: publishes a contribution as an administrator, read
   and checked with the app's own reader (`--dry-run` only checks it); `--remove <id>` takes one down.
 - `tools/upload-source.mjs <source.json>`: publishes or updates a source and its credits.
+- `tools/set-smtp.mjs <gmail address> <file with the app password>`: sends the account e-mails (address confirmation,
+  password reset) through that Gmail account; `--default` goes back to Firebase's own sender.
 - `tools/set-owner.mjs <id> <e-mail>`: gives a guide or contribution published with the admin tools to an account, so
   that its owner can change, replace or delete it from the site.
 - `tools/dev.mjs [--emulators]`: serves the app at `http://localhost:5173/studium/`, against the live project or the

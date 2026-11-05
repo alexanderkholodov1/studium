@@ -113,6 +113,9 @@ export async function publishGuide(uid, meta, html, replaceId) {
   batch.set(doc(db, 'catalog', id), {
     ...described(meta), date: meta.date, topics: meta.topics, concepts: meta.concepts, anchors: meta.anchors,
     ...(meta.level ? { level: meta.level } : {}), visibility: meta.visibility, updated: serverTimestamp(),
+    // Optional: the name the author chose to sign with, and the AI that made the guide.
+    ...(meta.by ? { by: String(meta.by).slice(0, 60) } : {}),
+    ...(meta.ai?.provider ? { ai: { provider: meta.ai.provider, model: String(meta.ai.model ?? '').slice(0, 80), effort: meta.ai.effort ?? '' } } : {}),
   });
   if (!replaceId) batch.set(doc(db, 'owners', id), { uid });
   await batch.commit();
@@ -134,9 +137,33 @@ export async function remove(item) {
   if (item.type === 'guide') {
     batch.delete(doc(db, 'guides', item.id));
     batch.delete(doc(db, 'catalog', item.id));
-  } else batch.delete(doc(db, 'contributions', item.id));
+  } else batch.delete(doc(db, item.type === 'document' ? 'library' : 'contributions', item.id));
   batch.delete(doc(db, 'owners', item.id));
   await batch.commit();
+}
+
+/* ---------- the library: shared course documents, as links ---------- */
+export const DOC_KINDS = { syllabus: 'Sílabo', reading: 'Texto de apoyo', lab: 'Guía de laboratorio', assignment: 'Enunciado', slides: 'Diapositivas', other: 'Otro' };
+export async function loadLibrary(uid) {
+  const [snap, own] = await Promise.all([
+    getDocs(collection(db, 'library')),
+    uid ? getDocs(query(collection(db, 'owners'), where('uid', '==', uid))) : null,
+  ]);
+  const mine = new Set(own?.docs.map((d) => d.id) ?? []);
+  return snap.docs.map((d) => ({ id: d.id, type: 'document', ...d.data(), updated: millis(d.data().updated), mine: mine.has(d.id) }));
+}
+export async function publishDocument(uid, meta, replaceId) {
+  const ref = replaceId ? doc(db, 'library', replaceId) : doc(collection(db, 'library'));
+  const keep = (k, max) => (meta[k] ? { [k]: String(meta[k]).trim().slice(0, max) } : {});
+  const batch = writeBatch(db);
+  batch.set(ref, {
+    course: meta.course.trim().slice(0, 80), kind: meta.kind, title: meta.title.trim().slice(0, 140), url: meta.url.trim(),
+    ...keep('code', 30), ...keep('professor', 80), ...keep('term', 60), ...keep('note', 200), ...keep('by', 60),
+    updated: serverTimestamp(),
+  });
+  if (!replaceId) batch.set(doc(db, 'owners', ref.id), { uid });
+  await batch.commit();
+  return ref.id;
 }
 
 /* ---------- the person's profile (only its owner reads it) ---------- */
