@@ -27,6 +27,8 @@ const HINTS = [
   { id: 'h-keys', where: ['ajustes'], anchor: '#set-ai', text: '¿Sabías que puedes conectar varias IA a la vez y elegir el modelo cada vez que la usas?' },
   { id: 'h-eggs', where: ['', 'guias', 'bienvenida'], anchor: '.brand', text: 'Studium esconde algunos secretos. Toca las cosas pequeñas, o escribe alguna palabra mágica.' },
   { id: 'h-letters', where: ['bienvenida'], anchor: '#wordmark', text: 'Las letras de «studium» se pueden arrastrar.' },
+  { id: 'h-ask', where: ['mapa'], anchor: '#map-q', text: '¿Sabías que puedes preguntarle al mapa en palabras? Por ejemplo: «la ruta para el Examen 2 de redes».' },
+  { id: 'h-views', where: ['mapa'], anchor: '#map-view-open', text: 'El mapa se ve de muchas formas: lo más preguntado, la dificultad, lo que te falta, la línea de tiempo de una materia…' },
 ];
 
 let shown = 0;

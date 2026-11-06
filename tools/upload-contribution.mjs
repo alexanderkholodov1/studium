@@ -8,6 +8,7 @@ import { gzipSync } from 'node:zlib';
 import { accessToken, call, project } from './google.mjs';
 import { parseContribution, findPersonal } from '../public/assets/prompts.js';
 import { keyOf, validTheme, guessTheme } from '../public/assets/themes.js';
+import { looseKey } from '../public/assets/standard.js';
 
 const LIMIT = 900_000;
 const args = process.argv.slice(2);
@@ -50,8 +51,10 @@ if (body.length > LIMIT) { console.error(`Not uploaded: ${body.length} bytes com
 const names = data.curriculum ? data.curriculum.semesters.flatMap((s) => s.courses) : data.concepts;
 const doc = {
   kind: meta.kind, course: meta.course, code: meta.code, university: meta.university, professor: meta.professor, term: meta.term,
-  title: meta.title, theme: validTheme(meta.theme) ?? (meta.kind === 'curriculum' ? 'estrellas' : guessTheme(meta.course)),
-  concepts: [...new Set(names.map((c) => keyOf(c.name)))].slice(0, 300), questions: data.questions.length, examples: data.examples.length,
+  title: meta.title, stage: meta.stage, theme: validTheme(meta.theme) ?? (meta.kind === 'curriculum' ? 'estrellas' : guessTheme(meta.course)),
+  // The same keys the app writes: loose keys for concepts (plurals and articles do not matter), plain keys for courses.
+  concepts: [...new Set(names.map((c) => (data.curriculum ? keyOf(c.name) : looseKey(c.name))))].filter(Boolean).slice(0, 300),
+  questions: data.questions.length, examples: data.examples.length,
   body, encoding: 'gzip', visibility: 'public', source: flag('--source'), updated: new Date(),
 };
 const docId = flag('--id') ?? `${keyOf(meta.course).slice(0, 40)}-${createHash('sha256').update(text).digest('hex').slice(0, 10)}`;

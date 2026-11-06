@@ -59,5 +59,9 @@ jobs:
           SHA: ${{ github.event.pull_request.merge_commit_sha }}
         run: |
           set -euo pipefail
-          bash tools/pack.sh "$VERSION" "$SHA" out
+          # The previous release's assets ship too, so a page still cached from it keeps working (tools/pack.sh).
+          previous="$(gh release list --limit 1 --json tagName --jq '.[0].tagName' || true)"
+          mkdir -p previous
+          if [ -n "$previous" ]; then gh release download "$previous" --pattern 'studium-dist-*.tar.gz' --dir previous || true; fi
+          bash tools/pack.sh "$VERSION" "$SHA" out "$(ls previous/*.tar.gz 2>/dev/null | head -1)"
           gh release create "v$VERSION" out/* --target "$SHA" --title "v$VERSION" --notes "Studium v$VERSION"

@@ -4,10 +4,13 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.8.0/firebas
 import { getAuth, connectAuthEmulator } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js';
 import {
   getFirestore, connectFirestoreEmulator, collection, query, where, getDocs, doc, getDoc, setDoc, deleteDoc, writeBatch,
-  serverTimestamp, Bytes, increment,
+  serverTimestamp, Bytes, increment, Timestamp,
 } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-lite.js';
 import { firebaseConfig } from './config.js';
 import { keyOf } from './themes.js';
+import { looseKey } from './standard.js';
+import { packJSON, readPack, slices, join, buildId, merge } from './packs.js';
+import { cache } from './cache.js';
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -46,18 +49,52 @@ async function contributionOf(snap) {
   return { id: snap.id, type: 'contribution', visibility: 'public', ...d, body: undefined, data: body, updated: millis(d.updated) };
 }
 
+// The public contributions. With packs (see packs.js): the last pack, kept in this browser until a newer one exists,
+// plus what was published after it, minus what was removed after it. Without packs, or when the database cannot
+// answer the query for what is newer (its index is still being built), every public contribution, one read each.
+const visible = where('visibility', '==', 'public');
+async function loadContributions() {
+  let packed = null;
+  try {
+    const index = await getDoc(doc(db, 'packs', 'index'));
+    if (index.exists()) {
+      const { build, parts, at } = index.data();
+      const kept = await cache.get('pack');
+      let items = kept?.build === build ? kept.items : null;
+      if (!items) {
+        const docs = await Promise.all(Array.from({ length: parts }, (_, i) => getDoc(doc(db, 'packs', `${build}-${i}`))));
+        if (docs.every((d) => d.exists())) {
+          items = parts ? readPack(await gunzip(join(docs.map((d) => d.data().data.toUint8Array())))) : [];
+          cache.set('pack', { build, items });
+        }
+      }
+      if (items) packed = { items, at };
+    }
+  } catch { packed = null; }
+  if (packed) {
+    try {
+      const [fresh, gone] = await Promise.all([
+        getDocs(query(collection(db, 'contributions'), visible, where('updated', '>', packed.at))),
+        getDocs(query(collection(db, 'removed'), where('at', '>', packed.at))),
+      ]);
+      const removed = new Map(gone.docs.map((d) => [d.id, millis(d.data().at)]));
+      return merge(packed.items, await Promise.all(fresh.docs.map(contributionOf)), removed);
+    } catch { /* read them all, below */ }
+  }
+  const all = await getDocs(query(collection(db, 'contributions'), visible));
+  return Promise.all(all.docs.map(contributionOf));
+}
+
 // Everything public, plus the account's own private guides and contributions.
 export async function loadAll(uid) {
-  const visible = where('visibility', '==', 'public');
-  const [cat, con, own, src] = await Promise.all([
+  const [cat, contributions, own, src] = await Promise.all([
     getDocs(query(collection(db, 'catalog'), visible)),
-    getDocs(query(collection(db, 'contributions'), visible)),
+    loadContributions(),
     uid ? getDocs(query(collection(db, 'owners'), where('uid', '==', uid))) : null,
     getDocs(collection(db, 'sources')),
   ]);
   const sources = src.docs.map((d) => ({ id: d.id, order: 0, ...d.data() })).sort((a, b) => a.order - b.order);
   const catalog = cat.docs.map(entryOf);
-  const contributions = await Promise.all(con.docs.map(contributionOf));
   const mine = new Set(own?.docs.map((d) => d.id) ?? []);
   const known = new Set([...catalog, ...contributions].map((x) => x.id));
   for (const id of [...mine].filter((x) => !known.has(x))) {
@@ -83,6 +120,8 @@ const DESCRIBED = ['course', 'code', 'university', 'term', 'professor', 'title',
 const described = (meta) => Object.fromEntries(DESCRIBED.filter((k) => meta[k]).map((k) => [k, meta[k]]));
 
 // Publishes a contribution (meta: its description; data: the compact extract), or replaces one of the account's own.
+// meta.stage: the evaluation it belongs to; meta.source: the registered collection it comes from; meta.print: the
+// fingerprint of the original file, so the same file is never added twice.
 export async function publishContribution(uid, meta, data, replaceId) {
   const body = await gzip(JSON.stringify(data));
   if (body.length > LIMIT) throw Object.assign(new Error('too-large'), { code: 'too-large', size: body.length });
@@ -90,8 +129,11 @@ export async function publishContribution(uid, meta, data, replaceId) {
   const batch = writeBatch(db);
   batch.set(ref, {
     ...described(meta), kind: meta.kind, visibility: meta.visibility,
-    concepts: [...new Set((data.curriculum ? data.curriculum.semesters.flatMap((sem) => sem.courses) : data.concepts)
-      .map((c) => keyOf(c.name)))].slice(0, 300),
+    ...(meta.stage ? { stage: String(meta.stage).slice(0, 40) } : {}),
+    ...(meta.source ? { source: meta.source } : {}),
+    ...(/^[0-9a-f]{16,40}$/.test(meta.print ?? '') ? { print: meta.print } : {}),
+    concepts: [...new Set((data.curriculum ? data.curriculum.semesters.flatMap((sem) => sem.courses).map((c) => keyOf(c.name))
+      : data.concepts.map((c) => looseKey(c.name))))].filter(Boolean).slice(0, 300),
     questions: data.questions.length, examples: data.examples.length,
     body: Bytes.fromUint8Array(body), encoding: 'gzip', updated: serverTimestamp(),
   });
@@ -122,13 +164,17 @@ export async function publishGuide(uid, meta, html, replaceId) {
   return id;
 }
 
+// A contribution that stops being public leaves a record in removed/, so every map drops it from its pack at once.
 export async function setVisibility(item, visibility) {
   const batch = writeBatch(db);
   const change = { visibility, updated: serverTimestamp() };
   if (item.type === 'guide') {
     batch.update(doc(db, 'guides', item.id), change);
     batch.update(doc(db, 'catalog', item.id), change);
-  } else batch.update(doc(db, 'contributions', item.id), change);
+  } else {
+    batch.update(doc(db, 'contributions', item.id), change);
+    if (visibility !== 'public') batch.set(doc(db, 'removed', item.id), { at: serverTimestamp() });
+  }
   await batch.commit();
 }
 
@@ -138,8 +184,43 @@ export async function remove(item) {
     batch.delete(doc(db, 'guides', item.id));
     batch.delete(doc(db, 'catalog', item.id));
   } else batch.delete(doc(db, item.type === 'document' ? 'library' : 'contributions', item.id));
+  if (item.type === 'contribution') batch.set(doc(db, 'removed', item.id), { at: serverTimestamp() });
   batch.delete(doc(db, 'owners', item.id));
   await batch.commit();
+}
+
+// An admin compiles the packs: every public contribution, in parts, then the index that points at them, then the
+// previous parts go. The pack covers up to the newest contribution it holds; anything newer is read one by one.
+export async function compilePacks(email, onStep = () => {}) {
+  onStep('Leyendo los aportes públicos…');
+  const snap = await getDocs(query(collection(db, 'contributions'), visible));
+  const items = await Promise.all(snap.docs.map(contributionOf));
+  const build = buildId();
+  const bytes = await gzip(packJSON(build, items));
+  const parts = slices(bytes);
+  for (let i = 0; i < parts.length; i += 8) {
+    onStep(`Guardando la parte ${i + 1} de ${parts.length}…`);
+    const batch = writeBatch(db);
+    parts.slice(i, i + 8).forEach((part, j) => batch.set(doc(db, 'packs', `${build}-${i + j}`), { build, i: i + j, of: parts.length, data: Bytes.fromUint8Array(part) }));
+    await batch.commit();
+  }
+  const newest = items.reduce((m, x) => Math.max(m, x.updated || 0), 0);
+  const old = await getDoc(doc(db, 'packs', 'index'));
+  await setDoc(doc(db, 'packs', 'index'), { build, parts: parts.length, count: items.length, at: Timestamp.fromMillis(newest), built: serverTimestamp(), by: email });
+  if (old.exists() && old.data().build !== build) {
+    const batch = writeBatch(db);
+    for (let i = 0; i < old.data().parts; i += 1) batch.delete(doc(db, 'packs', `${old.data().build}-${i}`));
+    await batch.commit();
+  }
+  await cache.remove('pack');
+  return { build, parts: parts.length, count: items.length, bytes: bytes.length };
+}
+export async function packInfo() {
+  const index = await getDoc(doc(db, 'packs', 'index'));
+  if (!index.exists()) return null;
+  const d = index.data();
+  const since = await getDocs(query(collection(db, 'contributions'), visible, where('updated', '>', d.at))).then((x) => x.size).catch(() => null);
+  return { ...d, at: millis(d.at), built: millis(d.built), since };
 }
 
 /* ---------- the library: shared course documents, as links ---------- */

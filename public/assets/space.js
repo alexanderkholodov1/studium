@@ -325,6 +325,7 @@ export function renderSettings() {
         <fieldset class="seg"><legend>Idioma</legend><label><input type="radio" name="lang" value="es" data-pref="lang" ${p.lang === 'es' ? 'checked' : ''}><span>Español</span></label><label><input type="radio" name="lang" value="en" data-pref="lang" ${p.lang === 'en' ? 'checked' : ''}><span>English</span></label></fieldset>
       </div></section>
     ${aiSettings()}
+    ${mapSettings()}
     <section class="set glass"><h2>Cómo estudias</h2><p>Cambia el orden de tu inicio.</p>
       <div class="picks" role="radiogroup">${Object.entries(MODES).map(([id, m]) => `<button type="button" class="pick" role="radio" aria-checked="${p.mode === id}" data-set-mode="${id}"><strong>${esc(m.name)}</strong><span>${esc(m.text)}</span></button>`).join('')}</div></section>
     <section class="set glass"><h2>Ambiente</h2><p>Cuánto se mueve la página, y qué tan tierna se pone.</p><div class="ambiences" data-ambience-picker></div>
@@ -340,6 +341,26 @@ export function renderSettings() {
       <p>${communityOf(auth.currentUser?.email) ? `Perteneces a la comunidad <strong>${esc(communityOf(auth.currentUser?.email).name)}</strong>.` : 'Entras como admin de Studium.'} Tus ajustes, metas y progreso se guardan en tu cuenta y solo los ves tú.</p></section>`;
   renderAmbiences($('#settings [data-ambience-picker]'));
   rise($('#settings'));
+}
+
+/* ---------- the map: courses, interests, what you know ---------- */
+// The areas of the map as a person names their interests and hobbies (the same as the map's filters).
+const AREAS = {
+  vectores: 'Matemáticas', redes: 'Redes y sistemas', codigo: 'Programación', algoritmos: 'Programación competitiva',
+  neuronas: 'IA y estadística', ondas: 'Física y electrónica', moleculas: 'Química', celulas: 'Biología y salud',
+  mercados: 'Economía y negocios', palabras: 'Humanidades e idiomas', trazos: 'Arte y diseño',
+};
+function mapSettings() {
+  const p = prefs.get();
+  const courses = (ctx.state.graph?.courses ?? []).filter((c) => !c.planned).sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  return `<section class="set glass" id="set-map"><h2>Tu mapa</h2>
+    <p>Tus materias de este semestre y lo que te interesa. En el mapa, «Solo mis materias e intereses» oculta las islas que no
+      estudias: si viniste por Redes, IEEEXtreme no te estorba.</p>
+    ${courses.length ? `<h3>Mis materias</h3><div class="chips">${courses.map((c) => `<button type="button" class="chip ${p.courses.includes(c.key) ? 'on' : ''}" data-my-course="${esc(c.key)}" style="${themeStyle(c.theme)}"><i></i>${esc(c.name)}</button>`).join('')}</div>` : ''}
+    <h3>Intereses y hobbies</h3>
+    <div class="chips">${Object.entries(AREAS).map(([k, label]) => `<button type="button" class="chip ${p.interests.includes(`area:${k}`) ? 'on' : ''}" data-my-area="${k}" style="${themeStyle(k)}"><i></i>${esc(label)}</button>`).join('')}</div>
+    <p class="fine">${p.known.length ? `Marcaste ${p.known.length} ${p.known.length === 1 ? 'concepto' : 'conceptos'} como «Ya lo sé». <button type="button" class="link" data-known-reset>Empezar de cero</button>` : 'En el mapa, «Ya lo sé» en cada concepto te deja ver lo que te falta.'}</p>
+  </section>`;
 }
 
 /* ---------- your AI ---------- */
@@ -407,6 +428,13 @@ export function mountSpace(context) {
     if (t.dataset.goalRemove) { prefs.set({ goals: prefs.get().goals.filter((g) => g.id !== t.dataset.goalRemove) }); renderHome(); }
     if (t.dataset.reroll !== undefined) renderHome();
     if (t.dataset.aiTest) testAI(t.dataset.aiTest);
+    if (t.closest('#set-map')) {
+      const p = prefs.get();
+      if (t.dataset.myCourse) prefs.set({ courses: p.courses.includes(t.dataset.myCourse) ? p.courses.filter((x) => x !== t.dataset.myCourse) : [...p.courses, t.dataset.myCourse] });
+      if (t.dataset.myArea) { const id = `area:${t.dataset.myArea}`; prefs.set({ interests: p.interests.includes(id) ? p.interests.filter((x) => x !== id) : [...p.interests, id] }); }
+      if (t.dataset.knownReset !== undefined) prefs.set({ known: [] });
+      if (t.dataset.myCourse || t.dataset.myArea || t.dataset.knownReset !== undefined) { sfx.tick(); $('#set-map').outerHTML = mapSettings(); }
+    }
     if (t.dataset.aiForget) { ai.forget(t.dataset.aiForget); renderSettings(); ctx?.toast('La clave se borró de este navegador.'); }
     if (t.dataset.soundTest !== undefined) { sfx.enable(true); sfx.chime(); if (!prefs.get().sound) setTimeout(() => sfx.enable(false), 900); }
     if (t.id === 'timer-go') {

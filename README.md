@@ -26,7 +26,8 @@ Each person can connect Claude, ChatGPT and Gemini in Settings, each with its ow
 keys are kept only in that browser; Studium charges nothing and each provider bills its own usage. Provider, model and
 effort are chosen when the AI is used, with a recommendation per task (the strongest model to create a guide, a light
 one to identify a document), and the last choice per task is remembered. With it, Studium:
-- turns files, or a whole folder, into contributions with Studium's instructions (`contribute.js`);
+- turns files, or a whole folder, into contributions with Studium's instructions (`contribute.js`, `files.js`);
+- answers questions about the map in words, with a compact index of it (`route.js`);
 - creates guides from the map's context, with the student's goal, level, language, style and extra sections;
 - identifies documents shared in the library (`library.js`, with pdf.js reading the first pages in the browser);
 - edits the owner's guides piece by piece: one section, a new section, or the whole guide (`editor.js`).
@@ -57,10 +58,25 @@ publish, and the rules and queries to match it.
 Students use their own AI (ChatGPT, Gemini, Claude, Copilot, NotebookLM…). Studium gives it the instructions and reads
 back what it returns:
 
-- **Contributions.** Exams, homework, slides, books, notes, contest problems or a curriculum go to the person's AI with
-  Studium's instructions. The AI returns a compact JSON extract: concepts and their relations, question patterns,
-  examples and how the material is taught or evaluated. The original files never reach Studium. Before publishing,
-  the app looks for personal data and offers to remove it.
+- **Contributions.** Exams, homework, labs, slides, notes, summaries, books, syllabi, contest problems or a curriculum
+  go to the person's AI with Studium's instructions. The AI returns a compact JSON extract in the standard of
+  `standard.js` and `prompts.js` (version 2):
+  - the evaluation the material belongs to (`stage`);
+  - its concepts in the order it teaches them, each with one standard name, its other names (`aka`), its unit, what
+    must be known before it (`needs`) and its other relations;
+  - its questions (with their number and evaluation), worked examples and how it teaches or evaluates;
+  - for a syllabus, its units, the evaluation that covers each one and the evaluations themselves.
+
+  The original files never reach Studium. Before publishing, the app looks for personal data and offers to remove it,
+  and warns when the same file (by its fingerprint) or the same exam is already on the map.
+- **Any file.** `files.js` reads in the browser whatever is dropped and splits it into parts the AI accepts:
+  - PDFs, split by their chapters. A long book sends its index first, and its chapters wait until the person picks
+    them. Scans and photos go as pictures, cut in quarters when the writing is small.
+  - Photos, joined when they are pages of the same exam.
+  - Word, PowerPoint, Excel, OpenDocument and EPUB, unzipped and read as text, with some of their figures.
+  - Notebooks, code (one material per folder), text and ZIPs.
+
+  Without an API key, the same parts download as folders, with their instructions, for a chat.
 - **Guides.** Studium exports the part of the map a guide needs (a Markdown context file) and the instructions, with
   settings for level, length, practice, difficulty and examples. The AI returns one HTML file with a JSON block that
   names the concepts it explains and the sections where it explains them.
@@ -73,26 +89,53 @@ acknowledgment and a link to the original), shown on the Sources page and next t
 
 ## The map
 
-`public/assets/graph.js` joins every guide and contribution an account can see into one graph: concepts, courses,
-guides and careers. Concepts with the same name join across courses, so a concept shared by two courses links them.
-A curriculum lays its courses out by semester and shows what comes next.
+`public/assets/graph.js` joins every guide, contribution and library document an account can see into one graph of
+careers, courses, concepts, guides, materials and documents.
+- **Joining.** Concepts join by name, by alias and regardless of plurals; courses by code and name; professors by
+  name.
+- **The timeline.** Each concept is placed on its course's timeline: the earliest evaluation it appears in, from the
+  materials or from a syllabus.
+- **Drawing.** The view draws thousands of nodes as islands per course, grouped by area. It uses Barnes-Hut forces, a
+  layout that settles across frames, culling, and labels placed on a grid.
+
+`mapui.js` holds its controls:
+- **The bar.** Search that also answers questions in words: with the person's AI, or with a simple reader of common
+  phrasings.
+- **Filters.** Courses, professors, terms, up to an evaluation, sources and kinds of material, and the person's own
+  courses and interests.
+- **Views.**
+  - The ones that light the map up: most asked, difficulty, bridges, what you grew, what you lack, gaps, new, by
+    professor.
+  - A course's timeline, and the curriculum.
+- **Selection** of one or many nodes, with hiding, focusing and «Ya lo sé».
+- **Routes and paths** (`route.js`):
+  - A route gathers everything needed for an evaluation, across courses, and stops there.
+  - A guide can be made from any route or selection.
+  - There is also the path between two concepts.
+
+**Reads.** A visit reads the map from packs (`packs.js`): every public contribution in a few documents, compiled on
+demand by an admin from the panel or with `tools/compile-packs.mjs`. The browser keeps them (`cache.js`) and then
+reads only what changed; removal records drop what stopped being public.
 
 ## Layout
 
-- `public/index.html`, `public/assets/`: the app. `app.js` (sign-in, routes, guides, map panel), `data.js`
-  (Firestore), `graph.js` (the map), `contribute.js` (contributing), `prompts.js` (the instructions for the AI and the
-  readers of what it returns), `viewer.js` (guides run in a sandboxed frame under a fixed content policy),
+- `public/index.html`, `public/assets/`: the app. `app.js` (sign-in, routes, guides), `data.js`
+  (Firestore), `graph.js` (the map's graph and drawing), `mapui.js` (the map's controls), `route.js` (routes, paths,
+  questions in words), `standard.js` (evaluations, terms, concept names), `files.js` (any file, read in the browser),
+  `packs.js` and `cache.js` (the map's reads), `contribute.js` (contributing), `prompts.js` (the instructions for the
+  AI and the readers of what it returns), `viewer.js` (guides run in a sandboxed frame under a fixed content policy),
   `themes.js` (each course's colors and motif), `fx.js` (the scene, tilting cards, glass, transitions), `play.js`
   (floating tokens with physics, the companion, bubbles, confetti, the springy wordmark), `sfx.js` (synthesized
   sounds), `prefs.js` (the person's settings, synced to `profiles/{uid}`), `space.js` (home, goals, timer,
-  settings), `community.js` (thanks and professors), `demos.js` (the landing's live examples). Assets load from
-  `/studium/assets/`.
+  settings), `community.js` (thanks and professors), `demos.js` (the landing's live examples). A release serves the
+  assets from `/studium/assets/<version>/`, so a new version always reaches returning visitors.
 - `public/assets/config.js`: the public web configuration, the allowed domain, and `confirmEmail`, the sign-up flow
   setting (address confirmation and password recovery by e-mail). A Firebase web API key is public by design; access
   is decided by the rules.
 - `firestore.rules`: who reads and writes each collection (`catalog`, `guides`, `contributions`, `owners`, `sources`,
-  `profiles`, `kudos`, `tips`), what a
-  document may contain, and how public and private documents are listed.
+  `profiles`, `kudos`, `tips`, `library`, `packs`, `removed`, `settings`, `audit`, `presence`, `eggs`), what a document
+  may contain, and how public and private documents are listed. `firestore.indexes.json`: the composite index the map
+  needs, created by `tools/deploy-rules.mjs`.
 - `tools/check.mjs`: checks `public/` before a release. Only the app may ship (no guide pages), every root-absolute
   resource stays inside `/studium/`, no key material except the web key in `config.js`, the default settings have an
   active community, and the rules read the live ones.
@@ -108,17 +151,20 @@ A curriculum lays its courses out by semester and shows what comes next.
 - `tools/upload-contribution.mjs <aporte.json> [--source <id>]`: publishes a contribution as an administrator, read
   and checked with the app's own reader (`--dry-run` only checks it); `--remove <id>` takes one down.
 - `tools/upload-source.mjs <source.json>`: publishes or updates a source and its credits.
+- `tools/compile-packs.mjs [--dry-run]`: compiles the map's packs (as «Compilar ahora» in the admin panel does).
 - `tools/set-smtp.mjs <gmail address> <file with the app password>`: sends the account e-mails (address confirmation,
   password reset) through that Gmail account; `--default` goes back to Firebase's own sender.
 - `tools/set-owner.mjs <id> <e-mail>`: gives a guide or contribution published with the admin tools to an account, so
   that its owner can change, replace or delete it from the site.
 - `tools/dev.mjs [--emulators]`: serves the app at `http://localhost:5173/studium/`, against the live project or the
   local emulators.
-- `tools/pack.sh <version> <commit>`: builds `studium-dist-v<version>.tar.gz`, `version.json` and `SHA256SUMS`.
+- `tools/pack.sh <version> <commit> [out] [previous tarball]`: builds `studium-dist-v<version>.tar.gz`, `version.json`
+  and `SHA256SUMS`, with the assets under `assets/<version>/` and the previous release's kept beside them.
 
 The admin tools read the service-account key from `GOOGLE_SERVICE_ACCOUNT_JSON` (its content) or
 `GOOGLE_APPLICATION_CREDENTIALS` (a path), refuse a key for any project other than the one in `.firebaserc`, and never
-print it.
+print it. With that key a tool can also sign in as an account (`customToken()` in `tools/google.mjs`), which the rules
+accept like a password sign-in, to publish material in someone's name through the app itself.
 
 ## Working locally
 

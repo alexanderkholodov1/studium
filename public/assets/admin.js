@@ -9,7 +9,7 @@
 import {
   collection, query, where, orderBy, limit, getDocs, getCount, doc, writeBatch, serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-lite.js';
-import { db, auth } from './data.js';
+import { db, auth, compilePacks, packInfo } from './data.js';
 import { firebaseConfig, mailFrom } from './config.js';
 import { settings, normalize, domainOf } from './settings.js';
 import { EGGS } from './eggs.js';
@@ -268,15 +268,20 @@ async function contentSection() {
   const row = (cells, id, actions) => `<tr data-id="${esc(id)}">${cells.map((c) => `<td>${c}</td>`).join('')}<td class="row-actions">${actions}</td></tr>`;
   const vis = (d) => (d.visibility === 'private' ? '<span class="badge">privada</span>' : '<span class="badge ok">pública</span>');
   let body = '';
+  let packCard = '';
   if (contentKind === 'guides') {
     const snap = await recent('catalog');
     body = `<thead><tr><th>Guía</th><th>Materia</th><th>Fecha</th><th>Visibilidad</th><th>Cambiada</th><th></th></tr></thead><tbody>${snap.docs.map((d) => { const g = d.data(); return row([
       `<a href="#/guia/${encodeURIComponent(d.id)}"><strong>${esc(g.title)}</strong></a>${g.by ? `<small> · ${esc(g.by)}</small>` : ''}`, esc(g.course), esc(g.date ?? ''), vis(g), esc(when(g.updated))], d.id,
       `<button class="link" data-mod="${g.visibility === 'private' ? 'show' : 'hide'}" data-kind="guides">${g.visibility === 'private' ? 'Mostrar' : 'Ocultar'}</button><button class="link danger" data-mod="delete" data-kind="guides">Borrar</button>`); }).join('')}</tbody>`;
   } else if (contentKind === 'contributions') {
-    const snap = await recent('contributions');
+    const [snap, pack] = await Promise.all([recent('contributions'), packInfo().catch(() => null)]);
+    packCard = `<section class="set glass"><h2>Paquetes del mapa <small>${pack ? `compilados ${esc(when(pack.built))}` : 'todavía no hay'}</small></h2>
+      <div class="stats">${stat('Aportes en el paquete', n(pack?.count))}${stat('Partes', n(pack?.parts))}${stat('Publicados después', n(pack?.since))}</div>
+      <p class="fine">Cada visita lee el paquete (unos pocos documentos, guardados en el navegador) y solo lo que se publicó después, en lugar de una lectura por aporte. Compílalo después de subir muchos aportes; lo que se borra u oculta desaparece del mapa al instante aunque siga en el paquete.</p>
+      <div class="actions"><button class="button primary" data-compile>Compilar ahora</button></div></section>`;
     body = `<thead><tr><th>Aporte</th><th>Materia</th><th>Tipo</th><th>Visibilidad</th><th>Cambiado</th><th></th></tr></thead><tbody>${snap.docs.map((d) => { const c = d.data(); return row([
-      `<strong>${esc(c.title)}</strong><small> · ${n(c.questions)} preguntas</small>`, esc(c.course), esc(c.kind), vis(c), esc(when(c.updated))], d.id,
+      `<strong>${esc(c.title)}</strong><small> · ${n(c.questions)} preguntas${c.stage ? ` · ${esc(c.stage)}` : ''}${c.source ? ` · ${esc(c.source)}` : ''}</small>`, esc(c.course), esc(c.kind), vis(c), esc(when(c.updated))], d.id,
       `<button class="link" data-mod="${c.visibility === 'private' ? 'show' : 'hide'}" data-kind="contributions">${c.visibility === 'private' ? 'Mostrar' : 'Ocultar'}</button><button class="link danger" data-mod="delete" data-kind="contributions">Borrar</button>`); }).join('')}</tbody>`;
   } else if (contentKind === 'library') {
     const snap = await recent('library');
@@ -289,7 +294,7 @@ async function contentSection() {
       `<strong>${esc(x.professor)}</strong>`, esc(x.course ?? ''), `<span class="fine">${esc((x.tags ?? []).join(', '))}</span>`, esc(when(x.updated))], d.id,
       '<button class="link danger" data-mod="delete" data-kind="tips">Borrar</button>'); }).join('')}</tbody>`;
   }
-  return `${tabs}<section class="set glass"><div class="table-wrap"><table class="adm-table">${body}</table></div>
+  return `${tabs}${packCard}<section class="set glass"><div class="table-wrap"><table class="adm-table">${body}</table></div>
     <p class="fine">Lo más reciente primero. Ocultar deja el contenido solo para quien lo publicó; borrar no se deshace.</p></section>`;
 }
 
@@ -420,6 +425,8 @@ async function moderate(kind, id, action) {
     if (kind === 'guides') { batch.update(doc(db, 'catalog', id), { visibility, updated: serverTimestamp() }); batch.update(doc(db, 'guides', id), { visibility, updated: serverTimestamp() }); }
     else batch.update(doc(db, kind, id), { visibility, updated: serverTimestamp() });
   }
+  // A contribution that stops being public leaves every map at once, even while it is still in the pack.
+  if (kind === 'contributions' && action !== 'show') batch.set(doc(db, 'removed', id), { at: serverTimestamp() });
   batch.set(doc(collection(db, 'audit')), { action: { delete: 'Contenido borrado', hide: 'Contenido ocultado', show: 'Contenido mostrado' }[action], detail: `${KINDS[kind]}: ${id}`, by: email(), at: serverTimestamp() });
   await batch.commit();
   ctx.toast({ delete: 'Borrado.', hide: 'Ocultado.', show: 'Visible otra vez.' }[action]);
@@ -456,6 +463,13 @@ export function mountAdmin(context) {
       const row = t.closest('tr');
       if (row && t.dataset.acc && (t.dataset.acc !== 'delete' || armed(t, '¿Borrar? Pulsa otra vez'))) { t.disabled = true; await accountAction(t.dataset.acc, row.dataset.uid, row.dataset.email); }
       if (row && t.dataset.mod && (t.dataset.mod !== 'delete' || armed(t, '¿Borrar? Pulsa otra vez'))) { t.disabled = true; await moderate(t.dataset.kind, row.dataset.id, t.dataset.mod); }
+      if (t.dataset.compile !== undefined) {
+        t.disabled = true;
+        const r = await compilePacks(email(), (step) => { t.textContent = step; });
+        await audit('Paquetes compilados', `${r.count} aportes en ${r.parts} partes (${Math.round(r.bytes / 1000)} KB)`);
+        ctx.toast(`Listo: ${r.count} aportes en ${r.parts} ${r.parts === 1 ? 'parte' : 'partes'}.`);
+        renderAdmin('contenido');
+      }
     } catch (error) { t.disabled = false; ctx.toast(error.message || ctx.explain(error)); }
   });
   view.addEventListener('submit', async (e) => {

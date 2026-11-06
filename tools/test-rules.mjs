@@ -5,7 +5,7 @@
 import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
-import { accessToken, call, project } from './google.mjs';
+import { accessToken, call, project, customToken } from './google.mjs';
 import { DEFAULT_SETTINGS, domainsOf, fromFields, toFields } from './settings.mjs';
 
 const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
@@ -65,13 +65,29 @@ async function signIn(email) {
   if (!body.idToken) throw new Error(`sign-in failed for a test account: ${body.error?.message ?? response.status}`);
   return body.idToken;
 }
-async function status(token, method, path, body) {
-  const response = await fetch(`${firestore}${path}`, {
-    method, headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
-    body: body ? JSON.stringify(body) : undefined,
+// Signing in with a custom token, as the admin tools do for an account. The emulators take an unsigned one.
+async function signInAs(uid) {
+  const b64 = (v) => Buffer.from(JSON.stringify(v)).toString('base64url');
+  const token = emulated ? `${b64({ alg: 'none', typ: 'JWT' })}.${b64({ uid, iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 3600, aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit' })}.` : customToken(uid);
+  const response = await fetch(`${identity}/accounts:signInWithCustomToken?key=${webKey}`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, returnSecureToken: true }),
   });
-  await response.arrayBuffer();
-  return response.status;
+  const body = await response.json();
+  if (!body.idToken) throw new Error(`custom sign-in failed for a test account: ${body.error?.message ?? response.status}`);
+  return body.idToken;
+}
+// A request's status. A momentary server error (500, 502, 503, 504) is not a verdict of the rules: it is retried,
+// up to three times, a moment apart.
+async function status(token, method, path, body) {
+  for (let attempt = 0; ; attempt += 1) {
+    const response = await fetch(`${firestore}${path}`, {
+      method, headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    await response.arrayBuffer();
+    if (![500, 502, 503, 504].includes(response.status) || attempt >= 3) return response.status;
+    await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** attempt));
+  }
 }
 
 // Firestore REST values and writes.
@@ -211,6 +227,42 @@ try {
   expect(`unverified ${confirmEmail ? 'cannot' : 'can'} publish a contribution`, await commit(accounts.unverified.token, [
     put(`contributions/${unverified}`, contribution(), { create: true }), put(`owners/${unverified}`, owner(accounts.unverified.uid), { stamp: false, create: true })]), confirmEmail ? 403 : 200);
 
+  // v0.5.1: the evaluation a contribution belongs to, the collection it comes from, the fingerprint of its file, the new
+  // kinds, and what a contribution leaves when it stops being public.
+  const source = `${tag}-coleccion`;
+  touched.add(`sources/${source}`);
+  await call(admin, 'POST', `${firestore}:commit`, { writes: [{ update: { name: `${base}/sources/${source}`, fields: fields({ name: 'Colección de prueba', order: 9 }) } }] });
+  const full = appId();
+  expect('student publishes a contribution with its evaluation, source and fingerprint', await commit(s.token, [
+    put(`contributions/${full}`, contribution({ stage: 'Examen 2', source, print: 'a1b2c3d4e5f60718293a4b5c' }), { create: true }), put(`owners/${full}`, owner(s.uid), { stamp: false, create: true })]), 200);
+  const nosource = appId();
+  expect('a contribution that names an unregistered source is refused', await commit(s.token, [
+    put(`contributions/${nosource}`, contribution({ source: `${tag}-inventada` }), { create: true }), put(`owners/${nosource}`, owner(s.uid), { stamp: false, create: true })]), 403);
+  expect('a contribution with a malformed fingerprint is refused', await commit(s.token, [
+    put(`contributions/${nosource}`, contribution({ print: 'Nombre del archivo.pdf' }), { create: true }), put(`owners/${nosource}`, owner(s.uid), { stamp: false, create: true })]), 403);
+  expect('a contribution with an overlong evaluation is refused', await commit(s.token, [
+    put(`contributions/${nosource}`, contribution({ stage: 'x'.repeat(41) }), { create: true }), put(`owners/${nosource}`, owner(s.uid), { stamp: false, create: true })]), 403);
+  for (const kind of ['lab', 'summary', 'syllabus']) {
+    const other = appId();
+    expect(`student publishes a contribution of kind ${kind}`, await commit(s.token, [
+      put(`contributions/${other}`, contribution({ kind }), { create: true }), put(`owners/${other}`, owner(s.uid), { stamp: false, create: true })]), 200);
+  }
+  expect('student makes its contribution private and leaves a removal record', await commit(s.token, [
+    put(`contributions/${full}`, contribution({ visibility: 'private', stage: 'Examen 2', source })), put(`removed/${full}`, {}, { stamp: 'at' })]), 200);
+  expect('classmate cannot leave a removal record for it', await commit(c.token, [put(`removed/${full}`, {}, { stamp: 'at' })]), 403);
+  expect('a removal record with other fields is refused', await commit(s.token, [put(`removed/${full}`, { why: 'x' }, { stamp: 'at' })]), 403);
+  expect('a removal record with another time is refused', await commit(s.token, [put(`removed/${full}`, { at: new Date(Date.now() - 86_400_000) }, { stamp: false })]), 403);
+  expect('classmate reads the removal records', await list(c.token, 'removed'), 200);
+  expect('no account cannot read the removal records', await list(null, 'removed'), 403);
+  // Acting for an account with a custom token (the upload tools).
+  const actingToken = await signInAs(s.uid);
+  const acted = appId();
+  expect('a custom-token sign-in publishes in the account\'s name', await commit(actingToken, [
+    put(`contributions/${acted}`, contribution({ source }), { create: true }), put(`owners/${acted}`, owner(s.uid), { stamp: false, create: true })]), 200);
+  const claimed = appId();
+  expect('a custom-token sign-in cannot publish in another account\'s name', await commit(actingToken, [
+    put(`contributions/${claimed}`, contribution(), { create: true }), put(`owners/${claimed}`, owner(c.uid), { stamp: false, create: true })]), 403);
+
   // Guides
   expect('student cannot claim a guide published without an owner', await commit(s.token, [put(`owners/${adminGuide}`, owner(s.uid), { stamp: false, create: true })]), 403);
   expect('student cannot change a guide published without an owner', await commit(s.token, [put(`guides/${adminGuide}`, guide())]), 403);
@@ -257,6 +309,8 @@ try {
   expect('classmate cannot write the profile of another account', await commit(c.token, [put(`profiles/${s.uid}`, profile())]), 403);
   expect('a profile with an unknown ambience is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ ambience: 'neon' }))]), 403);
   expect('a profile with other fields is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ email: s.email }))]), 403);
+  expect('student saves its courses, interests and known concepts', await commit(s.token, [put(`profiles/${s.uid}`, profile({ courses: ['redes-de-computadores'], interests: ['area:redes'], known: ['subred', 'vlan'] }))]), 200);
+  expect('a profile whose known concepts are not a list is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ known: 'subred' }))]), 403);
   expect('otherDomain cannot save a profile', await commit(accounts.otherDomain.token, [put(`profiles/${accounts.otherDomain.uid}`, profile())]), 403);
 
   // Thanks: only fixed, positive kinds
@@ -350,6 +404,21 @@ try {
   expect('student cannot hide a classmate\'s contribution', await commit(c.token, [put(`contributions/${m2}`, { visibility: 'private' }, { mask: ['visibility'] })]), 403);
   expect('admin hides a contribution', await commit(A.token, [put(`contributions/${m2}`, { visibility: 'private' }, { mask: ['visibility'] })]), 200);
   expect('admin deletes a student\'s contribution with its owner record', await commit(A.token, [remove(`contributions/${m2}`), remove(`owners/${m2}`)]), 200);
+  expect('admin leaves a removal record for a contribution it took down', await commit(A.token, [put(`removed/${m2}`, {}, { stamp: 'at' })]), 200);
+  // Packs: compiled by admins, read by every member.
+  const build = `t${randomBytes(4).toString('hex')}`;
+  expect('admin writes a pack part', await commit(A.token, [put(`packs/${build}-0`, { build, i: 0, of: 1, data: randomBytes(64) }, { stamp: false })]), 200);
+  expect('a pack part under the wrong id is refused', await commit(A.token, [put(`packs/${build}-7`, { build, i: 0, of: 1, data: randomBytes(64) }, { stamp: false })]), 403);
+  expect('student reads a pack part', await status(s.token, 'GET', `/packs/${build}-0`), 200);
+  expect('no account cannot read a pack part', await status(null, 'GET', `/packs/${build}-0`), 403);
+  expect('student cannot write a pack part', await commit(s.token, [put(`packs/${build}-1`, { build, i: 1, of: 2, data: randomBytes(64) }, { stamp: false })]), 403);
+  expect('student cannot write the pack index', await commit(s.token, [put('packs/index', { build, parts: 1, count: 1, at: new Date(), by: s.email }, { stamp: 'built' })]), 403);
+  // The live index is the project's own: it is written only in the emulators.
+  if (emulated) {
+    expect('admin writes the pack index', await commit(A.token, [put('packs/index', { build, parts: 1, count: 1, at: new Date(), by: A.email }, { stamp: 'built' })]), 200);
+    expect('the pack index signed by someone else is refused', await commit(A.token, [put('packs/index', { build, parts: 1, count: 1, at: new Date(), by: 'otra@example.com' }, { stamp: 'built' })]), 403);
+  } else touched.delete('packs/index');
+  expect('admin deletes a pack part', await commit(A.token, [remove(`packs/${build}-0`)]), 200);
   expect('admin cannot read a student\'s profile', await status(A.token, 'GET', `/profiles/${s.uid}`), 403);
   // The audit log
   expect('admin writes the audit log', await commit(A.token, [put(`audit/${tag}`, { action: 'prueba', detail: 'una prueba', by: A.email }, { stamp: 'at', create: true })]), 200);

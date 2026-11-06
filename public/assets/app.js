@@ -9,11 +9,12 @@ import { mailFrom } from './config.js';
 import { auth, loadAll, loadGuide, loadLibrary, markPresence } from './data.js';
 import { settings, communityOf, communityLabel, flag } from './settings.js';
 import { keyOf, themeStyle, courseThemes } from './themes.js';
-import { LEVELS, QUESTION_KINDS, RELATIONS, countKind } from './prompts.js';
-import { buildGraph, upcoming, GraphView } from './graph.js';
+import { LEVELS } from './prompts.js';
+import { buildGraph } from './graph.js';
+import { mountMap, openMap, refreshMap } from './mapui.js';
 import { prepareGuide, showAnchor } from './viewer.js';
 import { startScene, tilt, glassLight, transition, rise } from './fx.js';
-import { mountContribute, renderPane } from './contribute.js';
+import { mountContribute, renderPane, presetGuide } from './contribute.js';
 import { prefs } from './prefs.js';
 import { sfx } from './sfx.js';
 import { play, springLetters, celebrate } from './play.js';
@@ -279,7 +280,7 @@ async function load(force = false) {
     const [data, library] = await Promise.all([loadAll(auth.currentUser?.uid), loadLibrary(auth.currentUser?.uid).catch(() => []), loadCommunity(force)]);
     Object.assign(state, data, {
       library,
-      graph: buildGraph(data),
+      graph: buildGraph({ ...data, library }),
       themes: courseThemes([...data.catalog, ...data.contributions.filter((c) => c.kind !== 'curriculum')]),
       loaded: true,
     });
@@ -292,9 +293,10 @@ async function refresh() {
   if (current === 'catalog') renderCatalog();
   if (current === 'home') renderHome();
   if (current === 'profes') renderProfes();
-  if (map) map.setGraph(state.graph, { animate: false });
+  refreshMap();
 }
-const context = { state, get user() { return { uid: auth.currentUser?.uid, email: auth.currentUser?.email ?? '' }; }, refresh, toast, explain };
+const context = { state, get user() { return { uid: auth.currentUser?.uid, email: auth.currentUser?.email ?? '' }; }, refresh, toast, explain, presetGuide };
+mountMap(context);
 mountSpace(context);
 mountEggs({ toast });
 mountAdmin(context);
@@ -345,7 +347,6 @@ $('#q').addEventListener('input', renderCatalog);
 $('#g-filter').addEventListener('change', () => { sfx.tick(); renderCatalog(); });
 
 /* ---------- sources and credits ---------- */
-const sourceOf = (id) => state.sources.find((x) => x.id === id);
 function renderSources() {
   const el = $('#sources');
   if (!state.sources.length) { el.innerHTML = '<div class="empty glass"><h2>Todavía no hay fuentes registradas</h2><p>Cuando el mapa reciba material de una colección compartida, aparecerá aquí con su reconocimiento.</p></div>'; return; }
@@ -365,135 +366,9 @@ function renderSources() {
   }).join('');
   rise(el);
 }
-const creditLine = (items) => {
-  const ids = [...new Set(items.map((c) => c.source).filter(Boolean))];
-  return ids.length ? ` Con material de ${ids.map((id) => `<a href="#/fuentes">${esc(sourceOf(id)?.name ?? id)}</a>`).join(' y ')}.` : '';
-};
 
 /* ---------- map ---------- */
-let map = null;
-const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
-async function openMap(nodeId) {
-  if (!map) {
-    map = new GraphView($('#map-canvas'), {
-      onSelect: (n) => panel(n),
-      onOpen: (n) => { if (n.type === 'guide') location.hash = `#/guia/${encodeURIComponent(n.entry.id)}`; },
-    });
-    mapTools();
-  }
-  const empty = !state.graph.nodes.length;
-  $('#map-empty').hidden = !empty;
-  fillTools();
-  if (map.graph !== state.graph) map.setGraph(state.graph);
-  const node = nodeId && state.graph.byId.get(nodeId);
-  if (node) setTimeout(() => map.select(node, { fly: true }), 300);
-}
-const mapPrefs = { get() { try { return JSON.parse(localStorage.getItem('studium-map') ?? '{}'); } catch { return {}; } }, set(v) { try { localStorage.setItem('studium-map', JSON.stringify(v)); } catch { /* not remembered */ } } };
-function fillTools() {
-  const g = state.graph;
-  const careers = g.nodes.filter((n) => n.type === 'career');
-  const p = mapPrefs.get();
-  // The semester the person set in their settings is the default here.
-  const semester = p.semester ?? prefs.get().semester;
-  $('#map-career').innerHTML = `<option value="">Todas las carreras</option>${careers.map((c) => `<option value="${esc(c.id)}" ${p.career === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}`;
-  $('#map-career').hidden = !careers.length;
-  const plan = g.byId.get($('#map-career').value);
-  const count = plan ? plan.semesters.length - 1 : 0;
-  $('#map-semester').innerHTML = `<option value="0">Mi semestre</option>${Array.from({ length: Math.max(0, count) }, (_, i) => `<option value="${i + 1}" ${semester === i + 1 ? 'selected' : ''}>Estoy en ${i + 1}.º</option>`).join('')}`;
-  $('#map-semester').hidden = !plan;
-  const profs = [...new Set(g.nodes.filter((n) => n.type === 'course').flatMap((n) => [...n.professors.keys()]))].sort();
-  $('#map-prof').innerHTML = `<option value="">Todos los profesores</option>${profs.map((x) => `<option>${esc(x)}</option>`).join('')}`;
-  $('#map-names').innerHTML = g.nodes.filter((n) => n.type !== 'guide').map((n) => `<option value="${esc(n.name)}">`).join('');
-  const courses = g.nodes.filter((n) => n.type === 'course' && !n.planned);
-  $('#map-legend').innerHTML = courses.map((c) => `<button class="chip on" data-legend="${esc(c.id)}" style="${themeStyle(c.theme)}"><i></i>${esc(c.name)}</button>`).join('');
-  applyTools();
-}
-function applyTools() {
-  const off = new Set([...document.querySelectorAll('#map-legend .chip:not(.on)')].map((b) => b.dataset.legend));
-  const all = state.graph.nodes.filter((n) => n.type === 'course').map((n) => n.id);
-  const career = $('#map-career').value;
-  const semester = Number($('#map-semester').value) || 0;
-  mapPrefs.set({ career, semester });
-  map?.setFilter({ courses: off.size ? new Set(all.filter((id) => !off.has(id))) : null, professor: $('#map-prof').value, career, semester });
-}
-function mapTools() {
-  $('#map-career').addEventListener('change', () => { mapPrefs.set({ career: $('#map-career').value, semester: 0 }); fillTools(); setTimeout(() => map.fit(), 900); });
-  $('#map-semester').addEventListener('change', applyTools);
-  $('#map-prof').addEventListener('change', applyTools);
-  $('#map-legend').addEventListener('click', (e) => { const b = e.target.closest('[data-legend]'); if (b) { b.classList.toggle('on'); applyTools(); } });
-  $('#map-fit').addEventListener('click', () => map.fit());
-  $('#map-grow').addEventListener('click', () => map.playGrowth());
-  $('#map-zoom-in').addEventListener('click', () => map.zoomBy(1.3));
-  $('#map-zoom-out').addEventListener('click', () => map.zoomBy(0.77));
-  $('#map-q').addEventListener('change', () => {
-    const key = keyOf($('#map-q').value);
-    const node = state.graph.nodes.find((n) => keyOf(n.name) === key) ?? state.graph.nodes.find((n) => keyOf(n.name).includes(key));
-    if (node) map.select(node, { fly: true });
-  });
-  $('#map-panel').addEventListener('click', (e) => {
-    const go = e.target.closest('[data-node]');
-    if (go) { map.select(state.graph.byId.get(go.dataset.node), { fly: true }); return; }
-    if (e.target.closest('#panel-close')) map.select(null);
-  });
-}
-const chipsOf = (nodes) => nodes.map((n) => `<button class="chip" data-node="${esc(n.id)}" style="${themeStyle(n.theme ?? state.graph.byId.get([...(n.courses ?? [])][0] ?? '')?.theme)}"><i></i>${esc(n.name)}</button>`).join('');
-function panel(n) {
-  const el = $('#map-panel');
-  if (!n) { el.hidden = true; return; }
-  const g = state.graph;
-  const close = '<button class="icon" id="panel-close" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>';
-  let html = '';
-  if (n.type === 'concept') {
-    const courses = [...n.courses].map((id) => g.byId.get(id)).filter(Boolean);
-    const byWho = new Map();
-    for (const q of n.questions) {
-      const who = [q.professor || q.course, q.term].filter(Boolean).join(', ');
-      byWho.set(who, [...(byWho.get(who) ?? []), q]);
-    }
-    const rel = n.relations.filter((r, i, all) => all.findIndex((x) => x.key === r.key && x.kind === r.kind) === i);
-    html = `<p class="kicker">${n.ghost ? 'Concepto mencionado' : 'Concepto'}</p><h2>${esc(n.name)}</h2>
-      <div class="chips small">${chipsOf(courses)}</div>
-      ${n.summaries.slice(0, 2).map((s) => `<p>${esc(s.text)}</p>`).join('') || (n.ghost ? '<p class="muted">Otros conceptos lo mencionan, pero ningún aporte lo explica todavía.</p>' : '')}
-      ${rel.length ? `<h3>Relaciones</h3><ul class="rel">${rel.slice(0, 14).map((r) => {
-        const other = `<button class="link" data-node="concept:${esc(r.key)}">${esc(g.byId.get(`concept:${r.key}`)?.name ?? r.name)}</button>`;
-        const verb = esc(RELATIONS[r.kind] ?? 'se relaciona con');
-        return `<li>${r.out ? `<span class="muted">${verb[0].toUpperCase()}${verb.slice(1)}</span> ${other}` : `${other} <span class="muted">${verb} este concepto</span>`}</li>`;
-      }).join('')}</ul>` : ''}
-      ${byWho.size ? `<h3>Cómo lo preguntan</h3>${[...byWho].map(([who, qs]) => {
-        const kinds = {};
-        for (const q of qs) kinds[q.kind] = (kinds[q.kind] ?? 0) + 1;
-        return `<details class="asked"><summary><strong>${esc(who || 'Sin profesor')}</strong> <span class="muted">${plural(qs.length, 'pregunta', 'preguntas')}: ${Object.entries(kinds).map(([k, c]) => `${esc(QUESTION_KINDS[k] ?? k).toLowerCase()} ${c}`).join(', ')}</span></summary>
-          <ul>${qs.slice(0, 5).map((q) => `<li><span class="muted">${esc(q.title)}: ${esc(QUESTION_KINDS[q.kind] ?? '').toLowerCase()}, dificultad ${q.difficulty} de 5</span><p>${esc(q.text)}</p>${q.solution ? `<details><summary>Ver solución</summary><p>${esc(q.solution)}</p></details>` : ''}</li>`).join('')}</ul></details>`;
-      }).join('')}` : ''}
-      ${n.examples.length ? `<h3>Ejemplos</h3><ul class="ex">${n.examples.slice(0, 3).map((x) => `<li>${esc(x.text)}</li>`).join('')}</ul>` : ''}
-      ${n.guides.length ? `<h3>En guías</h3><ul class="links">${n.guides.map((x) => `<li><a href="#/guia/${encodeURIComponent(x.id)}${x.anchor ? `/${encodeURIComponent(x.anchor)}` : ''}">${esc(x.course)}: ${esc(x.title)}</a></li>`).join('')}</ul>` : ''}`;
-  } else if (n.type === 'course') {
-    const concepts = g.links.filter((l) => l.kind === 'in' && l.source === n).map((l) => l.target).sort((a, b) => b.weight - a.weight);
-    const next = upcoming(g, n);
-    const before = g.links.filter((l) => l.kind === 'prerequisite' && l.target === n).map((l) => l.source);
-    const counts = {};
-    for (const c of n.contributions) counts[c.kind] = (counts[c.kind] ?? 0) + 1;
-    html = `<p class="kicker">${n.planned ? 'Materia de la malla' : 'Materia o competencia'}</p><h2>${esc(n.name)}</h2>
-      <p class="muted">${esc([n.code, ...n.careers.map((c) => `${g.byId.get(c.career)?.name}, semestre ${c.semester}`)].filter(Boolean).join('. '))}</p>
-      ${n.contributions.length ? `<p>${Object.entries(counts).map(([k, c]) => esc(countKind(k, c))).join(', ')}${n.professors.size ? `, de ${esc([...n.professors.keys()].join(', '))}` : ''}.${creditLine(n.contributions)}</p>` : '<p class="muted">Nadie aportó material de esta materia todavía.</p>'}
-      ${before.length ? `<h3>Se necesita antes</h3><div class="chips small">${chipsOf(before)}</div>` : ''}
-      ${next.length ? `<h3>Lo que viene después</h3><ul class="next">${next.map((x) => `<li><button class="link" data-node="${esc(x.course.id)}">${esc(x.course.name)}</button>${x.shared.length ? `<span class="muted"> usa ${esc(x.shared.slice(0, 5).map((s) => s.name).join(', '))}${x.shared.length > 5 ? ` y ${x.shared.length - 5} más` : ''}</span>` : ''}</li>`).join('')}</ul>` : ''}
-      ${concepts.length ? `<h3>Conceptos más evaluados</h3><div class="chips small">${chipsOf(concepts.slice(0, 18))}</div>` : ''}
-      <div class="actions">${n.guides.length ? `<a class="button ghost" href="#/guias">Ver ${plural(n.guides.length, 'guía', 'guías')}</a>` : ''}${n.contributions.length ? `<a class="button primary" href="#/aportar/guia/${encodeURIComponent(n.id)}">Crear una guía</a>` : '<a class="button primary" href="#/aportar">Aportar material</a>'}</div>`;
-  } else if (n.type === 'guide') {
-    const e = n.entry;
-    html = `<p class="kicker">Guía</p><h2>${esc(e.title)}</h2><p class="muted">${esc([n.course.name, e.professor, e.term].filter(Boolean).join(', '))}</p>
-      ${e.level ? `<p><span class="level">${esc(LEVELS[e.level])}</span></p>` : ''}
-      <div class="actions"><a class="button primary" href="#/guia/${encodeURIComponent(e.id)}">Abrir la guía</a></div>`;
-  } else if (n.type === 'career') {
-    html = `<p class="kicker">Carrera</p><h2>${esc(n.name)}</h2><p class="muted">${esc(n.university)}</p>
-      ${n.semesters.map((ids, s) => (ids?.length ? `<h3>Semestre ${s}</h3><div class="chips small">${chipsOf(ids.map((id) => g.byId.get(id)).filter(Boolean))}</div>` : '')).join('')}`;
-  }
-  el.innerHTML = close + html;
-  el.setAttribute('style', themeStyle(n.type === 'course' ? n.theme : n.type === 'guide' ? n.course.theme : g.byId.get([...(n.courses ?? [])][0] ?? '')?.theme));
-  el.hidden = false;
-  el.scrollTop = 0;
-}
+// The map lives in mapui.js (its controls) and graph.js (the graph and its drawing).
 
 /* ---------- guide viewer ---------- */
 const guides = new Map();
@@ -646,7 +521,6 @@ async function route() {
     $(where).textContent = explain(error);
   }
 }
-$('#map-info-open').addEventListener('click', () => $('#map-info').showModal());
 
 // The guide's bar can be hidden; the choice is remembered on this device.
 function bareReader(on) {
