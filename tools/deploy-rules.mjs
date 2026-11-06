@@ -1,7 +1,9 @@
 // Publishes firestore.rules to the project in .firebaserc. Creating the ruleset compiles it on the server, so a
 // rule that does not compile is reported and nothing changes. Publishing is skipped when the live rules are already
 // identical. The rules read the app's settings (settings/app): when that document does not exist yet, it is created
-// first with the defaults of public/assets/config.js; an existing one is never changed here.
+// first with the defaults of public/assets/config.js; an existing one is never changed here. The composite indexes of
+// firestore.indexes.json are created when missing (the database builds them in a few minutes; until then the app reads
+// the slower way).
 // Usage: node tools/deploy-rules.mjs
 import { readFileSync } from 'node:fs';
 import { accessToken, call, project } from './google.mjs';
@@ -21,6 +23,17 @@ if (found.status === 404) {
 } else if (!found.ok) {
   console.error(`Could not read settings/app: HTTP ${found.status}`);
   process.exit(1);
+}
+
+const indexes = JSON.parse(readFileSync(new URL('../firestore.indexes.json', import.meta.url), 'utf8')).indexes;
+for (const index of indexes) {
+  const url = `https://firestore.googleapis.com/v1/projects/${id}/databases/(default)/collectionGroups/${index.collectionGroup}/indexes`;
+  const same = (x) => x.queryScope === index.queryScope && JSON.stringify(x.fields.filter((f) => f.fieldPath !== '__name__').map((f) => [f.fieldPath, f.order]))
+    === JSON.stringify(index.fields.map((f) => [f.fieldPath, f.order]));
+  const existing = (await call(token, 'GET', url)).indexes ?? [];
+  if (existing.some(same)) continue;
+  await call(token, 'POST', url, { queryScope: index.queryScope, fields: index.fields });
+  console.log(`Creating the index ${index.collectionGroup}(${index.fields.map((f) => f.fieldPath).join(', ')}) in ${id}`);
 }
 
 const live = await call(token, 'GET', `${api}/${release}`);

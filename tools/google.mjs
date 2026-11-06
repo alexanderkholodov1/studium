@@ -18,6 +18,17 @@ function serviceAccount() {
   return key;
 }
 
+// A custom token for an account (uid), signed with the service account: whoever holds the key can act for an account,
+// as the admin tools that upload material in someone's name do. The rules accept it like a password sign-in.
+export function customToken(uid) {
+  const key = serviceAccount();
+  const b64 = (value) => Buffer.from(JSON.stringify(value)).toString('base64url');
+  const now = Math.floor(Date.now() / 1000);
+  const claims = { iss: key.client_email, sub: key.client_email, aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit', iat: now, exp: now + 3600, uid };
+  const unsigned = `${b64({ alg: 'RS256', typ: 'JWT' })}.${b64(claims)}`;
+  return `${unsigned}.${createSign('RSA-SHA256').update(unsigned).sign(key.private_key, 'base64url')}`;
+}
+
 export async function accessToken() {
   const key = serviceAccount();
   const b64 = (value) => Buffer.from(JSON.stringify(value)).toString('base64url');

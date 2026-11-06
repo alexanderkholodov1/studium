@@ -19,6 +19,9 @@ rules_version = '2';
 //   switches. Every signed-in account reads it; only admins write it. audit/{id}: what each admin changed.
 // - presence/{uid}: when an account was last seen, written on real events (never on a timer); admins count them.
 // - eggs/{id}: how many people found each easter egg, as a counter that only goes up by one.
+// - packs/index + packs/{build}-{i}: every public contribution in a few documents, compiled by an admin on demand, so
+//   a visit reads a handful of documents. removed/{id}: when a contribution stopped being public (deleted or made
+//   private by its owner, or hidden by an admin), so every map drops it from its pack.
 // A guide or contribution is public, or private to its owner. Lists return public documents only (a list query must
 // ask for visibility == 'public'); the owner opens its private ones one by one.
 service cloud.firestore {
@@ -27,10 +30,11 @@ service cloud.firestore {
     function settings() { return get(at('settings', 'app')).data; }
     function admin() { return request.auth != null && request.auth.token.get('admin', false) == true; }
     // An account of an active community: its address domain is one the admins accepted, and the address is confirmed
-    // when the settings require it.
+    // when the settings require it. It signed in with its password, or with a token only the project's service account
+    // can mint (the admin tools that act for an account, such as uploading material in its name).
     function student() {
       return request.auth != null
-        && request.auth.token.firebase.sign_in_provider == 'password'
+        && request.auth.token.firebase.sign_in_provider in ['password', 'custom']
         && request.auth.token.get('email', '').lower().matches('[^@]+@[a-z0-9.-]+')
         && request.auth.token.email.lower().split('@')[1] in settings().domains
         && (settings().get('confirmEmail', false) != true || request.auth.token.email_verified == true);
@@ -82,13 +86,18 @@ service cloud.firestore {
         && text(d.title, 220) && visibility(d) && d.html is bytes && d.html.size() <= 900000 && d.encoding == 'gzip' && d.size is int
         && d.updated == request.time;
     }
+    // stage: the evaluation it belongs to. source: a registered collection it comes from (it gets the credit). print: the
+    // fingerprint of the original file, so the same file is not added twice.
     function contribution(d) {
-      return d.keys().hasOnly(['kind', 'course', 'code', 'university', 'term', 'professor', 'title', 'theme', 'concepts',
-          'questions', 'examples', 'body', 'encoding', 'visibility', 'updated'])
+      return d.keys().hasOnly(['kind', 'course', 'code', 'university', 'term', 'professor', 'title', 'stage', 'theme', 'source',
+          'print', 'concepts', 'questions', 'examples', 'body', 'encoding', 'visibility', 'updated'])
         && d.keys().hasAll(['kind', 'course', 'title', 'theme', 'concepts', 'questions', 'examples', 'body', 'encoding',
           'visibility', 'updated'])
-        && d.kind in ['exam', 'homework', 'slides', 'book', 'notes', 'contest', 'curriculum', 'other']
+        && d.kind in ['exam', 'homework', 'lab', 'slides', 'notes', 'summary', 'book', 'syllabus', 'contest', 'curriculum', 'other']
         && described(d)
+        && optional(d, 'stage', 40)
+        && (!('source' in d) || (d.source is string && d.source.matches('[a-z0-9][a-z0-9-]{2,60}') && exists(at('sources', d.source))))
+        && (!('print' in d) || (d.print is string && d.print.matches('[0-9a-f]{16,40}')))
         && d.concepts is list && d.concepts.size() <= 300
         && d.questions is int && d.examples is int
         && d.body is bytes && d.body.size() <= 900000 && d.encoding == 'gzip';
@@ -129,7 +138,7 @@ service cloud.firestore {
     // The person's own space.
     function profile(d) {
       return d.keys().hasOnly(['nickname', 'name', 'career', 'semester', 'mode', 'ambience', 'sound', 'theme', 'lang', 'avatar',
-          'goals', 'progress', 'deadlines', 'tiles', 'notes', 'links', 'focus', 'bubbles', 'updated'])
+          'goals', 'progress', 'deadlines', 'tiles', 'notes', 'links', 'focus', 'bubbles', 'courses', 'interests', 'known', 'updated'])
         && optional(d, 'nickname', 40) && optional(d, 'name', 60) && optional(d, 'career', 80)
         && (!('lang' in d) || d.lang in ['es', 'en'])
         && (!('avatar' in d) || d.avatar in ['blue', 'red', 'teal', 'butter', 'sky', 'peach'])
@@ -149,6 +158,10 @@ service cloud.firestore {
         && (!('focus' in d) || (d.focus is map && d.focus.keys().hasOnly(['study', 'rest'])
           && d.focus.study is int && d.focus.study >= 5 && d.focus.study <= 90
           && d.focus.rest is int && d.focus.rest >= 1 && d.focus.rest <= 30))
+        // The map: the person's courses this term, their interests, and the concepts they marked as known.
+        && (!('courses' in d) || (d.courses is list && d.courses.size() <= 40))
+        && (!('interests' in d) || (d.interests is list && d.interests.size() <= 40))
+        && (!('known' in d) || (d.known is list && d.known.size() <= 1500))
         && d.updated == request.time;
     }
     match /profiles/{uid} {
@@ -265,6 +278,30 @@ service cloud.firestore {
         && request.resource.data.at == request.time
         && request.resource.data.community is string && request.resource.data.community.size() <= 30
         && request.resource.data.since is timestamp;
+    }
+
+    // Packs: compiled by admins; every member reads them.
+    function packIndex(d) {
+      return d.keys().hasOnly(['build', 'parts', 'count', 'at', 'built', 'by']) && d.keys().hasAll(['build', 'parts', 'count', 'at', 'built', 'by'])
+        && d.build is string && d.build.matches('[a-z0-9]{4,30}') && d.parts is int && d.parts >= 0 && d.parts <= 400
+        && d.count is int && d.at is timestamp && d.built == request.time && d.by == request.auth.token.email;
+    }
+    function packPart(id, d) {
+      return d.keys().hasOnly(['build', 'i', 'of', 'data']) && d.keys().hasAll(['build', 'i', 'of', 'data'])
+        && d.build is string && d.i is int && d.of is int && id == d.build + '-' + string(d.i)
+        && d.data is bytes && d.data.size() <= 900000;
+    }
+    match /packs/{id} {
+      allow read: if member();
+      allow create, update: if admin() && ((id == 'index' && packIndex(request.resource.data)) || (id != 'index' && packPart(id, request.resource.data)));
+      allow delete: if admin() && id != 'index';
+    }
+    // A contribution that stopped being public: written by its owner in the same batch that deletes it or makes it
+    // private (or by an admin), and read by every map.
+    match /removed/{id} {
+      allow read: if member();
+      allow create, update: if (admin() || (student() && mine(id)))
+        && request.resource.data.keys().hasOnly(['at']) && request.resource.data.at == request.time;
     }
 
     // How many people found each easter egg: a counter that only goes up by one.

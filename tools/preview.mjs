@@ -6,7 +6,7 @@
 // Accounts (password prueba123): prueba@estud.usfq.edu.ec (a student), otra@estud.usfq.edu.ec (a classmate),
 // studiumplatform@gmail.com (an admin). Stop it with Ctrl+C.
 import { spawn } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { defaultDocument, toFields } from './settings.mjs';
 
@@ -82,6 +82,10 @@ writes.push(put('contributions/demo-aporte', { kind: 'exam', course: 'Redes de C
 writes.push(put('owners/demo-aporte', { uid }));
 writes.push(put('library/demo-doc', { course: 'Redes de Computadores', code: 'CMP-4005', professor: 'Docente de Prueba', term: '202610', kind: 'syllabus', title: 'Sílabo de Redes', url: 'https://drive.google.com/file/d/demo/view', updated: now }));
 writes.push(put('owners/demo-doc', { uid }));
+// A shared collection, as the Sources page and the material form show it: the real one when private/ has it.
+const source = existsSync(new URL('private/source-draconic.json', ROOT)) ? JSON.parse(readFileSync(new URL('private/source-draconic.json', ROOT), 'utf8'))
+  : { id: 'coleccion-de-prueba', name: 'Colección de prueba', by: 'Studium', description: 'Una colección compartida de prueba.', order: 1 };
+writes.push(put(`sources/${source.id}`, Object.fromEntries(Object.entries(source).filter(([k]) => k !== 'id'))));
 writes.push({ update: { name: `${base}/settings/app`, fields: toFields(defaultDocument('tools/preview.mjs')) } });
 writes.push(put('presence/' + uid, { at: now, community: 'usfq', since: now }));
 await post(`${FS}/v1/${base}:commit`, { writes });
