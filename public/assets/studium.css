@@ -1311,8 +1311,6 @@ html.has-announce .page { padding-top: 170px; }
 .ai-pick select, .ai-pick input { padding-top: 8px; padding-bottom: 8px; font-size: 14.5px; }
 
 /* ---------- the map's light links ---------- */
-.map-links { display: inline-flex; gap: 14px; align-items: center; padding: 0 6px; }
-.map-links .link { font-size: 14px; }
 #map-info .why { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; color: var(--ink-2); }
 #map-info p { color: var(--ink-2); }
 

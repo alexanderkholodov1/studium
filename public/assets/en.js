@@ -850,6 +850,8 @@ export const EN = {
   'pregunta': 'question',
   'ejemplo': 'example',
   'fuente': 'source',
+  '¿Sabías que puedes preguntarle al mapa en palabras? Por ejemplo: «la ruta para el Examen 2 de redes».': 'Did you know you can ask the map in words? For example: “the route for the Redes Exam 2”.',
+  'El mapa se ve de muchas formas: lo más preguntado, la dificultad, lo que te falta, la línea de tiempo de una materia…': 'The map can be seen in many ways: most asked, difficulty, what you still lack, a course’s timeline…',
 };
 
 const DAYS = { lunes: 'Monday', martes: 'Tuesday', miércoles: 'Wednesday', jueves: 'Thursday', viernes: 'Friday', sábado: 'Saturday', domingo: 'Sunday' };
