@@ -21,6 +21,7 @@ export const TASKS = {
   edit: { name: 'Editar una guía', tier: 'strong', effort: 'medium', why: 'cambiar una sección pide buen criterio, sin rehacer todo' },
   material: { name: 'Procesar material', tier: 'mid', effort: 'medium', why: 'leer apuntes y exámenes es trabajo de un modelo intermedio' },
   identify: { name: 'Identificar un documento', tier: 'light', effort: 'low', why: 'reconocer un sílabo o un enunciado basta con un modelo ligero' },
+  ask: { name: 'Preguntarle al mapa', tier: 'light', effort: 'low', why: 'leer el índice del mapa y elegir qué mostrar es rápido para un modelo ligero' },
 };
 // Claude models that accept the effort setting and the server-side fallback when a safeguard declines a request.
 const CLAUDE_EFFORT = /^claude-(fable|mythos|opus|sonnet|haiku-5)/;
@@ -208,12 +209,13 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
 
   if (c.provider === 'anthropic') {
     const client = await claude(c.key);
+    // Pictures carry their name in a line before them, so the AI knows their order («hoja 1», «hoja 2»).
     const content = [
-      ...usable.map((f) => (f.type === 'application/pdf'
-        ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.data }, title: f.name }
+      ...usable.flatMap((f) => (f.type === 'application/pdf'
+        ? [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.data }, title: f.name }]
         : f.type.startsWith('image/')
-          ? { type: 'image', source: { type: 'base64', media_type: f.type, data: f.data } }
-          : { type: 'text', text: `--- ${f.name} ---\n${f.text}` })),
+          ? [{ type: 'text', text: `--- ${f.name} ---` }, { type: 'image', source: { type: 'base64', media_type: f.type, data: f.data } }]
+          : [{ type: 'text', text: `--- ${f.name} ---\n${f.text}` }])),
       { type: 'text', text },
     ];
     const params = { model, max_tokens: maxTokens, system, messages: [{ role: 'user', content }], ...(CLAUDE_EFFORT.test(model) ? { output_config: { effort: c.effort } } : {}) };
@@ -234,11 +236,11 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
 
   if (c.provider === 'openai') {
     const parts = [
-      ...usable.map((f) => (f.type === 'application/pdf'
-        ? { type: 'file', file: { filename: f.name, file_data: `data:application/pdf;base64,${f.data}` } }
+      ...usable.flatMap((f) => (f.type === 'application/pdf'
+        ? [{ type: 'file', file: { filename: f.name, file_data: `data:application/pdf;base64,${f.data}` } }]
         : f.type.startsWith('image/')
-          ? { type: 'image_url', image_url: { url: `data:${f.type};base64,${f.data}` } }
-          : { type: 'text', text: `--- ${f.name} ---\n${f.text}` })),
+          ? [{ type: 'text', text: `--- ${f.name} ---` }, { type: 'image_url', image_url: { url: `data:${f.type};base64,${f.data}` } }]
+          : [{ type: 'text', text: `--- ${f.name} ---\n${f.text}` }])),
       { type: 'text', text },
     ];
     const reasoning = /^(o\d|gpt-5)/.test(model);
@@ -254,7 +256,7 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
   }
 
   const parts = [
-    ...usable.map((f) => (f.data ? { inline_data: { mime_type: f.type, data: f.data } } : { text: `--- ${f.name} ---\n${f.text}` })),
+    ...usable.flatMap((f) => (f.data ? [{ text: `--- ${f.name} ---` }, { inline_data: { mime_type: f.type, data: f.data } }] : [{ text: `--- ${f.name} ---\n${f.text}` }])),
     { text },
   ];
   onProgress?.(-1);

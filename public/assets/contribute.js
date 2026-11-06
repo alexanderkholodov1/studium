@@ -2,10 +2,12 @@
 // account's own items. Nothing of the original material reaches Studium: only what the AI extracted, after review.
 import { THEMES, keyOf, themeStyle, guessTheme, validTheme } from './themes.js';
 import {
-  KINDS, LEVELS, contributionInstructions, curriculumInstructions, guideInstructions, parseContribution, parseGuide,
+  KINDS, KIND_HINTS, LEVELS, contributionInstructions, curriculumInstructions, guideInstructions, parseContribution, parseGuide,
   contextPack, findPersonal, redact,
 } from './prompts.js';
 import { publishContribution, publishGuide, setVisibility, remove, LIMIT } from './data.js';
+import { prepareGroup, groupFiles, fingerprint, partsSize, partFiles, zipFiles } from './files.js';
+import { looseKey, stageOf, stageLabel } from './standard.js';
 import { prepareGuide } from './viewer.js';
 import { rise } from './fx.js';
 import * as ai from './ai.js';
@@ -23,7 +25,7 @@ const kb = (n) => (n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.
 let ctx = null; // { state, user, refresh, toast, go }
 
 export function download(name, text, type = 'text/markdown') {
-  const url = URL.createObjectURL(new Blob([text], { type: `${type};charset=utf-8` }));
+  const url = URL.createObjectURL(text instanceof Blob ? text : new Blob([text], { type: `${type};charset=utf-8` }));
   const a = Object.assign(document.createElement('a'), { href: url, download: name });
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
@@ -97,43 +99,76 @@ function aiStep(zone) {
     ${ai.pickerHTML('material')}
     <div class="dropzone" data-ai-drop="${zone}">
       <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 14a4 4 0 0 1 4-4h8l4 4h12a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4Z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M24 30V20m0 0-5 5m5-5 5 5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <p><strong>Suelta aquí tus archivos o una carpeta</strong>: PDF, fotos o texto.</p>
-      <div class="actions"><label class="button primary">Elegir archivos<input type="file" multiple hidden data-ai-files="${zone}" accept=".pdf,image/*,.txt,.md,.tex,.csv,.json,.py,.c,.cpp,.java,.js"></label>
+      <p><strong>Suelta aquí tus archivos o una carpeta</strong>: PDF (también libros enteros y escaneos), fotos de exámenes o apuntes a mano, Word, PowerPoint, Excel, EPUB, notebooks, código, texto o un ZIP.</p>
+      <div class="actions"><label class="button primary">Elegir archivos<input type="file" multiple hidden data-ai-files="${zone}"></label>
         <label class="button ghost">Elegir una carpeta<input type="file" multiple hidden webkitdirectory data-ai-files="${zone}"></label></div>
     </div>
+    <p class="fine">Los libros largos se dividen por capítulos: primero va su índice, y tú eliges qué capítulos procesar. Las fotos de un mismo examen se unen solas.</p>
     <ul class="ai-queue" data-ai-queue="${zone}"></ul>
   </li>`;
 }
+// The queue: each dropped file (or each group of photos of the same exam) is read in this browser and split into
+// units; each unit is one request to the person's AI and becomes one contribution to review. A file already in the map
+// (by its fingerprint) waits until the person decides to process it again.
 const queue = [];
 let working = false;
-function enqueue(zone, files) {
-  const list = $(`[data-ai-queue="${zone}"]`);
-  for (const file of files) {
-    const id = `q${serial += 1}`;
-    list.insertAdjacentHTML('beforeend', `<li id="${id}"><span class="name">${esc(file.webkitRelativePath || file.name)}</span><span class="state">En espera</span></li>`);
-    queue.push({ id, zone, file });
-  }
-  work();
+const units = new Map(); // row id -> { unit, group, v, print }
+const printed = () => new Set(ctx.state.contributions.map((c) => c.print).filter(Boolean));
+async function printOf(group) {
+  const prints = await Promise.all(group.files.map((f) => fingerprint(f)));
+  if (prints.length === 1) return prints[0];
+  const joined = new TextEncoder().encode(prints.join(''));
+  return [...new Uint8Array(await crypto.subtle.digest('SHA-256', joined))].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 24);
 }
-const setRow = (id, text, cls = '') => { const row = document.getElementById(id); if (row) { row.className = cls; row.querySelector('.state').textContent = text; } };
+async function enqueue(zone, files) {
+  const list = $(`[data-ai-queue="${zone}"]`);
+  const v = materialValues();
+  const known = printed();
+  for (const group of groupFiles(files)) {
+    const head = `g${serial += 1}`;
+    list.insertAdjacentHTML('beforeend', `<li id="${head}" class="busy file"><span class="name">${esc(group.name)}</span><span class="state">Preparando…</span><ul class="units"></ul></li>`);
+    let prepared;
+    try { prepared = await prepareGroup(group); } catch (error) { setRow(head, `No se pudo leer: ${error.message || 'formato desconocido'}`, 'bad file'); continue; }
+    if (prepared.skipped) { setRow(head, `Saltado: ${prepared.skipped}`, 'skip file'); continue; }
+    const print = await printOf(group).catch(() => '');
+    const repeated = print && known.has(print);
+    const pages = prepared.pages ? ` · ${prepared.pages} páginas` : '';
+    setRow(head, repeated ? 'Ya está en el mapa: este mismo archivo ya se aportó' : prepared.units.length > 1 ? `${prepared.units.length} partes${pages}${prepared.book ? ' · un libro: primero su índice' : ''}` : `Listo para tu IA${pages}`, repeated ? 'skip file' : 'file');
+    const sub = document.querySelector(`#${head} .units`);
+    for (const unit of prepared.units) {
+      const id = `q${serial += 1}`;
+      // The stage the file's name says («Examen parcial 1.pdf»), unless the form says it for the whole batch.
+      const stage = v.stage || stageOf(unit.label)?.label || '';
+      units.set(id, { unit, group, v: { ...v, stage }, print: prepared.units.length === 1 ? print : '' });
+      const on = unit.selected && !repeated;
+      sub.insertAdjacentHTML('beforeend', `<li id="${id}" class="${on ? '' : 'skip'}">${prepared.units.length > 1 || repeated ? `<label class="check"><input type="checkbox" data-unit="${id}" ${on ? 'checked' : ''}></label>` : ''}<span class="name">${esc(prepared.units.length > 1 ? unit.label.split(' · ').slice(1).join(' · ') || unit.label : baseName(unit.label))}</span><span class="state">${on ? 'En espera' : repeated ? 'No se procesa' : 'Sin elegir'}</span></li>`);
+      if (on) queue.push({ id, zone });
+    }
+    if (prepared.notes?.length) sub.insertAdjacentHTML('beforeend', `<li class="skip"><span class="name">${esc(plural(prepared.notes.length, 'archivo saltado', 'archivos saltados'))}</span><span class="state">${esc(prepared.notes.slice(0, 2).join(' · '))}</span></li>`);
+    work();
+  }
+}
+const baseName = (name) => String(name).split('/').pop();
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const setRow = (id, text, cls = '') => { const row = document.getElementById(id); if (row) { row.className = cls; row.querySelector(':scope > .state').textContent = text; } };
 async function work() {
   if (working) return;
   working = true;
   while (queue.length) {
     const job = queue.shift();
+    const { unit, v, print } = units.get(job.id);
     try {
       setRow(job.id, 'Leyendo…', 'busy');
-      const file = await ai.readFile(job.file);
-      if (file.skipped) { setRow(job.id, `Saltado: ${file.skipped}`, 'skip'); continue; }
-      setRow(job.id, 'Tu IA lo está leyendo…', 'busy');
-      const v = materialValues();
-      const system = v.kind === 'curriculum' ? curriculumInstructions(v) : contributionInstructions(v);
+      const files = await unit.make();
+      setRow(job.id, `Tu IA lo está leyendo… (${kb(partsSize(files))})`, 'busy');
+      const system = v.kind === 'curriculum' ? curriculumInstructions(v) : contributionInstructions({ ...v, part: unit.note });
       const res = await ai.run({
-        system, files: [file], maxTokens: 32000, use: ai.picked('material'),
+        system, files, maxTokens: 32000, use: ai.picked('material'),
         text: 'Procesa el material adjunto siguiendo las instrucciones de Studium. Responde solo con el JSON, en un bloque de código.',
         onProgress: (n) => setRow(job.id, n < 0 ? 'Tu IA está escribiendo…' : `Tu IA está escribiendo… ${n.toLocaleString('es')} caracteres`, 'busy'),
       });
-      const item = addReview('material', res.text, job.file.webkitRelativePath || job.file.name, { provider: res.provider, model: res.model, effort: res.effort });
+      // What the form said when this file was dropped, not what it says now: a batch can change it between files.
+      const item = addReview('material', res.text, unit.label, { provider: res.provider, model: res.model, effort: res.effort }, { print, stage: v.stage, source: v.source, fallback: v });
       setRow(job.id, item.parsed.error ? 'Tu IA no devolvió un aporte válido: revisa abajo' : res.truncated ? 'Listo, pero quedó cortado: revisa abajo' : 'Listo: revísalo abajo', item.parsed.error ? 'bad' : 'ok');
     } catch (error) {
       setRow(job.id, error.message || 'Algo falló', 'bad');
@@ -141,6 +176,27 @@ async function work() {
     }
   }
   working = false;
+}
+// Without an API key: the same preparation, as files to download and take to a chat with the instructions.
+async function prepareForChat(files) {
+  const out = $('#m-prepared');
+  out.hidden = false;
+  out.innerHTML = '<p class="status">Preparando…</p>';
+  const v = materialValues();
+  const zip = [];
+  const notes = [];
+  for (const group of groupFiles(files)) {
+    const prepared = await prepareGroup(group).catch((e) => ({ skipped: e.message }));
+    if (prepared.skipped) { notes.push(`${group.name}: ${prepared.skipped}`); continue; }
+    for (const [i, unit] of prepared.units.entries()) {
+      if (!unit.selected) continue;
+      const folder = `${String(i + 1).padStart(2, '0')} ${baseName(unit.label).replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80)}`;
+      for (const f of partFiles(await unit.make())) zip.push({ name: `${folder}/${f.name}`, bytes: f.bytes });
+      zip.push({ name: `${folder}/instrucciones.md`, bytes: new TextEncoder().encode(contributionInstructions({ ...v, stage: v.stage || stageOf(unit.label)?.label || '', part: unit.note })) });
+    }
+  }
+  if (zip.length) download('studium-material-preparado.zip', zipFiles(zip), 'application/zip');
+  out.innerHTML = `<p>${zip.length ? 'Se descargó <strong>studium-material-preparado.zip</strong>: una carpeta por parte, con sus archivos y sus instrucciones. Abre un chat nuevo por carpeta, adjunta lo que trae y pega sus instrucciones.' : 'No quedó nada que preparar.'}</p>${notes.length ? `<ul class="warnings">${notes.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}`;
 }
 // A dropped folder arrives as entries: walk it.
 async function droppedFiles(dataTransfer) {
@@ -171,12 +227,17 @@ function materialPane() {
       <p>Lo que completes va en las instrucciones; lo que dejes vacío, tu IA lo saca del material.</p>
       <form class="grid" id="m-form">
         ${segmented('kind', KINDS, d.kind, 'Qué material es')}
+        <p class="hint wide kind-hint" id="m-kind-hint">${esc(KIND_HINTS[d.kind] ?? '')}</p>
         ${input('course', 'Materia, competencia o carrera', d.course, 'list="dl-courses" autocomplete="off"')}
         ${input('code', 'Código', d.code, 'autocomplete="off"')}
         ${input('university', 'Universidad u organizador', d.university, 'list="dl-unis" autocomplete="off"')}
         ${input('professor', 'Profesor', d.professor, 'list="dl-profs" autocomplete="off"')}
         ${input('term', 'Semestre o edición', d.term, 'list="dl-terms" autocomplete="off" placeholder="202610, IEEEXtreme 19.0…"')}
+        ${input('stage', 'Evaluación', d.stage, 'list="dl-stages" autocomplete="off" placeholder="Examen 1, Examen 2, Final… (si es de una sola)"')}
+        ${ctx.state.sources.length ? `<label class="field"><span>De dónde viene</span><select name="source"><option value="">De mí o de mis compañeros</option>${ctx.state.sources.map((x) => `<option value="${esc(x.id)}" ${d.source === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>` : ''}
       </form>
+      <datalist id="dl-stages">${['Examen 1', 'Examen 2', 'Examen 3', 'Examen 4', 'Final', 'Quiz 1', 'Quiz 2', 'Deber 1', 'Proyecto'].map((x) => `<option value="${x}">`).join('')}</datalist>
+      <p class="fine">Si subes varios archivos de evaluaciones distintas, deja «Evaluación» vacío: Studium la lee del nombre de cada archivo (por ejemplo, «Parcial 2.pdf»), y tu IA del material.</p>
       <details class="prompt"><summary>Ver las instrucciones que recibe tu IA</summary><pre id="m-prompt"></pre></details>
     </li>
     ${aiStep('material')}
@@ -193,6 +254,11 @@ function materialPane() {
         <li>Pega las instrucciones y envía.</li>
         <li>Descarga el archivo <code>.json</code> que te devuelve. Si tu IA no crea archivos, copia su bloque de código.</li>
       </ol>
+      <details class="prepare"><summary>¿Un libro entero, un Word, un PowerPoint o un ZIP? Studium te lo prepara</summary>
+        <p>Suéltalo aquí: Studium lo lee en tu navegador, lo divide en partes que cualquier chat acepta (los libros, por capítulos) y te descarga una carpeta por parte con sus instrucciones.</p>
+        <label class="button ghost">Elegir archivos<input type="file" multiple hidden data-prepare></label>
+        <div id="m-prepared" hidden></div>
+      </details>
       <p class="note">Tu material no se sube a Studium: solo el resumen anónimo que hace tu IA, después de que lo revises.</p>
     </li>
     <li class="step glass">
@@ -207,9 +273,13 @@ function materialValues() {
   store.set('studium-draft-material', v);
   const k = known();
   const course = v.course?.trim();
-  const lessons = ctx.state.contributions.filter((c) => keyOf(c.course) === keyOf(course));
-  const knownConcepts = uniq(lessons.flatMap((c) => (c.data.concepts ?? []).map((x) => x.name)));
-  return { ...v, course: canonicalCourse(course), professor: canonical(v.professor?.trim(), k.professors), known: knownConcepts };
+  // The concepts the map already has for this course, by the names the map shows (the course's node, so its guides
+  // and every spelling of the course count), so the AI reuses them and the map joins them.
+  const node = ctx.state.graph?.byId.get(`course:${keyOf(canonicalCourse(course))}`);
+  const knownConcepts = node
+    ? uniq(ctx.state.graph.nodes.filter((n) => n.type === 'concept' && n.courses.has(node.id)).sort((a, b) => b.weight - a.weight).map((n) => n.name))
+    : uniq(ctx.state.contributions.filter((c) => keyOf(c.course) === keyOf(course)).flatMap((c) => (c.data.concepts ?? []).map((x) => x.name)));
+  return { ...v, course: canonicalCourse(course), professor: canonical(v.professor?.trim(), k.professors), stage: stageLabel(v.stage ?? ''), source: v.source ?? '', known: knownConcepts };
 }
 const materialPrompt = () => { const v = materialValues(); return v.kind === 'curriculum' ? curriculumInstructions(v) : contributionInstructions(v); };
 
@@ -236,15 +306,24 @@ const CHATS = {
   chatgpt: { name: 'ChatGPT', url: 'https://chatgpt.com/' },
   gemini: { name: 'Gemini', url: 'https://gemini.google.com/app' },
 };
-const NOTE_TYPES = '.pdf,image/*,.txt,.md,.tex,.csv,.py,.c,.cpp,.java,.js';
+const NOTE_TYPES = '.pdf,image/*,.txt,.md,.tex,.csv,.docx,.pptx,.xlsx,.odt,.odp,.epub,.ipynb,.zip,.py,.c,.cpp,.java,.js,.html';
 let notes = []; // the person's own files for this guide: read in this browser, sent only to their AI
 let scope = null;
+// A guide made from the map (a route, or a selection): its fields, and exactly those concepts as the map's part.
+let pending = null;
+let fromMap = null; // { keys: Set, label, bands }
+export function presetGuide(preset) {
+  pending = preset;
+  fromMap = preset.route ? { keys: new Set(preset.route.keys), label: preset.route.label, bands: preset.route.bands } : null;
+  store.set('studium-draft-guide', { ...(store.get('studium-draft-guide') ?? {}), course: preset.course, code: preset.code, title: preset.title, professor: preset.professor, term: preset.term, graph: true });
+}
 
 function courseNode(name) {
   return name ? ctx.state.graph?.byId.get(`course:${keyOf(name)}`) ?? null : null;
 }
 function guidePane(preset = {}) {
-  const d = { level: 'standard', length: 'medium', practice: 'normal', challenge: 'same', examples: 'normal', language: 'C++', ...(store.get('studium-draft-guide') ?? {}), ...preset };
+  const d = { level: 'standard', length: 'medium', practice: 'normal', challenge: 'same', examples: 'normal', language: 'C++', ...(store.get('studium-draft-guide') ?? {}), ...preset, ...(pending ?? {}) };
+  pending = null;
   // Links from the map and the home page name the course by its node.
   if (String(d.course ?? '').startsWith('course:')) d.course = ctx.state.graph?.byId.get(d.course)?.name ?? '';
   const node = courseNode(d.course);
@@ -274,6 +353,7 @@ function guidePane(preset = {}) {
       </div>
       <ul class="notes-list" id="g-notes"></ul>
       <label class="toggle"><input type="checkbox" name="graph" ${d.graph ? 'checked' : ''}><span class="knob"></span>Sumar lo que la comunidad ya sabe de esta materia (el mapa de conocimiento)</label>
+      <div class="from-map" id="g-from-map" hidden></div>
       <div class="scope" id="g-scope-wrap" hidden>
         <div class="scope-head"><h3>Conceptos del mapa que entran</h3><button type="button" class="link" data-scope="all">Todos</button><button type="button" class="link" data-scope="none">Ninguno</button></div>
         <div class="chips" id="g-scope"></div>
@@ -345,9 +425,11 @@ function guideValues() {
   store.set('studium-draft-guide', v);
   const course = courseNode(v.course);
   const g = ctx.state.graph;
-  const concepts = !course ? [] : g.links.filter((l) => l.kind === 'in' && l.source === course).map((l) => l.target)
-    .concat(g.links.filter((l) => l.kind === 'has' && l.source === course).flatMap((l) => g.links.filter((m) => m.source === l.target).map((m) => m.target)))
-    .filter((n, i, all) => n.type === 'concept' && all.indexOf(n) === i);
+  // From the map: the route's or the selection's concepts, from any course. Otherwise, the course's.
+  const concepts = fromMap ? [...fromMap.keys].map((k) => g.byId.get(`concept:${k}`)).filter(Boolean)
+    : !course ? [] : g.links.filter((l) => l.kind === 'in' && l.source === course).map((l) => l.target)
+      .concat(g.links.filter((l) => l.kind === 'has' && l.source === course).flatMap((l) => g.links.filter((m) => m.source === l.target).map((m) => m.target)))
+      .filter((n, i, all) => n.type === 'concept' && all.indexOf(n) === i);
   return { v, course, concepts };
 }
 function renderNotes() {
@@ -357,7 +439,7 @@ function renderNotes() {
 }
 function addNotes(files) {
   for (const file of files) {
-    if (file.size > ai.MAX_FILE) { ctx.toast(`${file.name} pesa más de 25 MB.`); continue; }
+    if (file.size > 400_000_000) { ctx.toast(`${file.name} pesa demasiado para leerlo aquí.`); continue; }
     if (!notes.some((n) => n.name === file.name && n.size === file.size)) notes.push(file);
   }
   notes = notes.slice(0, 20);
@@ -371,21 +453,35 @@ function renderScope() {
   const wrap = $('#g-scope-wrap');
   const summary = $('#g-summary');
   const mine = notes.length ? `Tu IA leerá ${notes.length === 1 ? 'tu archivo' : `tus ${notes.length} archivos`}.` : 'Sin apuntes, tu IA usará lo que sabe del tema.';
-  if (!v.graph || !course) {
+  const banner = $('#g-from-map');
+  if (banner) {
+    banner.hidden = !fromMap || !v.graph;
+    if (fromMap) {
+      const qs = concepts.reduce((s, n) => s + n.questions.length, 0);
+      banner.innerHTML = `<p><strong>Desde el mapa${fromMap.label ? `: la ruta ${esc(fromMap.label)}` : ''}</strong> · ${concepts.length} conceptos y ${qs} preguntas, con lo que necesitas antes. Puedes crear la guía solo con esto, o sumar tus apuntes.</p><button type="button" class="link" data-from-map-clear>Usar toda la materia</button>`;
+    }
+  }
+  if (!v.graph || (!course && !fromMap)) {
     wrap.hidden = true;
     const known = course ? ` En el mapa hay ${course.contributions.length} ${course.contributions.length === 1 ? 'aporte' : 'aportes'} de ${course.name}: actívalo si quieres sumarlos.` : '';
     summary.textContent = v.graph && v.course && !course ? `${mine} Todavía no hay aportes de «${v.course}» en el mapa: la guía saldrá de tus apuntes.` : `${mine}${known}`;
   } else {
-    if (!scope || scope.key !== course.id) scope = { key: course.id, off: new Set() };
+    const scopeKey = fromMap ? `map:${[...fromMap.keys].join(',')}` : course.id;
+    if (!scope || scope.key !== scopeKey) scope = { key: scopeKey, off: new Set() };
     wrap.hidden = !concepts.length;
     const ranked = [...concepts].sort((a, b) => b.questions.length - a.questions.length || a.name.localeCompare(b.name, 'es'));
     $('#g-scope').innerHTML = ranked.map((n) => `<button type="button" class="chip ${scope.off.has(n.key) ? '' : 'on'}" data-concept="${esc(n.key)}">${esc(n.name)}${n.questions.length ? `<small>${n.questions.length}</small>` : ''}</button>`).join('');
-    const lessons = course.contributions;
-    const qs = lessons.reduce((s, c) => s + (c.data.questions?.length ?? 0), 0);
+    const lessons = fromMap ? sourcesOf(concepts) : course.contributions;
+    const qs = fromMap ? concepts.reduce((s, n) => s + n.questions.length, 0) : lessons.reduce((s, c) => s + (c.data.questions?.length ?? 0), 0);
     const prof = v.professor ? lessons.filter((c) => keyOf(c.professor) === keyOf(v.professor)).length : 0;
-    summary.textContent = `${mine} Del mapa suma ${concepts.length} conceptos y ${qs} preguntas de ${course.name}${v.professor ? `; ${prof} de esos aportes son de ${v.professor}` : ''}.`;
+    summary.textContent = `${mine} Del mapa suma ${concepts.length} conceptos y ${qs} preguntas${course && !fromMap ? ` de ${course.name}` : ''}${v.professor ? `; ${prof} de esos aportes son de ${v.professor}` : ''}.`;
   }
   $('#g-prompt').textContent = guidePrompt({ inline: true });
+}
+// The contributions behind some concepts, from any course.
+function sourcesOf(concepts) {
+  const ids = new Set(concepts.flatMap((n) => [...n.items]));
+  return ctx.state.contributions.filter((c) => ids.has(c.id));
 }
 function guideRequest() {
   const { v, course, concepts } = guideValues();
@@ -393,7 +489,7 @@ function guideRequest() {
   const theme = course?.theme ?? guessTheme(v.course);
   const contest = theme === 'algoritmos' || !!course?.contributions.some((c) => c.kind === 'contest');
   const file = `studium-contexto-${keyOf(v.course || 'guia').slice(0, 40)}.md`;
-  return { v, course, picked, contest, theme, file, graph: v.graph && !!course };
+  return { v, course, picked, contest, theme, file, graph: v.graph && (!!course || (!!fromMap && picked.length > 0)) };
 }
 function guidePrompt({ api = false, inline = false } = {}) {
   const r = guideRequest();
@@ -401,16 +497,18 @@ function guidePrompt({ api = false, inline = false } = {}) {
     ...r.v, course: r.v.course || 'el tema que te indico', code: r.v.code || r.course?.code || '',
     university: r.course?.contributions.find((c) => c.university)?.university ?? '', theme: r.theme, contest: r.contest,
     graph: r.graph, contextFile: inline ? '' : r.file, api, notes: notes.length, mode: prefs.get().mode,
+    until: fromMap && r.graph ? fromMap.label : '',
   });
 }
 function guideContext() {
   const { v, course, picked, contest } = guideRequest();
-  if (!course) return '';
+  if (!course && !fromMap) return '';
   return contextPack({
-    course: { name: course.name, code: course.code, university: course.contributions.find((c) => c.university)?.university ?? '' },
+    course: { name: course?.name ?? v.course, code: course?.code ?? v.code ?? '', university: course?.contributions.find((c) => c.university)?.university ?? '' },
     professor: v.professor, term: v.term, contest,
-    concepts: picked.map((n) => ({ key: n.key, name: n.name, summaries: n.summaries.map((s) => s.text), relations: n.relations })),
-    contributions: course.contributions, guides: course.guides,
+    concepts: picked.map((n) => ({ key: n.key, name: n.name, summaries: n.summaries.map((s) => s.text), relations: n.relations, band: fromMap?.bands?.[n.key] ?? '' })),
+    contributions: fromMap ? sourcesOf(picked) : course.contributions, guides: course?.guides ?? [],
+    ordered: !!fromMap,
   });
 }
 // The course is the one thing a guide needs.
@@ -425,7 +523,7 @@ function guideReady() {
 function fullPrompt() {
   const r = guideRequest();
   const context = r.graph ? guideContext() : '';
-  return guidePrompt({ inline: true }) + (context ? `\n\n---\n\n# Contexto de Studium: ${r.course.name}\n\n${context}` : '');
+  return guidePrompt({ inline: true }) + (context ? `\n\n---\n\n# Contexto de Studium: ${r.course?.name ?? r.v.course}\n\n${context}` : '');
 }
 // With a subscription: the instructions go to the clipboard, a new chat opens in the provider's page, and the steps
 // stay here.
@@ -456,11 +554,20 @@ async function generateGuide() {
   button.textContent = 'Cancelar';
   out.hidden = false;
   try {
+    // The notes, read like any material (files.js): Word, PowerPoint and long PDFs included. A long PDF sends its
+    // first part (a book, its index); everything together stays within what a provider accepts in one request.
     const files = [];
+    let size = 0;
     for (const file of notes) {
       out.textContent = `Leyendo ${file.name}…`;
-      const read = await ai.readFile(file);
-      if (read.skipped) ctx.toast(`${file.name}: ${read.skipped}.`); else files.push(read);
+      const prepared = await prepareGroup({ name: file.name, files: [file] }).catch((e) => ({ skipped: e.message }));
+      if (prepared.skipped) { ctx.toast(`${file.name}: ${prepared.skipped}.`); continue; }
+      for (const unit of prepared.units.filter((u) => u.selected).slice(0, 3)) {
+        const parts = await unit.make();
+        if (size + partsSize(parts) > 24_000_000) { ctx.toast(`${file.name}: no cabe entero junto con lo demás; va lo primero.`); break; }
+        size += partsSize(parts);
+        files.push(...parts);
+      }
     }
     out.textContent = 'Tu IA está leyendo…';
     const use = ai.picked('guide');
@@ -498,15 +605,18 @@ async function readFiles(zone, files) {
     addReview(zone, await file.text(), file.name);
   }
 }
-function addReview(zone, text, name, made = null) {
+// extra: what Studium knows of the original file (its fingerprint, its stage, its source).
+function addReview(zone, text, name, made = null, extra = {}) {
   const html = /^\s*<!doctype html/i.test(text.replace(/^﻿/, ''));
   const preset = zone === 'guide' ? guideValues() : null;
   const fallback = zone === 'guide' && preset
     ? { course: preset.course?.name ?? preset.v.course, code: preset.v.code || preset.course?.code || '', professor: preset.v.professor ?? '', term: preset.v.term ?? '', title: preset.v.title, date: preset.v.date, level: preset.v.level, theme: preset.course?.theme ?? guessTheme(preset.v.course) }
-    : $('#m-form') ? materialValues() : {};
+    : extra.fallback ? { ...extra.fallback, ...(extra.stage ? { stage: extra.stage } : {}) }
+      : $('#m-form') ? { ...materialValues(), ...(extra.stage ? { stage: extra.stage } : {}) } : {};
   const parsed = html ? parseGuide(text, fallback) : parseContribution(text, fallback);
+  if (!html && !parsed.error) parsed.meta.source = extra.source ?? fallback.source ?? '';
   const id = `r${serial += 1}`;
-  const item = { id, zone, name, html, text, parsed, visibility: 'public', confirmed: false, replace: zone.startsWith('replace:') ? zone.slice(8) : '', ai: made, sign: false };
+  const item = { id, zone, name, html, text, parsed, visibility: 'public', confirmed: false, replace: zone.startsWith('replace:') ? zone.slice(8) : '', ai: made, sign: false, print: extra.print ?? '' };
   reviews.set(id, item);
   const list = $(`[data-reviews="${zone.startsWith('replace:') ? 'mine' : zone}"]`);
   list.insertAdjacentHTML('afterbegin', `<article class="review glass" id="${id}"></article>`);
@@ -540,6 +650,8 @@ function renderReview(item) {
       ? `${parsed.data.curriculum.semesters.length} semestres, ${parsed.data.curriculum.semesters.reduce((s, x) => s + x.courses.length, 0)} materias.`
       : `${conceptNames.length} conceptos (${fresh} nuevos en el mapa), ${parsed.data.questions.length} preguntas, ${parsed.data.examples.length} ejemplos.`;
   const ready = m.course && m.title && !blocking.length && (!needsLook.length || item.confirmed) && (!isGuide || /^\d{4}-\d{2}-\d{2}$/.test(m.date || ''));
+  item.ready = !!ready && !item.done;
+  const twin = !isGuide && !curriculum ? lookalike(m, parsed.data, item.print) : null;
   el.setAttribute('style', themeStyle(m.theme));
   el.innerHTML = `<header>
       <span class="badge">${isGuide ? 'Guía' : curriculum ? 'Malla' : `Aporte: ${esc(KINDS[m.kind] ?? 'Otro')}`}</span>
@@ -555,6 +667,8 @@ function renderReview(item) {
       ${curriculum ? '' : input('professor', 'Profesor', m.professor, 'list="dl-profs"')}
       ${curriculum ? '' : input('term', 'Semestre o edición', m.term, 'list="dl-terms"')}
       ${input('title', isGuide ? 'Evaluación' : 'Título', m.title, 'required')}
+      ${isGuide || curriculum || m.kind === 'contest' ? '' : input('stage', 'Evaluación', m.stage, 'list="dl-stages" placeholder="Examen 1, Final…"')}
+      ${isGuide || curriculum || !ctx.state.sources.length ? '' : `<label class="field"><span>De dónde viene</span><select name="source"><option value="">De mí o de mis compañeros</option>${ctx.state.sources.map((x) => `<option value="${esc(x.id)}" ${m.source === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>`}
       ${isGuide ? input('date', 'Fecha de la evaluación', m.date, 'type="date" required') : ''}
       ${isGuide ? `<label class="field"><span>Nivel</span><select name="level"><option value="">Sin indicar</option>${Object.entries(LEVELS).map(([key, v]) => `<option value="${key}" ${key === m.level ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></label>` : ''}
       ${curriculum ? '' : themePicker(`theme-${item.id}`, m.theme)}
@@ -569,6 +683,7 @@ function renderReview(item) {
         : '<p class="hint wide">Para firmar tus guías con tu nombre, escríbelo en <a href="#/ajustes">Ajustes</a>.</p>') : ''}
     </form>
     <p class="summary">${summary}</p>
+    ${twin ? `<p class="twin">${esc(twin)}</p>` : ''}
     ${parsed.warnings.length ? `<ul class="warnings">${parsed.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}
     ${findings.length ? `<div class="personal">
       <p><strong>${blocking.length ? 'Hay datos personales: quítalos antes de publicar.' : 'Revisa estos datos antes de publicar.'}</strong></p>
@@ -582,18 +697,21 @@ function renderReview(item) {
       <button class="button primary" data-publish="${item.id}" ${ready ? '' : 'disabled'}>${item.replace ? 'Reemplazar' : 'Publicar'}</button>
       ${!ready && !blocking.length && isGuide && !/^\d{4}-\d{2}-\d{2}$/.test(m.date || '') ? '<span class="hint">Falta la fecha de la evaluación.</span>' : ''}
     </div>`}`;
+  syncBulk(item.zone.startsWith('replace:') ? 'mine' : item.zone);
 }
 function readMeta(item) {
   const form = $(`[data-meta="${item.id}"]`);
   if (!form) return;
   const v = Object.fromEntries(new FormData(form).entries());
   const m = item.parsed.meta;
-  for (const k of ['kind', 'course', 'code', 'university', 'professor', 'term', 'title', 'date', 'level']) if (k in v) m[k] = v[k].trim();
+  for (const k of ['kind', 'course', 'code', 'university', 'professor', 'term', 'title', 'stage', 'source', 'date', 'level']) if (k in v) m[k] = v[k].trim();
+  if ('stage' in v) m.stage = stageLabel(m.stage);
   if (v[`theme-${item.id}`]) m.theme = v[`theme-${item.id}`];
   if (v[`vis-${item.id}`]) item.visibility = v[`vis-${item.id}`];
   if ('aiprov' in v) item.ai = v.aiprov ? { provider: v.aiprov, model: String(v.aimodel ?? '').trim().slice(0, 80), effort: v.aieffort ?? '' } : null;
 }
 async function publish(item) {
+  if (item.done) return true;
   readMeta(item);
   const m = item.parsed.meta;
   const button = $(`[data-publish="${item.id}"]`);
@@ -610,17 +728,61 @@ async function publish(item) {
       }, item.text, item.replace || undefined);
       item.done = `Publicada${item.visibility === 'private' ? ' solo para ti' : ''}. <a href="#/guia/${encodeURIComponent(id)}">Abrir la guía</a> · <a href="#/mapa/guide:${encodeURIComponent(id)}">Verla en el mapa</a>`;
     } else {
-      id = await publishContribution(ctx.user.uid, { ...m, theme: m.kind === 'curriculum' ? 'estrellas' : m.theme, visibility: item.visibility }, item.parsed.data);
+      id = await publishContribution(ctx.user.uid, { ...m, theme: m.kind === 'curriculum' ? 'estrellas' : m.theme, visibility: item.visibility, print: item.print }, item.parsed.data);
       item.done = `Publicado${item.visibility === 'private' ? ' solo para ti' : ''}. <a href="#/mapa">Verlo en el mapa</a>`;
     }
+    item.ready = false;
     renderReview(item);
-    await ctx.refresh();
-    ctx.toast(item.html ? 'Guía publicada.' : 'Aporte publicado.');
+    if (!bulk) { await ctx.refresh(); ctx.toast(item.html ? 'Guía publicada.' : 'Aporte publicado.'); }
+    return true;
   } catch (error) {
     button.disabled = false;
     button.textContent = item.replace ? 'Reemplazar' : 'Publicar';
     ctx.toast(error.code === 'too-large' ? `Pesa ${kb(error.size)} comprimido; el límite es ${kb(LIMIT)}. Pide a tu IA una versión más corta.` : ctx.explain(error));
+    return false;
   }
+}
+// Every review that is ready (nothing personal left to check), one after the other, then the map once.
+let bulk = false;
+async function publishAll(zone) {
+  const ready = [...reviews.values()].filter((x) => x.zone === zone && x.ready && !x.done);
+  if (!ready.length) return;
+  const button = $(`[data-publish-all="${zone}"]`);
+  bulk = true;
+  let done = 0;
+  try {
+    for (const item of ready) {
+      if (button) button.textContent = `Publicando ${done + 1} de ${ready.length}…`;
+      if (await publish(item)) done += 1;
+    }
+  } finally { bulk = false; }
+  await ctx.refresh();
+  ctx.toast(`${plural(done, 'aporte publicado', 'aportes publicados')}.`);
+  syncBulk(zone);
+}
+function syncBulk(zone) {
+  const list = $(`[data-reviews="${zone}"]`);
+  if (!list) return;
+  const ready = [...reviews.values()].filter((x) => x.zone === zone && x.ready && !x.done).length;
+  let bar = list.previousElementSibling?.classList.contains('bulk') ? list.previousElementSibling : null;
+  if (ready < 2) { bar?.remove(); return; }
+  if (!bar) { list.insertAdjacentHTML('beforebegin', '<div class="bulk"></div>'); bar = list.previousElementSibling; }
+  bar.innerHTML = `<p>${plural(ready, 'aporte listo', 'aportes listos')}: revisados, sin datos personales a la vista.</p><button class="button primary" data-publish-all="${zone}">Publicar los ${ready}</button>`;
+}
+// The same file, or what looks like the same exam: most of its questions are already in another contribution of the
+// course.
+function lookalike(m, data, print) {
+  const mine = ctx.state.contributions;
+  if (print && mine.some((c) => c.print === print)) return 'Este mismo archivo ya está en el mapa.';
+  const qkey = (q) => keyOf(q.text).slice(0, 70);
+  const ours = new Set((data.questions ?? []).map(qkey).filter((k) => k.length > 20));
+  if (ours.size < 3) return null;
+  for (const c of mine.filter((x) => keyOf(x.course) === keyOf(m.course))) {
+    const theirs = new Set((c.data?.questions ?? []).map(qkey));
+    const same = [...ours].filter((k) => theirs.has(k)).length;
+    if (same / ours.size >= 0.5) return `Se parece mucho a «${c.title}» (${same} de ${ours.size} preguntas iguales): revisa que no esté repetido.`;
+  }
+  return null;
 }
 function preview(item) {
   const dialog = $('#preview');
@@ -675,6 +837,15 @@ export function mountContribute(context) {
     if (e.target.dataset.notes !== undefined) { addNotes([...e.target.files]); e.target.value = ''; }
     const aiFiles = e.target.dataset.aiFiles;
     if (aiFiles) { enqueue(aiFiles, [...e.target.files]); e.target.value = ''; }
+    if (e.target.dataset.prepare !== undefined) { prepareForChat([...e.target.files]); e.target.value = ''; }
+    // A part of a book (or a file already in the map) joins the queue when the person ticks it.
+    const unitId = e.target.dataset.unit;
+    if (unitId) {
+      const row = document.getElementById(unitId);
+      if (e.target.checked && !queue.some((j) => j.id === unitId) && !row.classList.contains('ok')) { setRow(unitId, 'En espera', ''); queue.push({ id: unitId, zone: 'material' }); work(); }
+      if (!e.target.checked) { const i = queue.findIndex((j) => j.id === unitId); if (i >= 0) { queue.splice(i, 1); setRow(unitId, 'Sin elegir', 'skip'); } }
+    }
+    if (e.target.name === 'kind' && e.target.closest('#m-form')) { const hint = $('#m-kind-hint'); if (hint) hint.textContent = KIND_HINTS[e.target.value] ?? ''; }
     const sign = e.target.dataset.sign;
     if (sign) { const item = reviews.get(sign); item.sign = e.target.checked; }
     const replaceId = e.target.dataset.replace;
@@ -722,6 +893,8 @@ export function mountContribute(context) {
       renderReview(item);
     }
     if (t.dataset.publish) publish(reviews.get(t.dataset.publish));
+    if (t.dataset.publishAll) publishAll(t.dataset.publishAll);
+    if (t.dataset.fromMapClear !== undefined) { fromMap = null; scope = null; renderScope(); }
     if (t.dataset.preview) preview(reviews.get(t.dataset.preview));
     if (t.dataset.remove) {
       if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = '¿Borrar? Pulsa otra vez'; setTimeout(() => { if (t.isConnected) { t.dataset.armed = ''; t.textContent = 'Borrar'; } }, 4000); return; }
