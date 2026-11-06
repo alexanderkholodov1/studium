@@ -310,7 +310,8 @@ function renderRoute() {
   el.innerHTML = `${closeButton()}<p class="kicker">Ruta de estudio</p><h2>${esc(title)}</h2>
     ${r.professor || r.term ? `<p class="muted">${esc([r.professor && `Con ${r.professor}`, r.term && termLabel(r.term)].filter(Boolean).join(' · '))}</p>` : ''}
     ${say ? `<p class="said">${esc(say)}</p>` : ''}
-    <div class="route-stats"><span><b>${n.concepts}</b> conceptos</span><span><b>${n.questions}</b> preguntas</span><span><b>${n.examples}</b> ejemplos</span><span><b>${n.items + n.guides}</b> fuentes</span></div>
+    <div class="route-stats">${[[n.concepts, 'concepto', 'conceptos'], [n.questions, 'pregunta', 'preguntas'], [n.examples, 'ejemplo', 'ejemplos'], [n.items + n.guides, 'fuente', 'fuentes']]
+      .map(([v, one, many]) => `<span><b>${v.toLocaleString('es')}</b> ${v === 1 ? one : many}</span>`).join('')}</div>
     ${r.notes.map((x) => `<p class="note">${esc(x)}</p>`).join('')}
     <div class="actions"><button class="button primary" data-route-guide>Crear una guía con esta ruta</button></div>
     <div class="route-opts">
@@ -579,9 +580,9 @@ function panel(n) {
         return `<li>${r.out ? `<span class="muted">${verb[0].toUpperCase()}${verb.slice(1)}</span> ${other}` : `${other} <span class="muted">${verb} este concepto</span>`}</li>`;
       }).join('')}</ul>` : ''}
       ${byWho.size ? `<h3>Cómo lo preguntan <small>${plural(n.questions.length, 'pregunta', 'preguntas')}</small></h3>${[...byWho].map(([who, qs]) => {
-        const kinds = {};
-        for (const q of qs) kinds[q.kind] = (kinds[q.kind] ?? 0) + 1;
         const groups = bank(qs);
+        const kinds = {};
+        for (const { q } of groups) kinds[q.kind] = (kinds[q.kind] ?? 0) + 1;
         return `<details class="asked"><summary><strong>${esc(who || 'Sin profesor')}</strong> <span class="muted">${plural(groups.length, 'pregunta', 'preguntas')}: ${Object.entries(kinds).map(([k, c]) => `${esc(QUESTION_KINDS[k] ?? k).toLowerCase()} ${c}`).join(', ')}</span></summary>
           <ul>${groups.slice(0, 10).map(({ q, seen }) => `<li><span class="muted">${esc([q.stage || q.title, q.number && `pregunta ${q.number}`].filter(Boolean).join(', '))}: ${esc(QUESTION_KINDS[q.kind] ?? '').toLowerCase()}, dificultad ${q.difficulty} de 5</span>${seen.length > 1 ? `<span class="again">Salió en ${seen.length} evaluaciones</span>` : ''}<p>${esc(q.text)}</p>${q.solution ? `<details><summary>Ver solución</summary><p>${esc(q.solution)}</p></details>` : ''}</li>`).join('')}</ul></details>`;
       }).join('')}` : ''}
