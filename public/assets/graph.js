@@ -83,7 +83,7 @@ export function buildGraph({ catalog = [], contributions = [], library = [], now
   };
   for (const item of lessons) {
     const d = item.data ?? {};
-    for (const c of d.concepts ?? []) { seeConcept(c.name, c.aka, 3); for (const r of c.related ?? []) seeConcept(r.to); }
+    for (const c of d.concepts ?? []) { seeConcept(c.name, c.aka, 3); for (const r of c.related ?? []) seeConcept(r.to); for (const x of c.needs ?? []) seeConcept(x); }
     for (const q of d.questions ?? []) for (const n of Array.isArray(q.concepts) ? q.concepts : []) seeConcept(n);
     for (const e of d.examples ?? []) for (const n of Array.isArray(e.concepts) ? e.concepts : []) seeConcept(n);
     for (const u of d.plan?.units ?? []) for (const n of u.concepts ?? []) seeConcept(n);
@@ -247,6 +247,15 @@ export function buildGraph({ catalog = [], contributions = [], library = [], now
         if (!other.courses.has(c.id)) inCourse(c, other, item.updated);
         n.relations.push({ kind: r.kind, key: other.key, name: r.to, out: true });
         other.relations.push({ kind: r.kind, key: n.key, name: con.name, out: false });
+      }
+      // What this concept needs before it: each one is a prerequisite of it.
+      for (const name of con.needs ?? []) {
+        const other = concept(name);
+        if (!other || other === n) continue;
+        link(other, n, 'relation', { relation: 'prerequisite' });
+        if (!other.courses.has(c.id)) inCourse(c, other, item.updated);
+        other.relations.push({ kind: 'prerequisite', key: n.key, name: con.name, out: true });
+        n.relations.push({ kind: 'prerequisite', key: other.key, name, out: false });
       }
     }
     for (const q of d.questions ?? []) {

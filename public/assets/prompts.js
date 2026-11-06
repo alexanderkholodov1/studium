@@ -99,7 +99,10 @@ Transcribe con cuidado los números, fórmulas y diagramas. Lo que no se lea con
   - **aka**: sus otros nombres: el término en inglés, siglas y variantes («BFS», «Breadth-first search»).
   - **unit**: la unidad, capítulo, semana o tema donde aparece, si el material lo dice.
   - **summary**: una o dos frases con tu redacción.
-  - **related**: sus relaciones con otros conceptos; sobre todo lo que se necesita saber antes («prerequisite»).
+  - **needs**: lo que hay que saber antes para entender este concepto (sus prerrequisitos), por nombre. Es la relación
+    más importante: con ella Studium arma las rutas de estudio, de lo básico a lo que se evalúa.
+  - **related**: otras relaciones, cada una leída como «este concepto — relación — el otro»: "part" (es parte de),
+    "uses" (se usa en), "example" (es un ejemplo de), "contrast" (se confunde con), "related" (se relaciona con).
 - **stage**: ${contest ? 'deja ""' : 'la evaluación a la que pertenece o para la que prepara el material, tal como la nombra: "Examen 2", "Parcial 1", "Final", "Quiz 3", "Deber 4". Si no se puede saber, "".'}
 - **questions**: ${contest
     ? 'cada problema de la competencia. kind "algorithmic"; text: el enunciado resumido con entrada, salida y restricciones; solution: la idea, el algoritmo y su complejidad (y código breve si se conoce); concepts: las técnicas y temas que pide (programación dinámica, BFS, árboles de segmentos, teoría de números…).'
@@ -136,10 +139,10 @@ responde solo con un bloque de código JSON, sin texto antes ni después.
   "source": { "title": "", "author": "", "chapter": "" },
   "concepts": [
     { "name": "Espacio vectorial", "aka": ["Vector space"], "unit": "Unidad 2",
-      "summary": "Conjunto con suma y producto por escalar que cumplen ocho axiomas.",
-      "related": [ { "to": "Subespacio", "kind": "prerequisite" } ] },
+      "summary": "Conjunto con suma y producto por escalar que cumplen ocho axiomas.", "needs": [], "related": [] },
     { "name": "Subespacio", "aka": ["Subspace"], "unit": "Unidad 2",
-      "summary": "Subconjunto de un espacio vectorial que es espacio vectorial con las mismas operaciones.", "related": [] }
+      "summary": "Subconjunto de un espacio vectorial que es espacio vectorial con las mismas operaciones.",
+      "needs": ["Espacio vectorial"], "related": [ { "to": "Espacio vectorial", "kind": "part" } ] }
   ],
   "questions": [
     { "number": "3", "concepts": ["Subespacio"], "kind": "proof", "difficulty": 3, "points": 10,
@@ -158,11 +161,12 @@ Reglas:
 - JSON válido: comillas dobles, sin comentarios, sin comas al final.
 - kind del aporte: ${Object.keys(KINDS).filter((k) => k !== 'curriculum').map((k) => `"${k}"`).join(', ')}.
 - kind de una pregunta: ${Object.keys(QUESTION_KINDS).map((k) => `"${k}"`).join(', ')}.
-- kind de una relación: ${Object.entries(RELATIONS).map(([k, v]) => `"${k}" (${v})`).join(', ')}.
+- kind de una relación en "related": ${Object.entries(RELATIONS).filter(([k]) => k !== 'prerequisite').map(([k, v]) => `"${k}" (${v})`).join(', ')}.
+  Lo que se necesita antes va siempre en "needs" del concepto que lo necesita, nunca en "related".
 - difficulty: 1 (muy fácil) a 5 (muy difícil), según el nivel del curso o de la competencia.
 - theme, el estilo visual de la materia: ${Object.entries(THEMES).map(([k, t]) => `"${k}" (${t.hint})`).join('; ')}.
-- Cada nombre en "concepts" de una pregunta, un ejemplo, una relación o una unidad debe aparecer también como concepto
-  en la lista, escrito igual.
+- Cada nombre en "concepts" de una pregunta, un ejemplo o una unidad, y en "needs" o en una relación, debe escribirse
+  igual que en la lista de conceptos cuando el concepto está en ella.
 - Matemáticas en texto plano o en LaTeX entre $…$.
 - Como máximo 300 conceptos, 200 preguntas y 150 ejemplos. Si el material no cabe en una respuesta, entrega varias
   partes completas y válidas (studium-aporte-1.json, studium-aporte-2.json…).
@@ -242,7 +246,7 @@ function cleanConcepts(raw, warnings) {
     const { name, aliases } = conceptName(clip(c.name, 120), list(c.aka ?? c.aliases).map((a) => clip(a, 80)));
     const key = looseKey(name);
     if (!key) continue;
-    const prior = byKey.get(key) ?? { name, aka: [], unit: '', summary: '', related: [] };
+    const prior = byKey.get(key) ?? { name, aka: [], unit: '', summary: '', needs: [], related: [] };
     for (const a of aliases) if (!prior.aka.some((x) => looseKey(x) === looseKey(a)) && looseKey(a) !== key) prior.aka.push(a);
     prior.aka = prior.aka.slice(0, 8);
     prior.unit ||= clip(c.unit, 60);
@@ -253,9 +257,15 @@ function cleanConcepts(raw, warnings) {
       if (looseKey(to) && looseKey(to) !== key && !prior.related.some((x) => looseKey(x.to) === looseKey(to) && x.kind === kind)) prior.related.push({ to, kind });
     }
     prior.related = prior.related.slice(0, 20);
+    // What must be known before this concept: the relation the routes are built from.
+    for (const x of list(c.needs ?? c.prerequisites)) {
+      const before = conceptName(clip(typeof x === 'string' ? x : x?.name ?? x?.to, 120)).name;
+      if (looseKey(before) && looseKey(before) !== key && !prior.needs.some((y) => looseKey(y) === looseKey(before))) prior.needs.push(before);
+    }
+    prior.needs = prior.needs.slice(0, 12);
     byKey.set(key, prior);
   }
-  const concepts = [...byKey.values()].map(({ aka, unit, ...c }) => ({ ...c, ...(aka.length ? { aka } : {}), ...(unit ? { unit } : {}) }));
+  const concepts = [...byKey.values()].map(({ aka, unit, needs, ...c }) => ({ ...c, ...(aka.length ? { aka } : {}), ...(unit ? { unit } : {}), ...(needs.length ? { needs } : {}) }));
   if (concepts.length > 300) warnings.push(`Trae ${concepts.length} conceptos; se guardan los primeros 300.`);
   return concepts.slice(0, 300);
 }
@@ -320,7 +330,10 @@ export function parseContribution(text, fallback = {}) {
     ? { title: clip(obj.source.title, 160), author: clip(obj.source.author, 160), chapter: clip(obj.source.chapter, 160) } : null;
   const title = pick('title', 120) || KINDS[kind];
   // The stage as the AI or the person wrote it, read the standard way; or the one the title names.
-  const stage = kind === 'contest' ? '' : stageLabel(pick('stage', 40)) || stageOf(title)?.label || '';
+  // What the AI says after reading the material wins, even when it says there is none («»): the hint taken from a file's
+  // name is only a hint. Without a stage field (a v1 contribution), the hint and then the title decide.
+  const said = typeof obj.stage === 'string' ? stageLabel(clip(obj.stage, 40)) : null;
+  const stage = kind === 'contest' ? '' : said ?? (stageLabel(clip(fallback.stage, 40)) || stageOf(title)?.label || '');
   return {
     meta: {
       kind, course: pick('course', 80), code: pick('code', 30), university: pick('university', 60),
@@ -529,7 +542,13 @@ export function contextPack({ course, professor, term, concepts, contributions, 
     const n = asked.get(c.key) ?? 0;
     if (n) lines.push(`Preguntas: ${n}.`);
     for (const s of c.summaries.slice(0, 2)) lines.push(s);
-    const rel = c.relations.slice(0, 12).map((r) => `${RELATIONS[r.kind] ?? 'se relaciona con'} ${r.name}`);
+    // Each relation in its direction: what this concept needs first, then what it is to others.
+    const seen = new Set();
+    const unique = c.relations.filter((r) => { const k = `${r.kind}|${r.key ?? r.name}|${r.out !== false}`; if (seen.has(k)) return false; seen.add(k); return true; });
+    const needs = unique.filter((r) => r.out === false && r.kind === 'prerequisite').map((r) => r.name);
+    const rel = unique.filter((r) => !(r.out === false && r.kind === 'prerequisite')).slice(0, 12)
+      .map((r) => (r.out === false ? `${r.name} ${RELATIONS[r.kind] ?? 'se relaciona con'} este concepto` : `${RELATIONS[r.kind] ?? 'se relaciona con'} ${r.name}`));
+    if (needs.length) lines.push(`Necesita antes: ${needs.slice(0, 12).join(', ')}.`);
     if (rel.length) lines.push(`Relaciones: ${rel.join('; ')}.`);
     lines.push('');
   }
@@ -579,8 +598,11 @@ export function findPersonal(text, email = '') {
   for (const m of text.matchAll(/\b\d{10}\b|\b00\d{6}\b/g)) {
     if (!/0{5}/.test(m[0].slice(1))) add(m[0], 'número que parece una cédula o un código de estudiante', false);
   }
+  // A label followed by what looks like a person's name (two or more capitalized words) or a number: «Nombre: Ana
+  // Pérez», «Código: 00212345», «Calificación: 18». «… imprime su nombre: ¿qué…» or «Nombre: ______» are not.
   for (const m of text.matchAll(/\b(?:nombre(?: del estudiante| completo)?|apellidos?|estudiante|alumn[oa]|c[oó]digo(?: banner| de estudiante)?|c[eé]dula|id banner|calificaci[oó]n|nota obtenida|firma)\s*:\s*[^\s,;"][^\n",;]{0,40}/gi)) {
-    add(m[0], 'dato con etiqueta personal', false);
+    const value = m[0].slice(m[0].indexOf(':') + 1).trim();
+    if (/^[A-ZÁÉÍÓÚÑ][\p{L}'-]+(?:\s+(?:(?:de|del|la|las|los|y)\s+)*[A-ZÁÉÍÓÚÑ][\p{L}'-]+)+/u.test(value) || /^\d/.test(value)) add(m[0], 'dato con etiqueta personal', false);
   }
   const user = email.split('@')[0]?.toLowerCase();
   if (user && user.length >= 4) {

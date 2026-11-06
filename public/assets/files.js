@@ -249,7 +249,10 @@ export async function officeText(entries, ext) {
         if (type === 's') return shared[Number(v)] ?? '';
         if (type === 'inlineStr') return runs(c[2] ?? '', 't');
         const f = c[2]?.match(/<f>([^<]*)<\/f>/)?.[1];
-        return entities(f ? `${v} (=${f})` : v);
+        // Numbers as a person reads them (8.94, not 8.9399999999999995), at most six significant digits.
+        const n = Number(v);
+        const shown = v !== '' && Number.isFinite(n) ? String(Number(n.toPrecision(6))) : v;
+        return entities(f ? `${shown} (=${f})` : shown);
       }).join('\t')).filter((r) => r.trim());
       if (rows.length) out.push(`## Hoja: ${names[i] ?? i + 1}\n${rows.join('\n')}`);
     }
