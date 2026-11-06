@@ -148,14 +148,19 @@ reads only what changed; removal records drop what stopped being public.
 - `tools/set-email-links.mjs <url> | --default`: where the links of the account e-mails open (Firebase may refuse it).
 - `tools/upload-guide.mjs <meta.json> <guide.html>`: publishes or replaces a guide as an administrator;
   `--remove <id>` takes one down.
-- `tools/upload-contribution.mjs <aporte.json> [--source <id>]`: publishes a contribution as an administrator, read
-  and checked with the app's own reader (`--dry-run` only checks it); `--remove <id>` takes one down.
+- `tools/upload-contribution.mjs <aporte.json> [--source <id>] [--original <file>] [--owner <e-mail>]`: publishes a
+  contribution as an administrator, read and checked with the app's own reader (`--dry-run` only checks it).
+  `--original` computes the original file's fingerprint as the app does (`tools/fingerprint.mjs`; `--part i --of n` for
+  a part), and a fingerprint already in the database stops the upload. `--owner` gives it to that account, as if
+  published from the site. `--remove <id>` takes one down.
+- `tools/test-fingerprint.mjs`: checks that the tools' fingerprint equals the app's (one file, a file over 64 MB, a group
+  of photos, the parts of a file).
 - `tools/upload-source.mjs <source.json>`: publishes or updates a source and its credits.
 - `tools/compile-packs.mjs [--dry-run]`: compiles the map's packs (as «Compilar ahora» in the admin panel does).
 - `tools/set-smtp.mjs <gmail address> <file with the app password>`: sends the account e-mails (address confirmation,
   password reset) through that Gmail account; `--default` goes back to Firebase's own sender.
 - `tools/set-owner.mjs <id> <e-mail>`: gives a guide or contribution published with the admin tools to an account, so
-  that its owner can change, replace or delete it from the site.
+  that its owner can change, replace or delete it from the site, keeping its evaluation, source and fingerprint.
 - `tools/dev.mjs [--emulators]`: serves the app at `http://localhost:5173/studium/`, against the live project or the
   local emulators.
 - `tools/pack.sh <version> <commit> [out] [previous tarball]`: builds `studium-dist-v<version>.tar.gz`, `version.json`
