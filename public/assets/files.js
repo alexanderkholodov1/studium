@@ -32,6 +32,7 @@ export const LIMITS = {
 const TEXT = /\.(txt|md|markdown|csv|tsv|json|tex|bib|py|c|cc|cpp|h|hpp|java|kt|js|mjs|ts|rs|go|rb|php|cs|swift|m|r|jl|sql|sh|ps1|yaml|yml|xml|css|asm|s|vhd|vhdl|v|sv|pl|hs|scala|lua|dart)$/i;
 const MEDIA = /\.(mp4|mov|m4v|avi|mkv|webm|wmv|flv|mp3|wav|m4a|aac|ogg|flac|wma)$/i;
 const IMAGE = /\.(jpe?g|png|webp|gif|bmp)$/i;
+const CODE = /\.(py|c|cc|cpp|h|hpp|java|kt|js|mjs|ts|rs|go|rb|php|cs|swift|m|r|jl|sql|sh|ps1|asm|s|vhd|vhdl|v|sv|pl|hs|scala|lua|dart)$/i;
 const SKIP_ENTRY = /(^|\/)(__MACOSX|\.git|node_modules|\.DS_Store|Thumbs\.db|desktop\.ini)(\/|$)|\/\._/;
 
 const skipped = (name, reason) => ({ name, skipped: reason, units: [] });
@@ -544,22 +545,37 @@ function distance(a, b) {
   for (let i = 1; i <= a.length; i += 1) for (let j = 1; j <= b.length; j += 1) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
   return d[a.length][b.length];
 }
+// Code files of the same folder (a library of classes, a project) are one material too: one class alone teaches little.
 export function groupFiles(files) {
   const groups = [];
   for (const file of files) {
     const name = file.webkitRelativePath || file.relativePath || file.name;
     const photo = IMAGE.test(name);
+    const code = CODE.test(name) && file.size < 200_000;
     const base = pageless(name);
     const home = photo && base.length >= 4 ? groups.find((g) => g.photo && folder(g.name) === folder(name)
-      && (g.base === base || (base.length >= 8 && distance(g.base, base) <= 2))) : null;
-    if (home) home.files.push(file); else groups.push({ name, base, photo, files: [file] });
+      && (g.base === base || (base.length >= 8 && distance(g.base, base) <= 2)))
+      : code ? groups.find((g) => g.code && folder(g.name) === folder(name)) : null;
+    if (home) home.files.push(file); else groups.push({ name, base, photo, code, files: [file] });
   }
   for (const g of groups) g.files.sort((a, b) => (a.webkitRelativePath || a.relativePath || a.name).localeCompare(b.webkitRelativePath || b.relativePath || b.name, 'es', { numeric: true }));
-  return groups.map((g) => ({ name: g.files.length > 1 ? `${g.name} (+${g.files.length - 1})` : g.name, files: g.files }));
+  return groups.map((g) => ({
+    name: g.files.length > 1 ? (g.code ? `${folder(g.name) || 'código'} (${g.files.length} archivos de código)` : `${g.name} (+${g.files.length - 1})`) : g.name,
+    files: g.files, code: g.code && g.files.length > 1,
+  }));
 }
 // The units of a group: one file as prepare() gives it; several photos as one unit with every page.
 export async function prepareGroup(group) {
   if (group.files.length === 1) return prepare(group.files[0]);
+  if (group.code) {
+    const fence = '`'.repeat(3);
+    const texts = [];
+    for (const f of group.files) {
+      const name = f.webkitRelativePath || f.relativePath || f.name;
+      texts.push(`--- ${baseName(name)} ---\n${fence}${ext(name)}\n${decodeText(await bytesOf(f))}\n${fence}`);
+    }
+    return { name: group.name, units: textUnits(group.name, texts.join('\n\n'), { note: `Son ${plural(group.files.length, 'archivo', 'archivos')} de código de la misma carpeta: trátalos como un solo material` }) };
+  }
   return {
     name: group.name,
     units: [{

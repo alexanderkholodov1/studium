@@ -114,6 +114,9 @@ const queue = [];
 let working = false;
 const units = new Map(); // row id -> { unit, group, v, print }
 const printed = () => new Set(ctx.state.contributions.map((c) => c.print).filter(Boolean));
+const queuedPrints = new Set(); // the files of this visit, so the same file dropped twice is processed once
+// Each part of a long file has its own fingerprint, derived from the file's: a book's chapters are added one by one.
+const unitPrint = (print, i, count) => (!print ? '' : count === 1 ? print : `${print.slice(0, 20)}${i.toString(16).padStart(4, '0')}`);
 async function printOf(group) {
   const prints = await Promise.all(group.files.map((f) => fingerprint(f)));
   if (prints.length === 1) return prints[0];
@@ -131,19 +134,26 @@ async function enqueue(zone, files) {
     try { prepared = await prepareGroup(group); } catch (error) { setRow(head, `No se pudo leer: ${error.message || 'formato desconocido'}`, 'bad file'); continue; }
     if (prepared.skipped) { setRow(head, `Saltado: ${prepared.skipped}`, 'skip file'); continue; }
     const print = await printOf(group).catch(() => '');
-    const repeated = print && known.has(print);
+    const count = prepared.units.length;
+    const prints = prepared.units.map((_, i) => unitPrint(print, i, count));
+    const twice = !!print && queuedPrints.has(print);
+    const inMap = prints.map((x) => !!x && known.has(x));
+    const repeated = twice || (count > 0 && inMap.every(Boolean));
+    if (print) queuedPrints.add(print);
     const pages = prepared.pages ? ` · ${prepared.pages} páginas` : '';
-    setRow(head, repeated ? 'Ya está en el mapa: este mismo archivo ya se aportó' : prepared.units.length > 1 ? `${prepared.units.length} partes${pages}${prepared.book ? ' · un libro: primero su índice' : ''}` : `Listo para tu IA${pages}`, repeated ? 'skip file' : 'file');
+    setRow(head, twice ? 'Repetido: este mismo archivo ya está en la lista' : repeated ? 'Ya está en el mapa: este mismo archivo ya se aportó'
+      : count > 1 ? `${count} partes${pages}${prepared.book ? ' · un libro: primero su índice' : ''}` : `Listo para tu IA${pages}`, repeated ? 'skip file' : 'file');
     const sub = document.querySelector(`#${head} .units`);
-    for (const unit of prepared.units) {
+    prepared.units.forEach((unit, i) => {
       const id = `q${serial += 1}`;
       // The stage the file's name says («Examen parcial 1.pdf»), unless the form says it for the whole batch.
       const stage = v.stage || stageOf(unit.label)?.label || '';
-      units.set(id, { unit, group, v: { ...v, stage }, print: prepared.units.length === 1 ? print : '' });
-      const on = unit.selected && !repeated;
-      sub.insertAdjacentHTML('beforeend', `<li id="${id}" class="${on ? '' : 'skip'}">${prepared.units.length > 1 || repeated ? `<label class="check"><input type="checkbox" data-unit="${id}" ${on ? 'checked' : ''}></label>` : ''}<span class="name">${esc(prepared.units.length > 1 ? unit.label.split(' · ').slice(1).join(' · ') || unit.label : baseName(unit.label))}</span><span class="state">${on ? 'En espera' : repeated ? 'No se procesa' : 'Sin elegir'}</span></li>`);
+      units.set(id, { unit, group, v: { ...v, stage }, print: prints[i] });
+      const on = unit.selected && !repeated && !inMap[i];
+      const state = on ? 'En espera' : inMap[i] ? 'Ya está en el mapa' : repeated ? 'No se procesa' : 'Sin elegir';
+      sub.insertAdjacentHTML('beforeend', `<li id="${id}" class="${on ? '' : 'skip'}">${count > 1 || repeated ? `<label class="check"><input type="checkbox" data-unit="${id}" ${on ? 'checked' : ''}></label>` : ''}<span class="name">${esc(count > 1 ? unit.label.split(' · ').slice(1).join(' · ') || unit.label : baseName(unit.label))}</span><span class="state">${state}</span></li>`);
       if (on) queue.push({ id, zone });
-    }
+    });
     if (prepared.notes?.length) sub.insertAdjacentHTML('beforeend', `<li class="skip"><span class="name">${esc(plural(prepared.notes.length, 'archivo saltado', 'archivos saltados'))}</span><span class="state">${esc(prepared.notes.slice(0, 2).join(' · '))}</span></li>`);
     work();
   }
