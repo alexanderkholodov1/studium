@@ -1,17 +1,30 @@
 // What Studium asks of a person's own AI (any of them: ChatGPT, Gemini, Claude, Copilot, NotebookLM…), and how it
 // reads back what the AI returns: a contribution (JSON) or a guide (one HTML file with its data in a JSON block).
 import { THEMES, keyOf, validTheme } from './themes.js';
+import { conceptName, looseKey, stageLabel, stageOf } from './standard.js';
 
 export const KINDS = {
-  exam: 'Examen', homework: 'Deber', slides: 'Diapositivas', book: 'Libro o texto', notes: 'Apuntes',
-  contest: 'Problemas de competencia', curriculum: 'Malla curricular', other: 'Otro',
+  exam: 'Examen', homework: 'Deber', lab: 'Laboratorio', slides: 'Diapositivas', notes: 'Apuntes', summary: 'Resumen',
+  book: 'Libro o texto', syllabus: 'Sílabo', contest: 'Problemas de competencia', curriculum: 'Malla curricular', other: 'Otro',
 };
 const KIND_PLURALS = {
-  exam: 'exámenes', homework: 'deberes', slides: 'diapositivas', book: 'libros o textos', notes: 'apuntes',
-  contest: 'problemas de competencia', curriculum: 'mallas curriculares', other: 'otros',
+  exam: 'exámenes', homework: 'deberes', lab: 'laboratorios', slides: 'presentaciones', notes: 'archivos de apuntes', summary: 'resúmenes',
+  book: 'libros o textos', syllabus: 'sílabos', contest: 'problemas de competencia', curriculum: 'mallas curriculares', other: 'otros',
+};
+// What each kind is, for the person choosing it and for their AI.
+export const KIND_HINTS = {
+  exam: 'parciales, finales, quizzes y pruebas, resueltos o no', homework: 'deberes, tareas y talleres',
+  lab: 'prácticas, laboratorios e informes', slides: 'diapositivas y material de clase', notes: 'apuntes de clase, a mano o no',
+  summary: 'resúmenes, formularios, cheatsheets y tarjetas', book: 'libros, capítulos y lecturas',
+  syllabus: 'el programa de la materia: unidades, semanas y qué entra en cada evaluación',
+  contest: 'problemas de IEEEXtreme, ICPC y otras competencias', curriculum: 'la malla de una carrera', other: 'cualquier otro material',
+};
+const KIND_ONE = {
+  exam: 'examen', homework: 'deber', lab: 'laboratorio', slides: 'presentación', notes: 'archivo de apuntes', summary: 'resumen',
+  book: 'libro o texto', syllabus: 'sílabo', contest: 'conjunto de problemas de competencia', curriculum: 'malla curricular', other: 'otro',
 };
 // "1 examen", "3 exámenes".
-export const countKind = (kind, n) => `${n} ${n === 1 ? (KINDS[kind] ?? 'otro').toLowerCase() : KIND_PLURALS[kind] ?? 'otros'}`;
+export const countKind = (kind, n) => `${n} ${n === 1 ? KIND_ONE[kind] ?? 'otro' : KIND_PLURALS[kind] ?? 'otros'}`;
 export const QUESTION_KINDS = {
   'multiple-choice': 'Opción múltiple', 'true-false': 'Verdadero o falso', 'short-answer': 'Respuesta corta',
   computation: 'Cálculo', proof: 'Demostración', problem: 'Problema', code: 'Código', algorithmic: 'Problema de programación',
@@ -23,8 +36,11 @@ export const RELATIONS = {
 };
 export const LEVELS = { basic: 'Desde cero', standard: 'Intermedio', advanced: 'Avanzado y técnico' };
 
-const SPANISH_KINDS = { examen: 'exam', deber: 'homework', tarea: 'homework', diapositivas: 'slides', libro: 'book', texto: 'book',
-  apuntes: 'notes', competencia: 'contest', problemas: 'contest', malla: 'curriculum', otro: 'other' };
+const SPANISH_KINDS = { examen: 'exam', parcial: 'exam', prueba: 'exam', quiz: 'exam', final: 'exam', deber: 'homework', tarea: 'homework',
+  taller: 'homework', laboratorio: 'lab', practica: 'lab', informe: 'lab', diapositivas: 'slides', clase: 'slides', libro: 'book',
+  texto: 'book', lectura: 'book', apuntes: 'notes', resumen: 'summary', formulario: 'summary', cheatsheet: 'summary',
+  silabo: 'syllabus', syllabus: 'syllabus', programa: 'syllabus', competencia: 'contest', problemas: 'contest', malla: 'curriculum',
+  otro: 'other' };
 const SPANISH_LEVELS = { 'desde cero': 'basic', basico: 'basic', intermedio: 'standard', avanzado: 'advanced' };
 
 const clip = (value, max) => (typeof value === 'string' || typeof value === 'number' ? String(value).trim().slice(0, max) : '');
@@ -33,46 +49,71 @@ const field = (label, value) => `- ${label}: ${value || '(dedúcelo del material
 
 /* ---------- contributions ---------- */
 
+// m: what the person already knows of the material (kind, course, code, university, professor, term, stage), the concepts
+// the map already has for that course (known), and, when a long file was split, which part this is (part).
 export function contributionInstructions(m = {}) {
   const contest = m.kind === 'contest';
+  const syllabus = m.kind === 'syllabus';
+  const book = m.kind === 'book';
   const known = (m.known ?? []).slice(0, 400);
+  const part = m.part ? `\n\n## Esta es una parte de un archivo más grande\n${m.part}. Extrae solo lo que trae esta parte; las otras van en otros aportes.` : '';
   return `# Instrucciones de Studium: convertir material de estudio en un aporte
 
 Studium es un mapa de conocimiento que comparten estudiantes. Un aporte describe, de forma compacta y anónima, lo que
-enseña o evalúa un material: sus conceptos, cómo se relacionan, las preguntas o problemas que trae y la forma de enseñar
-o evaluar de quien lo preparó. Con los aportes de muchas personas, Studium muestra qué toma cada profesor en cada
-semestre (o cada competencia en cada edición) y sirve para crear guías de estudio.
+enseña o evalúa un material: sus conceptos en el orden en que se enseñan, cómo se relacionan, las preguntas o problemas
+que trae y la forma de enseñar o evaluar de quien lo preparó. Con los aportes de muchas personas, Studium arma rutas de
+estudio (todo lo que hace falta para rendir, por ejemplo, el Examen 2 de una materia), bancos de preguntas por concepto
+y guías de estudio.
 
-Te adjunto el material. Léelo completo (todas las páginas, diapositivas o problemas) antes de responder.
+Te adjunto el material. Léelo completo (todas las páginas, diapositivas, hojas o problemas) antes de responder.${part}
 
 ## Lo que sé del material
-${field('Tipo', KINDS[m.kind])}
+${field('Tipo', m.kind ? `${KINDS[m.kind]} (${KIND_HINTS[m.kind]})` : '')}
 ${field('Materia o competencia', m.course)}
 ${field('Código de la materia', m.code)}
 ${field('Universidad u organizador', m.university)}
 ${field('Profesor', contest ? 'no aplica: deja ""' : m.professor)}
 ${field(contest ? 'Edición' : 'Semestre', m.term)}
+${field('Evaluación a la que pertenece', contest ? 'no aplica: deja ""' : m.stage)}
 
 ## Anónimo, siempre
 Otros estudiantes verán este aporte.
 - Quita todo dato de estudiantes: nombres, firmas, códigos o números de estudiante, cédulas, correos, teléfonos,
-  calificaciones obtenidas y comentarios del profesor dirigidos a una persona.
+  calificaciones obtenidas y comentarios del profesor dirigidos a una persona. Esto vale también para el nombre del
+  archivo y para lo escrito a mano en los márgenes.
 - Conserva el nombre del profesor, la materia, la universidad y el semestre o edición: sirven para saber qué se evalúa.
 - Si el material trae respuestas de un estudiante, no las copies: escribe tú la solución correcta. Si una respuesta del
   estudiante muestra un error típico, descríbelo sin decir de quién es.
 - No copies párrafos de libros, diapositivas o enunciados largos: resume con tus palabras y conserva los datos que hacen
   falta para resolver (números, matrices, restricciones, código corto).
 
+## Si está escrito a mano, fotografiado o escaneado
+Transcribe con cuidado los números, fórmulas y diagramas. Lo que no se lea con certeza no lo inventes: escribe
+[ilegible] en ese lugar. Describe en palabras las figuras, tablas y diagramas que hagan falta para resolver.
+
 ## Qué extraer
 - **concepts**: cada concepto que el material enseña, usa o evalúa (definiciones, teoremas, métodos, técnicas,
-  herramientas). Para cada uno: un nombre corto y estándar en español (el término en inglés entre paréntesis si es el
-  usual), un resumen de una o dos frases con tu redacción, y sus relaciones con otros conceptos.
+  algoritmos, herramientas), **en el orden en que el material los enseña**. Para cada uno:
+  - **name**: un nombre corto y estándar en español, sin paréntesis ni siglas añadidas («Búsqueda en anchura», no
+    «Búsqueda en anchura (BFS)»).
+  - **aka**: sus otros nombres: el término en inglés, siglas y variantes («BFS», «Breadth-first search»).
+  - **unit**: la unidad, capítulo, semana o tema donde aparece, si el material lo dice.
+  - **summary**: una o dos frases con tu redacción.
+  - **related**: sus relaciones con otros conceptos; sobre todo lo que se necesita saber antes («prerequisite»).
+- **stage**: ${contest ? 'deja ""' : 'la evaluación a la que pertenece o para la que prepara el material, tal como la nombra: "Examen 2", "Parcial 1", "Final", "Quiz 3", "Deber 4". Si no se puede saber, "".'}
 - **questions**: ${contest
     ? 'cada problema de la competencia. kind "algorithmic"; text: el enunciado resumido con entrada, salida y restricciones; solution: la idea, el algoritmo y su complejidad (y código breve si se conoce); concepts: las técnicas y temas que pide (programación dinámica, BFS, árboles de segmentos, teoría de números…).'
-    : 'cada pregunta, ejercicio o problema, con los conceptos que evalúa, su tipo, su dificultad, su puntaje si aparece, el enunciado en paráfrasis compacta y la solución correcta breve si la conoces con certeza (si no, deja "").'}
+    : book
+      ? 'los ejercicios más representativos de esta parte (como máximo 25), con los conceptos que evalúan; la solución breve solo si la conoces con certeza.'
+      : syllabus
+        ? 'ninguna: deja [].'
+        : 'cada pregunta, ejercicio o problema, con su número tal como aparece (number), los conceptos que evalúa, su tipo, su dificultad, su puntaje si aparece, el enunciado en paráfrasis compacta y la solución correcta breve si la conoces con certeza (si no, deja ""). Si un mismo archivo trae varias evaluaciones, pon en cada pregunta su stage.'}
 - **examples**: ejemplos resueltos o casos que el material usa para explicar, en pocas líneas.
-- **style**: de 2 a 5 frases sobre cómo ${contest ? 'son los problemas de esta competencia (formato, dificultad, temas frecuentes, trampas)' : 'enseña o evalúa este profesor según este material: formato, qué pesa más, nivel de rigor, trampas habituales, notación'}.
-- **source**: solo para libros o textos publicados: título, autor y capítulo.
+- **style**: de 2 a 5 frases sobre cómo ${contest ? 'son los problemas de esta competencia (formato, dificultad, temas frecuentes, trampas)' : syllabus ? 'se evalúa la materia según el sílabo (pesos, tipo de evaluaciones, reglas)' : 'enseña o evalúa este profesor según este material: formato, qué pesa más, nivel de rigor, trampas habituales, notación'}.
+- **source**: solo para libros o textos publicados: título, autor y capítulo.${syllabus ? `
+- **plan**: el programa de la materia.
+  - units: cada unidad con su nombre, sus semanas, la evaluación que la cubre (stage) y sus conceptos.
+  - assessments: cada evaluación con su nombre, su semana y su peso en la nota si aparecen.` : ''}
 
 ## Formato de la respuesta
 Devuelve un archivo \`studium-aporte.json\` para descargar. Si no puedes crear archivos (por ejemplo en NotebookLM),
@@ -81,7 +122,7 @@ responde solo con un bloque de código JSON, sin texto antes ni después.
 \`\`\`json
 {
   "studium": "aporte",
-  "version": 1,
+  "version": 2,
   "kind": "exam",
   "course": "Álgebra Lineal",
   "code": "MAT-0000",
@@ -89,30 +130,39 @@ responde solo con un bloque de código JSON, sin texto antes ni después.
   "professor": "Nombre Apellido",
   "term": "202610",
   "title": "Examen parcial 1",
+  "stage": "Examen 1",
   "theme": "vectores",
   "style": "Evalúa sobre todo cálculos a mano con matrices de 3x3 y una demostración corta por examen.",
   "source": { "title": "", "author": "", "chapter": "" },
   "concepts": [
-    { "name": "Espacio vectorial", "summary": "Conjunto con suma y producto por escalar que cumplen ocho axiomas.",
-      "related": [ { "to": "Subespacio", "kind": "prerequisite" } ] }
+    { "name": "Espacio vectorial", "aka": ["Vector space"], "unit": "Unidad 2",
+      "summary": "Conjunto con suma y producto por escalar que cumplen ocho axiomas.",
+      "related": [ { "to": "Subespacio", "kind": "prerequisite" } ] },
+    { "name": "Subespacio", "aka": ["Subspace"], "unit": "Unidad 2",
+      "summary": "Subconjunto de un espacio vectorial que es espacio vectorial con las mismas operaciones.", "related": [] }
   ],
   "questions": [
-    { "concepts": ["Subespacio"], "kind": "proof", "difficulty": 3, "points": 10,
+    { "number": "3", "concepts": ["Subespacio"], "kind": "proof", "difficulty": 3, "points": 10,
       "text": "Probar que el conjunto de matrices simétricas de 2x2 es un subespacio de M2x2.",
       "solution": "Contiene la matriz cero y es cerrado bajo suma y producto por escalar porque (A+B)^T = A^T + B^T." }
   ],
-  "examples": [ { "concepts": ["Base"], "text": "{(1,0),(0,1)} es base de R^2: genera y es linealmente independiente." } ]
+  "examples": [ { "concepts": ["Espacio vectorial"], "text": "R^2 con la suma y el producto usuales es un espacio vectorial." } ]${syllabus ? `,
+  "plan": {
+    "units": [ { "name": "Espacios vectoriales", "weeks": "4-6", "stage": "Examen 1", "concepts": ["Espacio vectorial", "Subespacio"] } ],
+    "assessments": [ { "name": "Examen 1", "week": 7, "weight": 20 } ]
+  }` : ''}
 }
 \`\`\`
 
 Reglas:
 - JSON válido: comillas dobles, sin comentarios, sin comas al final.
-- kind del aporte: ${Object.keys(KINDS).map((k) => `"${k}"`).join(', ')}.
+- kind del aporte: ${Object.keys(KINDS).filter((k) => k !== 'curriculum').map((k) => `"${k}"`).join(', ')}.
 - kind de una pregunta: ${Object.keys(QUESTION_KINDS).map((k) => `"${k}"`).join(', ')}.
 - kind de una relación: ${Object.entries(RELATIONS).map(([k, v]) => `"${k}" (${v})`).join(', ')}.
 - difficulty: 1 (muy fácil) a 5 (muy difícil), según el nivel del curso o de la competencia.
 - theme, el estilo visual de la materia: ${Object.entries(THEMES).map(([k, t]) => `"${k}" (${t.hint})`).join('; ')}.
-- Cada nombre en "concepts" de una pregunta, un ejemplo o una relación debe aparecer también como concepto en la lista.
+- Cada nombre en "concepts" de una pregunta, un ejemplo, una relación o una unidad debe aparecer también como concepto
+  en la lista, escrito igual.
 - Matemáticas en texto plano o en LaTeX entre $…$.
 - Como máximo 300 conceptos, 200 preguntas y 150 ejemplos. Si el material no cabe en una respuesta, entrega varias
   partes completas y válidas (studium-aporte-1.json, studium-aporte-2.json…).
@@ -183,27 +233,48 @@ function parseCurriculum(obj, pick) {
   };
 }
 
+// Concepts in the order the material teaches them, one per name: «Subredes» and «Subred (subnet)» are one concept, and
+// what a name carried in parentheses becomes an alias.
 function cleanConcepts(raw, warnings) {
   const byKey = new Map();
   for (const item of list(raw)) {
     const c = typeof item === 'string' ? { name: item } : item ?? {};
-    const name = clip(c.name, 80);
-    const key = keyOf(name);
+    const { name, aliases } = conceptName(clip(c.name, 120), list(c.aka ?? c.aliases).map((a) => clip(a, 80)));
+    const key = looseKey(name);
     if (!key) continue;
-    const prior = byKey.get(key) ?? { name, summary: '', related: [] };
+    const prior = byKey.get(key) ?? { name, aka: [], unit: '', summary: '', related: [] };
+    for (const a of aliases) if (!prior.aka.some((x) => looseKey(x) === looseKey(a)) && looseKey(a) !== key) prior.aka.push(a);
+    prior.aka = prior.aka.slice(0, 8);
+    prior.unit ||= clip(c.unit, 60);
     prior.summary ||= clip(c.summary, 600);
     for (const r of list(c.related)) {
-      const to = clip(typeof r === 'string' ? r : r?.to, 80);
-      if (keyOf(to) && keyOf(to) !== key) prior.related.push({ to, kind: r?.kind in RELATIONS ? r.kind : 'related' });
+      const to = conceptName(clip(typeof r === 'string' ? r : r?.to, 120)).name;
+      const kind = r?.kind in RELATIONS ? r.kind : 'related';
+      if (looseKey(to) && looseKey(to) !== key && !prior.related.some((x) => looseKey(x.to) === looseKey(to) && x.kind === kind)) prior.related.push({ to, kind });
     }
     prior.related = prior.related.slice(0, 20);
     byKey.set(key, prior);
   }
-  const concepts = [...byKey.values()];
+  const concepts = [...byKey.values()].map(({ aka, unit, ...c }) => ({ ...c, ...(aka.length ? { aka } : {}), ...(unit ? { unit } : {}) }));
   if (concepts.length > 300) warnings.push(`Trae ${concepts.length} conceptos; se guardan los primeros 300.`);
   return concepts.slice(0, 300);
 }
-const names = (value) => list(value).map((x) => clip(x, 80)).filter((x) => keyOf(x)).slice(0, 12);
+const conceptNames = (value, max) => list(value).map((x) => conceptName(clip(x, 120)).name).filter((x) => keyOf(x)).slice(0, max);
+const names = (value) => conceptNames(value, 12);
+// A syllabus: its units (with their weeks, the evaluation that covers them and their concepts) and its evaluations.
+function cleanPlan(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const number = (v) => (Number.isFinite(Number(v)) && v !== '' && v != null ? Number(v) : null);
+  const units = list(raw.units).map((u) => ({
+    name: clip(typeof u === 'string' ? u : u?.name, 100), weeks: clip(u?.weeks, 20), stage: stageLabel(clip(u?.stage, 40)),
+    concepts: conceptNames(u?.concepts, 40),
+  })).filter((u) => u.name).slice(0, 40);
+  const assessments = list(raw.assessments).map((a) => ({
+    name: stageLabel(clip(typeof a === 'string' ? a : a?.name, 40)),
+    ...(number(a?.week) != null ? { week: number(a.week) } : {}), ...(number(a?.weight) != null ? { weight: number(a.weight) } : {}),
+  })).filter((a) => a.name).slice(0, 30);
+  return units.length || assessments.length ? { units, assessments } : null;
+}
 
 // Reads what an AI returned for a contribution: tolerant of code fences and text around the JSON.
 export function parseContribution(text, fallback = {}) {
@@ -221,8 +292,11 @@ export function parseContribution(text, fallback = {}) {
   const pick = (k, max) => clip(obj[k], max) || clip(fallback[k], max);
   if (kind === 'curriculum' || Array.isArray(obj.semesters)) return parseCurriculum(obj, pick);
   const concepts = cleanConcepts(obj.concepts, warnings);
-  if (!concepts.length) return { error: 'No trae conceptos. Pide a tu IA que siga el formato de las instrucciones de Studium.' };
+  const plan = kind === 'syllabus' || obj.plan ? cleanPlan(obj.plan) : null;
+  if (!concepts.length && !plan) return { error: 'No trae conceptos. Pide a tu IA que siga el formato de las instrucciones de Studium.' };
   const questions = list(obj.questions).map((q) => ({
+    ...(clip(q?.number, 12) ? { number: clip(q.number, 12) } : {}),
+    ...(clip(q?.stage, 40) ? { stage: stageLabel(clip(q.stage, 40)) } : {}),
     concepts: names(q?.concepts), kind: q?.kind in QUESTION_KINDS ? q.kind : 'problem',
     difficulty: Math.min(5, Math.max(1, Math.round(Number(q?.difficulty)) || 3)),
     ...(Number.isFinite(Number(q?.points)) && q?.points !== '' && q?.points != null ? { points: Number(q.points) } : {}),
@@ -231,17 +305,31 @@ export function parseContribution(text, fallback = {}) {
   const examples = list(obj.examples).map((e) => ({ concepts: names(e?.concepts), text: clip(e?.text, 2000) })).filter((e) => e.text);
   if (questions.length > 200) warnings.push(`Trae ${questions.length} preguntas; se guardan las primeras 200.`);
   if (examples.length > 150) warnings.push(`Trae ${examples.length} ejemplos; se guardan los primeros 150.`);
+  // Every concept a question, an example or a unit names is a concept of the contribution: the ones the AI forgot to
+  // list join the list, so the map knows them as taught and not only as mentioned.
+  const listed = new Set(concepts.map((c) => looseKey(c.name)));
+  const missing = [];
+  for (const n of [...questions, ...examples, ...(plan?.units ?? [])].flatMap((x) => x.concepts)) {
+    if (!listed.has(looseKey(n))) { listed.add(looseKey(n)); missing.push(n); }
+  }
+  if (missing.length) {
+    for (const n of missing) concepts.push({ name: n, summary: '', related: [] });
+    warnings.push(missing.length === 1 ? `«${missing[0]}» no estaba en la lista de conceptos: se agregó.` : `${missing.length} conceptos de las preguntas o ejemplos no estaban en la lista: se agregaron.`);
+  }
   const source = obj.source && typeof obj.source === 'object'
     ? { title: clip(obj.source.title, 160), author: clip(obj.source.author, 160), chapter: clip(obj.source.chapter, 160) } : null;
+  const title = pick('title', 120) || KINDS[kind];
+  // The stage as the AI or the person wrote it, read the standard way; or the one the title names.
+  const stage = kind === 'contest' ? '' : stageLabel(pick('stage', 40)) || stageOf(title)?.label || '';
   return {
     meta: {
       kind, course: pick('course', 80), code: pick('code', 30), university: pick('university', 60),
-      professor: pick('professor', 80), term: pick('term', 60), title: pick('title', 120) || KINDS[kind],
+      professor: pick('professor', 80), term: pick('term', 60), title, stage,
       theme: validTheme(obj.theme) ?? validTheme(fallback.theme) ?? '',
     },
     data: {
-      version: 1, concepts, questions: questions.slice(0, 200), examples: examples.slice(0, 150), style: clip(obj.style, 1500),
-      ...(source?.title ? { source } : {}),
+      version: 2, concepts: concepts.slice(0, 300), questions: questions.slice(0, 200), examples: examples.slice(0, 150), style: clip(obj.style, 1500),
+      ...(source?.title ? { source } : {}), ...(plan ? { plan } : {}),
     },
     warnings,
   };
@@ -279,7 +367,8 @@ const DECOR_TEXT = {
 // The instructions for a guide. They name only what the student gave: the subject, and the evaluation, date,
 // professor or term when there are any. The student's own notes come first; the map's context is an extra.
 // o.api: the AI is called from Studium (o.notes says how many files are attached); otherwise the text goes to a chat.
-// o.graph: the map's context goes along, inline or as o.contextFile.
+// o.graph: the map's context goes along, inline or as o.contextFile. o.until: the guide follows a route of the map
+// («hasta Examen 2»): its concepts, in the order they are learnt, and nothing of later evaluations.
 export function guideInstructions(o) {
   const contest = o.contest;
   const theme = THEMES[o.theme] ?? THEMES.estrellas;
@@ -298,6 +387,7 @@ export function guideInstructions(o) {
   }
   if (o.api && !o.notes && !o.graph) sources.push('No hay apuntes: usa lo que sabes del tema, al nivel de un curso universitario.');
   else if (!o.api) sources.push('Si no adjunto nada, usa lo que sabes del tema, al nivel de un curso universitario.');
+  if (o.graph && o.until) sources.push(`La guía sigue la ruta ${o.until} del mapa: cubre sus conceptos en el orden del contexto (de lo que se necesita antes a lo último que entra), y nada de evaluaciones posteriores.`);
   if (o.focus) sources.push(`Quiero reforzar: ${o.focus}.`);
   if (o.goal) sources.push(`Mi objetivo: ${o.goal}.`);
   const sections = (o.sections ?? []).filter((k) => SECTION_TEXT[k]);
@@ -400,7 +490,9 @@ export function parseGuide(html, fallback = {}) {
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 // The part of the map a guide is built from, as a Markdown file the person attaches in their AI.
-export function contextPack({ course, professor, term, concepts, contributions, guides, contest }) {
+// ordered: the concepts come in the order of a route (each with its band: «Lo que necesitas antes», «Examen 1»…) and
+// keep it; otherwise the most asked go first.
+export function contextPack({ course, professor, term, concepts, contributions, guides, contest, ordered = false }) {
   const mineFirst = (c) => (professor && c.professor === professor ? 0 : 1) + (term && c.term === term ? 0 : 0.5);
   const sources = [...contributions].sort((x, y) => mineFirst(x) - mineFirst(y));
   const kinds = {};
@@ -427,10 +519,12 @@ export function contextPack({ course, professor, term, concepts, contributions, 
     lines.push('');
   }
   const asked = new Map();
-  for (const c of contributions) for (const q of c.data.questions ?? []) for (const n of q.concepts) asked.set(keyOf(n), (asked.get(keyOf(n)) ?? 0) + 1);
-  const chosen = [...concepts].sort((x, y) => (asked.get(y.key) ?? 0) - (asked.get(x.key) ?? 0));
-  lines.push('## Conceptos', '', 'Ordenados por cuántas preguntas los evalúan. Usa el id como id de su sección en la guía.', '');
+  for (const c of contributions) for (const q of c.data.questions ?? []) for (const n of q.concepts) asked.set(looseKey(n), (asked.get(looseKey(n)) ?? 0) + 1);
+  const chosen = ordered ? [...concepts] : [...concepts].sort((x, y) => (asked.get(y.key) ?? 0) - (asked.get(x.key) ?? 0));
+  lines.push('## Conceptos', '', ordered ? 'En el orden de la ruta: de lo que se necesita antes a lo último que entra. Usa el id como id de su sección en la guía.' : 'Ordenados por cuántas preguntas los evalúan. Usa el id como id de su sección en la guía.', '');
+  let band = null;
   for (const c of chosen) {
+    if (ordered && c.band && c.band !== band) { band = c.band; lines.push(`#### ${band}`, ''); }
     lines.push(`### ${c.name} (id: ${c.key})`);
     const n = asked.get(c.key) ?? 0;
     if (n) lines.push(`Preguntas: ${n}.`);
@@ -442,20 +536,20 @@ export function contextPack({ course, professor, term, concepts, contributions, 
   const wanted = new Set(chosen.map((c) => c.key));
   const questions = [];
   for (const c of sources) for (const q of c.data.questions ?? []) {
-    if (q.concepts.some((n) => wanted.has(keyOf(n))) || !q.concepts.length) questions.push({ q, c });
+    if (q.concepts.some((n) => wanted.has(looseKey(n))) || (!q.concepts.length && !ordered)) questions.push({ q, c });
   }
   if (questions.length) {
     lines.push('## Preguntas de evaluaciones anteriores (paráfrasis anónima)', '');
     for (const { q, c } of questions.slice(0, 220)) {
       const other = professor && c.professor && c.professor !== professor ? ', otro profesor' : '';
-      const tags = [c.title, c.term, c.professor, QUESTION_KINDS[q.kind], `dificultad ${q.difficulty} de 5`, q.points != null ? plural(q.points, 'punto', 'puntos') : ''].filter(Boolean).join(', ');
+      const tags = [q.stage || c.stage || c.title, c.term, c.professor, QUESTION_KINDS[q.kind], `dificultad ${q.difficulty} de 5`, q.points != null ? plural(q.points, 'punto', 'puntos') : ''].filter(Boolean).join(', ');
       lines.push(`- [${tags}${other}; conceptos: ${q.concepts.join(', ') || 'sin indicar'}] ${q.text}`);
       if (q.solution) lines.push(`  Solución: ${q.solution}`);
     }
     lines.push('');
   }
   const examples = [];
-  for (const c of sources) for (const e of c.data.examples ?? []) if (e.concepts.some((n) => wanted.has(keyOf(n)))) examples.push(e);
+  for (const c of sources) for (const e of c.data.examples ?? []) if (e.concepts.some((n) => wanted.has(looseKey(n)))) examples.push(e);
   if (examples.length) {
     lines.push('## Ejemplos', '');
     for (const e of examples.slice(0, 120)) lines.push(`- [${e.concepts.join(', ')}] ${e.text}`);
