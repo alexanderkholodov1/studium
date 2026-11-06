@@ -1,5 +1,5 @@
 // The person's own Studium: how they study, the ambience, sounds, theme, semester and career, their goals and how far
-// they got in each guide. Kept in this browser for an instant start, and in the account (profiles/{uid}, readable only
+// they got in each guide, their courses and interests, and what they already know. Kept in this browser for an instant start, and in the account (profiles/{uid}, readable only
 // by its owner) so that it follows the person to any device.
 import { loadProfile, saveProfile } from './data.js';
 
@@ -20,7 +20,7 @@ export const THEMES = { auto: 'Como tu sistema', light: 'Día', dark: 'Noche' };
 export const AVATARS = ['blue', 'red', 'teal', 'butter', 'sky', 'peach'];
 const LANG = /^en\b/i.test(globalThis.navigator?.language ?? '') ? 'en' : 'es';
 const DEFAULTS = { mode: 'examenes', ambience: 'vivo', sound: false, theme: 'auto', lang: LANG, avatar: 'blue', semester: 0, career: '', nickname: '', name: '', goals: [], progress: {},
-  deadlines: [], tiles: [], notes: '', links: [], focus: { study: 25, rest: 5 }, bubbles: false };
+  deadlines: [], tiles: [], notes: '', links: [], focus: { study: 25, rest: 5 }, bubbles: false, courses: [], interests: [], known: [] };
 // The tiles the home page can show (space.js draws them).
 const TILE_IDS = ['countdown', 'deadlines', 'week', 'goals', 'timer', 'notes', 'links', 'recent', 'news', 'explore'];
 const rid = () => Math.random().toString(36).slice(2, 10);
@@ -60,6 +60,12 @@ const clean = (p) => {
     .map((l) => ({ id: String(l.id ?? rid()).slice(0, 16), label: String(l.label ?? '').slice(0, 40), url: /^https?:\/\//i.test(l.url ?? '') ? String(l.url).slice(0, 300) : '' }))
     .filter((l) => l.label && l.url);
   out.focus = { study: range(out.focus?.study, 5, 90, 25), rest: range(out.focus?.rest, 1, 30, 5) };
+  // The map: the person's courses this term (course keys), their interests and hobbies (areas, as «area:redes», or
+  // courses, as «course:…»), and the concepts they marked as known (concept keys).
+  const keys = (v, max, rx) => [...new Set((Array.isArray(v) ? v : []).map(String).filter((x) => rx.test(x)))].slice(0, max);
+  out.courses = keys(out.courses, 40, /^[a-z0-9-]{1,90}$/);
+  out.interests = keys(out.interests, 40, /^(area|course):[a-z0-9-]{1,90}$/);
+  out.known = keys(out.known, 1500, /^[a-z0-9-]{1,120}$/);
   out.progress = Object.fromEntries(Object.entries(out.progress && typeof out.progress === 'object' ? out.progress : {})
     .filter(([, v]) => v === 'reading' || v === 'done').slice(0, 300));
   return out;

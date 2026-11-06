@@ -315,23 +315,34 @@
 </main>
 
 <main class="view map" id="view-map" hidden>
-  <canvas id="map-canvas" tabindex="0" aria-label="Mapa de conocimiento: arrastra para moverte, rueda o pellizca para acercarte, pulsa un punto para ver qué es"></canvas>
-  <div class="map-tools glass">
-    <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><input id="map-q" list="map-names" placeholder="Busca un concepto o una materia" aria-label="Buscar en el mapa"></label>
-    <datalist id="map-names"></datalist>
-    <select id="map-career" aria-label="Carrera"></select>
-    <select id="map-semester" aria-label="Tu semestre"></select>
-    <select id="map-prof" aria-label="Profesor"></select>
-    <button class="button ghost" id="map-grow">Ver cómo creció</button>
-    <span class="map-links"><button class="link" id="map-info-open">¿Para qué sirve?</button><a class="link" href="#/fuentes">Créditos</a></span>
+  <canvas id="map-canvas" tabindex="0" aria-label="Mapa de conocimiento: arrastra para moverte, rueda o pellizca para acercarte, pulsa un punto para ver qué es; Mayús + clic suma puntos a la selección"></canvas>
+  <div class="map-bar glass" id="map-bar">
+    <div class="map-search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      <input id="map-q" type="search" autocomplete="off" spellcheck="false" placeholder="Busca, o pregunta: «la ruta para el Examen 2 de redes»" aria-label="Buscar en el mapa o preguntarle" role="combobox" aria-expanded="false" aria-controls="map-results" aria-autocomplete="list">
+      <kbd class="key" aria-hidden="true">/</kbd>
+      <ul class="map-results glass" id="map-results" role="listbox" hidden></ul>
+    </div>
+    <div class="map-actions">
+      <button class="button ghost" id="map-filters-open" aria-expanded="false" aria-controls="map-drawer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>Filtros<span class="count" id="map-filter-count" hidden></span></button>
+      <div class="map-menu">
+        <button class="button ghost" id="map-view-open" aria-expanded="false" aria-haspopup="menu" aria-controls="map-views"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>Vista: <b id="map-view-name">Normal</b></span></button>
+        <div class="map-views glass" id="map-views" role="menu" hidden></div>
+      </div>
+      <button class="button ghost" id="map-route-open"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20V9a3 3 0 0 1 3-3h7m0 0-3-3m3 3-3 3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="20" r="1.8" fill="currentColor"/></svg>Ruta</button>
+      <button class="button ghost" id="map-grow">Ver cómo creció</button>
+    </div>
+    <p class="map-said" id="map-said" role="status" hidden></p>
   </div>
-  <div class="map-legend" id="map-legend"></div>
+  <aside class="map-drawer glass" id="map-drawer" aria-label="Filtros del mapa" hidden></aside>
+  <div class="map-chips" id="map-chips" aria-label="Filtros activos"></div>
   <aside class="map-panel glass" id="map-panel" hidden></aside>
   <div class="map-zoom">
     <button class="icon glass" id="map-zoom-in" aria-label="Acercar"><svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
     <button class="icon glass" id="map-zoom-out" aria-label="Alejar"><svg viewBox="0 0 24 24"><path d="M6 12h12" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
     <button class="icon glass" id="map-fit" aria-label="Ver todo el mapa"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
   </div>
+  <p class="map-credits"><span id="map-count"></span><button class="link" id="map-info-open">¿Para qué sirve?</button><a class="link" href="#/fuentes">Créditos</a></p>
   <div class="map-empty glass" id="map-empty" hidden>
     <h2>El mapa todavía está vacío</h2>
     <p>Cada material que aportas agrega sus conceptos aquí.</p>
@@ -348,6 +359,15 @@
       <li><strong>Por dónde empezar.</strong> Ves qué conceptos vienen antes de lo que tienes que estudiar.</li>
       <li><strong>Qué pesa más.</strong> Los puntos más grandes son los que más aparecen en los exámenes.</li>
       <li><strong>Dónde está explicado.</strong> Cada concepto lleva a las guías y al material que lo explican, y muestra con qué otras materias se conecta.</li>
+      <li><strong>Hasta dónde entra.</strong> Una ruta junta todo lo que necesitas para una evaluación, desde lo básico, y se detiene ahí: lo del examen siguiente queda fuera. Con esa ruta puedes crear tu guía aunque no tengas apuntes.</li>
+    </ul>
+    <h3>Cómo se usa</h3>
+    <ul class="why">
+      <li>Escribe en la barra para buscar, o pregúntale en palabras: «la ruta para el Examen 2 de redes», «qué necesito para entender OSPF», «de subredes a Dijkstra». Con tu IA conectada entiende casi cualquier pregunta.</li>
+      <li>Toca un punto para ver qué es. Con Mayús o Ctrl + clic sumas varios; con Mayús + arrastrar en el fondo seleccionas un área.</li>
+      <li>En «Filtros» eliges materias, profesores, semestres, hasta qué evaluación y de dónde viene el material; también puedes quedarte solo con tus materias e intereses.</li>
+      <li>En «Vista» el mapa se ilumina de otra forma: lo más preguntado, la dificultad, los puentes entre materias, lo que hiciste crecer, lo que te falta, los huecos, lo nuevo, por profesor o la línea de tiempo de una materia.</li>
+      <li>Teclas: <kbd>/</kbd> busca, <kbd>Esc</kbd> suelta la selección, <kbd>H</kbd> oculta lo seleccionado, <kbd>+</kbd> y <kbd>−</kbd> acercan.</li>
     </ul>
     <p class="fine">Entre más aportamos, más completo queda para todos.</p>
     <div class="actions"><button class="button primary" value="close">Entendido</button></div>
