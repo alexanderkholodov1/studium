@@ -20,6 +20,8 @@ jobs:
         run: node tools/check.mjs
       - name: Check the scripts parse
         run: for f in public/assets/*.js tools/*.mjs; do node --check "$f"; done
+      - name: Check that the tools fingerprint files as the app does
+        run: node tools/test-fingerprint.mjs
       - name: Pack a trial release
         run: bash tools/pack.sh 0.0.0-check "$GITHUB_SHA" /tmp/trial
 

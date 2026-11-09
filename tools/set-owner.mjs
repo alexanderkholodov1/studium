@@ -32,7 +32,7 @@ if (entry && guide) {
   writes.push(stamped(`guides/${docId}`, keep(guide, ['title', 'html', 'encoding', 'size', 'visibility'])));
 } else if (contribution) {
   writes.push(stamped(`contributions/${docId}`, keep(contribution, ['kind', 'course', 'code', 'university', 'term', 'professor', 'title',
-    'theme', 'concepts', 'questions', 'examples', 'body', 'encoding', 'visibility'])));
+    'stage', 'theme', 'source', 'print', 'concepts', 'questions', 'examples', 'body', 'encoding', 'visibility'])));
 } else throw new Error(`No guide or contribution with the id ${docId}`);
 writes.push({ update: { name: `${base}/owners/${docId}`, fields: { uid: { stringValue: uid } } } });
 
