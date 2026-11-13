@@ -14,7 +14,7 @@ import { buildGraph } from './graph.js';
 import { mountMap, openMap, refreshMap } from './mapui.js';
 import { prepareGuide, showAnchor } from './viewer.js';
 import { startScene, tilt, glassLight, transition, rise } from './fx.js';
-import { mountContribute, renderPane, presetGuide } from './contribute.js';
+import { mountContribute, renderPane, presetGuide, startQueue } from './contribute.js';
 import { prefs } from './prefs.js';
 import { sfx } from './sfx.js';
 import { play, springLetters, celebrate } from './play.js';
@@ -597,7 +597,8 @@ onAuthStateChanged(auth, async (user) => {
     if (confirmEmail() && user.emailVerified && !claims.email_verified) await user.getIdToken(true);
   }
   document.documentElement.classList.toggle('is-admin', role.admin);
-  if (isMember(user)) { await prefs.attach(user.uid); seen(); } else prefs.detach();
+  // A member's queue of material resumes wherever they land: it lives in this browser.
+  if (isMember(user)) { await prefs.attach(user.uid); seen(); startQueue(context); } else prefs.detach();
   await route();
 });
 // Presence, on real events only: signing in (above), changing page and coming back to the tab.

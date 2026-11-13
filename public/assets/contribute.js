@@ -7,6 +7,7 @@ import {
 } from './prompts.js';
 import { publishContribution, publishGuide, setVisibility, remove, LIMIT } from './data.js';
 import { prepareGroup, groupFiles, fingerprint, partsSize, partFiles, zipFiles } from './files.js';
+import { createQueue, indexedStore, memoryStore } from './queue.js';
 import { looseKey, stageOf, stageLabel } from './standard.js';
 import { prepareGuide } from './viewer.js';
 import { rise } from './fx.js';
@@ -86,16 +87,11 @@ const promise = () => `<aside class="anon glass">
         <a href="${PROMPT_URL}" target="_blank" rel="noopener noreferrer">Puedes leer las instrucciones exactas que recibe tu IA</a>.</p></div>
   </aside>`;
 function aiStep(zone) {
-  if (!ai.ready()) {
-    return `<li class="step glass ai-step off"><h2>Con tu IA, sin copiar ni pegar</h2>
-      <p>Conecta Claude, ChatGPT o Gemini en <a href="#/ajustes">Ajustes</a> con tu propia clave, y Studium hace todo el
-        camino: le pasa tus archivos a tu IA con estas instrucciones y te muestra el resultado para que lo revises.
-        Studium no cobra nada; tu proveedor cobra lo que use tu clave.</p>
-      <div class="actions"><a class="button primary" href="#/ajustes">Conectar mi IA</a></div></li>`;
-  }
-  return `<li class="step glass ai-step"><h2>Con tu IA, sin copiar ni pegar</h2>
-    <p>Suelta uno o varios archivos, o una carpeta entera: cada archivo va a tu IA con las instrucciones de Studium y
-      vuelve aquí para que lo revises.</p>
+  const ready = ai.ready();
+  return `<li class="step glass ai-step ${ready ? '' : 'off'}"><h2>${ready ? 'Con tu IA, sin copiar ni pegar' : 'Suelta todo tu material'}</h2>
+    <p>${ready
+      ? 'Suelta los archivos que quieras, o carpetas enteras: cada parte espera su turno en la cola, va a tu IA con las instrucciones de Studium y vuelve aquí para que la revises. La cola sigue aunque recargues la página.'
+      : `Suelta los archivos que quieras, o carpetas enteras: Studium los divide en partes y cada una queda lista para tu chat, con sus instrucciones. Si <a href="#/ajustes">conectas tu IA</a> (también gratis o con tu suscripción), Studium lo hace solo.`}</p>
     ${ai.pickerHTML('material')}
     <div class="dropzone" data-ai-drop="${zone}">
       <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 14a4 4 0 0 1 4-4h8l4 4h12a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4Z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M24 30V20m0 0-5 5m5-5 5 5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -104,17 +100,22 @@ function aiStep(zone) {
         <label class="button ghost">Elegir una carpeta<input type="file" multiple hidden webkitdirectory data-ai-files="${zone}"></label></div>
     </div>
     <p class="fine">Los libros largos se dividen por capítulos: primero va su índice, y tú eliges qué capítulos procesar. Las fotos de un mismo examen se unen solas.</p>
+    <div class="queue-head" id="q-head"></div>
     <ul class="ai-queue" data-ai-queue="${zone}"></ul>
   </li>`;
 }
-// The queue: each dropped file (or each group of photos of the same exam) is read in this browser and split into
-// units; each unit is one request to the person's AI and becomes one contribution to review. A file already in the map
-// (by its fingerprint) waits until the person decides to process it again.
-const queue = [];
-let working = false;
-const units = new Map(); // row id -> { unit, group, v, print }
+// The queue (queue.js): each dropped file (or each group of photos of the same exam, or the code of one folder) is read
+// in this browser and split into parts; each part is one request to the person's AI, or one trip to their chat, and
+// becomes one contribution to review. Any amount of material can wait here: the queue lives in this browser, survives
+// a reload, waits out the limits of each AI and runs one part after another, in one tab only. A file already in the
+// map (by its fingerprint) is not queued again.
+let queue = null;
+let queueReady = null;
+const prepared = new Map(); // group id -> its parts, read again from its files when a part of it runs (a few at a time)
+const reviewOf = new Map(); // job id -> review id
+const queueNotes = []; // files skipped in this visit, and why
+const channel = typeof BroadcastChannel === 'function' ? new BroadcastChannel('studium-queue') : null;
 const printed = () => new Set(ctx.state.contributions.map((c) => c.print).filter(Boolean));
-const queuedPrints = new Set(); // the files of this visit, so the same file dropped twice is processed once
 // Each part of a long file has its own fingerprint, derived from the file's: a book's chapters are added one by one.
 const unitPrint = (print, i, count) => (!print ? '' : count === 1 ? print : `${print.slice(0, 20)}${i.toString(16).padStart(4, '0')}`);
 async function printOf(group) {
@@ -123,69 +124,204 @@ async function printOf(group) {
   const joined = new TextEncoder().encode(prints.join(''));
   return [...new Uint8Array(await crypto.subtle.digest('SHA-256', joined))].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 24);
 }
-async function enqueue(zone, files) {
-  const list = $(`[data-ai-queue="${zone}"]`);
-  const v = materialValues();
-  const known = printed();
-  for (const group of groupFiles(files)) {
-    const head = `g${serial += 1}`;
-    list.insertAdjacentHTML('beforeend', `<li id="${head}" class="busy file"><span class="name">${esc(group.name)}</span><span class="state">Preparando…</span><ul class="units"></ul></li>`);
-    let prepared;
-    try { prepared = await prepareGroup(group); } catch (error) { setRow(head, `No se pudo leer: ${error.message || 'formato desconocido'}`, 'bad file'); continue; }
-    if (prepared.skipped) { setRow(head, `Saltado: ${prepared.skipped}`, 'skip file'); continue; }
-    const print = await printOf(group).catch(() => '');
-    const count = prepared.units.length;
-    const prints = prepared.units.map((_, i) => unitPrint(print, i, count));
-    const twice = !!print && queuedPrints.has(print);
-    const inMap = prints.map((x) => !!x && known.has(x));
-    const repeated = twice || (count > 0 && inMap.every(Boolean));
-    if (print) queuedPrints.add(print);
-    const pages = prepared.pages ? ` · ${prepared.pages} páginas` : '';
-    setRow(head, twice ? 'Repetido: este mismo archivo ya está en la lista' : repeated ? 'Ya está en el mapa: este mismo archivo ya se aportó'
-      : count > 1 ? `${count} partes${pages}${prepared.book ? ' · un libro: primero su índice' : ''}` : `Listo para tu IA${pages}`, repeated ? 'skip file' : 'file');
-    const sub = document.querySelector(`#${head} .units`);
-    prepared.units.forEach((unit, i) => {
-      const id = `q${serial += 1}`;
-      // The stage the file's name says («Examen parcial 1.pdf»), unless the form says it for the whole batch.
-      const stage = v.stage || stageOf(unit.label)?.label || '';
-      units.set(id, { unit, group, v: { ...v, stage }, print: prints[i] });
-      const on = unit.selected && !repeated && !inMap[i];
-      const state = on ? 'En espera' : inMap[i] ? 'Ya está en el mapa' : repeated ? 'No se procesa' : 'Sin elegir';
-      sub.insertAdjacentHTML('beforeend', `<li id="${id}" class="${on ? '' : 'skip'}">${count > 1 || repeated ? `<label class="check"><input type="checkbox" data-unit="${id}" ${on ? 'checked' : ''}></label>` : ''}<span class="name">${esc(count > 1 ? unit.label.split(' · ').slice(1).join(' · ') || unit.label : baseName(unit.label))}</span><span class="state">${state}</span></li>`);
-      if (on) queue.push({ id, zone });
-    });
-    if (prepared.notes?.length) sub.insertAdjacentHTML('beforeend', `<li class="skip"><span class="name">${esc(plural(prepared.notes.length, 'archivo saltado', 'archivos saltados'))}</span><span class="state">${esc(prepared.notes.slice(0, 2).join(' · '))}</span></li>`);
-    work();
-  }
-}
 const baseName = (name) => String(name).split('/').pop();
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
-const setRow = (id, text, cls = '') => { const row = document.getElementById(id); if (row) { row.className = cls; row.querySelector(':scope > .state').textContent = text; } };
-async function work() {
-  if (working) return;
-  working = true;
-  while (queue.length) {
-    const job = queue.shift();
-    const { unit, v, print } = units.get(job.id);
-    try {
-      setRow(job.id, 'Leyendo…', 'busy');
-      const files = await unit.make();
-      setRow(job.id, `Tu IA lo está leyendo… (${kb(partsSize(files))})`, 'busy');
-      const system = v.kind === 'curriculum' ? curriculumInstructions(v) : contributionInstructions({ ...v, part: unit.note });
-      const res = await ai.run({
-        system, files, maxTokens: 32000, use: ai.picked('material'),
-        text: 'Procesa el material adjunto siguiendo las instrucciones de Studium. Responde solo con el JSON, en un bloque de código.',
-        onProgress: (n) => setRow(job.id, n < 0 ? 'Tu IA está escribiendo…' : `Tu IA está escribiendo… ${n.toLocaleString('es')} caracteres`, 'busy'),
-      });
-      // What the form said when this file was dropped, not what it says now: a batch can change it between files.
-      const item = addReview('material', res.text, unit.label, { provider: res.provider, model: res.model, effort: res.effort }, { print, stage: v.stage, source: v.source, fallback: v });
-      setRow(job.id, item.parsed.error ? 'Tu IA no devolvió un aporte válido: revisa abajo' : res.truncated ? 'Listo, pero quedó cortado: revisa abajo' : 'Listo: revísalo abajo', item.parsed.error ? 'bad' : 'ok');
-    } catch (error) {
-      setRow(job.id, error.message || 'Algo falló', 'bad');
-      if (/clave|saldo|límite/.test(error.message || '')) { for (const j of queue.splice(0)) setRow(j.id, 'Detenido', 'skip'); }
-    }
+const clock = (ms) => new Date(ms).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+function remember(gid, parts) {
+  prepared.set(gid, parts);
+  while (prepared.size > 4) prepared.delete(prepared.keys().next().value);
+}
+async function unitOf(job, group, list) {
+  if (!prepared.has(group.id)) remember(group.id, prepareGroup({ name: group.name, files: list, code: group.code }));
+  const parts = await prepared.get(group.id);
+  const unit = parts?.units?.[job.index];
+  if (!unit) throw new ai.AIError('No se pudo volver a leer este archivo.', { kind: 'job' });
+  return unit;
+}
+const instructionsOf = (job, group) => {
+  const v = { ...group.v, stage: job.stage };
+  return v.kind === 'curriculum' ? curriculumInstructions(v) : contributionInstructions({ ...v, part: job.note });
+};
+// One part, to the person's AI: the way, model and effort chosen for «Procesar material».
+async function processJob(job, group, list) {
+  const unit = await unitOf(job, group, list);
+  const files = await unit.make();
+  queue.setProgress(job.id, `Tu IA lo está leyendo… (${kb(partsSize(files))})`);
+  const res = await ai.run({
+    system: instructionsOf(job, group), files, maxTokens: 32000, use: ai.choice('material'),
+    text: 'Procesa el material adjunto siguiendo las instrucciones de Studium. Responde solo con el JSON, en un bloque de código.',
+    onProgress: (n) => queue.setProgress(job.id, n < 0 ? 'Tu IA está escribiendo…' : `Tu IA está escribiendo… ${n.toLocaleString('es')} caracteres`),
+  });
+  return { text: res.text, provider: res.provider, model: res.model, effort: res.effort, way: res.way, truncated: !!res.truncated };
+}
+function storeFor() {
+  try { if (typeof indexedDB === 'object' && indexedDB) return indexedStore(); } catch { /* a private window */ }
+  return memoryStore();
+}
+// One tab runs the queue; the others show it.
+const lockQueue = (fn) => (navigator.locks?.request ? navigator.locks.request('studium-queue', { ifAvailable: true }, (held) => (held ? fn() : false)) : fn());
+let lastCounts = null;
+function onQueue(change) {
+  if (change.progress) { const row = document.querySelector(`#q-${CSS.escape(change.progress)} > .state`); if (row) row.textContent = change.status.progress; return; }
+  channel?.postMessage('changed');
+  if (change.done) syncReviews();
+  if (change.kind === 'account') ctx?.toast(change.status.stopped);
+  const c = queue.counts();
+  if (lastCounts && (lastCounts.waiting || lastCounts.running) && !c.waiting && !c.running && c.done > lastCounts.done) ctx?.toast('Tu IA terminó la cola: revisa y publica abajo.');
+  lastCounts = c;
+  for (const gid of [...prepared.keys()]) if (!queue.jobs().some((j) => j.gid === gid && (j.state === 'waiting' || j.state === 'running'))) prepared.delete(gid);
+  renderQueueSoon();
+}
+export function startQueue(context) {
+  if (context) ctx = context;
+  queueReady ??= (async () => {
+    queue = createQueue({ store: storeFor(), process: processJob, onChange: onQueue });
+    queue.lock = lockQueue;
+    await queue.load();
+    channel?.addEventListener('message', async () => { await queue.load(); syncReviews(); renderQueueSoon(); queue.start(); });
+    queue.start();
+    return queue;
+  })();
+  return queueReady;
+}
+let renderPending = false;
+function renderQueueSoon() {
+  if (renderPending) return;
+  renderPending = true;
+  requestAnimationFrame(() => { renderPending = false; renderQueue(); });
+}
+const STATES = {
+  off: 'Sin elegir', manual: 'Para tu chat', missing: 'Suelta este archivo otra vez para seguir', done: 'Listo: revísalo abajo',
+  published: 'Publicado', discarded: 'Quitado',
+};
+function jobState(job, st) {
+  if (job.state === 'running') return st.progress || 'Leyendo…';
+  if (job.state === 'waiting') return job.retryAt > Date.now() ? `Sigue a las ${clock(job.retryAt)}` : 'En espera';
+  if (job.state === 'error') return job.error || 'Algo falló';
+  if (job.state === 'done' && job.result?.truncated) return 'Listo, pero quedó cortado: revisa abajo';
+  return STATES[job.state] ?? job.state;
+}
+function jobRow(job, many, st) {
+  const cls = { running: 'busy', done: 'ok', published: 'ok', error: 'bad', off: 'skip', discarded: 'skip', missing: 'bad', manual: 'manual' }[job.state] ?? '';
+  const name = many ? job.label.split(' · ').slice(1).join(' · ') || job.label : baseName(job.label);
+  const choose = many && ['off', 'waiting', 'manual', 'error'].includes(job.state) ? `<label class="check"><input type="checkbox" data-unit="${esc(job.id)}" ${job.state === 'off' ? '' : 'checked'}></label>` : '';
+  const actions = job.state === 'manual'
+    ? `<div class="chat-part"><div class="actions"><button type="button" class="button ghost small" data-q-copy="${esc(job.id)}">Copiar instrucciones</button><button type="button" class="button ghost small" data-q-download="${esc(job.id)}">Descargar la parte</button></div>
+        <textarea class="plain" rows="2" data-q-paste="${esc(job.id)}" placeholder="Pega aquí lo que te devolvió tu IA"></textarea>
+        <div class="actions"><button type="button" class="button primary small" data-q-answer="${esc(job.id)}">Listo</button>${ai.ready() ? `<button type="button" class="link" data-q-retry="${esc(job.id)}">Que lo haga mi IA</button>` : ''}</div></div>`
+    : job.state === 'error'
+      ? `<div class="actions"><button type="button" class="link" data-q-retry="${esc(job.id)}">Reintentar</button><button type="button" class="link" data-q-chat="${esc(job.id)}">Hacerlo por chat</button></div>`
+      : '';
+  return `<li id="q-${esc(job.id)}" class="${cls}">${choose}<span class="name">${esc(name)}</span><span class="state">${esc(jobState(job, st))}</span>${actions}</li>`;
+}
+function renderQueue() {
+  const list = $('[data-ai-queue="material"]');
+  const head = $('#q-head');
+  if (!list || !queue) return;
+  const st = queue.status();
+  const c = queue.counts();
+  const jobs = queue.jobs();
+  const byGroup = new Map();
+  for (const j of jobs) { if (!byGroup.has(j.gid)) byGroup.set(j.gid, []); byGroup.get(j.gid).push(j); }
+  list.innerHTML = [...byGroup.entries()].map(([gid, js]) => {
+    const g = queue.group(gid);
+    const live = js.filter((j) => j.state !== 'off');
+    const ready = live.filter((j) => ['done', 'published', 'discarded'].includes(j.state)).length;
+    const summary = js.length > 1 ? `${ready} de ${plural(live.length, 'parte', 'partes')}${js.some((j) => j.state === 'off') ? ` · ${plural(js.filter((j) => j.state === 'off').length, 'sin elegir', 'sin elegir')}` : ''}` : '';
+    return `<li class="file ${js.every((j) => ['done', 'published'].includes(j.state)) ? 'ok' : ''}"><span class="name">${esc(g?.name ?? '')}</span><span class="state">${esc(summary)}</span><ul class="units">${js.map((j) => jobRow(j, js.length > 1, st)).join('')}</ul></li>`;
+  }).join('') + queueNotes.map((n) => `<li class="skip"><span class="name">${esc(n.name)}</span><span class="state">${esc(n.why)}</span></li>`).join('');
+  if (!head) return;
+  if (!c.total && !c.off) { head.innerHTML = ''; return; }
+  const parts = [`${c.done} de ${c.total} listas`];
+  if (c.running) parts.push('1 leyendo');
+  if (c.waiting) parts.push(`${c.waiting} en espera`);
+  if (c.manual) parts.push(`${c.manual} para tu chat`);
+  if (c.error) parts.push(plural(c.error, 'con error', 'con error'));
+  if (c.missing) parts.push(`${c.missing} sin su archivo`);
+  const waitingLimit = st.waitUntil > Date.now();
+  const line = st.stopped ? `<p class="msg bad">${esc(st.stopped)}</p>`
+    : st.paused ? '<p class="msg">En pausa.</p>'
+      : waitingLimit ? `<p class="msg">${esc(st.note || 'Tu IA pidió una pausa.')} Sigue sola a las ${esc(clock(st.waitUntil))}.</p>` : '';
+  const busy = c.running || (c.waiting && !st.stopped && !st.paused);
+  head.innerHTML = `<div class="queue-bar"><progress max="${Math.max(1, c.total)}" value="${c.done}"></progress><p><strong>${esc(parts.join(' · '))}</strong></p></div>${line}
+    <div class="actions">${busy && !waitingLimit ? '<button type="button" class="button ghost small" data-q-pause>Pausar</button>' : ''}
+      ${st.paused || st.stopped || waitingLimit ? '<button type="button" class="button primary small" data-q-resume>Seguir ahora</button>' : ''}
+      ${c.error ? '<button type="button" class="button ghost small" data-q-retry-all>Reintentar las fallidas</button>' : ''}
+      ${c.manual && ai.ready() ? '<button type="button" class="button ghost small" data-q-auto>Que mi IA haga las del chat</button>' : ''}
+      ${c.reviewed || c.off ? '<button type="button" class="link" data-q-clear>Quitar lo terminado</button>' : ''}</div>`;
+}
+// Every answer waits for review, also after a reload.
+function syncReviews() {
+  if (!queue || !$('[data-reviews="material"]')) return;
+  for (const job of queue.jobs()) {
+    if (job.state !== 'done' || reviewOf.has(job.id) || !job.result) continue;
+    const g = queue.group(job.gid);
+    const made = job.result.way === 'chat' ? null : { provider: job.result.provider, model: job.result.model, effort: job.result.effort };
+    const item = addReview(g?.zone ?? 'material', job.result.text, job.label, made, { print: job.print, stage: job.stage, source: g?.v?.source, fallback: g?.v });
+    item.jobId = job.id;
+    reviewOf.set(job.id, item.id);
   }
-  working = false;
+}
+async function enqueue(zone, files) {
+  const q = await startQueue();
+  const v = materialValues();
+  const known = printed();
+  const manual = !ai.ready();
+  queueNotes.length = 0;
+  let added = 0;
+  for (const group of groupFiles(files)) {
+    const print = await printOf(group).catch(() => '');
+    const queued = print ? q.groups().find((g) => g.print === print) : null;
+    if (queued) {
+      const missing = q.jobs().some((j) => j.gid === queued.id && j.state === 'missing');
+      if (missing) await q.attach(print, group.files); else queueNotes.push({ name: group.name, why: 'Ya está en la cola' });
+      continue;
+    }
+    let p;
+    try { p = await prepareGroup(group); } catch (error) { queueNotes.push({ name: group.name, why: `No se pudo leer: ${error.message || 'formato desconocido'}` }); continue; }
+    if (p.skipped) { queueNotes.push({ name: group.name, why: `Saltado: ${p.skipped}` }); continue; }
+    const count = p.units.length;
+    const prints = p.units.map((_, i) => unitPrint(print, i, count));
+    const inMap = prints.map((x) => !!x && known.has(x));
+    if (count && inMap.every(Boolean)) { queueNotes.push({ name: group.name, why: 'Ya está en el mapa: este mismo archivo ya se aportó' }); continue; }
+    // The stage the file's name says («Examen parcial 1.pdf»), unless the form says it for the whole batch.
+    const units = p.units.map((u, i) => ({ label: u.label, note: u.note, stage: v.stage || stageOf(u.label)?.label || '', print: prints[i], on: !!u.selected && !inMap[i] }));
+    const { group: g } = await q.add({ zone, name: group.name, code: !!group.code, print, v: { ...v, known: (v.known ?? []).slice(0, 400) }, list: group.files, units, manual });
+    remember(g.id, p);
+    for (const n of p.notes ?? []) queueNotes.push({ name: group.name, why: n });
+    added += 1;
+  }
+  if (added && manual) ctx.toast('Sin una IA conectada, cada parte queda lista para tu chat.');
+  renderQueueSoon();
+}
+async function queueAction(t) {
+  const q = await startQueue();
+  if (t.dataset.qPause !== undefined) q.pause();
+  if (t.dataset.qResume !== undefined) q.resume();
+  if (t.dataset.qRetryAll !== undefined) q.retryFailed();
+  if (t.dataset.qClear !== undefined) q.clearFinished();
+  if (t.dataset.qAuto !== undefined) for (const j of q.jobs()) if (j.state === 'manual') await q.retry(j.id);
+  if (t.dataset.qRetry) q.retry(t.dataset.qRetry);
+  if (t.dataset.qChat) q.toChat(t.dataset.qChat);
+  const id = t.dataset.qCopy || t.dataset.qDownload || t.dataset.qAnswer;
+  if (!id) return;
+  const job = q.job(id);
+  const group = job && q.group(job.gid);
+  if (!job || !group) return;
+  if (t.dataset.qCopy) copy(instructionsOf(job, group), 'Instrucciones');
+  if (t.dataset.qDownload) {
+    const list = await q.filesOf(group.id);
+    if (!list) { ctx.toast('Suelta este archivo otra vez: el navegador no lo guardó.'); return; }
+    const unit = await unitOf(job, group, list);
+    const zip = partFiles(await unit.make()).map((f) => ({ name: f.name, bytes: f.bytes }));
+    zip.push({ name: 'instrucciones.md', bytes: new TextEncoder().encode(instructionsOf(job, group)) });
+    download(`${baseName(job.label).replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80)}.zip`, zipFiles(zip), 'application/zip');
+  }
+  if (t.dataset.qAnswer) {
+    const area = $(`[data-q-paste="${CSS.escape(id)}"]`);
+    if (!area?.value.trim()) { ctx.toast('Pega primero lo que te devolvió tu IA.'); return; }
+    await q.answer(id, area.value);
+  }
 }
 // Without an API key: the same preparation, as files to download and take to a chat with the instructions.
 async function prepareForChat(files) {
@@ -742,6 +878,7 @@ async function publish(item) {
       item.done = `Publicado${item.visibility === 'private' ? ' solo para ti' : ''}. <a href="#/mapa">Verlo en el mapa</a>`;
     }
     item.ready = false;
+    if (item.jobId) queue?.reviewed(item.jobId, 'published');
     renderReview(item);
     if (!bulk) { await ctx.refresh(); ctx.toast(item.html ? 'Guía publicada.' : 'Aporte publicado.'); }
     return true;
@@ -826,6 +963,7 @@ const findItem = (ref) => {
 /* ---------- mount ---------- */
 export function mountContribute(context) {
   ctx = context;
+  startQueue(context);
   const view = $('#view-contribute');
   if (view.dataset.ready) return;
   view.dataset.ready = '1';
@@ -849,12 +987,7 @@ export function mountContribute(context) {
     if (aiFiles) { enqueue(aiFiles, [...e.target.files]); e.target.value = ''; }
     if (e.target.dataset.prepare !== undefined) { prepareForChat([...e.target.files]); e.target.value = ''; }
     // A part of a book (or a file already in the map) joins the queue when the person ticks it.
-    const unitId = e.target.dataset.unit;
-    if (unitId) {
-      const row = document.getElementById(unitId);
-      if (e.target.checked && !queue.some((j) => j.id === unitId) && !row.classList.contains('ok')) { setRow(unitId, 'En espera', ''); queue.push({ id: unitId, zone: 'material' }); work(); }
-      if (!e.target.checked) { const i = queue.findIndex((j) => j.id === unitId); if (i >= 0) { queue.splice(i, 1); setRow(unitId, 'Sin elegir', 'skip'); } }
-    }
+    if (e.target.dataset.unit) { const id = e.target.dataset.unit; const on = e.target.checked; startQueue().then((q) => q.choose(id, on, !ai.ready())); }
     if (e.target.name === 'kind' && e.target.closest('#m-form')) { const hint = $('#m-kind-hint'); if (hint) hint.textContent = KIND_HINTS[e.target.value] ?? ''; }
     const sign = e.target.dataset.sign;
     if (sign) { const item = reviews.get(sign); item.sign = e.target.checked; }
@@ -891,7 +1024,12 @@ export function mountContribute(context) {
       const area = $(`[data-paste="${t.dataset.reviewPaste}"]`);
       if (area.value.trim()) { addReview(t.dataset.reviewPaste, area.value, 'Respuesta pegada'); area.value = ''; }
     }
-    if (t.dataset.discard) { reviews.delete(t.dataset.discard); document.getElementById(t.dataset.discard)?.remove(); }
+    if (t.matches('[data-q-pause], [data-q-resume], [data-q-retry-all], [data-q-clear], [data-q-auto], [data-q-retry], [data-q-chat], [data-q-copy], [data-q-download], [data-q-answer]')) queueAction(t);
+    if (t.dataset.discard) {
+      const gone = reviews.get(t.dataset.discard);
+      if (gone?.jobId) queue?.reviewed(gone.jobId, 'discarded');
+      reviews.delete(t.dataset.discard); document.getElementById(t.dataset.discard)?.remove();
+    }
     if (t.dataset.redact) {
       const item = reviews.get(t.dataset.redact);
       readMeta(item);
@@ -944,7 +1082,7 @@ export function renderPane(pane, preset) {
     const list = $(`[data-reviews="${zone}"]`, el);
     if (list) { list.insertAdjacentHTML('beforeend', `<article class="review glass" id="${item.id}"></article>`); renderReview(item); }
   }
-  if (pane === 'material') $('#m-prompt').textContent = materialPrompt();
+  if (pane === 'material') { $('#m-prompt').textContent = materialPrompt(); renderQueue(); syncReviews(); }
   if (pane === 'guide' && $('#g-form')) { renderNotes(); renderScope(); }
   rise(el, '.flow > li, .mine > li, .empty');
 }

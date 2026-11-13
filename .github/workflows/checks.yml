@@ -22,6 +22,8 @@ jobs:
         run: for f in public/assets/*.js public/assets/*.mjs tools/*.mjs; do node --check "$f"; done
       - name: Test the local bridge with fake CLIs
         run: node tools/test-bridge.mjs
+      - name: Test the queue of material and what each AI's errors mean
+        run: node tools/test-queue.mjs
       - name: Check that the tools fingerprint files as the app does
         run: node tools/test-fingerprint.mjs
       - name: Pack a trial release
