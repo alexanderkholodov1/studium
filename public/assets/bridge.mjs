@@ -37,8 +37,9 @@ if (!Number.isInteger(port) || port < 1024 || port > 65535) { console.error('El 
 
 /* ---------- who may ask ---------- */
 const ORIGINS = new Set([SITE, 'http://localhost:5173', 'http://127.0.0.1:5173']);
-// Firebase preview channels of Studium's project.
-const PREVIEW = /^https:\/\/studium101--[a-z0-9-]+\.web\.app$/;
+// Studium's preview pages: the channels of each pull request on the portfolio's project, and any channel of Studium's
+// own project.
+const PREVIEW = /^https:\/\/(?:alexanderkholodov--studium-pr-\d+-[a-z0-9]+|studium101--[a-z0-9-]+)\.web\.app$/;
 const originAllowed = (origin) => !!origin && (ORIGINS.has(origin) || PREVIEW.test(origin) || extraOrigins.includes(origin));
 
 /* ---------- the pairing code ---------- */

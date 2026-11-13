@@ -42,3 +42,60 @@ jobs:
           java-version: '21'
       - name: Test the database rules on the emulators
         run: npx --yes firebase-tools@15.11.0 emulators:exec --only auth,firestore --project studium101 "node tools/test-rules.mjs --emulators"
+
+  # Every pull request gets its own page, deployed by itself, to see it before the merge (operator, 2026-11-13): the
+  # app packed exactly as a release is, served at /studium/ on a preview channel of the portfolio's Hosting project,
+  # as Little Galaxy's are. The channel is named studium-pr-<number>, so it never takes another repository's pr-<number>
+  # (INCIDENTS 2026-10-23). It reads and writes the live database: a preview is the real Studium, unreleased.
+  preview:
+    needs: [site, rules]
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+    concurrency:
+      group: studium-preview-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      PREVIEW_ENABLED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ALEXANDERKHOLODOV != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pack the app as a release
+        run: |
+          bash tools/pack.sh "0.0.0-pr${{ github.event.pull_request.number }}" "${{ github.event.pull_request.head.sha }}" /tmp/pack
+          mkdir -p deploy/studium
+          tar -xzf /tmp/pack/studium-dist-v*.tar.gz -C deploy/studium
+      - name: Write the preview's Hosting configuration
+        run: |
+          cat > deploy/firebase.json <<'JSON'
+          {
+            "hosting": {
+              "public": ".",
+              "ignore": ["firebase.json"],
+              "redirects": [{ "source": "/", "destination": "/studium/", "type": 302 }],
+              "rewrites": [{ "source": "/studium{,/**}", "destination": "/studium/index.html" }],
+              "headers": [
+                { "source": "**/*.@(html|json)", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+                { "source": "/studium/assets/**", "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] }
+              ]
+            }
+          }
+          JSON
+      - name: Preview unavailable
+        if: env.PREVIEW_ENABLED != 'true'
+        run: echo '::notice::Preview skipped. The secret FIREBASE_SERVICE_ACCOUNT_ALEXANDERKHOLODOV is missing.'
+      - name: Deploy the preview channel
+        if: env.PREVIEW_ENABLED == 'true'
+        uses: FirebaseExtended/action-hosting-deploy@500ac625ca2dd40cbd15f7659af953801858032a # v0.11.0
+        with:
+          entryPoint: deploy
+          projectId: alexanderkholodov
+          channelId: studium-pr-${{ github.event.pull_request.number }}
+          expires: 30d
+          # The action fetches firebase-tools at run time: the locked version, never latest.
+          firebaseToolsVersion: 15.33.0
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ALEXANDERKHOLODOV }}

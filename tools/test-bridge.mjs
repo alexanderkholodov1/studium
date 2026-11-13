@@ -121,9 +121,11 @@ await test('another origin is refused, without CORS headers', async () => {
   check(!r.headers['access-control-allow-origin'], 'CORS header leaked');
   const pre = await call('OPTIONS', '/v1/run', { origin: 'https://studium101.web.app.evil.example' });
   check(pre.status === 403, `preflight ${pre.status}`);
+  // Another repository's preview on the portfolio's project is not Studium.
+  check((await call('GET', '/v1/status', { origin: 'https://alexanderkholodov--pr-25-abcd1234.web.app' })).status === 403, 'another preview');
 });
 await test('a preview channel and the local preview are allowed', async () => {
-  for (const origin of ['https://studium101--v0-6-0-abc123.web.app', 'http://localhost:5173']) {
+  for (const origin of ['https://alexanderkholodov--studium-pr-16-i3n9iohk.web.app', 'https://studium101--v0-6-0-abc123.web.app', 'http://localhost:5173']) {
     const r = await call('GET', '/v1/hello', { origin, auth: null });
     check(r.headers['access-control-allow-origin'] === origin, origin);
   }

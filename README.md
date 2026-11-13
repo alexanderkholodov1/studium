@@ -219,7 +219,10 @@ node tools/dev.mjs --emulators
 
 1. Work on a branch. Commits may carry any working version.
 2. When a milestone is complete, open a pull request titled `vX.Y.Z: <what it delivers>`. `Checks` runs on every push
-   and pull request, including the rules tests on the emulators.
+   and pull request, including the rules tests on the emulators. When they pass, the pull request deploys its own
+   preview by itself: the app packed as a release, at `/studium/` on the channel `studium-pr-<number>` of the
+   portfolio's Hosting project (secret `FIREBASE_SERVICE_ACCOUNT_ALEXANDERKHOLODOV`), for 30 days, with its address
+   commented on the pull request. A preview reads and writes the live database.
 3. The operator merges. `Release on merge` then checks the merge commit, publishes and tests the database rules, and
    publishes the GitHub Release `vX.Y.Z`. Nothing is published without that merge.
 4. The portfolio mounts the latest release on its next deploy.
