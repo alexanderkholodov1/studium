@@ -400,13 +400,24 @@ function base64(file) {
     r.readAsDataURL(file);
   });
 }
-// The parts as the way reads them: a PDF becomes pictures of its pages where the way does not read PDFs.
-async function adapt(files, reads) {
-  if (reads.pdf || !files.some((f) => f.type === 'application/pdf')) return files;
-  const { pdfPictures } = await import('./files.js');
-  const out = [];
-  for (const f of files) out.push(...(f.type === 'application/pdf' ? await pdfPictures(f) : [f]));
-  return out;
+// The parts as the way reads them: a PDF becomes pictures of its pages where the way does not read PDFs, or its text
+// where it reads no pictures either. A picture or a scan for a way that reads no pictures fails that part only.
+async function adapt(files, reads, way = '') {
+  const pictures = (f) => f.type?.startsWith('image/');
+  if (!reads.pdf && files.some((f) => f.type === 'application/pdf')) {
+    const { pdfPictures, pdfAsText } = await import('./files.js');
+    const out = [];
+    for (const f of files) {
+      if (f.type !== 'application/pdf') { out.push(f); continue; }
+      if (reads.images) { out.push(...await pdfPictures(f)); continue; }
+      const text = await pdfAsText(f);
+      if (!text) throw new AIError(`${WAYS[way]?.name ?? 'Esta IA'} no lee escaneos ni fotos: elige otra IA para esta parte.`, { kind: 'job', way });
+      out.push(text);
+    }
+    files = out;
+  }
+  if (!reads.images && files.some(pictures)) throw new AIError(`${WAYS[way]?.name ?? 'Esta IA'} no lee escaneos ni fotos: elige otra IA para esta parte.`, { kind: 'job', way });
+  return files;
 }
 const dataURL = (f) => `data:${f.type};base64,${f.data}`;
 // OpenAI's form of the parts, which OpenRouter and Puter also read.
@@ -431,7 +442,7 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
   const model = c.model || recommend(task, way);
   if (!model) throw new AIError('Elige un modelo: pulsa «Probar» en Ajustes para ver los de tu cuenta.', { kind: 'account', way });
   const effort = fitEffort(way, c.effort);
-  const usable = await adapt(files.filter((f) => !f.skipped), readsOf(way));
+  const usable = await adapt(files.filter((f) => !f.skipped), readsOf(way), way);
   const meta = { provider: vendorOf(way, model), way, model, effort };
   try {
     const out = await send({ way, model, effort, system, text, files: usable, maxTokens, onProgress, signal });
@@ -520,7 +531,7 @@ async function send({ way, model, effort, system, text, files, maxTokens, onProg
       }
       content.push({ type: 'text', text });
     } catch {
-      content = openaiParts(await adapt(files, { pdf: false, images: true }), text).filter((p) => p.type !== 'file');
+      content = openaiParts(await adapt(files, { pdf: false, images: true }, way), text).filter((p) => p.type !== 'file');
     }
     try {
       const r = await puter.ai.chat([{ role: 'system', content: system }, { role: 'user', content }], false, { model, max_tokens: maxTokens, normalize: true, signal, ...(effort ? { reasoning_effort: effort === 'xhigh' ? 'high' : effort } : {}) });
