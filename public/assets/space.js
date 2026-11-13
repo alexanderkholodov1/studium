@@ -364,43 +364,142 @@ function mapSettings() {
 }
 
 /* ---------- your AI ---------- */
-// One key per provider, as many providers as the person wants. Which one, which model and how much effort is chosen
-// each time the AI is used.
+// Every way to connect an AI, as many as the person wants. Which one, which model and how much effort is chosen each
+// time the AI is used, and the page proposes the best of what is connected.
+const aiMsg = (id, text = '') => `<p class="msg" data-ai-msg="${id}" role="status">${esc(text)}</p>`;
+const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+function keyCard(k) {
+  const pr = ai.PROVIDERS[k]; const key = ai.keyOf(k); const n = ai.cachedModels(k).length;
+  return `<article class="ai-key ${key ? 'on' : ''}">
+    <h3>${esc(pr.name)} <small>${esc(pr.by)}</small>${key ? ' <span class="badge ok">conectada</span>' : ''}</h3>
+    <label class="field"><span>Tu clave de API</span><input type="password" data-ai-key="${k}" value="${esc(key)}" placeholder="${esc(pr.keyHint)}" autocomplete="off" spellcheck="false"></label>
+    <div class="actions"><button class="button ghost small" data-ai-test="${k}" ${key ? '' : 'disabled'}>Probar</button>
+      ${key ? `<button class="link" data-ai-forget="${k}">Borrar la clave</button>` : ''}
+      <a class="link" href="${esc(pr.keys)}" target="_blank" rel="noopener noreferrer">¿Dónde la consigo?</a></div>
+    ${aiMsg(k, key && n ? `${count(n, 'modelo', 'modelos')} en tu cuenta.` : '')}
+  </article>`;
+}
+function geminiCard() {
+  const key = ai.keyOf('gemini'); const n = ai.cachedModels('gemini').length;
+  return `<article class="ai-way ${key ? 'on' : ''}">
+    <h3>Gratis, con tu cuenta de Google <small>Gemini</small>${key ? ' <span class="badge ok">conectada</span>' : ''}</h3>
+    <ol class="howto">
+      <li>Abre <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a> con cualquier cuenta de Google.</li>
+      <li>Pulsa «Create API key». No pide tarjeta.</li>
+      <li>Pega aquí la clave.</li>
+    </ol>
+    <label class="field"><span>Tu clave de Gemini</span><input type="password" data-ai-key="gemini" value="${esc(key)}" placeholder="AIza…" autocomplete="off" spellcheck="false"></label>
+    <div class="actions"><button class="button ghost small" data-ai-test="gemini" ${key ? '' : 'disabled'}>Probar</button>
+      ${key ? '<button class="link" data-ai-forget="gemini">Borrar la clave</button>' : ''}</div>
+    ${aiMsg('gemini', key && n ? `${count(n, 'modelo', 'modelos')} en tu cuenta.` : '')}
+    <p class="fine">Google pone un límite de pedidos por día; cuando se acaba, Studium espera a que se renueve y sigue. En el plan gratis, Google puede usar lo que recibe para mejorar sus productos.</p>
+  </article>`;
+}
+function bridgeCard() {
+  const b = ai.bridgeOf();
+  const engines = b?.engines ?? [];
+  if (b?.token) {
+    return `<article class="ai-way on">
+      <h3>Con tu suscripción <small>el puente, en tu computadora</small>${engines.some((e) => e.ready) ? ' <span class="badge ok">enlazado</span>' : ''}</h3>
+      <ul class="engines">${engines.length
+        ? engines.map((e) => `<li class="${e.ready ? 'ok' : ''}"><strong>${esc(e.name)}</strong> <span>${esc(e.ready ? `lista, ${count((e.models ?? []).length, 'modelo', 'modelos')}` : e.detail || 'no está lista')}</span></li>`).join('')
+        : '<li>Pulsa «Revisar» con el puente abierto.</li>'}</ul>
+      <div class="actions"><button class="button ghost small" data-ai-bridge-check>Revisar</button><button class="link" data-ai-forget="bridge">Desenlazar</button></div>
+      ${aiMsg('bridge')}
+      <p class="fine">El puente debe estar abierto mientras Studium usa tu IA. Si lo cierras, la cola espera hasta que lo abras otra vez.</p>
+    </article>`;
+  }
+  return `<article class="ai-way">
+    <h3>Con tu suscripción <small>Claude Pro o Max, ChatGPT, Google AI Pro</small></h3>
+    <p>El puente es un programa pequeño que corre en tu computadora y usa tu Claude Code, Codex o Antigravity, con tu sesión ya iniciada. Sin API y sin costo por uso.</p>
+    <ol class="howto">
+      <li>Necesitas <a href="https://nodejs.org/" target="_blank" rel="noopener noreferrer">Node</a> 20 o más nuevo y al menos una de esas IA instalada, con tu sesión iniciada.</li>
+      <li><a href="${esc(ai.BRIDGE_URL)}" download="studium-bridge.mjs">Descarga el puente</a>.</li>
+      <li>En una terminal, en la carpeta donde lo guardaste, escribe <code>node studium-bridge.mjs</code>.</li>
+      <li>Abre el enlace que te muestra. Chrome te pedirá permiso para que Studium hable con tu computadora: acéptalo.</li>
+    </ol>
+    <label class="field"><span>O pega aquí su código de enlace</span><input data-ai-pair-code placeholder="41730.…" autocomplete="off" spellcheck="false"></label>
+    <div class="actions"><button class="button ghost small" data-ai-pair>Enlazar</button></div>
+    ${aiMsg('bridge')}
+  </article>`;
+}
+function loginCard(way) {
+  const on = ai.connected().includes(way);
+  const n = ai.cachedModels(way).length;
+  const name = way === 'openrouter' ? 'OpenRouter' : 'Puter';
+  const text = way === 'openrouter'
+    ? 'Inicia sesión y vuelve aquí, sin copiar claves. Sus modelos gratis no cuestan nada y aceptan 50 pedidos al día (1.000 si alguna vez compraste 10 USD de crédito): sirven para pocos archivos.'
+    : 'Inicia sesión con un clic y usa Claude, GPT o Gemini con lo que tiene disponible tu cuenta de Puter. Puter es un servicio aparte: mientras lo uses, su código corre en esta página.';
+  return `<article class="ai-way ${on ? 'on' : ''}">
+    <h3>${name} <small>con un clic</small>${on ? ' <span class="badge ok">conectada</span>' : ''}</h3>
+    <p>${esc(text)}</p>
+    <div class="actions">${on
+      ? `<button class="button ghost small" data-ai-test="${way}">Probar</button><button class="link" data-ai-forget="${way}">Desconectar</button>`
+      : `<button class="button primary small" data-ai-login="${way}">Conectar con ${name}</button>`}</div>
+    ${aiMsg(way, on && n ? `${count(n, 'modelo disponible', 'modelos disponibles')}.` : '')}
+  </article>`;
+}
 function aiSettings() {
-  const offered = Object.keys(ai.PROVIDERS).filter((k) => settings.get().providers.includes(k));
+  const has = (way) => ai.offered(way);
+  const keys = ['anthropic', 'openai'].filter(has);
+  const now = ai.connected();
   return `<section class="set glass" id="set-ai"><h2>Tu IA</h2>
-    <p>Conecta una o varias IA con tus propias claves, y Studium las usa para procesar tu material, crear guías a tu
-      medida, identificar documentos y editar tus guías por partes. <strong>Studium no cobra nada</strong>: cada proveedor
-      cobra lo que use su clave, según su tarifa.</p>
-    <p class="fine">El modelo y el esfuerzo se eligen cada vez que usas la IA: para crear una guía conviene el modelo más
-      potente; para identificar un documento basta uno ligero. Studium recuerda tu última elección para cada cosa.</p>
-    <div class="ai-keys">${offered.map((k) => {
-      const pr = ai.PROVIDERS[k]; const key = ai.keyOf(k); const n = ai.cachedModels(k).length;
-      return `<article class="ai-key ${key ? 'on' : ''}">
-        <h3>${esc(pr.name)} <small>${esc(pr.by)}</small>${key ? ' <span class="badge ok">conectada</span>' : ''}</h3>
-        <label class="field"><span>Tu clave de API</span><input type="password" data-ai-key="${k}" value="${esc(key)}" placeholder="${esc(pr.keyHint)}" autocomplete="off" spellcheck="false"></label>
-        <div class="actions"><button class="button ghost small" data-ai-test="${k}" ${key ? '' : 'disabled'}>Probar</button>
-          ${key ? `<button class="link" data-ai-forget="${k}">Borrar la clave</button>` : ''}
-          <a class="link" href="${esc(pr.keys)}" target="_blank" rel="noopener noreferrer">¿Dónde la consigo?</a></div>
-        <p class="msg" data-ai-msg="${k}" role="status">${key && n ? `${n} ${n === 1 ? 'modelo' : 'modelos'} en tu cuenta.` : ''}</p>
-      </article>`;
-    }).join('')}</div>
-    <p class="hint">Las claves se guardan solo en este navegador: no llegan a la base de datos de Studium ni a su creador.
+    <p>Studium usa tu IA para procesar tu material, crear guías a tu medida, identificar documentos y editar tus guías.
+      <strong>Studium no cobra nada.</strong> Conecta una o varias, de la forma que tengas: cada vez que la uses, Studium te
+      propone dónde, con qué modelo y con qué esfuerzo.</p>
+    ${now.length ? `<p class="fine">Conectadas: ${now.map((w) => esc(ai.wayName(w))).join(' · ')}.</p>` : ''}
+    <div class="ai-ways">
+      ${has('gemini') ? geminiCard() : ''}
+      ${has('bridge:claude') ? bridgeCard() : ''}
+      ${has('openrouter') ? loginCard('openrouter') : ''}
+      ${has('puter') ? loginCard('puter') : ''}
+    </div>
+    ${keys.length ? `<details class="ai-more" ${keys.some((k) => ai.keyOf(k)) ? 'open' : ''}><summary>Con una clave de API, que cobra por uso</summary>
+      <div class="ai-keys">${keys.map(keyCard).join('')}</div>
+      <p class="fine">Una suscripción de claude.ai o de ChatGPT no incluye la API: para usar tu suscripción, conecta el puente.</p></details>` : ''}
+    <p class="hint">Las claves y sesiones se guardan solo en este navegador: no llegan a la base de datos de Studium ni a su creador.
       En un computador compartido, bórralas al terminar.</p>
-    <p class="fine">¿Prefieres tu suscripción de Claude, ChatGPT o Gemini, sin clave? Al crear una guía, «Con tu suscripción» copia las instrucciones y abre el chat en su página.</p>
+    <p class="fine">¿Sin conectar nada, o con una cuenta gratis de Claude o ChatGPT? Al aportar material o crear una guía, Studium te da las instrucciones y las partes listas para llevarlas al chat de tu IA.</p>
   </section>`;
 }
-async function testAI(provider) {
-  const msg = document.querySelector(`[data-ai-msg="${provider}"]`);
+async function testAI(way) {
+  const msg = document.querySelector(`[data-ai-msg="${way}"]`);
   if (!msg) return;
   msg.classList.remove('ok');
   msg.textContent = 'Probando…';
   try {
-    const list = await ai.models(provider);
+    const list = await ai.models(way);
     msg.classList.add('ok');
-    msg.textContent = `Conectada: ${list.length} ${list.length === 1 ? 'modelo' : 'modelos'} en tu cuenta. Para crear guías se recomienda ${ai.recommend('guide', provider) || list[0]}.`;
+    msg.textContent = `Conectada: ${count(list.length, 'modelo', 'modelos')}. Para crear guías se recomienda ${ai.recommend('guide', way) || list[0] || 'el de tu cuenta'}.`;
     sfx.chime();
   } catch (error) { msg.textContent = error.message; }
+}
+// The bridge's link («#/ajustes?puente=41730.code») or its code, pasted.
+export async function pairBridge(text) {
+  const m = String(text ?? '').trim().match(/(?:puente=)?(\d{2,5})\.([A-Za-z0-9_-]{16,})/);
+  if (!m) { ctx?.toast('Ese no es un código del puente: empieza con el puerto, un punto y el código.'); return false; }
+  try {
+    const engines = await ai.pairBridge(m[1], m[2]);
+    const ready = engines.filter((e) => e.ready).map((e) => e.name);
+    ctx?.toast(ready.length ? `Puente enlazado: ${ready.join(', ')}.` : 'Puente enlazado, pero ninguna IA está lista en tu computadora.');
+    sfx.chime();
+    return true;
+  } catch (error) { ctx?.toast(error.message); return false; } finally { if ($('#set-ai')) renderSettings(); }
+}
+async function aiAction(t) {
+  if (t.dataset.aiLogin === 'openrouter') { await ai.connectOpenRouter(); return; }
+  if (t.dataset.aiLogin === 'puter') {
+    t.disabled = true;
+    try { await ai.connectPuter(); ctx.toast('Puter quedó conectado.'); sfx.chime(); } catch (error) { ctx.toast(error.message); }
+    renderSettings();
+    return;
+  }
+  if (t.dataset.aiPair !== undefined) { await pairBridge($('[data-ai-pair-code]')?.value); return; }
+  if (t.dataset.aiBridgeCheck !== undefined) {
+    const msg = $('[data-ai-msg="bridge"]');
+    if (msg) msg.textContent = 'Revisando…';
+    try { await ai.bridgeStatus(); renderSettings(); } catch (error) { const m = $('[data-ai-msg="bridge"]'); if (m) m.textContent = error.message; }
+  }
 }
 
 let savedTimer = 0;
@@ -435,7 +534,12 @@ export function mountSpace(context) {
       if (t.dataset.knownReset !== undefined) prefs.set({ known: [] });
       if (t.dataset.myCourse || t.dataset.myArea || t.dataset.knownReset !== undefined) { sfx.tick(); $('#set-map').outerHTML = mapSettings(); }
     }
-    if (t.dataset.aiForget) { ai.forget(t.dataset.aiForget); renderSettings(); ctx?.toast('La clave se borró de este navegador.'); }
+    if (t.dataset.aiForget) {
+      const way = t.dataset.aiForget;
+      ai.forget(way); renderSettings();
+      ctx?.toast(way === 'bridge' ? 'El puente quedó desenlazado.' : way === 'puter' || way === 'openrouter' ? 'Se desconectó de este navegador.' : 'La clave se borró de este navegador.');
+    }
+    if (t.dataset.aiLogin || t.dataset.aiPair !== undefined || t.dataset.aiBridgeCheck !== undefined) aiAction(t);
     if (t.dataset.soundTest !== undefined) { sfx.enable(true); sfx.chime(); if (!prefs.get().sound) setTimeout(() => sfx.enable(false), 900); }
     if (t.id === 'timer-go') {
       timer.running = !timer.running;

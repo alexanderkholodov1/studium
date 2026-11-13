@@ -19,7 +19,9 @@ jobs:
       - name: Check the site
         run: node tools/check.mjs
       - name: Check the scripts parse
-        run: for f in public/assets/*.js tools/*.mjs; do node --check "$f"; done
+        run: for f in public/assets/*.js public/assets/*.mjs tools/*.mjs; do node --check "$f"; done
+      - name: Test the local bridge with fake CLIs
+        run: node tools/test-bridge.mjs
       - name: Check that the tools fingerprint files as the app does
         run: node tools/test-fingerprint.mjs
       - name: Pack a trial release

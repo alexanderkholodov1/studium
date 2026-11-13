@@ -186,7 +186,10 @@ function pageSection() {
       ${sw('radio', 'La radio', 'el easter egg de la radio')}
       ${sw('bubbles', 'Burbujas del modo juguetón', 'apagadas por defecto')}</div></section>
     <section class="set glass"><h2>Proveedores de IA que se ofrecen</h2><div class="switches">
-      ${[['anthropic', 'Claude (Anthropic)'], ['openai', 'ChatGPT (OpenAI)'], ['gemini', 'Gemini (Google)']].map(([k, label]) => `<label class="toggle"><input type="checkbox" data-provider="${k}" ${draft.providers.includes(k) ? 'checked' : ''}><span class="knob"></span>${esc(label)}</label>`).join('')}</div></section>
+      ${[['anthropic', 'Claude (Anthropic)'], ['openai', 'ChatGPT (OpenAI)'], ['gemini', 'Gemini (Google)']].map(([k, label]) => `<label class="toggle"><input type="checkbox" data-provider="${k}" ${draft.providers.includes(k) ? 'checked' : ''}><span class="knob"></span>${esc(label)}</label>`).join('')}
+      ${sw('bridge', 'El puente', 'la suscripción de cada uno, desde su computadora')}
+      ${sw('openrouter', 'OpenRouter', 'modelos gratis, con un clic')}
+      ${sw('puter', 'Puter', 'un servicio aparte, con un clic')}</div></section>
     <section class="set glass"><h2>Anuncio <small>Arriba de la página, para todos los miembros</small></h2>
       <label class="toggle"><input type="checkbox" data-ann="on" ${a.on ? 'checked' : ''}><span class="knob"></span>Mostrar el anuncio</label>
       <label class="field"><span>Texto</span><textarea data-ann="text" maxlength="280" rows="2" class="plain">${esc(a.text)}</textarea></label>

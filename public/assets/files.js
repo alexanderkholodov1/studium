@@ -588,6 +588,14 @@ export async function prepareGroup(group) {
     }],
   };
 }
+// A PDF part as pictures of its pages, for an AI that reads pictures but not PDFs (Codex through the bridge, for
+// example). Large pages go in quarters, as scans do.
+export async function pdfPictures(part) {
+  const lib = await pdfjs();
+  const bytes = Uint8Array.from(atob(part.data), (c) => c.charCodeAt(0));
+  const doc = await lib.getDocument({ data: bytes, isEvalSupported: false, useSystemFonts: true }).promise;
+  return pagePictures(doc, 1, doc.numPages, baseName(part.name));
+}
 // What a unit's parts weigh, for the queue.
 export const partsSize = (parts) => parts.reduce((s, p) => s + (p.data ? (p.data.length * 3) / 4 : p.text.length), 0);
 // A unit's parts as files to download, for a person who takes them to their subscription's chat.

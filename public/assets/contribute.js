@@ -594,7 +594,7 @@ async function generateGuide() {
     });
     const html = ai.htmlFrom(res.text);
     if (!html) throw new Error('Tu IA no devolvió una página HTML completa. Vuelve a intentarlo.');
-    const item = addReview('guide', html, `Guía creada con ${ai.PROVIDERS[res.provider]?.name ?? 'tu IA'}`, { provider: res.provider, model: res.model, effort: res.effort });
+    const item = addReview('guide', html, `Guía creada con ${ai.WAYS[res.way]?.name ?? 'tu IA'}`, { provider: res.provider, model: res.model, effort: res.effort });
     out.textContent = res.truncated ? 'Lista, pero quedó cortada: elige una extensión más corta y vuelve a crearla.' : 'Lista: revísala abajo y publícala.';
     document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (error) {

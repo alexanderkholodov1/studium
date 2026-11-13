@@ -110,7 +110,7 @@ async function identify(file) {
       const json = JSON.parse(res.text.slice(res.text.indexOf('{'), res.text.lastIndexOf('}') + 1));
       for (const k of ['kind', 'course', 'code', 'professor', 'term', 'title']) if (typeof json[k] === 'string' && json[k].trim()) found[k] = json[k].trim();
       if (!(found.kind in DOC_KINDS)) found.kind = 'other';
-      how = `con tu IA (${ai.PROVIDERS[res.provider].name})`;
+      how = `con tu IA (${ai.WAYS[res.way]?.name ?? 'tu IA'})`;
     } catch (error) { status.textContent = `Tu IA no pudo: ${error.message} Uso lo que Studium encontró.`; }
   }
   const form = $('#doc-form');
