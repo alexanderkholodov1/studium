@@ -97,7 +97,8 @@ await test('files the browser had no room for are asked again, and the same file
   await a.add({ name: 'grande.pdf', print: 'f8', list: [file('grande.pdf', 5)], units: units(2) });
   const b = queueWith(store, async () => ({ text: 'ok' }));
   await b.load();
-  check(b.jobs().every((j) => j.state === 'missing'), b.jobs().map((j) => j.state).join());
+  b.start(); // the tab that runs the queue finds no file for them
+  await until(() => b.jobs().every((j) => j.state === 'missing'), 'both missing their file');
   check(await b.attach('f8', [file('grande.pdf', 5)]), 'matched by fingerprint');
   await until(() => b.counts().done === 2, 'done after dropping it again');
 });
@@ -136,6 +137,46 @@ await test('chapters not chosen wait; choosing one runs it; finished work leaves
   for (const j of q.jobs().filter((x) => x.state === 'done')) await q.reviewed(j.id, 'published');
   await q.clearFinished();
   check(q.jobs().length === 0 && q.groups().length === 0, 'all cleared');
+});
+
+await test('a part dropped while the loop reads the store is not lost', async () => {
+  const store = memoryStore();
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  // The store's first read is slow: a second file arrives meanwhile.
+  const slow = { ...store, getAll: async () => { const snap = await store.getAll(); await gate; return snap; } };
+  const q = queueWith(slow, async () => ({ text: 'ok' }));
+  await q.add({ name: 'uno.txt', print: 'r1', list: [file('uno.txt')], units: units(1) });
+  await q.add({ name: 'dos.txt', print: 'r2', list: [file('dos.txt')], units: units(1) });
+  release();
+  await until(() => q.counts().done === 2, 'both done');
+});
+await test('another tab\'s news never makes the running part run twice', async () => {
+  const store = memoryStore();
+  const ran = [];
+  let q;
+  q = queueWith(store, async (job) => {
+    ran.push(job.id);
+    // While the AI reads, the store still says «waiting» for an older copy, and another tab announces a change.
+    await store.putJob({ ...job, state: 'waiting' });
+    await q.load();
+    await tick(10);
+    return { text: 'ok' };
+  });
+  await q.add({ name: 'h.pdf', print: 'r3', list: [file('h.pdf')], units: units(2) });
+  await until(() => q.counts().done === 2, 'both done');
+  await tick(50);
+  check(ran.length === 2 && new Set(ran).size === 2, ran.join());
+});
+await test('a tab that does not run the queue never marks parts as missing their file', async () => {
+  const store = memoryStore({ room: 0 });
+  const a = queueWith(store, () => new Promise(() => {}));
+  await a.add({ name: 'i.pdf', print: 'r4', list: [file('i.pdf', 5)], units: units(2) });
+  const b = queueWith(store, async () => ({ text: 'ok' }));
+  await b.load();
+  check(b.jobs().every((j) => j.state !== 'missing'), b.jobs().map((j) => j.state).join());
+  const back = (await store.getAll()).jobs;
+  check(back.every((j) => j.state !== 'missing'), 'saved as missing');
 });
 
 /* ---------- what the errors mean ---------- */

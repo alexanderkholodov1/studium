@@ -446,6 +446,8 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
   const meta = { provider: vendorOf(way, model), way, model, effort };
   try {
     const out = await send({ way, model, effort, system, text, files: usable, maxTokens, onProgress, signal });
+    // An empty answer is a failure of the AI, never a result to review: it is tried again.
+    if (!String(out.text ?? '').trim()) throw new AIError('Tu IA devolvió una respuesta vacía. Studium vuelve a probar.', { kind: 'transient', way });
     return { ...out, ...meta, truncated: !!out.truncated };
   } catch (e) {
     if (e instanceof AIError) throw e;
@@ -493,6 +495,8 @@ async function send({ way, model, effort, system, text, files, maxTokens, onProg
     });
     const choice = body.choices?.[0];
     if (body.error) throw classify({ way, status: Number(body.error.code) || 500, message: body.error.message, body });
+    // OpenRouter may answer 200 with the model's failure inside the choice.
+    if (choice?.error || choice?.finish_reason === 'error') throw classify({ way, status: Number(choice.error?.code) || 502, message: choice.error?.message ?? 'error', body: choice });
     return { text: choice?.message?.content ?? '', truncated: choice?.finish_reason === 'length' };
   }
 

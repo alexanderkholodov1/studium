@@ -25,6 +25,8 @@ export function createQueue({ store, process, now = () => Date.now(), timers = g
   const jobs = new Map();
   const files = new Map(); // group id -> its File objects, while this page lives
   let looping = false;
+  let again = false; // a start asked while the loop was running or waiting for its turn
+  let current = ''; // the part the loop holds, from the moment it picks it
   let wake = null;
   let order = 0;
   const status = { paused: false, stopped: '', note: '', waitUntil: 0, running: '', progress: '' };
@@ -42,24 +44,19 @@ export function createQueue({ store, process, now = () => Date.now(), timers = g
   const poke = () => wake?.();
 
   const api = {
-    // What the store holds (also what another tab changed). The part this tab is running keeps its own state.
+    // What the store holds, merged into what this tab knows (another tab may have added or changed parts). Nothing
+    // this tab knows is dropped by a read that started before it was added, and the part the loop holds keeps the very
+    // object the loop works on, so no part is lost or run twice. Only the loop decides that a part misses its file.
     async load() {
       const all = await store.getAll();
-      groups.clear();
-      for (const g of all.groups) groups.set(g.id, g);
-      const mine = jobs.get(status.running);
-      for (const id of [...jobs.keys()]) if (id !== status.running) jobs.delete(id);
+      for (const g of all.groups) groups.set(g.id, { ...groups.get(g.id), ...g });
       for (const j of all.jobs) {
-        if (j.id === status.running && mine) continue;
-        jobs.set(j.id, j);
         order = Math.max(order, j.order ?? 0);
+        if (j.id === current) continue;
+        const known = jobs.get(j.id);
+        if (known) Object.assign(known, j); else jobs.set(j.id, j);
       }
-      // Jobs of a group whose files were not kept cannot go on until the person drops them again.
-      for (const j of jobs.values()) {
-        const g = groups.get(j.gid);
-        if (j.state === 'waiting' && g && !g.stored && !files.has(g.id)) { j.state = 'missing'; await save(j); }
-      }
-      changed();
+      changed({ loaded: true });
     },
     groups: () => [...groups.values()],
     jobs: sorted,
@@ -96,7 +93,7 @@ export function createQueue({ store, process, now = () => Date.now(), timers = g
       for (const [index, u] of units.entries()) {
         order += 1;
         const j = { id: `${id}-${index}`, gid: id, index, order, label: u.label, note: u.note ?? '', stage: u.stage ?? '', print: u.print ?? '',
-          state: u.on ? (manual ? 'manual' : 'waiting') : 'off', attempts: 0, retryAt: 0, error: '', result: null };
+          state: u.on ? (manual ? 'manual' : 'waiting') : 'off', inMap: !!u.inMap, attempts: 0, retryAt: 0, error: '', result: null };
         jobs.set(j.id, j);
         await save(j);
         added.push(j);
@@ -157,9 +154,14 @@ export function createQueue({ store, process, now = () => Date.now(), timers = g
     },
     // Runs the waiting parts one after the other. lock(fn) runs fn only in the one tab that holds the queue.
     start(lock = api.lock) {
-      if (looping || status.paused || status.stopped) return;
-      looping = true;
-      Promise.resolve(lock ? lock(loop) : loop()).catch(() => {}).finally(() => { looping = false; status.running = ''; changed(); });
+      if (status.paused || status.stopped) return;
+      if (looping) { again = true; return; }
+      looping = true; again = false;
+      Promise.resolve(lock ? lock(loop) : loop()).catch(() => {}).finally(() => {
+        looping = false; status.running = ''; current = ''; changed();
+        // A part added while the loop was ending is not left waiting until a reload.
+        if (again) { again = false; api.start(lock); }
+      });
     },
     lock: null,
     setProgress(id, text) { if (status.running === id) { status.progress = text; changed({ progress: id }); } },
@@ -181,9 +183,10 @@ export function createQueue({ store, process, now = () => Date.now(), timers = g
         await sleep(until - now());
         continue;
       }
+      current = job.id;
       const g = groups.get(job.gid);
       const list = await api.filesOf(job.gid);
-      if (!g || !list) { job.state = 'missing'; await save(job); changed(); continue; }
+      if (!g || !list) { job.state = 'missing'; current = ''; await save(job); changed(); continue; }
       job.state = 'running'; status.running = job.id; status.progress = ''; status.note = ''; status.waitUntil = 0;
       await save(job); changed();
       try {
@@ -211,7 +214,7 @@ export function createQueue({ store, process, now = () => Date.now(), timers = g
         await save(job);
         if (kind === 'daily') for (const j of jobs.values()) if (j.state === 'waiting') await save(j);
         changed({ failed: job, kind });
-      } finally { status.running = ''; status.progress = ''; }
+      } finally { status.running = ''; status.progress = ''; current = ''; }
     }
   }
   return api;

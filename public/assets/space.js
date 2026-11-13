@@ -447,7 +447,7 @@ function aiSettings() {
     <p>Studium usa tu IA para procesar tu material, crear guías a tu medida, identificar documentos y editar tus guías.
       <strong>Studium no cobra nada.</strong> Conecta una o varias, de la forma que tengas: cada vez que la uses, Studium te
       propone dónde, con qué modelo y con qué esfuerzo.</p>
-    ${now.length ? `<p class="fine">Conectadas: ${now.map((w) => esc(ai.wayName(w))).join(' · ')}.</p>` : ''}
+    ${now.length ? `<p class="fine">Conectadas: ${now.map((w) => esc(ai.WAYS[w].name)).join(' · ')}.</p>` : ''}
     <div class="ai-ways">
       ${has('gemini') ? geminiCard() : ''}
       ${has('bridge:claude') ? bridgeCard() : ''}

@@ -1070,3 +1070,8 @@ PATTERNS.push(
   [/^(Claude Code|Codex|Antigravity) terminó con un error: (.+)$/, '$1 ended with an error: $2'],
   [/^Tu IA respondió: (.+)$/, 'Your AI answered: $1'],
 );
+Object.assign(EN, {
+  'Ya está en el mapa: márcalo para procesarlo otra vez': 'Already in the map: tick it to process it again',
+  'Tu IA devolvió una respuesta vacía. Studium vuelve a probar.': 'Your AI returned an empty answer. Studium tries again.',
+});
+PATTERNS.push([/^(Claude Code|Codex|Antigravity|Esta IA) no lee escaneos ni fotos: elige otra IA para esta parte\.$/, (m, n) => `${n === 'Esta IA' ? 'This AI' : n} reads no scans or photos: choose another AI for this part.`]);

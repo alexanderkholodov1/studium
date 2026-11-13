@@ -159,11 +159,13 @@ function storeFor() {
   return memoryStore();
 }
 // One tab runs the queue; the others show it.
-const lockQueue = (fn) => (navigator.locks?.request ? navigator.locks.request('studium-queue', { ifAvailable: true }, (held) => (held ? fn() : false)) : fn());
+// The other tabs wait for their turn: when the tab that runs the queue closes, the next one takes it over.
+const lockQueue = (fn) => (navigator.locks?.request ? navigator.locks.request('studium-queue', () => fn()) : fn());
 let lastCounts = null;
 function onQueue(change) {
   if (change.progress) { const row = document.querySelector(`#q-${CSS.escape(change.progress)} > .state`); if (row) row.textContent = change.status.progress; return; }
-  channel?.postMessage('changed');
+  // Only this tab's own changes are announced: reading what another tab announced must not answer it back.
+  if (!change.loaded) channel?.postMessage('changed');
   if (change.done) syncReviews();
   if (change.kind === 'account') ctx?.toast(change.status.stopped);
   const c = queue.counts();
@@ -191,20 +193,22 @@ function renderQueueSoon() {
   requestAnimationFrame(() => { renderPending = false; renderQueue(); });
 }
 const STATES = {
-  off: 'Sin elegir', manual: 'Para tu chat', missing: 'Suelta este archivo otra vez para seguir', done: 'Listo: revísalo abajo',
+  manual: 'Para tu chat', missing: 'Suelta este archivo otra vez para seguir', done: 'Listo: revísalo abajo',
   published: 'Publicado', discarded: 'Quitado',
 };
 function jobState(job, st) {
   if (job.state === 'running') return st.progress || 'Leyendo…';
   if (job.state === 'waiting') return job.retryAt > Date.now() ? `Sigue a las ${clock(job.retryAt)}` : 'En espera';
   if (job.state === 'error') return job.error || 'Algo falló';
+  if (job.state === 'off') return job.inMap ? 'Ya está en el mapa: márcalo para procesarlo otra vez' : 'Sin elegir';
   if (job.state === 'done' && job.result?.truncated) return 'Listo, pero quedó cortado: revisa abajo';
   return STATES[job.state] ?? job.state;
 }
 function jobRow(job, many, st) {
   const cls = { running: 'busy', done: 'ok', published: 'ok', error: 'bad', off: 'skip', discarded: 'skip', missing: 'bad', manual: 'manual' }[job.state] ?? '';
   const name = many ? job.label.split(' · ').slice(1).join(' · ') || job.label : baseName(job.label);
-  const choose = many && ['off', 'waiting', 'manual', 'error'].includes(job.state) ? `<label class="check"><input type="checkbox" data-unit="${esc(job.id)}" ${job.state === 'off' ? '' : 'checked'}></label>` : '';
+  // A part of a book, or a file already in the map, can be chosen.
+  const choose = (many || job.state === 'off') && ['off', 'waiting', 'manual', 'error'].includes(job.state) ? `<label class="check"><input type="checkbox" data-unit="${esc(job.id)}" ${job.state === 'off' ? '' : 'checked'}></label>` : '';
   const actions = job.state === 'manual'
     ? `<div class="chat-part"><div class="actions"><button type="button" class="button ghost small" data-q-copy="${esc(job.id)}">Copiar instrucciones</button><button type="button" class="button ghost small" data-q-download="${esc(job.id)}">Descargar la parte</button></div>
         <textarea class="plain" rows="2" data-q-paste="${esc(job.id)}" placeholder="Pega aquí lo que te devolvió tu IA"></textarea>
@@ -267,6 +271,8 @@ async function enqueue(zone, files) {
   const v = materialValues();
   const known = printed();
   const manual = !ai.ready();
+  // What the picker shows now, a model just typed included, is what the queue uses.
+  if ($('[data-ai-pick="material"]')) ai.picked('material');
   queueNotes.length = 0;
   let added = 0;
   for (const group of groupFiles(files)) {
@@ -283,9 +289,8 @@ async function enqueue(zone, files) {
     const count = p.units.length;
     const prints = p.units.map((_, i) => unitPrint(print, i, count));
     const inMap = prints.map((x) => !!x && known.has(x));
-    if (count && inMap.every(Boolean)) { queueNotes.push({ name: group.name, why: 'Ya está en el mapa: este mismo archivo ya se aportó' }); continue; }
     // The stage the file's name says («Examen parcial 1.pdf»), unless the form says it for the whole batch.
-    const units = p.units.map((u, i) => ({ label: u.label, note: u.note, stage: v.stage || stageOf(u.label)?.label || '', print: prints[i], on: !!u.selected && !inMap[i] }));
+    const units = p.units.map((u, i) => ({ label: u.label, note: u.note, stage: v.stage || stageOf(u.label)?.label || '', print: prints[i], on: !!u.selected && !inMap[i], inMap: inMap[i] }));
     const { group: g } = await q.add({ zone, name: group.name, code: !!group.code, print, v: { ...v, known: (v.known ?? []).slice(0, 400) }, list: group.files, units, manual });
     remember(g.id, p);
     for (const n of p.notes ?? []) queueNotes.push({ name: group.name, why: n });

@@ -9,7 +9,7 @@
 import { createServer } from 'node:http';
 import { execFile, spawn } from 'node:child_process';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
-import { chmodSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { homedir, platform, tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -232,12 +232,15 @@ const ENGINES = {
           { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5', tier: 'mid' },
           { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5', tier: 'light' },
         ],
-        efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
+        // The efforts a guide may record (the database rules accept these).
+        efforts: ['low', 'medium', 'high', 'xhigh'],
       };
     },
-    // Read-only: it may read the files of its folder and nothing else.
+    // Read-only, and only its own folder: «Read(./**)» lets it read the files of its folder; a read anywhere else asks
+    // for a permission that a non-interactive run never grants (measured 2026-11-13: plain «Read» read a file in the
+    // home folder). So material that tells the model to read other files gets nothing.
     async run(b, dir, body, names, timeoutMs) {
-      const args = ['-p', prompt(names), '--output-format', 'json', '--allowedTools', 'Read',
+      const args = ['-p', prompt(names), '--output-format', 'json', '--allowedTools', 'Read(./**)',
         '--disallowedTools', 'Bash', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'WebFetch', 'WebSearch', 'Task', 'Agent'];
       if (body.model) args.push('--model', String(body.model));
       if (body.effort) args.push('--effort', String(body.effort));
@@ -265,8 +268,9 @@ const ENGINES = {
       const args = ['exec', '--skip-git-repo-check', '--sandbox', 'read-only', '--json', '-C', dir];
       if (body.model && body.model !== 'default') args.push('-m', String(body.model));
       if (body.effort) args.push('-c', `model_reasoning_effort=${String(body.effort).replace(/[^a-z]/g, '')}`);
+      // --image takes every value after it, so nothing follows the pictures: with no prompt argument, Codex reads it
+      // from stdin.
       for (const n of names) if (/\.(png|jpe?g|webp|gif)$/i.test(n)) args.push('-i', path.join(dir, n));
-      args.push('-');
       const r = await runCli(b, args, { cwd: dir, input: prompt(names), timeoutMs });
       let answer = ''; let error = '';
       for (const line of r.out.split(/\r?\n/)) {
@@ -334,7 +338,11 @@ async function handleRun(body) {
   if (!status.ready) throw new Failure(424, 'not-signed-in', `${engine.name} no está listo: ${status.detail}.`);
   const timeoutMs = Math.min(Math.max(Number(body.timeoutMs) || DEFAULT_TIMEOUT, 5000), MAX_TIMEOUT);
   const started = Date.now();
-  const dir = mkdtempSync(path.join(tmpdir(), TEMP_PREFIX));
+  // The folder by its real, long path: Windows may give the temporary folder as a short 8.3 name («ALEXAM~1»), and
+  // Claude Code refuses to read in a path written that way (measured 2026-11-13).
+  const made = mkdtempSync(path.join(tmpdir(), TEMP_PREFIX));
+  let dir = made;
+  try { dir = realpathSync.native(made); } catch { /* keep the path as made */ }
   try {
     const names = writeRun(dir, body);
     const text = await engine.run(await bin(body.engine === 'antigravity' ? 'agy' : body.engine), dir, body, names, timeoutMs);

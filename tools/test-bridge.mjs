@@ -146,6 +146,7 @@ await test('status lists the three CLIs, signed in, without calling a model', as
   check(by.codex.ready && !by.codex.reads.pdf && by.codex.models[0].id === 'default', 'codex');
   check(by.antigravity.ready && by.antigravity.models.some((m) => m.id === 'claude-opus-4-6-thinking' && m.tier === 'strong'), 'antigravity models');
   check(by.antigravity.efforts.length === 0, 'antigravity must not take --effort');
+  check(!by.claude.efforts.includes('max'), 'max cannot be recorded in a guide');
   check(calls().length === 0, 'a model was called during detection');
 });
 await test('claude runs read-only in a folder with the material and the instructions', async () => {
@@ -155,7 +156,7 @@ await test('claude runs read-only in a folder with the material and the instruct
   const [c] = calls();
   check(c.files.includes('examen.pdf') && c.files.includes('notas.txt') && c.files.includes('INSTRUCCIONES.md'), c.files.join());
   check(c.instructions.includes('Instrucciones de Studium') && c.instructions.includes('Procesa el material'), 'instructions');
-  check(c.args.includes('--allowedTools') && c.args[c.args.indexOf('--allowedTools') + 1] === 'Read', 'Read only');
+  check(c.args.includes('--allowedTools') && c.args[c.args.indexOf('--allowedTools') + 1] === 'Read(./**)', 'Read only, and only its own folder');
   for (const tool of ['Bash', 'Edit', 'Write', 'WebFetch']) check(c.args.includes(tool), `${tool} not disallowed`);
   check(c.args.includes('claude-haiku-5-5') && c.args.includes('low'), 'model or effort');
   check(!c.args.includes('--bare'), '--bare breaks macOS sign-in');
@@ -182,6 +183,7 @@ await test('codex gets its prompt on stdin, pictures with -i, and its answer is 
   check(c.input.includes('INSTRUCCIONES.md'), 'prompt not on stdin');
   check(c.args.includes('-i') && c.args.some((a) => a.endsWith('hoja 1.png')), 'picture not attached');
   check(!c.args.includes('-m'), 'the default model must not be forced');
+  check(c.args[c.args.length - 1].endsWith('hoja 1.png'), 'nothing may follow the pictures: --image would take it as one');
   check(c.args.includes('read-only'), 'not read-only');
 });
 await test('a model the ChatGPT account refuses is a 424', async () => {

@@ -1337,6 +1337,11 @@ html.has-announce .page { padding-top: 170px; }
 .ai-queue li.manual .state { color: var(--teal); }
 .chat-part { flex-basis: 100%; display: grid; gap: 8px; }
 .chat-part textarea { width: 100%; min-height: 3.2em; font-size: 14px; }
+@media (max-width: 560px) {
+  .ai-queue li { flex-wrap: wrap; gap: 2px 10px; }
+  .ai-queue .name { flex: 1 1 100%; }
+  .ai-queue .state { white-space: normal; }
+}
 .ai-pick select, .ai-pick input { padding-top: 8px; padding-bottom: 8px; font-size: 14.5px; }
 
 /* ---------- the map's light links ---------- */
