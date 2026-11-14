@@ -414,7 +414,7 @@ function search(text) {
   const wordsIn = q.split('-').length;
   if (wordsIn >= 2) {
     out.push({ kind: 'ask', label: `Preguntarle al mapa: «${text.trim()}»`, ai: false });
-    if (ai.ready()) out.push({ kind: 'ask', label: `Preguntarle a tu IA (${ai.PROVIDERS[ai.choice('ask').provider]?.name ?? 'IA'})`, ai: true });
+    if (ai.ready()) out.push({ kind: 'ask', label: `Preguntarle a tu IA (${ai.WAYS[ai.choice('ask').provider]?.name ?? 'IA'})`, ai: true });
   }
   for (const c of g.courses) if (has(c.name) || has(c.code)) out.push({ kind: 'node', node: c, label: c.name, tag: 'Materia' });
   const concepts = g.nodes.filter((n) => n.type === 'concept' && (has(n.name) || [...n.aliases].some(has))).sort((a, b) => (keyOf(a.name).startsWith(q) ? 0 : 1) - (keyOf(b.name).startsWith(q) ? 0 : 1) || b.weight - a.weight);

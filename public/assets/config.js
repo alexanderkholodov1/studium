@@ -19,7 +19,7 @@ export const DEFAULT_SETTINGS = {
   // confirmation e-mails, so the requirement only kept students out.
   confirmEmail: false,
   // Switches of the page, for everyone.
-  flags: { hints: true, eggs: true, radio: true, bubbles: false },
+  flags: { hints: true, eggs: true, radio: true, bubbles: false, bridge: true, openrouter: true, puter: true },
   // The AI providers members may connect.
   providers: ['anthropic', 'openai', 'gemini'],
   // A message shown to every member at the top of the page.

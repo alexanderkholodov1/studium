@@ -22,10 +22,24 @@ tools.
 
 ## Your own AI
 
-Each person can connect Claude, ChatGPT and Gemini in Settings, each with its own API key (`public/assets/ai.js`). The
-keys are kept only in that browser; Studium charges nothing and each provider bills its own usage. Provider, model and
-effort are chosen when the AI is used, with a recommendation per task (the strongest model to create a guide, a light
-one to identify a document), and the last choice per task is remembered. With it, Studium:
+Each person connects their AI in Settings in whatever way they have, as many ways as they like (`public/assets/ai.js`):
+- **Gemini, free:** a key from Google AI Studio, made in a minute with any Google account and no card. Google's daily
+  limits apply, and on the free plan Google may use what it receives.
+- **The local bridge, with their subscription:** `bridge.mjs`, downloaded from Studium and run with
+  `node studium-bridge.mjs`, lets the page use the Claude Code, Codex or Antigravity already signed in on their computer,
+  with no API. It listens on 127.0.0.1 only, answers only Studium's origins and only with the code it prints (its link
+  pairs it), runs each CLI read-only in a folder of its own that it deletes, and one request at a time per CLI.
+- **OpenRouter** (free models) and **Puter**, each signed in with one click.
+- **An API key** of Claude, ChatGPT or Gemini, which bills per use.
+- **The chat**, with no connection at all (a free Claude account included): every part comes with its instructions, to
+  take to any chat and paste back.
+
+Keys and sign-ins are kept only in that browser; Studium charges nothing. Where, which model and which effort are
+chosen when the AI is used: the page proposes the best of what the person has for each task (a subscription for many
+files, the strongest model for a guide, a light one to identify a document), says why, and remembers the last choice
+per task. A provider's error is said in words (`aierror.js`): an API account without balance says that a subscription
+does not include the API and offers the other ways. The admins can switch each way off from the panel. With it,
+Studium:
 - turns files, or a whole folder, into contributions with Studium's instructions (`contribute.js`, `files.js`);
 - answers questions about the map in words, with a compact index of it (`route.js`);
 - creates guides from the map's context, with the student's goal, level, language, style and extra sections;
@@ -76,7 +90,13 @@ back what it returns:
   - Word, PowerPoint, Excel, OpenDocument and EPUB, unzipped and read as text, with some of their figures.
   - Notebooks, code (one material per folder), text and ZIPs.
 
-  Without an API key, the same parts download as folders, with their instructions, for a chat.
+  Every part waits in **the queue** (`queue.js`), as many files as the person drops. The queue lives in the browser
+  (IndexedDB), so a reload, a closed tab or a crash resumes where it stopped, and one tab runs it at a time. It waits
+  out a rate limit as long as the provider asks, pauses a whole day's limit until its reset and resumes alone, retries
+  network failures a few times, and stops on an account problem until the person acts. When the browser has no room
+  for the files, it keeps its place and asks for the same files again, matched by fingerprint. Without an AI connected,
+  each part waits for the chat: copy its instructions, download it, paste the answer back. Every answer waits for
+  review, and «Publicar todo lo listo» publishes at once those with nothing personal to check.
 - **Guides.** Studium exports the part of the map a guide needs (a Markdown context file) and the instructions, with
   settings for level, length, practice, difficulty and examples. The AI returns one HTML file with a JSON block that
   names the concepts it explains and the sections where it explains them.
@@ -122,7 +142,9 @@ reads only what changed; removal records drop what stopped being public.
 - `public/index.html`, `public/assets/`: the app. `app.js` (sign-in, routes, guides), `data.js`
   (Firestore), `graph.js` (the map's graph and drawing), `mapui.js` (the map's controls), `route.js` (routes, paths,
   questions in words), `standard.js` (evaluations, terms, concept names), `files.js` (any file, read in the browser),
-  `packs.js` and `cache.js` (the map's reads), `contribute.js` (contributing), `prompts.js` (the instructions for the
+  `packs.js` and `cache.js` (the map's reads), `contribute.js` (contributing), `queue.js` (the queue of material),
+  `ai.js` and `aierror.js` (every way to the person's AI, and its errors in words), `bridge.mjs` (the local bridge a
+  person downloads and runs with Node; not loaded by the page), `prompts.js` (the instructions for the
   AI and the readers of what it returns), `viewer.js` (guides run in a sandboxed frame under a fixed content policy),
   `themes.js` (each course's colors and motif), `fx.js` (the scene, tilting cards, glass, transitions), `play.js`
   (floating tokens with physics, the companion, bubbles, confetti, the springy wordmark), `sfx.js` (synthesized
@@ -139,6 +161,10 @@ reads only what changed; removal records drop what stopped being public.
 - `tools/check.mjs`: checks `public/` before a release. Only the app may ship (no guide pages), every root-absolute
   resource stays inside `/studium/`, no key material except the web key in `config.js`, the default settings have an
   active community, and the rules read the live ones.
+- `tools/test-queue.mjs`: tests the queue (a reload in the middle, rate and daily limits, an account without balance,
+  retries, files without room, the chat, two tabs) and what each provider's errors mean, with a store in memory.
+- `tools/test-bridge.mjs`: tests the local bridge with fake CLIs (`.cmd` shims on Windows): origins, the pairing code,
+  read-only runs, limits, models refused, timeouts, hostile file names, one run at a time.
 - `tools/test-rules.mjs`: tests the rules with temporary accounts and documents, and deletes them afterwards; with
   `--emulators`, against the local emulators instead of the live project.
 - `tools/deploy-rules.mjs`: publishes `firestore.rules` (skipped when the live rules are identical), creating
@@ -193,7 +219,10 @@ node tools/dev.mjs --emulators
 
 1. Work on a branch. Commits may carry any working version.
 2. When a milestone is complete, open a pull request titled `vX.Y.Z: <what it delivers>`. `Checks` runs on every push
-   and pull request, including the rules tests on the emulators.
+   and pull request, including the rules tests on the emulators. When they pass, the pull request deploys its own
+   preview by itself: the app packed as a release, at `/studium/` on the channel `studium-pr-<number>` of the
+   portfolio's Hosting project (secret `FIREBASE_SERVICE_ACCOUNT_ALEXANDERKHOLODOV`), for 30 days, with its address
+   commented on the pull request. A preview reads and writes the live database.
 3. The operator merges. `Release on merge` then checks the merge commit, publishes and tests the database rules, and
    publishes the GitHub Release `vX.Y.Z`. Nothing is published without that merge.
 4. The portfolio mounts the latest release on its next deploy.

@@ -14,11 +14,11 @@ import { buildGraph } from './graph.js';
 import { mountMap, openMap, refreshMap } from './mapui.js';
 import { prepareGuide, showAnchor } from './viewer.js';
 import { startScene, tilt, glassLight, transition, rise } from './fx.js';
-import { mountContribute, renderPane, presetGuide } from './contribute.js';
+import { mountContribute, renderPane, presetGuide, startQueue } from './contribute.js';
 import { prefs } from './prefs.js';
 import { sfx } from './sfx.js';
 import { play, springLetters, celebrate } from './play.js';
-import { mountSpace, renderHome, renderSettings, renderAmbiences, remember, soonLabel, daysTo } from './space.js';
+import { mountSpace, renderHome, renderSettings, renderAmbiences, remember, soonLabel, daysTo, pairBridge } from './space.js';
 import { mountCommunity, loadCommunity, kudosRow, renderKudos, renderProfes } from './community.js';
 import { mountDemos } from './demos.js';
 import { mountScenes } from './scenes.js';
@@ -449,6 +449,9 @@ async function route() {
   if (!role.admin && confirmEmail() && !user.emailVerified) { $('#verify-email').textContent = user.email; $('#verify-from').textContent = mailFrom; say('#verify-msg', verifyNote); show('verify'); return; }
   if (pending) { const to = pending; pending = ''; if (location.hash !== to) { location.hash = to; return; } }
   if (page === 'entrar' || (page === 'admin' && !role.admin)) { location.hash = '#/'; return; }
+  // The link the local bridge prints: pair it, then show the settings.
+  const bridgeLink = location.hash.match(/^#\/ajustes\?puente=([\w.-]+)$/);
+  if (bridgeLink) { history.replaceState(null, '', `${location.pathname}#/ajustes`); pairBridge(bridgeLink[1]); return route(); }
   showAnnouncement();
   try {
     if (page === 'guia' && arg[0]) {
@@ -577,6 +580,8 @@ $('#reset-form').addEventListener('submit', async (e) => {
   } catch (error) { say('#reset-msg', explain(error)); } finally { button.disabled = false; }
 });
 handleEmailLink();
+// Back from OpenRouter's sign-in: its code becomes this browser's key.
+ai.finishOpenRouter().then((message) => { if (message) toast(message); });
 
 addEventListener('hashchange', () => route());
 onAuthStateChanged(auth, async (user) => {
@@ -592,7 +597,8 @@ onAuthStateChanged(auth, async (user) => {
     if (confirmEmail() && user.emailVerified && !claims.email_verified) await user.getIdToken(true);
   }
   document.documentElement.classList.toggle('is-admin', role.admin);
-  if (isMember(user)) { await prefs.attach(user.uid); seen(); } else prefs.detach();
+  // A member's queue of material resumes wherever they land: it lives in this browser.
+  if (isMember(user)) { await prefs.attach(user.uid); seen(); startQueue(context); } else prefs.detach();
   await route();
 });
 // Presence, on real events only: signing in (above), changing page and coming back to the tab.
