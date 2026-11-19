@@ -13,7 +13,7 @@ import { LEVELS } from './prompts.js';
 import { buildGraph } from './graph.js';
 import { mountMap, openMap, refreshMap } from './mapui.js';
 import { prepareGuide, showAnchor } from './viewer.js';
-import { startScene, tilt, glassLight, transition, rise } from './fx.js';
+import { startScene, tilt, glassLight, transition, rise, restOffscreen } from './fx.js';
 import { mountContribute, renderPane, presetGuide, startQueue } from './contribute.js';
 import { prefs } from './prefs.js';
 import { sfx } from './sfx.js';
@@ -50,6 +50,7 @@ play.start($('#play'), $('#fx-top'));
 springLetters($('#wordmark'));
 mountDemos();
 mountScenes();
+restOffscreen();
 mountHints();
 for (const el of document.querySelectorAll('[data-ambience-picker]')) renderAmbiences(el);
 

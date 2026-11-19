@@ -394,14 +394,15 @@ function render() {
 }
 
 // While the page scrolls, nothing here moves: the browser only has to scroll. At rest, when nothing is held, thrown
-// or popping, the slow drift is drawn at half the frame rate.
+// or popping, the slow drift is drawn at half the frame rate, and at a quarter once the pointer has been still for a
+// few seconds: each drawn frame makes the browser restyle and recompose the floating things.
 let scrollingUntil = 0;
-let parity = 0;
+let skip = 0;
 const busy = () => !!drag || bubbles.length > 0 || bodies.some((b) => Math.abs(b.vx) + Math.abs(b.vy) > 40 || b.sq > 0.01);
 function frame(now) {
   raf = 0;
   if (!running()) return;
-  if ((now < scrollingUntil && !drag) || (!busy() && (parity ^= 1))) { last = now; raf = requestAnimationFrame(frame); return; }
+  if ((now < scrollingUntil && !drag) || (!busy() && (++skip % (now - idleSince > 5000 ? 4 : 2)))) { last = now; raf = requestAnimationFrame(frame); return; }
   const dt = Math.min(0.05, (now - last) / 1000 || 0.016);
   last = now;
   const n = 2;

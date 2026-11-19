@@ -96,3 +96,25 @@ export function rise(container, selector = ':scope > *') {
     });
   });
 }
+
+/* ---------- endless animations rest while they are off screen ---------- */
+// A looping animation that nobody can see still made the browser restyle and repaint it on every frame (some of them,
+// a dashed line or a dot travelling a path, cannot run on the graphics card). Each one pauses while its element is
+// off screen and resumes, where it was, when it comes back. New ones are found after the page changes.
+export function restOffscreen() {
+  if (!('IntersectionObserver' in window) || !document.getAnimations) return;
+  const watched = new WeakSet();
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) e.target.classList.toggle('offscreen', !e.isIntersecting);
+  }, { rootMargin: '120px' });
+  const scan = () => {
+    for (const a of document.getAnimations()) {
+      const el = a.effect?.target;
+      if (!el || watched.has(el) || a.effect.getComputedTiming().iterations !== Infinity) continue;
+      watched.add(el); io.observe(el);
+    }
+  };
+  let timer = 0;
+  new MutationObserver(() => { clearTimeout(timer); timer = setTimeout(scan, 400); }).observe(document.body, { childList: true, subtree: true });
+  scan();
+}

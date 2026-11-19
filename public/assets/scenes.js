@@ -7,7 +7,16 @@ import { t } from './i18n.js';
 
 const root = document.documentElement;
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches || root.dataset.ambience === 'enfoque';
-const css = (name) => getComputedStyle(root).getPropertyValue(name).trim();
+// The page's colors, read once and kept: reading them on every frame made the browser recompute the style of the whole
+// page each time. They are read again only when the theme, the ambience or the system's light or dark changes.
+const cached = new Map();
+new MutationObserver(() => cached.clear()).observe(root, { attributes: true });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => cached.clear());
+const css = (name) => {
+  let v = cached.get(name);
+  if (v === undefined) { v = getComputedStyle(root).getPropertyValue(name).trim(); cached.set(name, v); }
+  return v;
+};
 const rand = (a, b) => a + Math.random() * (b - a);
 
 function visible(el, start, stop) {
@@ -179,9 +188,12 @@ function graphScene(el) {
       if (p.t >= 1) flying.splice(flying.indexOf(p), 1);
     }
   };
-  const frame = (now) => { raf = requestAnimationFrame(frame); step(); draw(now); };
-  const start = () => { if (calm()) { for (let i = 0; i < 200; i += 1) step(); draw(performance.now() + 1e4); return; } if (!raf) raf = requestAnimationFrame(frame); };
-  visible(el, start, () => { cancelAnimationFrame(raf); raf = 0; });
+  // Once the graph has settled and nothing is held, growing or flying, it stops drawing until something changes.
+  let shown = false;
+  const settled = (now) => !dragging && !flying.length && nodes.every((n) => now - n.born > 700 && Math.abs(n.vx) + Math.abs(n.vy) < 0.02);
+  const frame = (now) => { step(); draw(now); raf = shown && !settled(now) ? requestAnimationFrame(frame) : 0; };
+  const start = () => { shown = true; if (calm()) { for (let i = 0; i < 200; i += 1) step(); draw(performance.now() + 1e4); return; } if (!raf) raf = requestAnimationFrame(frame); };
+  visible(el, start, () => { shown = false; cancelAnimationFrame(raf); raf = 0; });
   new ResizeObserver(() => {
     const before = size;
     size = fitCanvas(canvas);
@@ -201,7 +213,7 @@ function graphScene(el) {
   const at = (e) => { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
   canvas.addEventListener('pointerdown', (e) => {
     const p = at(e); const n = nodes.find((m) => Math.hypot(m.x - p.x, m.y - p.y) < m.r + 8);
-    if (n) { dragging = n; canvas.setPointerCapture(e.pointerId); sfx.pick(); }
+    if (n) { dragging = n; canvas.setPointerCapture(e.pointerId); sfx.pick(); start(); }
   });
   canvas.addEventListener('pointermove', (e) => { if (!dragging) return; const p = at(e); dragging.x = p.x; dragging.y = p.y; dragging.vx = dragging.vy = 0; });
   const release = () => { if (dragging) sfx.drop(); dragging = null; };
@@ -222,7 +234,7 @@ function graphScene(el) {
     const anchor = nodes[Math.floor(Math.random() * nodes.length)];
     n.concepts.forEach((name, i) => {
       setTimeout(() => {
-        const node = add(name, anchor);
+        const node = add(name, anchor); start();
         for (let k = 0; k < 8; k += 1) flying.push({ x0: pr.left - cr.left + pr.width / 2, y0: pr.top - cr.top + pr.height / 2, x1: node.x, y1: node.y, t: -k * 0.04, c: node.c });
         if (i === 0) edges.push([base, nodes.indexOf(anchor)]);
         sfx.note(i);

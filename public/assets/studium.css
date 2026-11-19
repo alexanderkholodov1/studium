@@ -307,15 +307,18 @@ input[type="range"] { padding: 0; border: 0; background: none; accent-color: var
 .hero2-copy { display: grid; gap: 22px; justify-items: start; }
 .note-hand { font: 600 clamp(22px, 2.2vw, 28px)/1.1 var(--hand); color: var(--red); rotate: -2deg; }
 .wordmark { font-size: clamp(76px, 12.4vw, 196px); font-weight: 800; line-height: .82; letter-spacing: -.04em; white-space: nowrap; font-variation-settings: "opsz" 96; margin-left: -.04em; user-select: none; }
-.wordmark .l { display: inline-block; animation: letter 1s var(--spring) both; animation-delay: calc(var(--i) * 55ms + 200ms); }
+.wordmark .l { display: inline-block; animation: letter 1s var(--spring) backwards; animation-delay: calc(var(--i) * 55ms + 200ms); }
 .wordmark .g { position: relative; display: inline-block; cursor: grab; touch-action: none; }
 .wordmark .g:active { cursor: grabbing; }
 .wordmark .l:nth-child(-n+4) .g { color: var(--ink); }
 .wordmark .l:nth-child(n+5) .g { background: linear-gradient(170deg, var(--blue-2), var(--blue) 60%); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .wordmark .i b { position: absolute; left: calc(50% - .02em); top: -.06em; width: .18em; height: .18em; translate: -50% 0; border-radius: 50%; background: var(--red);
-  box-shadow: 0 0 .25em color-mix(in oklab, var(--red) 70%, transparent); animation: spark 3.6s 1.4s ease-in-out infinite; }
+  box-shadow: 0 0 .25em color-mix(in oklab, var(--red) 70%, transparent); }
+/* Its spark is a glow that only fades in and out: animating the shadow itself repainted the wordmark on every frame. */
+.wordmark .i b::after { content: ""; position: absolute; inset: 0; border-radius: inherit; opacity: 0; will-change: opacity;
+  box-shadow: 0 0 .35em var(--red), 0 0 1.1em color-mix(in oklab, var(--red) 70%, transparent); animation: spark 3.6s 1.4s ease-in-out infinite; }
 @keyframes letter { from { transform: translateY(.55em) rotate(8deg); opacity: 0; filter: blur(10px); } }
-@keyframes spark { 50% { box-shadow: 0 0 .35em var(--red), 0 0 1.1em color-mix(in oklab, var(--red) 70%, transparent); } }
+@keyframes spark { 50% { opacity: 1; } }
 .hero2 .lede { max-width: 26ch; }
 .drag-hint { display: flex; align-items: center; gap: 10px; font: 600 23px/1.1 var(--hand); color: var(--muted); rotate: -1.5deg; }
 .drag-hint svg { width: 46px; height: 30px; color: var(--red); flex: none; }
@@ -334,7 +337,7 @@ input[type="range"] { padding: 0; border: 0; background: none; accent-color: var
 .sk-guide .in { padding: 36px 18px 18px; display: grid; gap: 6px; }
 .sk-guide h4 { margin: 0; font: 800 26px/1 var(--display); letter-spacing: -.03em; }
 .sk-map { right: 0; top: 0; width: 52%; height: 46%; padding: 0; overflow: hidden; background: linear-gradient(160deg, var(--card-2), var(--card)); }
-.sk-map svg { width: 100%; height: 100%; }
+.sk-map svg { width: 100%; height: 100%; will-change: transform; } /* its own layer: the moving dash repaints only the drawing, not the card */
 .sk-map .edge { stroke: var(--line); stroke-width: 2; fill: none; }
 .sk-map .hot { stroke: var(--blue); stroke-width: 3; stroke-dasharray: 6 8; animation: dash 1.6s linear infinite; }
 @keyframes dash { to { stroke-dashoffset: -28; } }
@@ -364,6 +367,7 @@ input[type="range"] { padding: 0; border: 0; background: none; accent-color: var
 .bars i:nth-child(3n) { background: linear-gradient(180deg, var(--red-2), var(--red)); }
 .bars .mean { position: absolute; left: 0; right: 0; bottom: calc(var(--m) * 1%); border-top: 2px dashed var(--butter); transition: bottom .9s var(--spring); }
 .demo svg.full { position: absolute; inset: 0; width: 100%; height: 100%; }
+.net { will-change: transform; } /* its own layer, so the route's dash repaints only itself */
 .net .edge { stroke: color-mix(in oklab, var(--ink) 22%, transparent); stroke-width: 2.4; fill: none; }
 .net .path { stroke: var(--red); stroke-width: 3.2; stroke-linecap: round; fill: none; stroke-dasharray: 5 7; animation: dash 1.4s linear infinite; }
 .net circle.n { fill: var(--card-2); stroke: var(--blue); stroke-width: 2.4; }
@@ -1390,3 +1394,5 @@ html.has-announce .page { padding-top: 170px; }
 .from-map p { margin: 0; }
 .from-map .link { justify-self: start; }
 .asked .again { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 99px; font: 700 12px var(--display); color: #fff; background: var(--red); }
+/* A looping animation off screen rests where it is (fx.js, restOffscreen). */
+.offscreen, .offscreen::before, .offscreen::after { animation-play-state: paused !important; }
