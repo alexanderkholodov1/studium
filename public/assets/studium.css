@@ -1314,11 +1314,6 @@ html.has-announce .page { padding-top: 170px; }
 .ai-key h3 { font-size: 19px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ai-key h3 small { color: var(--muted); font: 650 13.5px var(--display); }
 .ai-key .badge { font-size: 12px; padding: 2px 9px; }
-.ai-pick { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: end; min-width: 0; }
-.ai-pick .field { flex: 1 1 120px; }
-.ai-pick .field.model { flex: 2 1 190px; }
-.ai-pick .fine { flex-basis: 100%; }
-.ai-pick .field > span { font-size: 12.5px; }
 /* Every way to connect an AI, and the queue of material */
 .ai-ways { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin: 14px 0; }
 .ai-way { display: grid; gap: 10px; align-content: start; padding: 18px; border-radius: 22px; background: var(--well); box-shadow: inset 0 0 0 1px var(--line); }
@@ -1353,7 +1348,6 @@ html.has-announce .page { padding-top: 170px; }
   .ai-queue .name { flex: 1 1 100%; }
   .ai-queue .state { white-space: normal; }
 }
-.ai-pick select, .ai-pick input { padding-top: 8px; padding-bottom: 8px; font-size: 14.5px; }
 
 /* ---------- the map's light links ---------- */
 #map-info .why { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; color: var(--ink-2); }
@@ -1706,3 +1700,35 @@ html.has-announce .page { padding-top: 170px; }
 .ai-bridge .engines li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 10px; border-radius: 12px; background: var(--card); }
 @media (max-width: 700px) { .ai-vendors { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .ai-way .msg:empty { display: none; }
+
+/* Which model a task uses: one quiet line; «Cambiar» opens the models, best first, with what each costs. */
+.ai-pick { min-width: 0; font-size: 14px; }
+.ai-pick > summary { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; cursor: pointer; color: var(--muted); padding: 4px 0; }
+.ai-pick > summary::-webkit-details-marker { display: none; }
+.ai-pick-now { min-width: 0; overflow-wrap: anywhere; }
+.ai-pick-now b { color: var(--ink-2); }
+.ai-pick-change { color: var(--blue); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.ai-pick[open] .ai-pick-change { visibility: hidden; }
+.ai-pick-body { display: grid; gap: 10px; margin-top: 6px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+.ai-pick-body .fine { margin: 0; }
+.ai-pick-body .field > span { font-size: 12.5px; }
+.ai-pick-body select { padding-top: 8px; padding-bottom: 8px; font-size: 14.5px; }
+.ai-opts { display: grid; gap: 4px; }
+.ai-opt { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; padding: 6px 8px; border-radius: 10px; cursor: pointer; }
+.ai-opt:hover { background: color-mix(in oklab, var(--blue) 6%, transparent); }
+.ai-opt:has(input:checked) { background: color-mix(in oklab, var(--blue) 11%, transparent); }
+.ai-opt input[type="radio"] { flex: none; width: 16px; height: 16px; margin: 0; padding: 0; box-shadow: none; accent-color: var(--blue); }
+.ai-opt .id { font: 650 14px var(--display); color: var(--ink); overflow-wrap: anywhere; }
+.ai-opt small { flex-basis: 100%; padding-left: 24px; margin-top: -2px; color: var(--muted); font-size: 12.5px; }
+.ai-opt small:empty { display: none; }
+.ai-more > summary { cursor: pointer; color: var(--blue); font-weight: 650; padding: 4px 8px; font-size: 13.5px; }
+.ai-think small { display: block; margin-top: 4px; color: var(--muted); font-size: 12.5px; }
+.ai-pick .tag, .ai-tasks .tag { display: inline-block; font: 700 11.5px var(--display); padding: 1px 8px; border-radius: 999px; background: color-mix(in oklab, var(--muted) 14%, transparent); color: var(--ink-2); white-space: nowrap; }
+.ai-pick .tag.rec { background: color-mix(in oklab, var(--blue) 16%, transparent); color: var(--blue); }
+.ai-pick .tag.c-free, .ai-tasks .tag.c-free, .ai-pick .tag.c-sub, .ai-tasks .tag.c-sub { background: color-mix(in oklab, var(--teal) 16%, transparent); color: var(--teal); }
+.ai-pick .tag.c-paid, .ai-tasks .tag.c-paid, .ai-pick .tag.c-nofree, .ai-tasks .tag.c-nofree { background: color-mix(in oklab, var(--red) 14%, transparent); color: var(--red); }
+.ai-tasks { flex-basis: 100%; margin-top: 4px; }
+.ai-tasks > summary { cursor: pointer; font: 650 14px var(--display); color: var(--blue); }
+.ai-tasks ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.ai-tasks li { display: flex; flex-wrap: wrap; gap: 2px 10px; justify-content: space-between; font-size: 14px; border-bottom: 1px dashed var(--line); padding-bottom: 6px; }
+.ai-tasks li span { color: var(--muted); }

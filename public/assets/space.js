@@ -392,15 +392,25 @@ const THEIRS = (who) => `<p class="ai-theirs">${who} es un servicio de otra empr
 function wayStatus(way) {
   if (!ai.connected().includes(way)) return '';
   const isDefault = ai.defaultWay() === way;
-  const models = way.startsWith('bridge:') ? [] : ai.cachedModels(way);
-  const model = ai.choice('guide').provider === way ? ai.choice('guide').model : ai.recommend('guide', way);
   const reset = way === 'gemini' ? `Su límite gratis se renueva ${when(nextMidnight('America/Los_Angeles'))}.` : way === 'openrouter' ? `Su límite gratis se renueva ${when(nextMidnight('UTC'))}.` : '';
   return `<div class="ai-status">
     <span class="badge ok">conectada</span>
-    ${models.length ? `<label class="ai-model">Modelo <select data-ai-model="${way}">${models.map((m) => `<option ${m === model ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select></label>` : model ? `<span class="muted">Modelo: ${esc(model)}</span>` : ''}
     <span class="muted">Hoy: ${count(ai.usageToday(way), 'pedido', 'pedidos')} desde Studium.</span>${reset ? ` <span class="muted">${reset}</span>` : ''}
     ${isDefault ? '<span class="badge">la que usa Studium</span>' : `<button class="button ghost small" data-ai-default="${way}">Usar esta</button>`}
+    ${taskModels(way)}
   </div>`;
+}
+// Which model each task uses with this AI, and how much it thinks: each task needs its own. Changed where it is used.
+function taskModels(way) {
+  const rows = Object.entries(ai.TASKS).map(([task, t]) => {
+    const m = ai.ranked(task, way)[0];
+    if (!m) return '';
+    const think = ai.thinks(way, m.id) ? ` · piensa ${(ai.EFFORTS[t.effort] ?? '').toLowerCase()}` : '';
+    return `<li><b>${esc(t.name)}</b><span>${esc(m.id)}${esc(think)} <span class="tag c-${esc(m.cost)}">${esc(ai.COST[m.cost])}</span></span></li>`;
+  }).join('');
+  return `<details class="ai-tasks"><summary>Qué modelo usa en cada tarea</summary>
+    <p class="fine">Cada tarea necesita su propia capacidad: una guía, el modelo más capaz; una pregunta rápida, uno ligero. Studium elige solo lo mejor de lo que tienes gratis. Si quieres otro, lo cambias en el momento, con «Cambiar» junto a cada tarea.</p>
+    <ul>${rows}</ul></details>`;
 }
 function keyBox(k, cost) {
   const pr = ai.PROVIDERS[k]; const key = ai.keyOf(k);
@@ -508,7 +518,7 @@ function aiSettings() {
   const c = now.length ? ai.choice('guide') : null;
   return `<section class="set glass" id="set-ai"><h2>Tu IA</h2>
     <p class="ai-lede">Studium usa una IA para leer tus archivos, tu horario y crear guías. Tú eliges cuál. <strong>Studium no cobra nada.</strong></p>
-    <div class="ai-now ${now.length ? 'on' : ''}">${c ? `Ahora Studium usa <b>${esc(ai.WAYS[c.provider]?.name ?? c.provider)}</b>${c.model ? ` · ${esc(c.model)}` : ''}. Hoy: ${count(ai.usageToday(c.provider), 'pedido', 'pedidos')}.`
+    <div class="ai-now ${now.length ? 'on' : ''}">${c ? `Ahora Studium usa <b>${esc(ai.WAYS[c.provider]?.name ?? c.provider)}</b>, con el modelo adecuado para cada tarea. Hoy: ${count(ai.usageToday(c.provider), 'pedido', 'pedidos')}.`
       : 'Todavía no conectaste ninguna. <b>Para empezar, Gemini es gratis y toma un minuto.</b> Si usas ChatGPT o Claude, también sirven.'}</div>
     <p class="ai-ask">¿Qué IA usas?</p>
     <div class="ai-vendors" role="tablist">${Object.entries(VENDORS).map(([k, x]) => `<button role="tab" class="ai-vendor" aria-selected="${k === v}" data-ai-vendor="${k}">${esc(x.name)}<small>${esc(x.note)}</small>${now.some((w) => vendorOfWay(w) === k) ? '<i class="dot" title="conectada"></i>' : ''}</button>`).join('')}</div>
@@ -646,7 +656,6 @@ export function mountSpace(context) {
       }
       setTimeout(renderHome, t.checked ? 650 : 0);
     }
-    if (t.dataset.aiModel) { ai.setDefault(t.dataset.aiModel, t.value); ctx?.toast(`Studium usará ${t.value}.`); renderSettings(); return; }
     if (t.dataset.aiKey) {
       ai.setKey(t.dataset.aiKey, t.value);
       renderSettings();

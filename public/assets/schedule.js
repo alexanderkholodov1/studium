@@ -241,7 +241,7 @@ function transcribeBox(target) {
     </label>
     <textarea data-text rows="3" placeholder="…o pega aquí el texto de tu horario"></textarea>
     <div class="actions"><button class="button primary" data-read>Leer mi horario</button></div>
-    ${ready ? '' : `<p class="sched-ai-note">Para leer capturas y archivos, Studium usa tu propia IA (con Gemini es gratis): <a href="#/ajustes">conéctala en Ajustes</a>, o <button class="link" data-chat-open>hazlo con cualquier chat</button>.</p>`}
+    ${ready ? ai.pickerHTML('schedule') : `<p class="sched-ai-note">Para leer capturas y archivos, Studium usa tu propia IA (con Gemini es gratis): <a href="#/ajustes">conéctala en Ajustes</a>, o <button class="link" data-chat-open>hazlo con cualquier chat</button>.</p>`}
     <div class="sched-chat" data-chat hidden>
       <ol><li><button class="link" data-copy>Copia estas instrucciones</button> y llévalas a cualquier chat (Claude, ChatGPT, Gemini…) junto con tu captura o archivo.</li>
         <li>Pega aquí lo que te responda:</li></ol>
@@ -557,7 +557,7 @@ function mountTranscribe(box) {
           return;
         }
         say('Tu IA está leyendo tu horario. Puede tardar un minuto…');
-        const res = await ai.run({ system: SYSTEM, text: txt ? `Mi horario:\n${txt}` : 'Mi horario está en lo adjunto.', files: parts, maxTokens: 6000, task: 'identify' });
+        const res = await ai.run({ system: SYSTEM, text: txt ? `Mi horario:\n${txt}` : 'Mi horario está en lo adjunto.', files: parts, maxTokens: 6000, use: ai.picked('schedule', box) });
         say(skipped.length ? `No se leyó: ${skipped.map((s) => `${s.name} (${s.skipped})`).join(', ')}` : '');
         show(parseAnswer(res.text));
       } catch (error) {

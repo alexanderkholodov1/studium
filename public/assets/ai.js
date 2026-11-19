@@ -25,7 +25,8 @@ export const PROVIDERS = {
   anthropic: { name: 'Claude', by: 'Anthropic', keyHint: 'sk-ant-…', keys: 'https://console.anthropic.com/settings/keys',
     tiers: { strong: 'claude-opus-5-5', mid: 'claude-sonnet-5-5', light: 'claude-haiku-5-5' } },
   openai: { name: 'ChatGPT', by: 'OpenAI', keyHint: 'sk-…', keys: 'https://platform.openai.com/api-keys', tiers: {} },
-  gemini: { name: 'Gemini', by: 'Google', keyHint: 'AIza…', keys: 'https://aistudio.google.com/apikey', tiers: {} },
+  gemini: { name: 'Gemini', by: 'Google', keyHint: 'AIza…', keys: 'https://aistudio.google.com/apikey',
+    tiers: { strong: 'gemini-2.5-flash', mid: 'gemini-2.5-flash', light: 'gemini-2.5-flash-lite' } },
 };
 // The ways to reach an AI. offer: what the admins switch on or off (a provider of settings.providers, or a flag).
 export const WAYS = {
@@ -38,28 +39,29 @@ export const WAYS = {
   openrouter: { name: 'OpenRouter', where: 'tu cuenta de OpenRouter', reads: { pdf: true, images: true }, offer: 'openrouter' },
   puter: { name: 'Puter', where: 'tu cuenta de Puter', reads: { pdf: true, images: true }, offer: 'puter' },
 };
-export const EFFORTS = { low: 'Bajo', medium: 'Medio', high: 'Alto', xhigh: 'Muy alto' };
-// What each use of the AI needs, and what it recommends.
+export const EFFORTS = { low: 'Poco', medium: 'Normal', high: 'Bastante', xhigh: 'Al máximo' };
+// What each use of the AI needs: how capable a model (tier) and how much it thinks (effort), and why.
 export const TASKS = {
-  guide: { name: 'Crear una guía', tier: 'strong', effort: 'high', why: 'una guía completa merece el modelo más potente' },
-  edit: { name: 'Editar una guía', tier: 'strong', effort: 'medium', why: 'cambiar una sección pide buen criterio, sin rehacer todo' },
-  material: { name: 'Procesar material', tier: 'mid', effort: 'medium', why: 'leer apuntes y exámenes es trabajo de un modelo intermedio' },
-  identify: { name: 'Identificar un documento', tier: 'light', effort: 'low', why: 'reconocer un sílabo o un enunciado basta con un modelo ligero' },
-  ask: { name: 'Preguntarle al mapa', tier: 'light', effort: 'low', why: 'leer el índice del mapa y elegir qué mostrar es rápido para un modelo ligero' },
+  guide: { name: 'Crear una guía', tier: 'strong', effort: 'high', why: 'conviene el modelo más capaz que tengas, pensando bastante: es el trabajo más largo y delicado' },
+  edit: { name: 'Editar una guía', tier: 'strong', effort: 'medium', why: 'conviene un modelo capaz, pensando lo normal: cambia una parte sin rehacer todo' },
+  material: { name: 'Procesar material', tier: 'mid', effort: 'medium', why: 'basta un modelo intermedio, pensando lo normal: lee apuntes y exámenes y los ordena' },
+  schedule: { name: 'Leer tu horario', tier: 'mid', effort: 'low', why: 'basta un modelo intermedio que vea bien las imágenes, pensando poco: es copiar lo que ve' },
+  identify: { name: 'Identificar un documento', tier: 'light', effort: 'low', why: 'basta un modelo ligero, pensando poco: solo reconoce qué es' },
+  ask: { name: 'Preguntarle al mapa', tier: 'light', effort: 'low', why: 'basta un modelo ligero y rápido, pensando poco: elige qué mostrarte' },
 };
-// Where each kind of task runs best, first to last: a subscription costs nothing per use and is the place for many
-// files; the strongest models for a guide; a light, fast one for a quick question.
+// Where each kind of task runs, first to last. Nothing should cost the person anything: their subscription through
+// the bridge (no charge per use) and the free ways first; a key that charges per use only if it is all they have.
 const ORDER = {
-  strong: ['bridge:claude', 'anthropic', 'openai', 'puter', 'bridge:antigravity', 'bridge:codex', 'gemini', 'openrouter'],
-  mid: ['bridge:claude', 'bridge:antigravity', 'gemini', 'anthropic', 'openai', 'bridge:codex', 'puter', 'openrouter'],
-  light: ['gemini', 'anthropic', 'openai', 'openrouter', 'puter', 'bridge:claude', 'bridge:antigravity', 'bridge:codex'],
+  strong: ['bridge:claude', 'bridge:codex', 'bridge:antigravity', 'gemini', 'openrouter', 'puter', 'anthropic', 'openai'],
+  mid: ['bridge:claude', 'bridge:antigravity', 'bridge:codex', 'gemini', 'openrouter', 'puter', 'anthropic', 'openai'],
+  light: ['gemini', 'openrouter', 'bridge:claude', 'bridge:antigravity', 'bridge:codex', 'puter', 'anthropic', 'openai'],
 };
 const WHY = {
   'bridge:claude': 'tu suscripción no cobra por uso y Claude lee los PDF tal como son',
   'bridge:antigravity': 'tu suscripción de Google no cobra por uso',
   'bridge:codex': 'tu suscripción de ChatGPT no cobra por uso',
-  anthropic: 'tu clave cobra por uso, pero es rápida y lee cualquier archivo',
-  openai: 'tu clave cobra por uso, pero es rápida y lee cualquier archivo',
+  anthropic: 'es la IA que conectaste, aunque tu clave cobra por uso',
+  openai: 'es la IA que conectaste, aunque tu clave cobra por uso',
   gemini: 'tu clave de Gemini es gratis dentro de los límites diarios de Google',
   openrouter: 'sus modelos gratis no cuestan nada, aunque aceptan pocos pedidos al día',
   puter: 'usa lo que tiene disponible tu cuenta de Puter',
@@ -127,36 +129,71 @@ export function vendorOf(way, model = '') {
 }
 
 /* ---------- which model, and where ---------- */
+// Each task asks for its own capacity: a guide wants the most capable model, reading a schedule a good eye, a quick
+// question a light and fast one. Studium ranks what this person's account has for each task: free first (Studium
+// never makes anyone pay), then the fit to the task, then the newest. The first is what it uses unless the person
+// picks another, where the task is done.
+const WRITES = (id) => !/(audio|tts|image|imagen|live|embed|veo|robotics|computer-use|aqa|learnlm|gemma|native|dialog|transcribe|search|moderation|whisper|dall-e|realtime|babbage|davinci|instruct|gpt-3|ft:)/i.test(id);
 const light = (id) => /(mini|nano|flash|lite|haiku|small|\(low\))/i.test(id);
 const strong = (id) => /(opus|ultra|-max|\bpro\b|-pro)/i.test(id) || (!light(id) && /gpt-[5-9]|gpt-\d\d|gemini-[3-9]/i.test(id));
 const tierOf = (id) => (light(id) ? 'light' : strong(id) ? 'strong' : 'mid');
-// The model a task recommends for a way: Claude's by name; the bridge's by what each engine says; the others from the
-// models the account lists.
-export function recommend(task, way) {
+// Gemini's own scale: «pro» is the most capable, «flash» the middle, «flash-lite» the lightest (and the one with the
+// most free requests a day).
+const geminiTier = (id) => (/lite/i.test(id) ? 'light' : /flash/i.test(id) ? 'mid' : /(pro|ultra)/i.test(id) ? 'strong' : 'mid');
+const unstable = (id) => /(preview|exp|latest)/i.test(id);
+// 2.5 from «gemini-2.5-flash», 5.5 from «claude-opus-5-5», 4.1 from «claude-opus-4-1-20250805».
+const versionOf = (id) => { const m = String(id).match(/(\d+)(?:[.-](\d{1,2}))?(?!\d)/); return m ? Number(m[1]) + (m[2] ? Number(m[2]) / 10 : 0) : 0; };
+// What a model costs the person: free; their subscription (no charge per use); Puter's allowance; or paid per use.
+export function costOf(way, id) {
+  if (way.startsWith('bridge:')) return 'sub';
+  if (way === 'gemini') return load().noFree?.[id] || (/(pro|ultra)/i.test(id) && !/flash/i.test(id)) ? 'nofree' : 'free';
+  if (way === 'openrouter') return /:free$/.test(id) ? 'free' : 'paid';
+  if (way === 'puter') return 'puter';
+  return 'paid';
+}
+export const COST = { free: 'Gratis', sub: 'Tu suscripción', puter: 'Tu cuenta de Puter', nofree: 'Sin uso gratis', paid: 'De pago' };
+const COST_RANK = { free: 0, sub: 0, puter: 1, nofree: 3, paid: 2 };
+const FIT = { strong: { strong: 0, mid: 1, light: 2 }, mid: { mid: 0, strong: 1, light: 2 }, light: { light: 0, mid: 1, strong: 2 } };
+// A Gemini model that answered «no free use» is remembered as such.
+const markNoFree = (id) => patch((s) => { s.noFree = { ...(s.noFree ?? {}), [id]: true }; });
+// The models of a way for a task, best first: { id, cost, tier }.
+export function ranked(task, way) {
   const tier = TASKS[task]?.tier ?? 'strong';
-  if (way?.startsWith('bridge:')) {
-    const models = engineOf(way)?.models ?? [];
-    const pick = models.find((m) => m.tier === tier) ?? models.find((m) => m.tier === 'mid') ?? models[0];
-    return pick?.id ?? '';
+  const named = PROVIDERS[way]?.tiers?.[tier];
+  let list;
+  if (way?.startsWith('bridge:')) list = (engineOf(way)?.models ?? []).map((m) => ({ id: m.id, tier: m.tier ?? tierOf(m.id) }));
+  else {
+    const ids = cachedModels(way).filter(WRITES);
+    const fallback = Object.values(PROVIDERS[way]?.tiers ?? {});
+    list = (ids.length ? ids : [...new Set(fallback)]).map((id) => ({ id, tier: way === 'gemini' ? geminiTier(id) : tierOf(id) }));
   }
-  const named = PROVIDERS[way]?.tiers[tier];
-  const list = cachedModels(way);
-  if (named && (!list.length || list.includes(named))) return named;
-  if (!list.length) return named ?? '';
-  const pickFrom = (ids) => ids.find((id) => !/(preview|exp|latest|audio|tts|image|vision)/i.test(id)) ?? ids[0];
-  if (way === 'puter') {
-    const claude = list.filter((id) => /claude/i.test(id));
-    const byTier = (ids) => ids.filter((id) => tierOf(id) === tier);
-    return pickFrom(byTier(claude)) ?? pickFrom(byTier(list)) ?? pickFrom(claude) ?? list[0];
-  }
-  if (way === 'gemini') {
-    const flash = list.filter((id) => /flash/i.test(id) && !/(audio|tts|image|live|thinking)/i.test(id));
-    const lite = flash.filter((id) => /lite/i.test(id));
-    return pickFrom(tier === 'light' ? (lite.length ? lite : flash) : flash.filter((id) => !/lite/i.test(id)).length ? flash.filter((id) => !/lite/i.test(id)) : flash) ?? list[0];
-  }
-  if (tier === 'light') return pickFrom(list.filter(light)) ?? list[0];
-  if (tier === 'strong') return pickFrom(list.filter(strong)) ?? pickFrom(list.filter((id) => !light(id))) ?? list[0];
-  return pickFrom(list.filter((id) => !light(id) && !strong(id))) ?? pickFrom(list.filter((id) => !light(id))) ?? list[0];
+  const key = (m) => [COST_RANK[costOf(way, m.id)] ?? 2, FIT[tier][m.tier] ?? 1, -(versionOf(m.id) - (unstable(m.id) ? 0.6 : 0)), m.id === named ? 0 : 1,
+    // Through Puter, Claude first; then the shortest name, which is the model itself and not one of its variants.
+    way === 'puter' && !/claude/i.test(m.id) ? 1 : 0, m.id.length];
+  const cmp = (a, b) => { const x = key(a); const y = key(b); for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] - y[i]; return 0; };
+  return list.sort(cmp).map((m) => ({ ...m, cost: costOf(way, m.id) }));
+}
+// The model a task recommends for a way: the first of its ranking.
+export const recommend = (task, way) => ranked(task, way)[0]?.id ?? '';
+// What one model is, said in a few words, for a task.
+function noteOf(way, m, i, task) {
+  if (m.cost === 'nofree') return 'Google no da uso gratis de este modelo';
+  if (m.cost === 'paid') return 'cobra por cada uso a tu cuenta';
+  const tier = TASKS[task]?.tier ?? 'strong';
+  if (i === 0) return m.cost === 'free' ? 'el mejor para esto entre los gratis' : 'el mejor para esto';
+  if (way === 'gemini' && m.tier === 'light') return 'más pedidos gratis al día, pero piensa menos';
+  if (m.tier === 'strong' && tier !== 'strong') return 'más capaz de lo que esto necesita: gasta más';
+  if (m.tier === 'light' && tier !== 'light') return 'más rápido, pero menos capaz';
+  if (/latest/i.test(m.id)) return 'lleva siempre al más nuevo, que puede cambiar sin aviso';
+  return unstable(m.id) ? 'versión de prueba' : '';
+}
+// Whether a model takes «cuánto piensa»: Claude's effort, OpenAI's reasoning, Gemini's thinking, the bridge's own.
+export function thinks(way, model) {
+  if (way.startsWith('bridge:')) return (engineOf(way)?.efforts ?? []).length > 0;
+  if (way === 'anthropic') return CLAUDE_EFFORT.test(model);
+  if (way === 'openai') return /^(o\d|gpt-5|gpt-6)/.test(model);
+  if (way === 'gemini') return /gemini-(2\.5|[3-9])/.test(model);
+  return true;
 }
 const effortsOf = (way) => (way.startsWith('bridge:') ? engineOf(way)?.efforts ?? [] : Object.keys(EFFORTS));
 const fitEffort = (way, effort) => { const list = effortsOf(way); return !list.length ? '' : list.includes(effort) ? effort : list.includes('medium') ? 'medium' : list[0]; };
@@ -170,18 +207,19 @@ export function suggest(task) {
   const effort = fitEffort(way, TASKS[task]?.effort ?? 'high');
   return { provider: way, model, effort, why: WHY[way] };
 }
-// The choice for a task: the last one the person made, or the page's proposal.
+// The choice for a task: what the person picked for it, or the page's proposal. An empty model or effort follows the
+// recommendation, so that it stays the best as the account's models change.
 export function choice(task) {
   const saved = load().use[task];
   if (saved && connected().includes(saved.provider)) {
-    return { provider: saved.provider, model: saved.model || recommend(task, saved.provider), effort: fitEffort(saved.provider, saved.effort in EFFORTS ? saved.effort : TASKS[task].effort) };
+    return { provider: saved.provider, model: saved.model || recommend(task, saved.provider), effort: fitEffort(saved.provider, saved.effort in EFFORTS ? saved.effort : TASKS[task]?.effort ?? 'medium') };
   }
   const s = suggest(task);
   return s ? { provider: s.provider, model: s.model, effort: s.effort } : { provider: 'anthropic', model: recommend(task, 'anthropic'), effort: TASKS[task]?.effort ?? 'high' };
 }
-// The AI used everywhere unless the person picks another for one task: the same way and model for every task.
-export function setDefault(way, model = '') {
-  patch((s) => { for (const task of Object.keys(TASKS)) s.use[task] = { provider: way, model: model || recommend(task, way), effort: TASKS[task].effort }; });
+// The AI used everywhere: each task with its own recommended model and effort for that AI.
+export function setDefault(way) {
+  patch((s) => { for (const task of Object.keys(TASKS)) s.use[task] = { provider: way, model: '', effort: '' }; });
 }
 export const defaultWay = () => choice('guide').provider;
 // How many requests Studium sent today from this browser, per way: the providers do not tell it the person's usage.
@@ -193,60 +231,79 @@ function bump(way) {
 export function usageToday(way) {
   try { const u = JSON.parse(localStorage.getItem(USAGE) ?? '{}'); return u.day === today() ? u.n?.[way] ?? 0 : 0; } catch { return 0; }
 }
+// What the person picks; what equals the recommendation is kept empty, so it keeps following it.
 export function setChoice(task, c) {
-  patch((s) => { s.use[task] = { provider: c.provider, model: String(c.model ?? '').trim(), effort: c.effort }; });
+  const model = String(c.model ?? '').trim();
+  patch((s) => {
+    s.use[task] = { provider: c.provider, model: model === recommend(task, c.provider) ? '' : model, effort: c.effort === fitEffort(c.provider, TASKS[task]?.effort ?? 'medium') ? '' : c.effort };
+  });
 }
 export function label(c) {
-  const effort = (EFFORTS[c.effort] ?? '').toLowerCase();
-  return [WAYS[c.provider]?.name ?? c.provider, c.model || '—', effort].filter(Boolean).join(' · ');
+  const effort = thinks(c.provider, c.model) ? (EFFORTS[c.effort] ?? '').toLowerCase() : '';
+  return [WAYS[c.provider]?.name ?? c.provider, c.model || '—', effort && `piensa ${effort}`].filter(Boolean).join(' · ');
 }
 
 /* ---------- choosing at the moment of use ---------- */
+// Never in the way: one line says what Studium will use and that it is the recommended; «Cambiar» opens the models
+// of the account for this task, best first, each with what it costs, and how much it thinks.
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
-const proposal = (task) => {
-  const s = suggest(task);
-  if (!s) return '';
-  const effort = s.effort ? `, esfuerzo ${(EFFORTS[s.effort] ?? s.effort).toLowerCase()}` : '';
-  return `Te recomiendo ${esc(s.model || 'el modelo de tu cuenta')} en ${esc(WAYS[s.provider].name)} (${esc(WAYS[s.provider].where)})${esc(effort)}, porque ${esc(s.why)}.`;
-};
-// A compact row: where, model and effort for this task, with what the page proposes.
-export function pickerHTML(task) {
-  const c = choice(task);
+const SHOWN = 5;
+export function pickerHTML(task, { open = false } = {}) {
   const ways = connected();
   if (!ways.length) return '';
-  const rec = recommend(task, c.provider);
-  const list = [...new Set([rec, c.model, ...(c.provider.startsWith('bridge:') ? (engineOf(c.provider)?.models ?? []).map((m) => m.id) : cachedModels(c.provider))].filter(Boolean))];
-  const efforts = effortsOf(c.provider);
+  const c = choice(task);
   const s = suggest(task);
-  const differs = s && (s.provider !== c.provider || (s.model && s.model !== c.model));
-  return `<div class="ai-pick" data-ai-pick="${esc(task)}">
-    <label class="field"><span>Dónde</span><select name="provider">${ways.map((w) => `<option value="${esc(w)}" ${w === c.provider ? 'selected' : ''}>${esc(wayName(w))}</option>`).join('')}</select></label>
-    <label class="field model"><span>Modelo</span><input name="model" list="ai-models-${esc(task)}" value="${esc(c.model)}" autocomplete="off" spellcheck="false"><datalist id="ai-models-${esc(task)}">${list.map((m) => `<option value="${esc(m)}">`).join('')}</datalist></label>
-    <label class="field" ${efforts.length ? '' : 'hidden'}><span>Esfuerzo</span><select name="effort">${(efforts.length ? efforts : ['medium']).map((k) => `<option value="${esc(k)}" ${k === c.effort ? 'selected' : ''}>${esc(EFFORTS[k] ?? k)}</option>`).join('')}</select></label>
-    <p class="fine">${proposal(task)} ${differs ? `<button type="button" class="link" data-ai-suggest="${esc(task)}">Usar lo recomendado</button>` : ''}</p>
-  </div>`;
+  const list = ranked(task, c.provider);
+  if (c.model && !list.some((m) => m.id === c.model)) list.unshift({ id: c.model, tier: tierOf(c.model), cost: costOf(c.provider, c.model) });
+  const rec = list[0]?.id;
+  const recEffort = fitEffort(c.provider, TASKS[task]?.effort ?? 'medium');
+  const isRec = s && s.provider === c.provider && c.model === s.model && (!thinks(c.provider, c.model) || c.effort === s.effort);
+  const efforts = thinks(c.provider, c.model) ? effortsOf(c.provider) : [];
+  const t = TASKS[task] ?? {};
+  const row = (m, i) => `<label class="ai-opt">
+      <input type="radio" name="ai-model-${esc(task)}" value="${esc(m.id)}" ${m.id === c.model ? 'checked' : ''}>
+      <span class="id">${esc(m.id)}</span>
+      ${m.id === rec ? '<span class="tag rec">Recomendado</span>' : ''}<span class="tag c-${esc(m.cost)}">${esc(COST[m.cost])}</span>
+      <small>${esc(noteOf(c.provider, m, i, task))}</small>
+    </label>`;
+  const cost = costOf(c.provider, c.model);
+  return `<details class="ai-pick" data-ai-pick="${esc(task)}" ${open ? 'open' : ''}>
+    <summary><span class="ai-pick-now">Con <b>${esc(WAYS[c.provider]?.name)}</b> · ${esc(c.model || 'el modelo de tu cuenta')}${efforts.length ? ` · piensa ${esc((EFFORTS[c.effort] ?? '').toLowerCase())}` : ''}</span>
+      <span class="tag ${isRec ? 'rec' : ''}">${isRec ? 'Recomendado' : 'Elegido por ti'}</span>${cost === 'paid' || cost === 'nofree' ? `<span class="tag c-${cost}">${COST[cost]}</span>` : ''}
+      <span class="ai-pick-change">Cambiar</span></summary>
+    <div class="ai-pick-body">
+      <p class="fine">${esc(t.name ?? '')}: ${esc(t.why ?? '')}. Studium ya elige lo mejor de lo que tienes gratis; cámbialo solo si quieres.</p>
+      ${ways.length > 1 ? `<label class="field"><span>Con qué IA</span><select name="provider">${ways.map((w) => `<option value="${esc(w)}" ${w === c.provider ? 'selected' : ''}>${esc(wayName(w))}${w === s?.provider ? ' (recomendada)' : ''}</option>`).join('')}</select></label>` : ''}
+      <div class="ai-opts" role="radiogroup" aria-label="Modelo, el mejor primero">
+        ${list.slice(0, SHOWN).map(row).join('')}
+        ${list.length > SHOWN ? `<details class="ai-more"><summary>Ver ${list.length - SHOWN} más</summary>${list.slice(SHOWN).map((m, i) => row(m, i + SHOWN)).join('')}</details>` : ''}
+      </div>
+      ${efforts.length ? `<label class="field ai-think"><span>Cuánto piensa</span><select name="effort">${efforts.map((k) => `<option value="${esc(k)}" ${k === c.effort ? 'selected' : ''}>${esc(EFFORTS[k] ?? k)}${k === recEffort ? ' (recomendado)' : ''}</option>`).join('')}</select>
+        <small>Pensar más da mejores respuestas, pero tarda más${c.provider === 'gemini' ? ' y gasta más de tu límite gratis' : ''}.</small></label>` : ''}
+      ${isRec ? '' : `<button type="button" class="button ghost small" data-ai-suggest="${esc(task)}">Volver a lo recomendado</button>`}
+    </div>
+  </details>`;
 }
 // What the picker of a task says right now (and remember it).
 export function picked(task, root = document) {
   const el = root.querySelector(`[data-ai-pick="${task}"]`);
   if (!el) return choice(task);
-  const provider = el.querySelector('[name="provider"]').value;
-  const c = { provider, model: el.querySelector('[name="model"]').value.trim(), effort: fitEffort(provider, el.querySelector('[name="effort"]').value) };
-  if (!c.model) c.model = recommend(task, c.provider);
+  const now = choice(task);
+  const provider = el.querySelector('[name="provider"]')?.value ?? now.provider;
+  const model = el.querySelector(`input[name="ai-model-${task}"]:checked`)?.value ?? now.model;
+  const c = { provider, model: model || recommend(task, provider), effort: fitEffort(provider, el.querySelector('[name="effort"]')?.value ?? now.effort) };
   setChoice(task, c);
   return c;
 }
-// Changing where a picker runs suggests that way's recommended model; «Usar lo recomendado» takes the proposal.
+const redraw = (box, task) => { box.outerHTML = pickerHTML(task, { open: box.open }); };
+// Changing where a picker runs takes that way's recommendation; any other change is kept and the line updated.
 document.addEventListener('change', (e) => {
   const box = e.target.closest?.('[data-ai-pick]');
   if (!box) return;
   const task = box.dataset.aiPick;
-  if (e.target.name === 'provider') {
-    setChoice(task, { provider: e.target.value, model: recommend(task, e.target.value), effort: fitEffort(e.target.value, TASKS[task]?.effort ?? 'medium') });
-    box.outerHTML = pickerHTML(task);
-    return;
-  }
-  picked(task, box.parentElement ?? document);
+  if (e.target.name === 'provider') setChoice(task, { provider: e.target.value, model: '', effort: '' });
+  else picked(task, box.parentElement ?? document);
+  redraw(box, task);
 });
 document.addEventListener('click', (e) => {
   const b = e.target.closest?.('[data-ai-suggest]');
@@ -255,7 +312,7 @@ document.addEventListener('click', (e) => {
   const s = suggest(task);
   if (!s) return;
   setChoice(task, s);
-  b.closest('[data-ai-pick]').outerHTML = pickerHTML(task);
+  redraw(b.closest('[data-ai-pick]'), task);
 });
 
 /* ---------- the network ---------- */
@@ -476,16 +533,24 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
     // A Gemini model with no free use, or whose free use ran out today: the same request goes to another «flash»
     // model of the person's account, once each, before giving up.
     if (way === 'gemini' && (err.kind === 'model' || err.kind === 'daily')) {
+      if (err.kind === 'model') markNoFree(model);
       const tried = new Set([...(c.tried ?? []), model]);
-      let list = cachedModels(way);
-      if (!list.length) { try { list = await models(way); } catch { list = []; } }
-      const next = list.find((id) => /flash/i.test(id) && !/(preview|exp|latest|audio|tts|image|live|thinking)/i.test(id) && !tried.has(id));
+      if (!cachedModels(way).length) { try { await models(way); } catch { /* the defaults */ } }
+      const next = ranked(task, way).find((m) => m.cost === 'free' && !tried.has(m.id))?.id;
       if (next) return run({ system, text, files, maxTokens, onProgress, signal, task, use: { ...c, model: next, tried: [...tried] } });
     }
     throw err;
   }
 }
 
+// How much a Gemini model thinks: a level for Gemini 3 and later, a budget of tokens for 2.5 (which counts within the
+// answer's tokens, so it never takes more than half of them).
+function geminiThinking(model, effort, maxTokens) {
+  if (!effort || !thinks('gemini', model)) return {};
+  if (!/gemini-2\.5/.test(model)) return { thinkingConfig: { thinkingLevel: effort === 'low' ? 'low' : effort === 'medium' && /flash/.test(model) ? 'medium' : 'high' } };
+  const budget = { low: 1024, medium: 4096, high: 12288, xhigh: 24576 }[effort] ?? 4096;
+  return { thinkingConfig: { thinkingBudget: Math.min(budget, Math.floor(maxTokens / 2)) } };
+}
 async function send({ way, model, effort, system, text, files, maxTokens, onProgress, signal }) {
   if (way === 'anthropic') {
     const client = await claude(keyOf(way));
@@ -538,7 +603,7 @@ async function send({ way, model, effort, system, text, files, maxTokens, onProg
     onProgress?.(-1);
     const body = await http(way, `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(keyOf(way))}`, {
       method: 'POST', signal, headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts }], generationConfig: { maxOutputTokens: maxTokens } }),
+      body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts }], generationConfig: { maxOutputTokens: maxTokens, ...geminiThinking(model, effort, maxTokens) } }),
     });
     const cand = body.candidates?.[0];
     if (cand?.finishReason === 'SAFETY') throw new AIError('Tu IA se negó a procesar este material.', { kind: 'job', way });
