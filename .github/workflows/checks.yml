@@ -65,7 +65,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Pack the app as a release
         run: |
-          bash tools/pack.sh "0.0.0-pr${{ github.event.pull_request.number }}" "${{ github.event.pull_request.head.sha }}" /tmp/pack
+          # Each push gets its own assets folder: they are served as immutable, so a folder shared by every push of the
+          # pull request kept a returning browser on the first version it saw.
+          sha="${{ github.event.pull_request.head.sha }}"
+          bash tools/pack.sh "0.0.0-pr${{ github.event.pull_request.number }}.${sha:0:7}" "$sha" /tmp/pack
           mkdir -p deploy/studium
           tar -xzf /tmp/pack/studium-dist-v*.tar.gz -C deploy/studium
       - name: Write the preview's Hosting configuration
@@ -79,6 +82,7 @@ jobs:
               "rewrites": [{ "source": "/studium{,/**}", "destination": "/studium/index.html" }],
               "headers": [
                 { "source": "**/*.@(html|json)", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+                { "source": "/studium{,/}", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
                 { "source": "/studium/assets/**", "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] }
               ]
             }

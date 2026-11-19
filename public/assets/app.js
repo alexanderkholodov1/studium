@@ -127,6 +127,8 @@ function show(view) {
     root.classList.toggle('quiet', quiet);
     play.setQuiet(quiet);
     for (const a of document.querySelectorAll('[data-tab]')) a.setAttribute('aria-current', String(a.dataset.tab === TABS[view]));
+    // On a phone the bar scrolls sideways when its tabs do not fit: the current one is kept in sight.
+    $('#tabbar [aria-current="true"]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
     const user = auth.currentUser;
     $('#who-email').textContent = user?.email ?? '';
     $('#initial').textContent = (prefs.get().nickname || user?.email || '?')[0].toUpperCase();
