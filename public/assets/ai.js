@@ -179,6 +179,20 @@ export function choice(task) {
   const s = suggest(task);
   return s ? { provider: s.provider, model: s.model, effort: s.effort } : { provider: 'anthropic', model: recommend(task, 'anthropic'), effort: TASKS[task]?.effort ?? 'high' };
 }
+// The AI used everywhere unless the person picks another for one task: the same way and model for every task.
+export function setDefault(way, model = '') {
+  patch((s) => { for (const task of Object.keys(TASKS)) s.use[task] = { provider: way, model: model || recommend(task, way), effort: TASKS[task].effort }; });
+}
+export const defaultWay = () => choice('guide').provider;
+// How many requests Studium sent today from this browser, per way: the providers do not tell it the person's usage.
+const USAGE = 'studium-ai-usage';
+const today = () => new Date().toDateString();
+function bump(way) {
+  try { const u = JSON.parse(localStorage.getItem(USAGE) ?? '{}'); const d = u.day === today() ? u : { day: today(), n: {} }; d.n[way] = (d.n[way] ?? 0) + 1; localStorage.setItem(USAGE, JSON.stringify(d)); } catch { /* not counted */ }
+}
+export function usageToday(way) {
+  try { const u = JSON.parse(localStorage.getItem(USAGE) ?? '{}'); return u.day === today() ? u.n?.[way] ?? 0 : 0; } catch { return 0; }
+}
 export function setChoice(task, c) {
   patch((s) => { s.use[task] = { provider: c.provider, model: String(c.model ?? '').trim(), effort: c.effort }; });
 }
@@ -449,6 +463,7 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
   const effort = fitEffort(way, c.effort);
   const usable = await adapt(files.filter((f) => !f.skipped), readsOf(way), way);
   const meta = { provider: vendorOf(way, model), way, model, effort };
+  bump(way);
   try {
     const out = await send({ way, model, effort, system, text, files: usable, maxTokens, onProgress, signal });
     // An empty answer is a failure of the AI, never a result to review: it is tried again.

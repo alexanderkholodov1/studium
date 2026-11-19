@@ -2,6 +2,7 @@
 // ambience picker, and the settings. Everything the person chooses lives in prefs.js.
 import { prefs, MODES, AMBIENCES, THEMES, AVATARS } from './prefs.js';
 import * as ai from './ai.js';
+import { when, nextMidnight } from './aierror.js';
 import { sfx } from './sfx.js';
 import { celebrate } from './play.js';
 import { themeStyle, keyOf } from './themes.js';
@@ -370,98 +371,150 @@ function mapSettings() {
 // time the AI is used, and the page proposes the best of what is connected.
 const aiMsg = (id, text = '') => `<p class="msg" data-ai-msg="${id}" role="status">${esc(text)}</p>`;
 const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
-function keyCard(k) {
-  const pr = ai.PROVIDERS[k]; const key = ai.keyOf(k); const n = ai.cachedModels(k).length;
-  return `<article class="ai-key ${key ? 'on' : ''}">
-    <h3>${esc(pr.name)} <small>${esc(pr.by)}</small>${key ? ' <span class="badge ok">conectada</span>' : ''}</h3>
-    <label class="field"><span>Tu clave de API</span><input type="password" data-ai-key="${k}" value="${esc(key)}" placeholder="${esc(pr.keyHint)}" autocomplete="off" spellcheck="false"></label>
+// «Tu IA», read from the top: what Studium uses now; which AI you use (Gemini, ChatGPT, Claude or another), and for
+// each, its ways from the easiest to the most technical; each says what it is, what it costs, and that it is another
+// company's service. The bridge is advanced, and says what it does on the computer and how to stop it.
+const VENDOR = 'studium-ai-vendor';
+const VENDORS = {
+  gemini: { name: 'Gemini', note: 'gratis' },
+  openai: { name: 'ChatGPT', note: 'de OpenAI' },
+  anthropic: { name: 'Claude', note: 'de Anthropic' },
+  otras: { name: 'Otras', note: 'OpenRouter, Puter' },
+};
+const vendorOfWay = (w) => (w === 'gemini' ? 'gemini' : w === 'openai' || w === 'bridge:codex' ? 'openai' : w === 'anthropic' || w === 'bridge:claude' ? 'anthropic' : 'otras');
+function shownVendor() {
+  try { const v = localStorage.getItem(VENDOR); if (v in VENDORS) return v; } catch { /* the default */ }
+  const now = ai.connected();
+  return now.length ? vendorOfWay(ai.defaultWay()) : 'gemini';
+}
+const THEIRS = (who) => `<p class="ai-theirs">${who} es un servicio de otra empresa, con sus propias condiciones. Studium solo le envía lo que tú le pides procesar, y no se hace responsable del servicio.</p>`;
+// A way that is connected: which model, how many requests today from here, when the free limit comes back.
+function wayStatus(way) {
+  if (!ai.connected().includes(way)) return '';
+  const isDefault = ai.defaultWay() === way;
+  const models = way.startsWith('bridge:') ? [] : ai.cachedModels(way);
+  const model = ai.choice('guide').provider === way ? ai.choice('guide').model : ai.recommend('guide', way);
+  const reset = way === 'gemini' ? `Su límite gratis se renueva ${when(nextMidnight('America/Los_Angeles'))}.` : way === 'openrouter' ? `Su límite gratis se renueva ${when(nextMidnight('UTC'))}.` : '';
+  return `<div class="ai-status">
+    <span class="badge ok">conectada</span>
+    ${models.length ? `<label class="ai-model">Modelo <select data-ai-model="${way}">${models.map((m) => `<option ${m === model ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select></label>` : model ? `<span class="muted">Modelo: ${esc(model)}</span>` : ''}
+    <span class="muted">Hoy: ${count(ai.usageToday(way), 'pedido', 'pedidos')} desde Studium.</span>${reset ? ` <span class="muted">${reset}</span>` : ''}
+    ${isDefault ? '<span class="badge">la que usa Studium</span>' : `<button class="button ghost small" data-ai-default="${way}">Usar esta</button>`}
+  </div>`;
+}
+function keyBox(k, cost) {
+  const pr = ai.PROVIDERS[k]; const key = ai.keyOf(k);
+  return `<label class="field"><span>Tu clave de API de ${esc(pr.name)}</span><input type="password" data-ai-key="${k}" value="${esc(key)}" placeholder="${esc(pr.keyHint)}" autocomplete="off" spellcheck="false"></label>
     <div class="actions"><button class="button ghost small" data-ai-test="${k}" ${key ? '' : 'disabled'}>Probar</button>
-      ${key ? `<button class="link" data-ai-forget="${k}">Borrar la clave</button>` : ''}
-      <a class="link" href="${esc(pr.keys)}" target="_blank" rel="noopener noreferrer">¿Dónde la consigo?</a></div>
-    ${aiMsg(k, key && n ? `${count(n, 'modelo', 'modelos')} en tu cuenta.` : '')}
-  </article>`;
+      <a class="link" href="${esc(pr.keys)}" target="_blank" rel="noopener noreferrer">Conseguir una clave ↗</a>
+      ${key ? `<button class="link" data-ai-forget="${k}">Borrar la clave</button>` : ''}</div>
+    ${aiMsg(k)}<p class="fine">${cost}</p>`;
 }
-function geminiCard() {
-  const key = ai.keyOf('gemini'); const n = ai.cachedModels('gemini').length;
-  return `<article class="ai-way ${key ? 'on' : ''}">
-    <h3>Gratis, con tu cuenta de Google <small>Gemini</small>${key ? ' <span class="badge ok">conectada</span>' : ''}</h3>
-    <ol class="howto">
-      <li>Abre <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a> con cualquier cuenta de Google.</li>
-      <li>Pulsa «Create API key». No pide tarjeta.</li>
-      <li>Pega aquí la clave.</li>
-    </ol>
-    <label class="field"><span>Tu clave de Gemini</span><input type="password" data-ai-key="gemini" value="${esc(key)}" placeholder="AIza…" autocomplete="off" spellcheck="false"></label>
-    <div class="actions"><button class="button ghost small" data-ai-test="gemini" ${key ? '' : 'disabled'}>Probar</button>
-      ${key ? '<button class="link" data-ai-forget="gemini">Borrar la clave</button>' : ''}</div>
-    ${aiMsg('gemini', key && n ? `${count(n, 'modelo', 'modelos')} en tu cuenta.` : '')}
-    <p class="fine">Google pone un límite de pedidos por día; cuando se acaba, Studium espera a que se renueve y sigue. En el plan gratis, Google puede usar lo que recibe para mejorar sus productos.</p>
+// The chat way: nothing to connect, with any account, free or paid.
+const chatWay = (name, site) => `<article class="ai-way easy">
+    <h3><span class="step">1</span> Por chat, con tu cuenta de ${name} <small>gratis o de pago · nada que configurar</small></h3>
+    <p>Cuando Studium necesita la IA (leer tu horario, procesar apuntes, crear una guía), te da el pedido listo: lo copias, lo pegas en <a href="${site}" target="_blank" rel="noopener noreferrer">${name}</a> con tu archivo, y pegas la respuesta en Studium. Es la forma más fácil si ya pagas ${name}.</p>
   </article>`;
-}
-function bridgeCard() {
+function bridgeWay(engine) {
+  const way = `bridge:${engine}`;
   const b = ai.bridgeOf();
-  const engines = b?.engines ?? [];
-  if (b?.token) {
-    return `<article class="ai-way on">
-      <h3>Con tu suscripción <small>el puente, en tu computadora</small>${engines.some((e) => e.ready) ? ' <span class="badge ok">enlazado</span>' : ''}</h3>
-      <ul class="engines">${engines.length
-        ? engines.map((e) => `<li class="${e.ready ? 'ok' : ''}"><strong>${esc(e.name)}</strong> <span>${esc(e.ready ? `lista, ${count((e.models ?? []).length, 'modelo', 'modelos')}` : e.detail || 'no está lista')}</span></li>`).join('')
-        : '<li>Pulsa «Revisar» con el puente abierto.</li>'}</ul>
-      <div class="actions"><button class="button ghost small" data-ai-bridge-check>Revisar</button><button class="link" data-ai-forget="bridge">Desenlazar</button></div>
-      ${aiMsg('bridge')}
-      <p class="fine">El puente debe estar abierto mientras Studium usa tu IA. Si lo cierras, la cola espera hasta que lo abras otra vez.</p>
+  const e = b?.engines?.find((x) => x.id === engine);
+  const name = { claude: 'Claude Code', codex: 'Codex', antigravity: 'Antigravity' }[engine];
+  return `<article class="ai-way ${ai.connected().includes(way) ? 'on' : ''}">
+    <h3><span class="step">3</span> Automático, con tu suscripción <small>avanzado · el puente con ${name}</small></h3>
+    <p>Studium usa el ${name} que ya tienes instalado en tu computadora, con tu suscripción, sin pagar por uso. Necesita el puente (abajo, en «Avanzado»).</p>
+    ${b?.token ? (e ? `<p class="muted">${e.ready ? `${name} está listo en tu computadora.` : `${name}: ${esc(e.detail || 'no está listo')}.`}</p>` : `<p class="muted">El puente está enlazado, pero no encontró ${name} en tu computadora.</p>`) : ''}
+    ${wayStatus(way)}
+  </article>`;
+}
+function vendorPanel(v) {
+  if (v === 'gemini') {
+    const key = ai.keyOf('gemini');
+    return `<article class="ai-way ${key ? 'on' : ''} easy">
+      <h3>Gratis, automático <small>en un minuto, con cualquier cuenta de Google</small></h3>
+      <ol class="howto">
+        <li>Abre <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio ↗</a> y entra con tu cuenta de Google.</li>
+        <li>Pulsa «Create API key». No pide tarjeta.</li>
+        <li>Copia la clave y pégala aquí.</li>
+      </ol>
+      <label class="field"><span>Tu clave de Gemini</span><input type="password" data-ai-key="gemini" value="${esc(key)}" placeholder="AIza…" autocomplete="off" spellcheck="false"></label>
+      <div class="actions"><button class="button primary small" data-ai-test="gemini" ${key ? '' : 'disabled'}>Probar</button>${key ? '<button class="link" data-ai-forget="gemini">Borrar la clave</button>' : ''}</div>
+      ${aiMsg('gemini')}${wayStatus('gemini')}
+      <p class="fine">Google da un número de pedidos gratis por día y por modelo. Studium usa los modelos «flash», que son los que tienen uso gratis. En el plan gratis, Google puede usar lo que recibe para mejorar sus productos.</p>
+      ${THEIRS('Gemini')}
     </article>`;
   }
-  return `<article class="ai-way">
-    <h3>Con tu suscripción <small>Claude Pro o Max, ChatGPT, Google AI Pro</small></h3>
-    <p>El puente es un programa pequeño que corre en tu computadora y usa tu Claude Code, Codex o Antigravity, con tu sesión ya iniciada. Sin API y sin costo por uso.</p>
-    <ol class="howto">
-      <li>Necesitas <a href="https://nodejs.org/" target="_blank" rel="noopener noreferrer">Node</a> 20 o más nuevo y al menos una de esas IA instalada, con tu sesión iniciada.</li>
-      <li><a href="${esc(ai.BRIDGE_URL)}" download="studium-bridge.mjs">Descarga el puente</a>.</li>
-      <li>En una terminal, en la carpeta donde lo guardaste, escribe <code>node studium-bridge.mjs</code>.</li>
-      <li>Abre el enlace que te muestra. Chrome te pedirá permiso para que Studium hable con tu computadora: acéptalo.</li>
-    </ol>
-    <label class="field"><span>O pega aquí su código de enlace</span><input data-ai-pair-code placeholder="41730.…" autocomplete="off" spellcheck="false"></label>
-    <div class="actions"><button class="button ghost small" data-ai-pair>Enlazar</button></div>
-    ${aiMsg('bridge')}
-  </article>`;
+  if (v === 'openai' || v === 'anthropic') {
+    const name = v === 'openai' ? 'ChatGPT' : 'Claude';
+    const site = v === 'openai' ? 'https://chatgpt.com' : 'https://claude.ai';
+    const company = v === 'openai' ? 'OpenAI' : 'Anthropic';
+    return `${chatWay(name, site)}
+      <article class="ai-way ${ai.keyOf(v) ? 'on' : ''}">
+        <h3><span class="step">2</span> Automático, pagando por uso <small>con una clave de API de ${company}</small></h3>
+        <p>Studium lo hace todo solo. Cada pedido se cobra en tu cuenta de ${company}, aparte de tu suscripción: una suscripción de ${name} no incluye la API.</p>
+        ${keyBox(v, 'La clave se guarda solo en este navegador. En un computador compartido, bórrala al terminar.')}
+        ${wayStatus(v)}
+      </article>
+      ${ai.offered('bridge:claude') ? bridgeWay(v === 'openai' ? 'codex' : 'claude') : ''}
+      ${THEIRS(name)}`;
+  }
+  const on = (w) => ai.connected().includes(w);
+  return `<article class="ai-way ${on('openrouter') ? 'on' : ''}">
+      <h3>OpenRouter <small>muchas IA en un solo lugar</small></h3>
+      <p>Una empresa que da acceso a modelos de muchas IA con una sola cuenta. Sus modelos gratis no cuestan nada, pero aceptan pocos pedidos al día (unos 50): sirven para cosas pequeñas.</p>
+      <div class="actions">${on('openrouter') ? '<button class="button ghost small" data-ai-test="openrouter">Probar</button><button class="link" data-ai-forget="openrouter">Desconectar</button>' : '<button class="button primary small" data-ai-login="openrouter">Conectar con OpenRouter</button>'}</div>
+      ${aiMsg('openrouter')}${wayStatus('openrouter')}${THEIRS('OpenRouter')}
+    </article>
+    ${ai.offered('puter') ? `<article class="ai-way ${on('puter') ? 'on' : ''}">
+      <h3>Puter <small>con un clic</small></h3>
+      <p>Un servicio que da acceso a varias IA con su propia cuenta. Para funcionar, su código corre dentro de esta página mientras lo usas, y Studium no controla qué modelos ni cuántos pedidos te da.</p>
+      <div class="actions">${on('puter') ? '<button class="button ghost small" data-ai-test="puter">Probar</button><button class="link" data-ai-forget="puter">Desconectar</button>' : '<button class="button ghost small" data-ai-login="puter">Conectar con Puter</button>'}</div>
+      ${aiMsg('puter')}${wayStatus('puter')}${THEIRS('Puter')}
+    </article>` : ''}`;
 }
-function loginCard(way) {
-  const on = ai.connected().includes(way);
-  const n = ai.cachedModels(way).length;
-  const name = way === 'openrouter' ? 'OpenRouter' : 'Puter';
-  const text = way === 'openrouter'
-    ? 'Inicia sesión y vuelve aquí, sin copiar claves. Sus modelos gratis no cuestan nada y aceptan 50 pedidos al día (1.000 si alguna vez compraste 10 USD de crédito): sirven para pocos archivos.'
-    : 'Inicia sesión con un clic y usa Claude, GPT o Gemini con lo que tiene disponible tu cuenta de Puter. Puter es un servicio aparte: mientras lo uses, su código corre en esta página.';
-  return `<article class="ai-way ${on ? 'on' : ''}">
-    <h3>${name} <small>con un clic</small>${on ? ' <span class="badge ok">conectada</span>' : ''}</h3>
-    <p>${esc(text)}</p>
-    <div class="actions">${on
-      ? `<button class="button ghost small" data-ai-test="${way}">Probar</button><button class="link" data-ai-forget="${way}">Desconectar</button>`
-      : `<button class="button primary small" data-ai-login="${way}">Conectar con ${name}</button>`}</div>
-    ${aiMsg(way, on && n ? `${count(n, 'modelo disponible', 'modelos disponibles')}.` : '')}
-  </article>`;
+// The bridge, said plainly: what it is, what it can and cannot do, how to stop it, and which subscription it uses.
+function bridgeAdvanced() {
+  const b = ai.bridgeOf();
+  const engines = b?.engines ?? [];
+  const names = { claude: 'Claude Code', codex: 'Codex', antigravity: 'Antigravity' };
+  return `<details class="ai-advanced" ${b?.token ? 'open' : ''}><summary>Avanzado: el puente, para usar tu suscripción automáticamente</summary>
+    <div class="ai-bridge">
+      <p><b>Qué es.</b> Un programa pequeño que corre en tu computadora mientras lo tienes abierto. Conecta Studium con Claude Code, Codex o Antigravity, si ya los tienes instalados con tu sesión iniciada, para usar tu suscripción sin pagar por uso.</p>
+      <ul>
+        <li><b>Qué hace:</b> recibe un pedido de Studium, se lo pasa a tu IA en una carpeta temporal, y devuelve la respuesta. Después borra la carpeta.</li>
+        <li><b>Qué no puede hacer:</b> no lee tus otros archivos ni cambia nada en tu computadora; solo responde a Studium, y solo con el código que muestra al abrirse.</li>
+        <li><b>Cómo apagarlo:</b> cierra la ventana de la terminal, o pulsa Ctrl+C en ella.</li>
+        <li><b>Para quién:</b> si nunca abriste una terminal, mejor usa la forma por chat: hace lo mismo, solo que a mano.</li>
+      </ul>
+      ${b?.token ? `<p><b>Tus suscripciones en esta computadora.</b> Elige cuál usa Studium:</p>
+        <ul class="engines">${engines.length ? engines.map((e) => `<li class="${e.ready ? 'ok' : ''}"><strong>${esc(names[e.id] ?? e.name)}</strong>
+          <span>${esc(e.ready ? `lista · ${count((e.models ?? []).length, 'modelo', 'modelos')}` : e.detail || 'no está lista')}</span>
+          ${e.ready ? (ai.defaultWay() === `bridge:${e.id}` ? '<span class="badge">la que usa Studium</span>' : `<button class="button ghost small" data-ai-default="bridge:${e.id}">Usar esta</button>`) : ''}</li>`).join('') : '<li>Pulsa «Revisar» con el puente abierto.</li>'}</ul>
+        <div class="actions"><button class="button ghost small" data-ai-bridge-check>Revisar</button><button class="link" data-ai-forget="bridge">Desenlazar</button></div>`
+      : `<ol class="howto">
+        <li>Necesitas <a href="https://nodejs.org/" target="_blank" rel="noopener noreferrer">Node</a> 20 o más nuevo.</li>
+        <li><a href="${esc(ai.BRIDGE_URL)}" download="studium-bridge.mjs">Descarga el puente</a>.</li>
+        <li>Abre una terminal en la carpeta donde lo guardaste y escribe <code>node studium-bridge.mjs</code>.</li>
+        <li>Abre el enlace que te muestra (o pega aquí su código). Chrome te pedirá permiso para que Studium hable con tu computadora.</li>
+      </ol>
+      <label class="field"><span>Código de enlace del puente</span><input data-ai-pair-code placeholder="41730.…" autocomplete="off" spellcheck="false"></label>
+      <div class="actions"><button class="button ghost small" data-ai-pair>Enlazar</button></div>`}
+      ${aiMsg('bridge')}
+    </div></details>`;
 }
 function aiSettings() {
-  const has = (way) => ai.offered(way);
-  const keys = ['anthropic', 'openai'].filter(has);
   const now = ai.connected();
+  const v = shownVendor();
+  const c = now.length ? ai.choice('guide') : null;
   return `<section class="set glass" id="set-ai"><h2>Tu IA</h2>
-    <p>Studium usa tu IA para procesar tu material, crear guías a tu medida, identificar documentos y editar tus guías.
-      <strong>Studium no cobra nada.</strong> Conecta una o varias, de la forma que tengas: cada vez que la uses, Studium te
-      propone dónde, con qué modelo y con qué esfuerzo.</p>
-    ${now.length ? `<p class="fine">Conectadas: ${now.map((w) => esc(ai.WAYS[w].name)).join(' · ')}.</p>` : ''}
-    <div class="ai-ways">
-      ${has('gemini') ? geminiCard() : ''}
-      ${has('bridge:claude') ? bridgeCard() : ''}
-      ${has('openrouter') ? loginCard('openrouter') : ''}
-      ${has('puter') ? loginCard('puter') : ''}
-    </div>
-    ${keys.length ? `<details class="ai-more" ${keys.some((k) => ai.keyOf(k)) ? 'open' : ''}><summary>Con una clave de API, que cobra por uso</summary>
-      <div class="ai-keys">${keys.map(keyCard).join('')}</div>
-      <p class="fine">Una suscripción de claude.ai o de ChatGPT no incluye la API: para usar tu suscripción, conecta el puente.</p></details>` : ''}
-    <p class="hint">Las claves y sesiones se guardan solo en este navegador: no llegan a la base de datos de Studium ni a su creador.
-      En un computador compartido, bórralas al terminar.</p>
-    <p class="fine">¿Sin conectar nada, o con una cuenta gratis de Claude o ChatGPT? Al aportar material o crear una guía, Studium te da las instrucciones y las partes listas para llevarlas al chat de tu IA.</p>
+    <p class="ai-lede">Studium usa una IA para leer tus archivos, tu horario y crear guías. Tú eliges cuál. <strong>Studium no cobra nada.</strong></p>
+    <div class="ai-now ${now.length ? 'on' : ''}">${c ? `Ahora Studium usa <b>${esc(ai.WAYS[c.provider]?.name ?? c.provider)}</b>${c.model ? ` · ${esc(c.model)}` : ''}. Hoy: ${count(ai.usageToday(c.provider), 'pedido', 'pedidos')}.`
+      : 'Todavía no conectaste ninguna. <b>Para empezar, Gemini es gratis y toma un minuto.</b> Si usas ChatGPT o Claude, también sirven.'}</div>
+    <p class="ai-ask">¿Qué IA usas?</p>
+    <div class="ai-vendors" role="tablist">${Object.entries(VENDORS).map(([k, x]) => `<button role="tab" class="ai-vendor" aria-selected="${k === v}" data-ai-vendor="${k}">${esc(x.name)}<small>${esc(x.note)}</small>${now.some((w) => vendorOfWay(w) === k) ? '<i class="dot" title="conectada"></i>' : ''}</button>`).join('')}</div>
+    <div class="ai-panel">${vendorPanel(v)}</div>
+    ${ai.offered('bridge:claude') ? bridgeAdvanced() : ''}
+    <p class="fine">Las claves y sesiones se guardan solo en este navegador: no llegan a la base de datos de Studium ni a su creador.</p>
   </section>`;
 }
 async function testAI(way) {
@@ -528,6 +581,8 @@ export function mountSpace(context) {
     }
     if (t.dataset.goalRemove) { prefs.set({ goals: prefs.get().goals.filter((g) => g.id !== t.dataset.goalRemove) }); renderHome(); }
     if (t.dataset.reroll !== undefined) renderHome();
+    if (t.dataset.aiVendor) { try { localStorage.setItem('studium-ai-vendor', t.dataset.aiVendor); } catch { /* shown now */ } renderSettings(); sfx.tick(); return; }
+    if (t.dataset.aiDefault) { ai.setDefault(t.dataset.aiDefault); ctx?.toast(`Studium usará ${ai.WAYS[t.dataset.aiDefault]?.name ?? 'esta IA'}.`); renderSettings(); sfx.tick(); return; }
     if (t.dataset.aiTest) testAI(t.dataset.aiTest);
     if (t.closest('#set-map')) {
       const p = prefs.get();
@@ -591,6 +646,7 @@ export function mountSpace(context) {
       }
       setTimeout(renderHome, t.checked ? 650 : 0);
     }
+    if (t.dataset.aiModel) { ai.setDefault(t.dataset.aiModel, t.value); ctx?.toast(`Studium usará ${t.value}.`); renderSettings(); return; }
     if (t.dataset.aiKey) {
       ai.setKey(t.dataset.aiKey, t.value);
       renderSettings();
