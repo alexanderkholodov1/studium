@@ -149,6 +149,11 @@ export function recommend(task, way) {
     const byTier = (ids) => ids.filter((id) => tierOf(id) === tier);
     return pickFrom(byTier(claude)) ?? pickFrom(byTier(list)) ?? pickFrom(claude) ?? list[0];
   }
+  if (way === 'gemini') {
+    const flash = list.filter((id) => /flash/i.test(id) && !/(audio|tts|image|live|thinking)/i.test(id));
+    const lite = flash.filter((id) => /lite/i.test(id));
+    return pickFrom(tier === 'light' ? (lite.length ? lite : flash) : flash.filter((id) => !/lite/i.test(id)).length ? flash.filter((id) => !/lite/i.test(id)) : flash) ?? list[0];
+  }
   if (tier === 'light') return pickFrom(list.filter(light)) ?? list[0];
   if (tier === 'strong') return pickFrom(list.filter(strong)) ?? pickFrom(list.filter((id) => !light(id))) ?? list[0];
   return pickFrom(list.filter((id) => !light(id) && !strong(id))) ?? pickFrom(list.filter((id) => !light(id))) ?? list[0];
@@ -452,7 +457,17 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
   } catch (e) {
     if (e instanceof AIError) throw e;
     if (signal?.aborted) throw new AIError('Cancelado.', { kind: 'cancel', way });
-    throw classify({ way, status: e.status ?? 0, message: e.message, body: e.error ?? e.body, headers: e.headers });
+    const err = classify({ way, status: e.status ?? 0, message: e.message, body: e.error ?? e.body, headers: e.headers, model });
+    // A Gemini model with no free use, or whose free use ran out today: the same request goes to another «flash»
+    // model of the person's account, once each, before giving up.
+    if (way === 'gemini' && (err.kind === 'model' || err.kind === 'daily')) {
+      const tried = new Set([...(c.tried ?? []), model]);
+      let list = cachedModels(way);
+      if (!list.length) { try { list = await models(way); } catch { list = []; } }
+      const next = list.find((id) => /flash/i.test(id) && !/(preview|exp|latest|audio|tts|image|live|thinking)/i.test(id) && !tried.has(id));
+      if (next) return run({ system, text, files, maxTokens, onProgress, signal, task, use: { ...c, model: next, tried: [...tried] } });
+    }
+    throw err;
   }
 }
 

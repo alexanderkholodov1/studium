@@ -22,6 +22,12 @@ const SECOND = 1000;
 const MINUTE = 60 * SECOND;
 
 // The next midnight in a time zone: Gemini's daily limits reset at midnight in California, OpenRouter's in UTC.
+// A moment said in the person's own time: «hoy a las 3:00», «mañana a las 2:00».
+export function when(ms) {
+  const d = new Date(ms); const n = new Date();
+  const day = d.toDateString() === n.toDateString() ? 'hoy' : d.getDate() === new Date(n.getTime() + 864e5).getDate() ? 'mañana' : d.toLocaleDateString('es-EC', { weekday: 'long' });
+  return `${day} a las ${d.toLocaleTimeString('es-EC', { hour: 'numeric', minute: '2-digit' })} (tu hora)`;
+}
 export function nextMidnight(timeZone = 'UTC', now = Date.now()) {
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: 'numeric', day: 'numeric' })
     .formatToParts(new Date(now)).filter((p) => p.type !== 'literal').map((p) => [p.type, Number(p.value)]));
@@ -56,7 +62,7 @@ const NO_API = 'Una suscripción de claude.ai, gratis o Pro, no incluye la API. 
 
 // way: which connection failed ('anthropic', 'openai', 'gemini', 'openrouter', 'puter', 'bridge:<engine>').
 // status: HTTP status (0 when there was no connection). message: the provider's own text. body: its error body.
-export function classify({ way = '', status = 0, message = '', body = null, headers = null, now = Date.now() } = {}) {
+export function classify({ way = '', status = 0, message = '', body = null, headers = null, now = Date.now(), model = '' } = {}) {
   const text = `${message} ${flat(body)}`;
   const opts = (kind, retryAt = 0) => ({ kind, retryAt, way });
   const bridge = way.startsWith('bridge:');
@@ -100,11 +106,17 @@ export function classify({ way = '', status = 0, message = '', body = null, head
   if (status === 413) return new AIError('Esta parte es demasiado grande para tu IA. Prueba con menos páginas.', opts('job'));
 
   if (status === 429) {
+    // Gemini answers 429 «per day, limit: 0» for a model with no free use at all: that is not a used-up day.
+    if (way === 'gemini' && /limit:\s*0\b/i.test(text)) {
+      return new AIError(`El modelo ${model || 'elegido'} no tiene uso gratis en tu cuenta de Gemini. Elige un modelo «flash», que sí lo tiene.`, opts('model'));
+    }
     if (way === 'gemini' && /PerDay|per day|daily/i.test(text)) {
-      return new AIError('Usaste los pedidos gratis de hoy en Gemini. Se renuevan a medianoche de California.', opts('daily', nextMidnight('America/Los_Angeles', now)));
+      const at = nextMidnight('America/Los_Angeles', now);
+      return new AIError(`Usaste los pedidos gratis de hoy de ${model || 'este modelo'} en Gemini. Se renuevan ${when(at)}. Mientras tanto puedes elegir otro modelo u otra IA.`, opts('daily', at));
     }
     if (way === 'openrouter' && /per[- ]day|free-models-per-day|daily/i.test(text)) {
-      return new AIError('Usaste los pedidos gratis de hoy en OpenRouter. Se renuevan a medianoche UTC.', opts('daily', nextMidnight('UTC', now)));
+      const at = nextMidnight('UTC', now);
+      return new AIError(`Usaste los pedidos gratis de hoy en OpenRouter. Se renuevan ${when(at)}. Mientras tanto puedes elegir otra IA.`, opts('daily', at));
     }
     const wait = retryAfterOf(headers) || delayOf(body?.error?.details?.find?.((d) => d.retryDelay)?.retryDelay) || delayOf(text.match(/retry in ([\d.]+\s*m?s)/i)?.[1]) || 30 * SECOND;
     return new AIError('Tu IA pidió una pausa: demasiados pedidos seguidos. Studium espera y sigue solo.', opts('rate', now + Math.min(wait, 30 * MINUTE)));
