@@ -1416,7 +1416,7 @@ html.has-announce .page { padding-top: 170px; }
 .sg-topic { margin: 34px 0; }
 .sg-topic h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; font: 800 26px var(--display); letter-spacing: -.02em; }
 .sg-topic h2 i { width: 12px; height: 12px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 5px color-mix(in oklab, var(--c) 20%, transparent); }
-.sg-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.sg-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
 .sg-card { --c: var(--blue); position: relative; display: grid; grid-template-columns: 48px 1fr; gap: 4px 14px; align-content: start; padding: 18px 20px; border-radius: 22px;
   background: linear-gradient(170deg, color-mix(in oklab, var(--c) 7%, var(--card)), var(--card) 60%); box-shadow: inset 0 0 0 1px var(--line), 0 16px 30px -26px rgba(0, 0, 0, .55); scroll-margin-top: 110px; transition: box-shadow .4s; }
 .sg-card.focus { box-shadow: inset 0 0 0 2px var(--c), 0 18px 34px -22px var(--c); }
@@ -1428,6 +1428,7 @@ html.has-announce .page { padding-top: 170px; }
 .sg-card details { grid-column: 1 / -1; margin-top: 8px; }
 .sg-card summary { cursor: pointer; width: max-content; font: 700 14px var(--display); color: var(--ink-2); }
 .sg-card details p { margin: 8px 0 0; line-height: 1.55; color: var(--ink-2); }
+.sg-card details ul { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; line-height: 1.5; color: var(--ink-2); }
 .sg-card .button { margin-top: 10px; }
 .sg-source { display: block; margin-top: 8px; font-size: 12.5px; color: var(--muted); }
 @media (max-width: 900px) { .sg-essential { grid-template-columns: repeat(2, minmax(0, 1fr)); } .sg-grid { grid-template-columns: 1fr; } }

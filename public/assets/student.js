@@ -18,6 +18,16 @@ const P = {
 };
 const icon = (name) => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${P[name] ?? P.star}</svg>`;
 const ESSENTIAL = ['como', 'grupo', 'creditos', 'minor'];
+// A tip's text: sentences as paragraphs, and lines that start with «• » as a list.
+function prose(body) {
+  const out = []; let list = [];
+  const flush = () => { if (list.length) { out.push(`<ul>${list.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`); list = []; } };
+  for (const line of String(body).split(/\n/)) {
+    if (line.startsWith('• ')) list.push(line.slice(2)); else { flush(); if (line.trim()) out.push(`<p>${esc(line)}</p>`); }
+  }
+  flush();
+  return out.join('');
+}
 
 function card(x, open) {
   const color = TOPICS[x.topic].color;
@@ -26,7 +36,7 @@ function card(x, open) {
     <p class="sg-kicker">${esc(x.title)}</p>
     <h3>${esc(x.key)}</h3>
     <details ${open ? 'open' : ''}><summary>Cómo funciona</summary>
-      <p>${esc(x.body)}</p>
+      ${prose(x.body)}
       ${x.link ? `<a class="button ghost small" href="${esc(x.link)}" target="_blank" rel="noopener">Abrir la Oferta de cursos ↗</a>` : ''}
       ${x.source ? `<small class="sg-source">${esc(SOURCE)}, ${esc(x.source)}</small>` : ''}
     </details>
@@ -42,5 +52,6 @@ export function renderStudentGuide(id) {
     ${Object.entries(TOPICS).map(([topic, t]) => `<section class="sg-topic"><h2><i class="c-${t.color}"></i>${esc(t.name)}</h2>
       <div class="sg-grid">${TIPS.filter((x) => x.topic === topic).map((x) => card(x, x.id === id)).join('')}</div></section>`).join('')}`;
   const target = id && root.querySelector(`#tip-${CSS.escape(id)}`);
-  if (target) { target.classList.add('focus'); requestAnimationFrame(() => target.scrollIntoView({ block: 'center' })); }
+  // After the route's own scroll to the top, which happens with the page's transition.
+  if (target) { target.classList.add('focus'); setTimeout(() => target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 450); }
 }
