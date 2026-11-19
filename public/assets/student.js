@@ -38,7 +38,7 @@ function card(x, open) {
     <details ${open ? 'open' : ''}><summary>Cómo funciona</summary>
       ${prose(x.body)}
       ${x.link ? `<a class="button ghost small" href="${esc(x.link)}" target="_blank" rel="noopener">Abrir la Oferta de cursos ↗</a>` : ''}
-      ${x.source ? `<small class="sg-source">${esc(SOURCE)}, ${esc(x.source)}</small>` : ''}
+      ${x.source ? `<small class="sg-source">${esc(SOURCE)}, ${esc(x.source)}</small>` : x.cite ? `<small class="sg-source">${esc(x.cite)}</small>` : ''}
     </details>
   </article>`;
 }
