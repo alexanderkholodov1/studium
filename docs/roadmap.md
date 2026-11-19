@@ -88,3 +88,22 @@ Members talk to each other here, so the rule between members holds: nothing is w
 
 It is not a promise to anyone. The landing never shows it. Each version gets its own plan in `docs/`, made with him,
 when its turn comes.
+
+## His ideas of 2026-11-19 (Squire), after 0.6.0
+
+Each is settled with him when its turn comes. His words are in `caspian-kb/rules/sources/2026-11-19T*`.
+- **Spectre, Studium's mascot** (`191112Z`, `192655Z`): the ghost that lives in Maxwell, with a page of his own (who he
+  is, his traits, his story, why study). It needs a redesign, after 0.6.
+- **The graduation** (`184643Z`): when a member has graduated, Spectre asks if they have a moment, or it waits in
+  Settings, and closes the stage with a funny animated performance. A song of its own, in homage: singing the lyrics
+  of *Still Alive* would copy a protected song.
+- **Achievements in the style of Xbox** (`190021Z`, "después de las 0.6"): they unlock wallpapers for the home, skins
+  and references, Spectre's looks, songs for the radio; the campus's own wallpaper (`192516Z`).
+- **The weather** (`192516Z`): Spectre and the home react to it ("no te olvides de ponerte bloqueador solar" when the UV
+  is high).
+- **Spectre Watchtogether** (`210806Z`, 0.7 or 0.8): a shared space to watch together, with safe URLs, without
+  cookies or anything else leaking; each person's cursor visible, if turned on.
+- **Sponsors** (`210806Z`): a clearly marked space in «Comunidad» for companies and services, paid, with prices the
+  admin sets, promotional codes and invitations, reports from the site's analytics (users, audience), and an honest
+  word when the audience is not the one they look for. Payments need a server: his decision first (Blaze or another
+  design). Their terms come with them.
