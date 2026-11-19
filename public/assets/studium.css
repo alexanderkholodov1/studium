@@ -1732,3 +1732,69 @@ html.has-announce .page { padding-top: 170px; }
 .ai-tasks ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
 .ai-tasks li { display: flex; flex-wrap: wrap; gap: 2px 10px; justify-content: space-between; font-size: 14px; border-bottom: 1px dashed var(--line); padding-bottom: 6px; }
 .ai-tasks li span { color: var(--muted); }
+
+/* «Mi malla»: the career by semesters, side by side; what you passed in color, what you can take outlined, what
+   still asks for something muted with a lock. */
+.malla-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 0 0 6px; }
+.malla-where { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; min-width: 0; }
+.malla .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.malla-progress { display: flex; align-items: center; gap: 8px; font-size: 14.5px; color: var(--muted); margin-left: auto; }
+.malla-progress b { color: var(--ink); font-size: 18px; }
+.malla-progress .bar { display: inline-block; width: 140px; height: 8px; border-radius: 99px; background: color-mix(in oklab, var(--muted) 20%, transparent); overflow: hidden; }
+.malla-progress .bar i { display: block; height: 100%; background: var(--teal); border-radius: inherit; transition: width .3s; }
+.malla-help { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
+.malla .sched-more .menu a { padding: 10px 12px; border-radius: 12px; color: var(--ink); font: 650 15px var(--body); text-decoration: none; }
+.malla .sched-more .menu a:hover { background: color-mix(in oklab, var(--blue) 12%, transparent); }
+.malla-career { padding: 6px 8px 10px; }
+.malla-career select { width: 100%; max-width: 100%; }
+.malla-grid { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 6px; overflow-x: auto; padding-bottom: 6px; }
+@media (max-width: 1250px) and (min-width: 701px) { .malla-grid { grid-template-columns: repeat(var(--cols), 124px); } }
+.malla-sem { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 5px; min-width: 0; }
+.malla-sem header { display: flex; justify-content: space-between; align-items: center; gap: 4px; font: 750 13px var(--display); color: var(--ink-2); padding: 0 2px; white-space: nowrap; }
+.malla-all { flex: none; width: 20px; height: 20px; padding: 3px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--card); color: var(--muted); cursor: pointer; }
+.malla-all svg { width: 100%; height: 100%; display: block; }
+.malla-all:hover { border-color: var(--teal); color: var(--teal); }
+.malla-all.on { background: var(--teal); border-color: var(--teal); color: #fff; }
+.malla-class { position: relative; }
+.malla-mark { width: 100%; min-width: 0; display: block; text-align: left; padding: 6px 7px 6px 8px; box-sizing: border-box; border-radius: 12px; cursor: pointer;
+  border: 1.5px solid var(--line); background: var(--card); color: var(--ink); font: inherit; transition: background .15s, border-color .15s, transform .1s; }
+.malla-mark:active { transform: scale(.98); }
+.malla-name { display: block; font: 700 12.5px/1.22 var(--display); hyphens: auto; -webkit-hyphens: auto; overflow-wrap: break-word; padding-right: 14px; }
+.malla-mark small { display: block; margin-top: 2px; padding-right: 20px; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.malla-state { position: absolute; top: 6px; right: 5px; width: 13px; height: 13px; color: var(--muted); }
+.malla-state svg { width: 100%; height: 100%; display: block; }
+.malla-class.ready .malla-mark { border-color: color-mix(in oklab, var(--blue) 55%, var(--line)); }
+.malla-class.ready .malla-mark:hover { background: color-mix(in oklab, var(--blue) 7%, var(--card)); }
+.malla-class.passed .malla-mark { background: color-mix(in oklab, var(--teal) 17%, var(--card)); border-color: color-mix(in oklab, var(--teal) 55%, transparent); }
+.malla-class.passed .malla-state { color: var(--teal); }
+.malla-class.locked .malla-mark { background: color-mix(in oklab, var(--muted) 6%, var(--card)); border-style: dashed; }
+.malla-class.locked .malla-name { color: var(--ink-2); }
+.malla-class.slot .malla-mark { border-style: dotted; }
+.malla-class.slot.passed .malla-mark { border-style: solid; }
+.malla-info { position: absolute; right: 4px; bottom: 4px; width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); color: var(--muted); font: 750 12px var(--display); cursor: pointer; padding: 0; line-height: 1; }
+.malla-info:hover, .malla-class.open .malla-info { color: var(--blue); border-color: var(--blue); }
+.malla-class.open .malla-mark { box-shadow: 0 0 0 2px var(--blue); }
+.malla-detail { position: fixed; z-index: 30; right: max(16px, calc((100vw - 1200px) / 2)); bottom: 20px; width: min(420px, calc(100vw - 32px)); padding: 16px 18px; border-radius: 18px; background: var(--card); box-shadow: 0 24px 50px -20px rgba(0, 0, 0, .5), inset 0 0 0 1px var(--line); }
+.malla-detail h3 { margin: 0 0 8px; font-size: 18px; padding-right: 60px; }
+.malla-detail h3 small { display: block; color: var(--muted); font: 600 13px var(--body); margin-top: 2px; }
+.malla-detail p { margin: 6px 0; font-size: 14.5px; }
+.malla-detail .close { position: absolute; top: 14px; right: 16px; }
+.malla-missing { color: var(--red); }
+.malla-below { display: grid; gap: 14px; margin-top: 18px; max-width: 900px; }
+.malla-now h2 { font-size: 20px; margin: 0 0 4px; }
+.malla-now h2 small { color: var(--muted); font-size: 14px; }
+.malla-now ul { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.malla-now li { padding: 7px 12px; border-radius: 12px; border: 1.5px solid color-mix(in oklab, var(--blue) 45%, var(--line)); font-size: 14px; }
+.malla-now li small { color: var(--muted); margin-left: 4px; }
+.malla-notes summary { cursor: pointer; font: 700 16px var(--display); }
+.malla-notes summary small { color: var(--muted); font-size: 13px; }
+.malla-notes ul { padding-left: 18px; display: grid; gap: 8px; font-size: 14px; }
+.malla-empty { max-width: 560px; margin: 8vh auto 0; padding: 26px; border-radius: 22px; display: grid; gap: 10px; }
+.malla-empty h2 { margin: 0; }
+.malla-empty p { margin: 0; }
+@media (max-width: 700px) {
+  .malla-grid { grid-template-columns: 1fr; overflow: visible; }
+  .malla-sem { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .malla-sem header { grid-column: 1 / -1; margin-top: 6px; }
+  .malla-progress { margin-left: 0; }
+}

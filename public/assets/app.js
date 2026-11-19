@@ -24,6 +24,7 @@ import { mountDemos } from './demos.js';
 import { mountScenes } from './scenes.js';
 import { renderSchedule, mountSchedule } from './schedule.js';
 import { renderStudentGuide } from './student.js';
+import { renderMalla, mountMalla } from './malla.js';
 import { mountLibrary, renderLibrary } from './library.js';
 import { mountEditor, openEditor } from './editor.js';
 import * as ai from './ai.js';
@@ -53,6 +54,7 @@ springLetters($('#wordmark'));
 mountDemos();
 mountScenes();
 mountSchedule();
+mountMalla();
 restOffscreen();
 mountHints();
 for (const el of document.querySelectorAll('[data-ambience-picker]')) renderAmbiences(el);
@@ -111,8 +113,8 @@ document.addEventListener('click', (e) => {
 });
 
 /* ---------- views ---------- */
-const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'horario', 'student', 'catalog', 'map', 'library', 'profes', 'contribute', 'settings', 'about', 'sources', 'guide', 'admin'];
-const TABS = { home: 'home', horario: 'home', catalog: 'catalog', map: 'map', library: 'library', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', admin: 'admin' };
+const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'horario', 'malla', 'student', 'catalog', 'map', 'library', 'profes', 'contribute', 'settings', 'about', 'sources', 'guide', 'admin'];
+const TABS = { home: 'home', horario: 'home', malla: 'home', catalog: 'catalog', map: 'map', library: 'library', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', admin: 'admin' };
 const PUBLIC = ['landing', 'auth', 'about', 'denied', 'verify'];
 let current = 'boot';
 function show(view) {
@@ -493,6 +495,7 @@ async function route() {
     const views = {
       biblioteca: ['library', 'Biblioteca', renderLibrary],
       horario: ['horario', 'Mi horario', renderSchedule],
+      malla: ['malla', 'Mi malla', renderMalla],
       'guia-estudiante': ['student', 'Guía del estudiante', () => renderStudentGuide(arg[0])],
       mapa: ['map', 'Mapa', () => openMap(arg.join('/'))],
       fuentes: ['sources', 'Fuentes', renderSources],

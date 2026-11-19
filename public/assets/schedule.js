@@ -11,6 +11,7 @@ import * as ai from './ai.js';
 import { sfx } from './sfx.js';
 import { prefs } from './prefs.js';
 import { parseOffer, termName } from './offer.js';
+import { prereqNote, norm } from './malla.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const $ = (s, r = document) => r.querySelector(s);
@@ -291,6 +292,7 @@ function askCard() {
     dup: () => `Ya tienes <b>${esc(which(a.old))}</b> en este borrador. ¿Cambiarla por <b>${esc(which(a.cls))}</b>?`,
     group: () => `<b>${esc(which(a.cls))}</b> es de otro grupo que tu ${isTheory(a.cls) ? 'ejercicio o laboratorio' : 'teoría'} <b>${esc(which(a.other))}</b>: no van juntos y no te dejarán inscribirte así.`,
     clash: () => `<b>${esc(which(a.cls))}</b> choca con ${a.with.map((c) => `<b>${esc(which(c))}</b>`).join(', ')}.`,
+    prereq: () => `Según tu malla, <b>${esc(which(a.cls))}</b> pide ${esc(a.needs)}, y no lo tienes marcado como aprobado. Si ya lo aprobaste o lo estás cursando, puedes dejarla.`,
     excluded: () => `<b>${esc(which(a.cls))}</b> no está abierta para: ${a.excluded.map(esc).join('; ')}.${a.applies ? ' Según tu perfil, eso te incluye.' : ''}`,
   })[a.kind]();
   const actions = {
@@ -298,6 +300,7 @@ function askCard() {
     group: '<button class="button primary" data-ask="cancel">No agregarla</button><button class="button ghost" data-ask="add">Agregarla igual</button>',
     clash: '<button class="button ghost" data-ask="keep">Dejar el choque</button><button class="button primary" data-ask="draft">Llevarla a un borrador nuevo</button><button class="link" data-ask="remove">Quitarla</button>',
     excluded: '<button class="button ghost" data-ask="keep">Entendido</button><button class="link" data-ask="remove">Quitarla</button>',
+    prereq: '<button class="button primary" data-ask="keep">Dejarla</button><a class="button ghost" href="#/malla">Ver Mi malla</a><button class="link" data-ask="remove">Quitarla</button>',
   }[a.kind];
   const tone = a.kind === 'clash' || a.kind === 'group' ? 'red' : 'amber';
   return `<div class="sched-ask ${tone}" role="alertdialog" aria-live="assertive">
@@ -320,7 +323,7 @@ function paint() {
       ${has ? `<details class="sched-more"><summary class="button ghost small">Opciones</summary><div class="menu glass">
         <button data-add>Agregar una clase</button><button data-retranscribe>Volver a subir mi horario</button>
         <button data-xlsx>Descargar Excel</button><button data-png>Descargar imagen</button>
-        <a href="#/guia-estudiante">Guía del estudiante</a>
+        <a href="#/malla">Mi malla</a><a href="#/guia-estudiante">Guía del estudiante</a>
         <button data-mine-clear class="danger">Vaciar mi horario</button></div></details>` : ''}
     </div>
   </div>
@@ -365,8 +368,22 @@ function place(cls, list, raw) {
   const hits = list.classes.filter((c) => c !== cls && meets(c, cls) && !samePart(c, cls));
   if (hits.length) asks.push({ kind: 'clash', cls, with: hits, list });
   if (raw?.excluded?.length) asks.push({ kind: 'excluded', cls, excluded: raw.excluded, applies: semesterIn(raw.excluded), list });
-  note = raw?.code && raw?.nrc ? `Agregada: ${which(cls)}. Studium no puede ver sus prerrequisitos; revísalos en la Oferta de cursos («Ver Prerrequisitos»).` : '';
+  note = raw?.code && raw?.nrc ? `Agregada: ${esc(which(cls))}.` : '';
+  if (cls.code) checkPrereq(cls, list);
   save(); sfx.tick();
+}
+// What the person's malla says the class needs, once per class: a question they answer, never a block.
+const warned = new Set();
+async function checkPrereq(cls, list) {
+  if (!prefs.get().malla) {
+    if (note.startsWith('Agregada') && !note.includes('malla')) { note += ' Si eliges tu carrera en <a href="#/malla">Mi malla</a>, Studium revisa sus prerrequisitos.'; paint(); }
+    return;
+  }
+  const n = await prereqNote(cls.code);
+  if (!n || warned.has(norm(cls.code)) || !list.classes.includes(cls)) return;
+  warned.add(norm(cls.code));
+  asks.push({ kind: 'prereq', cls, needs: n.needs, list });
+  paint();
 }
 function addCandidate(raw, list = view()) {
   const cls = cleanClass(raw, list.classes.length);

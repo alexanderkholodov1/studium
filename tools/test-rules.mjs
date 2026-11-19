@@ -309,6 +309,9 @@ try {
   expect('classmate cannot write the profile of another account', await commit(c.token, [put(`profiles/${s.uid}`, profile())]), 403);
   expect('a profile with an unknown ambience is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ ambience: 'neon' }))]), 403);
   expect('a profile with other fields is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ email: s.email }))]), 403);
+  expect('student saves its career and the classes it passed', await commit(s.token, [put(`profiles/${s.uid}`, profile({ malla: '1CMP', passed: ['MAT 1201', 'CMP 4004E', 'OPT 1'] }))]), 200);
+  expect('a career code with other characters is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ malla: '1cmp/../x' }))]), 403);
+  expect('more than 150 passed classes is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ passed: Array.from({ length: 151 }, (_, i) => `MAT ${1000 + i}`) }))]), 403);
   expect('student saves its courses, interests and known concepts', await commit(s.token, [put(`profiles/${s.uid}`, profile({ courses: ['redes-de-computadores'], interests: ['area:redes'], known: ['subred', 'vlan'] }))]), 200);
   expect('a profile whose known concepts are not a list is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ known: 'subred' }))]), 403);
   expect('otherDomain cannot save a profile', await commit(accounts.otherDomain.token, [put(`profiles/${accounts.otherDomain.uid}`, profile())]), 403);

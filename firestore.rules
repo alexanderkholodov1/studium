@@ -138,7 +138,7 @@ service cloud.firestore {
     // The person's own space.
     function profile(d) {
       return d.keys().hasOnly(['nickname', 'name', 'career', 'semester', 'mode', 'ambience', 'sound', 'theme', 'lang', 'avatar',
-          'goals', 'progress', 'deadlines', 'tiles', 'notes', 'links', 'focus', 'bubbles', 'courses', 'interests', 'known', 'updated'])
+          'goals', 'progress', 'deadlines', 'tiles', 'notes', 'links', 'focus', 'bubbles', 'courses', 'interests', 'known', 'malla', 'passed', 'updated'])
         && optional(d, 'nickname', 40) && optional(d, 'name', 60) && optional(d, 'career', 80)
         && (!('lang' in d) || d.lang in ['es', 'en'])
         && (!('avatar' in d) || d.avatar in ['blue', 'red', 'teal', 'butter', 'sky', 'peach'])
@@ -162,6 +162,9 @@ service cloud.firestore {
         && (!('courses' in d) || (d.courses is list && d.courses.size() <= 40))
         && (!('interests' in d) || (d.interests is list && d.interests.size() <= 40))
         && (!('known' in d) || (d.known is list && d.known.size() <= 1500))
+        // «Mi malla»: the career's code and the classes marked as passed.
+        && (!('malla' in d) || (d.malla is string && d.malla.matches('[0-9A-Z]{0,8}')))
+        && (!('passed' in d) || (d.passed is list && d.passed.size() <= 150))
         && d.updated == request.time;
     }
     match /profiles/{uid} {
