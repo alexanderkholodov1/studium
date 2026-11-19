@@ -350,6 +350,20 @@ try {
   expect('a focus timer outside its range is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ focus: { study: 300, rest: 5 } }))]), 403);
   expect('a focus timer with other fields is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ focus: { study: 25, rest: 5, nap: 60 } }))]), 403);
   expect('student deletes its profile', await commit(s.token, [remove(`profiles/${s.uid}`)]), 200);
+  // The person's schedule: private, options to compare, nothing shared yet.
+  const sched = (extra = {}) => ({ mine: { id: 'mine', name: 'Mi horario', classes: [] }, options: [{ id: 'o1', name: 'Borrador 1', classes: [{ id: 'c1', name: 'Redes', credits: 3, color: 'blue', slots: [{ d: 1, s: 870, e: 950 }] }] }], active: 0, term: '202620', share: [], ...extra });
+  expect('student saves its schedule', await commit(s.token, [put(`schedules/${s.uid}`, sched())]), 200);
+  expect('student reads its schedule', await status(s.token, 'GET', `/schedules/${s.uid}`), 200);
+  expect('classmate cannot read the schedule of another account', await status(c.token, 'GET', `/schedules/${s.uid}`), 403);
+  expect('classmate cannot write the schedule of another account', await commit(c.token, [put(`schedules/${s.uid}`, sched())]), 403);
+  expect('a schedule shared with someone is refused before friends exist', await commit(s.token, [put(`schedules/${s.uid}`, sched({ share: [c.uid] }))]), 403);
+  expect('a schedule with more than six options is refused', await commit(s.token, [put(`schedules/${s.uid}`, sched({ options: Array.from({ length: 7 }, (_, i) => ({ id: `o${i}`, name: 'X', classes: [] })) }))]), 403);
+  expect('a schedule pointing at an option it does not have is refused', await commit(s.token, [put(`schedules/${s.uid}`, sched({ active: 3 }))]), 403);
+  expect('a schedule with other fields is refused', await commit(s.token, [put(`schedules/${s.uid}`, sched({ email: s.email }))]), 403);
+  expect('a schedule whose term is not a term code is refused', await commit(s.token, [put(`schedules/${s.uid}`, sched({ term: 'segundo' }))]), 403);
+  expect('a schedule whose «mine» carries other fields is refused', await commit(s.token, [put(`schedules/${s.uid}`, sched({ mine: { id: 'mine', name: 'x', classes: [], email: s.email } }))]), 403);
+  expect('otherDomain cannot save a schedule', await commit(accounts.otherDomain.token, [put(`schedules/${accounts.otherDomain.uid}`, sched())]), 403);
+  expect('student deletes its schedule', await commit(s.token, [remove(`schedules/${s.uid}`)]), 200);
 
   // The library: course documents as links
   const shared = (extra = {}) => ({ course: 'Curso de prueba', kind: 'syllabus', title: 'Sílabo de prueba', url: 'https://drive.google.com/file/d/abc123/view', professor: 'Docente de Prueba', term: '202610', ...extra });

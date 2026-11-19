@@ -169,6 +169,23 @@ service cloud.firestore {
       allow create, update: if member() && request.auth.uid == uid && profile(request.resource.data);
     }
 
+    // The person's schedule: «mine», the semester's definitive week, and up to six drafts to prepare enrollment, read
+    // and written only by its owner. «share» stays empty until friends exist (0.6.0); the classes inside are checked
+    // by the app, and the document's size by Firestore.
+    function schedule(d) {
+      return d.keys().hasOnly(['mine', 'options', 'active', 'term', 'share', 'updated']) && d.keys().hasAll(['options', 'active', 'updated'])
+        && (!('mine' in d) || (d.mine is map && d.mine.keys().hasOnly(['id', 'name', 'classes']) && d.mine.classes is list && d.mine.classes.size() <= 40))
+        && (!('term' in d) || (d.term is string && d.term.matches('([0-9]{6})?')))
+        && d.options is list && d.options.size() >= 1 && d.options.size() <= 6
+        && d.active is int && d.active >= 0 && d.active < d.options.size()
+        && (!('share' in d) || (d.share is list && d.share.size() == 0))
+        && d.updated == request.time;
+    }
+    match /schedules/{uid} {
+      allow get, delete: if member() && request.auth.uid == uid;
+      allow create, update: if member() && request.auth.uid == uid && schedule(request.resource.data);
+    }
+
     // A list without repeated values, all of them from the allowed ones.
     function picked(value, allowed, max) {
       return value is list && value.size() > 0 && value.size() <= max && value.toSet().size() == value.size() && value.hasOnly(allowed);

@@ -258,6 +258,17 @@ export async function saveProfile(uid, profile) {
   await setDoc(doc(db, 'profiles', uid), { ...profile, updated: serverTimestamp() });
 }
 
+/* ---------- the person's schedule (only its owner reads it; «share» opens with friends in 0.6.0) ---------- */
+export async function loadSchedule(uid) {
+  const snap = await getDoc(doc(db, 'schedules', uid));
+  if (!snap.exists()) return null;
+  const { updated, ...data } = snap.data();
+  return data;
+}
+export async function saveSchedule(uid, schedule) {
+  await setDoc(doc(db, 'schedules', uid), { mine: schedule.mine, options: schedule.options, active: schedule.active, term: schedule.term ?? '', share: [], updated: serverTimestamp() });
+}
+
 /* ---------- thanks: only positive reactions, one document per guide and account ---------- */
 export const KUDOS = ['salvo', 'entendi', 'examen', 'gracias'];
 export async function loadKudos(uid) {

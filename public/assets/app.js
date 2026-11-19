@@ -22,6 +22,7 @@ import { mountSpace, renderHome, renderSettings, renderAmbiences, remember, soon
 import { mountCommunity, loadCommunity, kudosRow, renderKudos, renderProfes } from './community.js';
 import { mountDemos } from './demos.js';
 import { mountScenes } from './scenes.js';
+import { renderSchedule, mountSchedule } from './schedule.js';
 import { mountLibrary, renderLibrary } from './library.js';
 import { mountEditor, openEditor } from './editor.js';
 import * as ai from './ai.js';
@@ -50,6 +51,7 @@ play.start($('#play'), $('#fx-top'));
 springLetters($('#wordmark'));
 mountDemos();
 mountScenes();
+mountSchedule();
 restOffscreen();
 mountHints();
 for (const el of document.querySelectorAll('[data-ambience-picker]')) renderAmbiences(el);
@@ -108,8 +110,8 @@ document.addEventListener('click', (e) => {
 });
 
 /* ---------- views ---------- */
-const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'catalog', 'map', 'library', 'profes', 'contribute', 'settings', 'about', 'sources', 'guide', 'admin'];
-const TABS = { home: 'home', catalog: 'catalog', map: 'map', library: 'library', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', admin: 'admin' };
+const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'horario', 'catalog', 'map', 'library', 'profes', 'contribute', 'settings', 'about', 'sources', 'guide', 'admin'];
+const TABS = { home: 'home', horario: 'horario', catalog: 'catalog', map: 'map', library: 'library', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', admin: 'admin' };
 const PUBLIC = ['landing', 'auth', 'about', 'denied', 'verify'];
 let current = 'boot';
 function show(view) {
@@ -487,6 +489,7 @@ async function route() {
     }
     const views = {
       biblioteca: ['library', 'Biblioteca', renderLibrary],
+      horario: ['horario', 'Tu horario', renderSchedule],
       mapa: ['map', 'Mapa', () => openMap(arg.join('/'))],
       fuentes: ['sources', 'Fuentes', renderSources],
       profes: ['profes', 'Profes', renderProfes],
