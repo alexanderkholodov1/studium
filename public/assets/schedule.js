@@ -253,6 +253,7 @@ function transcribeBox(target) {
 }
 function pastePanel() {
   return `<div class="sched-paste glass">
+    <h3>Agregar clases a ${esc(view().name)}</h3>
     <textarea data-paste rows="2" aria-label="Pega lo que copiaste de la Oferta de cursos" placeholder="Pega aquí lo que copiaste de la Oferta de cursos: una clase o toda la búsqueda"></textarea>
     <button class="button primary" data-paste-add>Agregar</button>
     <p class="sched-ways"><a class="link" href="${OFFER_URL}" target="_blank" rel="noopener">Abrir la Oferta de cursos ↗</a> · <button class="link" data-add>agregar a mano</button> · <button class="link" data-import>desde una captura o un archivo</button></p>
@@ -303,41 +304,48 @@ function askCard() {
     <span class="sched-ask-icon" aria-hidden="true">!</span><p>${body}</p><div class="actions">${actions}</div></div>`;
 }
 
+// The page opens on the week: one thin bar above it (where you are, what you can do), everything else below it or
+// floating, so the whole week is in sight without scrolling.
+const PREP_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M9 3v4M15 3v4M12 13v4M10 15h4"/></svg>';
 function paint() {
   if (!root) return;
   const o = view();
   const has = o.classes.length > 0;
   root.dataset.mode = mode;
   root.innerHTML = mode === 'mine' ? `
-  <div class="sched-top">
-    <p class="muted">${has ? `Tu semana${state.term ? ` · ${esc(termName(state.term))}` : ''}` : ''}</p>
-    <button class="sched-special" data-mode="prep"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M9 3v4M15 3v4M12 13v4M10 15h4"/></svg>Preparar mi inscripción</button>
+  <div class="sched-toolbar">
+    <div class="sched-where"><a class="back" href="#/">← Inicio</a><h1 class="sched-title">Mi horario</h1>${has ? `<span class="muted">${credits(o.classes)} de ${INCLUDED} créditos${state.term ? ` · ${esc(termName(state.term))}` : ''}</span>` : ''}</div>
+    <div class="sched-actions">
+      <button class="sched-special small" data-mode="prep">${PREP_ICON}Preparar mi inscripción</button>
+      ${has ? `<details class="sched-more"><summary class="button ghost small">Opciones</summary><div class="menu glass">
+        <button data-add>Agregar una clase</button><button data-retranscribe>Volver a subir mi horario</button>
+        <button data-xlsx>Descargar Excel</button><button data-png>Descargar imagen</button>
+        <a href="#/guia-estudiante">Guía del estudiante</a>
+        <button data-mine-clear class="danger">Vaciar mi horario</button></div></details>` : ''}
+    </div>
   </div>
-  ${has ? `<div class="sched-body">${week(o)}<div class="sched-col">
-      <div class="sched-actions"><details class="sched-more"><summary class="button ghost">Opciones</summary><div class="menu glass">
-        <button data-retranscribe>Volver a subir mi horario</button><button data-add>Agregar una clase</button>
-        <button data-xlsx>Descargar Excel</button><button data-png>Descargar imagen</button><button data-mine-clear class="danger">Vaciar mi horario</button></div></details></div>
-      ${side(o)}</div></div>`
+  ${has ? `<div class="sched-body">${week(o)}${side(o)}</div>`
     : `<div class="sched-empty glass"><h2>Pon tu horario</h2><p>Studium lo pasa completo a tu semana, por bloques de clase.</p>${transcribeBox('mine')}</div>`}`
   : `
-  <div class="sched-banner"><div><b>Preparando tu inscripción</b><span>Prueba paralelos en borradores. Cuando te inscribas, el que quedó puede ser tu horario.</span></div>
-    <button class="button ghost small" data-mode="mine">Volver a mi horario</button></div>
-  ${pastePanel()}${pickerPanel()}${askCard()}
-  <div class="sched-bar">
-    <div class="sched-options" role="tablist" aria-label="Borradores">
-      ${state.options.map((x, i) => `<button role="tab" class="sched-opt" aria-selected="${i === state.active}" data-opt="${i}" data-drop="${i}">${esc(x.name)}<small>${credits(x.classes)} cr</small></button>`).join('')}
-      ${state.options.length < MAX_OPTIONS ? '<button class="sched-opt add" data-opt-add title="Otro borrador" aria-label="Otro borrador">+</button>' : ''}
-    </div>
+  <div class="sched-toolbar prep">
+    <div class="sched-where"><span class="sched-mode-pill">${PREP_ICON}Preparando tu inscripción</span>
+      <div class="sched-options" role="tablist" aria-label="Borradores">
+        ${state.options.map((x, i) => `<button role="tab" class="sched-opt" aria-selected="${i === state.active}" data-opt="${i}" data-drop="${i}">${esc(x.name)}<small>${credits(x.classes)} cr</small></button>`).join('')}
+        ${state.options.length < MAX_OPTIONS ? '<button class="sched-opt add" data-opt-add title="Otro borrador" aria-label="Otro borrador">+</button>' : ''}
+      </div></div>
     <div class="sched-actions">
-      ${has ? '<button class="button ghost" data-use-mine>Usar como mi horario</button>' : ''}
-      <details class="sched-more"><summary class="button ghost" aria-label="Más opciones">···</summary><div class="menu glass">
-        <button data-rename>Cambiar el nombre</button><button data-dup>Duplicar</button>
+      ${has ? '<button class="button primary small" data-use-mine>Usar como mi horario</button>' : ''}
+      <details class="sched-more"><summary class="button ghost small" aria-label="Más opciones">···</summary><div class="menu glass">
+        <button data-rename>Cambiar el nombre</button><button data-dup>Duplicar este borrador</button>
         ${has ? '<button data-xlsx>Descargar Excel</button><button data-png>Descargar imagen</button>' : ''}
+        <a href="#/guia-estudiante">Guía del estudiante</a>
         ${state.options.length > 1 ? '<button data-opt-remove class="danger">Quitar este borrador</button>' : ''}
       </div></details>
+      <button class="button ghost small" data-mode="mine">Volver a mi horario</button>
     </div>
   </div>
-  <div class="sched-body">${week(o)}${side(o)}</div>`;
+  <div class="sched-body">${week(o)}${side(o)}</div>
+  ${pastePanel()}${pickerPanel()}${askCard()}`;
   paintWhere();
   const box = $('.sched-empty [data-transcribe]', root);
   if (box) mountTranscribe(box);

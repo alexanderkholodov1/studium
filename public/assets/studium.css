@@ -1434,21 +1434,14 @@ html.has-announce .page { padding-top: 170px; }
 @media (max-width: 480px) { .sg-big { min-height: 140px; padding: 16px; } .sg-big b { font-size: 18px; } }
 
 /* ---------- Tu horario ---------- */
-.sched { --rowh: 66px; }
+.sched { --rowh: clamp(40px, calc((100svh - 300px) / 8), 64px); }
 .sched .small { font-size: 13.5px; }
-.sched-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 16px; }
-.sched-top p { margin: 0; }
 /* Preparing enrollment is a special mode, entered from its own button. */
 .sched-special { display: inline-flex; align-items: center; gap: 9px; padding: 11px 18px; border: 0; border-radius: 999px; cursor: pointer; color: #fff;
   font: 750 15px var(--display); background: linear-gradient(135deg, var(--red-2), var(--red) 55%, color-mix(in oklab, var(--red) 70%, #000));
   box-shadow: 0 14px 26px -14px var(--red), inset 0 1px 0 rgba(255, 255, 255, .35); transition: transform .45s var(--spring); }
 .sched-special:hover { transform: translateY(-2px) rotate(-1deg); }
 .sched-special svg { width: 20px; height: 20px; }
-.sched-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; margin: 4px 0 14px; border-radius: 22px; color: #fff;
-  background: linear-gradient(135deg, color-mix(in oklab, var(--red) 85%, #fff), var(--red) 60%, color-mix(in oklab, var(--red) 70%, #000)); box-shadow: 0 20px 36px -24px var(--red); }
-.sched-banner b { display: block; font: 800 19px var(--display); }
-.sched-banner span { font-size: 14.5px; opacity: .92; }
-.sched-banner .button { background: rgba(255, 255, 255, .92); color: var(--ink); }
 /* The empty «Mi horario»: one thing to do. */
 .sched-empty { padding: 22px 24px; border-radius: 26px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
 .sched-empty h2 { margin: 0; font: 800 28px var(--display); letter-spacing: -.03em; }
@@ -1503,8 +1496,9 @@ html.has-announce .page { padding-top: 170px; }
 .sched-pick .tag.red { background: var(--red); }
 .sched-pick .tag.amber { top: auto; bottom: 10px; background: var(--butter); color: #3b2a00; }
 /* What adding a class asks: it must be seen. */
-.sched-ask { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px 14px; padding: 16px 18px; border-radius: 20px; margin-bottom: 14px; animation: pop .5s var(--spring);
-  background: color-mix(in oklab, var(--tone) 14%, var(--card)); box-shadow: inset 0 0 0 2px var(--tone), 0 18px 34px -22px var(--tone); }
+.sched-ask { position: fixed; z-index: 35; left: 50%; translate: -50% 0; bottom: max(20px, env(safe-area-inset-bottom)); width: min(760px, calc(100vw - 24px));
+  display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px 14px; padding: 14px 18px; border-radius: 20px; animation: pop .5s var(--spring);
+  background: color-mix(in oklab, var(--tone) 12%, var(--card)); box-shadow: inset 0 0 0 2px var(--tone), 0 24px 50px -18px rgba(0, 0, 0, .45); }
 .sched-ask.red { --tone: var(--red); } .sched-ask.amber { --tone: var(--butter); }
 .sched-ask-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: #fff; background: var(--tone); font: 800 19px var(--display); animation: nudge 1.6s ease-in-out 2; }
 .sched-ask.amber .sched-ask-icon { color: #3b2a00; }
@@ -1557,7 +1551,7 @@ html.has-announce .page { padding-top: 170px; }
   transition: transform .4s var(--spring), box-shadow .25s; }
 .sched-class:hover { transform: translateY(-2px); z-index: 2; }
 .sched-class.clashing { box-shadow: inset 4px 0 0 var(--c), 0 0 0 2px var(--red), 0 10px 18px -12px color-mix(in oklab, var(--red) 80%, #000); }
-.sched-class b { font: 750 13.5px/1.15 var(--display); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sched-class b { display: block; font: 750 13.5px/1.2 var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sched-class small { font: 600 11.5px var(--body); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sched-class .code { display: none; font: 750 11px/1.15 var(--display); font-style: normal; overflow-wrap: anywhere; }
 .sched-class.narrow b { font-size: 12px; }
@@ -1616,7 +1610,6 @@ html.has-announce .page { padding-top: 170px; }
 }
 @media (max-width: 560px) {
   .sched { --rowh: 56px; }
-  .sched-top { flex-wrap: wrap; }
   .sched-special { width: 100%; justify-content: center; }
   .sched-head .long { display: none; }
   .sched-head .short { display: inline; }
@@ -1655,7 +1648,7 @@ html.has-announce .page { padding-top: 170px; }
 .hs-empty p { margin: 2px 0 0; color: var(--ink-2); }
 .hs-empty .hs-actions { margin: 0; flex-direction: column; align-items: stretch; }
 .hs-empty .sg-icon { --c: var(--blue); }
-.sched-sheet.compact { --rowh: 46px; padding-top: 8px; }
+.sched-sheet.compact { --rowh: clamp(32px, calc((100svh - 390px) / 8), 48px); padding-top: 8px; }
 .sched-sheet.compact .sched-hours small { display: none; }
 .sched-sheet.compact .sched-class small { display: none; }
 .sched-sheet.compact .sched-class { align-content: center; padding-block: 4px; }
@@ -1667,3 +1660,21 @@ html.has-announce .page { padding-top: 170px; }
 }
 
 @media (max-width: 560px) { .sched-sheet.compact .sched-class b { display: none; } .hs-actions .sched-special.small { flex: 1; justify-content: center; } }
+
+/* The thin bar above the week. */
+.sched-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 0 0 12px; }
+.sched-where { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; min-width: 0; }
+.sched-title { margin: 0; font: 800 28px/1 var(--display); letter-spacing: -.03em; }
+.sched-mode-pill { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 999px; color: #fff; font: 750 14px var(--display);
+  background: linear-gradient(135deg, var(--red-2), var(--red) 60%); box-shadow: 0 10px 20px -12px var(--red); }
+.sched-mode-pill svg { width: 17px; height: 17px; }
+.sched-toolbar .sched-options { gap: 6px; }
+.sched-toolbar .sched-opt { padding: 7px 14px; font-size: 15px; }
+.sched-toolbar .sched-actions { gap: 6px; }
+.sched-more .menu a { padding: 10px 12px; border-radius: 12px; color: var(--ink); font: 650 15px var(--body); text-decoration: none; }
+.sched-more .menu a:hover { background: color-mix(in oklab, var(--blue) 12%, transparent); }
+.sched-paste { margin-top: 18px; }
+.sched-paste h3 { grid-column: 1 / -1; margin: 0; font: 800 18px var(--display); }
+.sched-picker { margin-top: 12px; }
+#view-horario { padding-top: 84px; }
+@media (max-width: 560px) { .sched-ask { bottom: 92px; } .sched-title { font-size: 24px; } }
