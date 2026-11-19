@@ -5,7 +5,7 @@
 // by Studium itself (offer.js), no AI needed. A theory section brings its exercises or lab of the same group to the
 // front. A class that clashes asks once: leave the clash, or take it to a new draft and build around it. Classes can be
 // dragged from one draft to another. Screenshots, PDFs or any file go through the person's own AI; by hand also works.
-// Tips are a panel you open, never text hanging on the page. It is private: schedules/{uid}, only its owner.
+// Tips appear one at a time next to what they talk about (hints.js) and lead to the student guide. It is private: schedules/{uid}, only its owner.
 import { auth, loadSchedule, saveSchedule } from './data.js';
 import * as ai from './ai.js';
 import { sfx } from './sfx.js';
@@ -94,6 +94,10 @@ export function lanes(classes, d) {
 export const credits = (classes) => classes.reduce((n, c) => n + (c.credits || 0), 0);
 // A class's name as the list shows it: «Cálculo Integral + Ej» and its kind, «Ejercicios», when it is not the theory.
 const label = (c) => (c.kind && !/^teor/i.test(c.kind) ? `${c.name} · ${c.kind}` : c.name);
+// On a phone's narrow column: the code, and «Ej» or «Lab» for the second part; a name without a code, its first word.
+const shortLabel = (c) => `${c.code || c.name.split(/\s+/)[0]}${c.kind && !/^teor/i.test(c.kind) ? ` ${c.kind.slice(0, 3)}` : ''}`;
+// Two classes with the same name told apart: their section, or their NRC.
+const which = (c) => `${label(c)}${c.section ? ` (paralelo ${c.section})` : c.nrc ? ` (NRC ${c.nrc})` : ''}`;
 // A course that has exercises or a lab («+ Ej», «+Lab», or a group) but has only one of its parts in this list.
 function missingPart(c, list) {
   if (!c.code) return '';
@@ -104,19 +108,22 @@ function missingPart(c, list) {
 }
 
 /* ---------- kept: in the account, or on this device until the rules reach the database ---------- */
-const LOCAL = 'studium-schedule';
+// The copy on this device belongs to one account: on a shared computer nobody sees another person's schedule. It is
+// read only when the account cannot be reached (or, on a preview, before the rules reach the database).
+const localKey = () => `studium-schedule:${auth.currentUser?.uid ?? 'anon'}`;
+try { localStorage.removeItem('studium-schedule'); } catch { /* the old shared copy, gone */ }
 let state = blank();
 let where = 'account';
 async function load() {
   const uid = auth.currentUser?.uid;
-  try { const doc = uid ? await loadSchedule(uid) : null; state = clean(doc ?? local() ?? {}); where = 'account'; } catch {
+  try { const doc = uid ? await loadSchedule(uid) : null; state = clean(doc ?? {}); where = 'account'; } catch {
     state = clean(local() ?? {}); where = 'device';
   }
 }
-function local() { try { return JSON.parse(localStorage.getItem(LOCAL) ?? 'null'); } catch { return null; } }
+function local() { try { return JSON.parse(localStorage.getItem(localKey()) ?? 'null'); } catch { return null; } }
 let saveTimer = 0;
 function save() {
-  try { localStorage.setItem(LOCAL, JSON.stringify(state)); } catch { /* the account keeps it */ }
+  try { localStorage.setItem(localKey(), JSON.stringify(state)); } catch { /* the account keeps it */ }
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     const uid = auth.currentUser?.uid;
@@ -164,8 +171,8 @@ function week(o) {
     <div class="sched-grid" style="height:${(last - first) * px}px">
       <div class="sched-hours">${Array.from({ length: Math.floor((last - first) / 60) + 1 }, (_, i) => first + i * 60).filter((m) => m < last).map((m) => `<span style="top:${(m - first) * px}px">${hhmm(m)}</span>`).join('')}</div>
       ${DAYS.slice(0, days).map((_, d) => `<div class="sched-day" data-day="${d}">
-        ${lanes(o.classes, d).map(({ c, s, lane, of }) => `<button class="sched-class c-${c.color}${inClash(c, d, s) ? ' clashing' : ''}" draggable="true" data-drag="${c.id}" data-edit="${c.id}" style="top:${(s.s - first) * px}px;height:${Math.max(26, (s.e - s.s) * px)}px;--lane:${lane};--of:${of}" title="${esc(label(c))}${c.nrc ? ` · NRC ${esc(c.nrc)}` : ''}">
-          <b>${esc(label(c))}</b><small>${hhmm(s.s)}–${hhmm(s.e)}${c.room ? ` · ${esc(c.room)}` : ''}</small></button>`).join('')}
+        ${lanes(o.classes, d).map(({ c, s, lane, of }) => `<button class="sched-class c-${c.color}${inClash(c, d, s) ? ' clashing' : ''}${of > 1 ? ' narrow' : ''}" draggable="true" data-drag="${c.id}" data-edit="${c.id}" style="top:${(s.s - first) * px}px;height:${Math.max(26, (s.e - s.s) * px)}px;--lane:${lane};--of:${of}" title="${esc(label(c))}${c.nrc ? ` · NRC ${esc(c.nrc)}` : ''}">
+          <b>${esc(label(c))}</b><i class="code">${esc(shortLabel(c))}</i><small>${hhmm(s.s)}–${hhmm(s.e)}${c.room ? ` · ${esc(c.room)}` : ''}</small></button>`).join('')}
         ${clash.filter((x) => x.d === d).map((x) => `<span class="sched-clash" style="top:${(x.s - first) * px}px;height:${(x.e - x.s) * px}px"></span>`).join('')}
       </div>`).join('')}
     </div></div>`;
@@ -173,33 +180,22 @@ function week(o) {
 function side(o) {
   const clash = conflicts(o.classes);
   const pairs = [...new Map(clash.map((x) => [[x.a.id, x.b.id].sort().join(), x])).values()];
-  const total = credits(o.classes);
   return `<aside class="sched-side">
-    <div class="sched-total"><span class="big">${total}</span><span>${t('créditos')}</span>
-      ${total === 15 && ui('tip-credit') !== 'no' ? `<button class="sched-hint" data-tips="credits">${t('Pista: suele sobrar un crédito')}</button>` : ''}</div>
-    ${pairs.length ? `<div class="sched-clashes${clashOpen ? ' open' : ''}"><button class="sched-clash-chip" data-clash-toggle aria-expanded="${clashOpen}">${pairs.length === 1 ? t('1 cruce') : `${pairs.length} ${t('cruces')}`}</button>
-      ${clashOpen ? `<ul>${pairs.map((x) => `<li>${esc(label(x.a))} <span>×</span> ${esc(label(x.b))} <small>${t(SHORT[x.d])} ${hhmm(x.s)}</small></li>`).join('')}</ul>` : ''}</div>` : ''}
+    <div class="sched-total"><span class="big">${credits(o.classes)}</span><span>créditos</span></div>
+    ${pairs.length ? `<div class="sched-clashes${clashOpen ? ' open' : ''}"><button class="sched-clash-chip" data-clash-toggle aria-expanded="${clashOpen}">${pairs.length === 1 ? '1 cruce' : `${pairs.length} cruces`}</button>
+      ${clashOpen ? `<ul>${pairs.map((x) => `<li>${esc(label(x.a))} <span>×</span> ${esc(label(x.b))} <small>${SHORT[x.d]} ${hhmm(x.s)}</small></li>`).join('')}</ul>` : ''}</div>` : ''}
     <ol class="sched-list">${o.classes.map((c) => {
       const miss = missingPart(c, o.classes);
       return `<li><button class="c-${c.color}" draggable="true" data-drag="${c.id}" data-edit="${c.id}"><i></i><span><b>${esc(label(c))}</b><small>${[c.code && `${esc(c.code)}${c.nrc ? ` · NRC ${esc(c.nrc)}` : ''}`, c.prof && esc(c.prof)].filter(Boolean).join(' · ')}</small>${miss ? `<em class="miss">${miss}</em>` : ''}</span><strong>${c.credits || '–'}</strong></button></li>`;
     }).join('')}</ol>
-    ${o.classes.length ? `<p class="muted small">${mode === 'prep' && state.options.length > 1 ? t('Arrastra una clase a otro borrador para copiarla allí.') : ''}</p>` : ''}
     <p class="muted small" id="sched-where"></p>
   </aside>`;
 }
 function pastePanel() {
   return `<div class="sched-paste glass">
-    <label class="sched-paste-box"><span class="sr">${t('Pega lo que copiaste de la Oferta de cursos')}</span>
-      <textarea data-paste rows="2" placeholder="${t('Pega aquí lo que copiaste de la Oferta de cursos: una clase o toda la búsqueda')}"></textarea></label>
-    <div class="sched-paste-actions">
-      <button class="button primary" data-paste-add>${t('Agregar')}</button>
-      <details class="sched-more"><summary class="button ghost">${t('Otras formas')}</summary><div class="menu glass">
-        <button data-add>${t('A mano')}</button>
-        <button data-import>${t('Desde una captura, foto o archivo')}</button>
-        <a href="${OFFER_URL}" target="_blank" rel="noopener">${t('Abrir la Oferta de cursos')} ↗</a>
-      </div></details>
-      <button class="button ghost" data-tips>${t('Pistas')}</button>
-    </div>
+    <textarea data-paste rows="2" aria-label="Pega lo que copiaste de la Oferta de cursos" placeholder="Pega aquí lo que copiaste de la Oferta de cursos: una clase o toda la búsqueda"></textarea>
+    <button class="button primary" data-paste-add>Agregar</button>
+    <p class="sched-ways">o <button class="link" data-add>agrégala a mano</button> · <button class="link" data-import>desde una captura o un archivo</button> · <a class="link" href="${OFFER_URL}" target="_blank" rel="noopener">abrir la Oferta de cursos ↗</a></p>
     <p class="msg" data-paste-msg role="status"></p>
   </div>`;
 }
@@ -227,42 +223,42 @@ function pickerPanel() {
 function clashPrompt() {
   if (!pending) return '';
   return `<div class="sched-ask glass" role="alertdialog" aria-live="polite">
-    <p><b>${esc(label(pending.cls))}</b> ${t('choca con')} ${pending.with.map((n) => `<b>${esc(n)}</b>`).join(', ')}.</p>
+    <p><b>${esc(which(pending.cls))}</b> choca con ${pending.with.map((n) => `<b>${esc(n)}</b>`).join(', ')}.</p>
     <div class="actions"><button class="button ghost" data-ask="keep">${t('Dejar el choque')}</button><button class="button primary" data-ask="move">${t('Llevarla a un borrador nuevo')}</button></div>
   </div>`;
 }
 
 function paint() {
   const o = view();
+  const has = o.classes.length > 0;
   root.innerHTML = `
-  <div class="sched-modes seg" role="tablist">
-    <button role="tab" aria-selected="${mode === 'mine'}" data-mode="mine" data-drop="mine">${t('Mi horario')}</button>
-    <button role="tab" aria-selected="${mode === 'prep'}" data-mode="prep">${t('Preparar la inscripción')}</button>
+  <div class="sched-modes" role="tablist">
+    <button role="tab" aria-selected="${mode === 'mine'}" data-mode="mine" data-drop="mine">Mi horario</button>
+    <button role="tab" aria-selected="${mode === 'prep'}" data-mode="prep">Preparar la inscripción</button>
   </div>
   ${mode === 'prep' ? pastePanel() + pickerPanel() + clashPrompt() : ''}
+  ${mode === 'mine' && !has ? `<div class="sched-empty glass">
+      <h3>Aún no tienes tu horario del semestre</h3>
+      <p>Arma borradores en «Preparar la inscripción» y, cuando te inscribas, usa el que quedó. O agrega tus clases aquí.</p>
+      <div class="actions"><button class="button primary" data-mode="prep">Preparar la inscripción</button><button class="button ghost" data-add>Agregar una clase</button></div>
+    </div>` : `
   <div class="sched-bar">
-    ${mode === 'prep' ? `<div class="sched-options" role="tablist" aria-label="${t('Borradores')}">
+    ${mode === 'prep' ? `<div class="sched-options" role="tablist" aria-label="Borradores">
       ${state.options.map((x, i) => `<button role="tab" class="sched-opt" aria-selected="${i === state.active}" data-opt="${i}" data-drop="${i}">${esc(x.name)}<small>${credits(x.classes)} cr</small></button>`).join('')}
-      ${state.options.length < MAX_OPTIONS ? `<button class="sched-opt add" data-opt-add title="${t('Otro borrador')}" aria-label="${t('Otro borrador')}">+</button>` : ''}
-    </div>` : `<p class="muted">${o.classes.length ? t('Tu semana de este semestre.') : ''}</p>`}
+      ${state.options.length < MAX_OPTIONS ? '<button class="sched-opt add" data-opt-add title="Otro borrador" aria-label="Otro borrador">+</button>' : ''}
+    </div>` : '<span></span>'}
     <div class="sched-actions">
-      ${mode === 'mine' ? `<button class="button ghost" data-add>${t('Agregar una clase')}</button>` : ''}
-      <details class="sched-more"><summary class="button ghost" aria-label="${t('Más')}">···</summary><div class="menu glass">
-        ${mode === 'prep' ? `<button data-use-mine ${o.classes.length ? '' : 'disabled'}>${t('Usar como mi horario')}</button>
-        <button data-dup>${t('Duplicar este borrador')}</button>
-        <button data-rename>${t('Cambiar el nombre')}</button>` : ''}
-        <button data-xlsx ${o.classes.length ? '' : 'disabled'}>${t('Descargar Excel')}</button>
-        <button data-png ${o.classes.length ? '' : 'disabled'}>${t('Descargar imagen')}</button>
-        ${mode === 'prep' && state.options.length > 1 ? `<button data-opt-remove class="danger">${t('Quitar este borrador')}</button>` : ''}
-        ${mode === 'mine' && o.classes.length ? `<button data-mine-clear class="danger">${t('Vaciar mi horario')}</button>` : ''}
+      ${mode === 'prep' && has ? '<button class="button ghost" data-use-mine>Usar como mi horario</button>' : ''}
+      ${mode === 'mine' ? '<button class="button ghost" data-add>Agregar una clase</button>' : ''}
+      <details class="sched-more"><summary class="button ghost" aria-label="Más">···</summary><div class="menu glass">
+        ${mode === 'prep' ? '<button data-rename>Cambiar el nombre</button><button data-dup>Duplicar</button>' : ''}
+        ${has ? '<button data-xlsx>Descargar Excel</button><button data-png>Descargar imagen</button>' : ''}
+        ${mode === 'prep' && state.options.length > 1 ? '<button data-opt-remove class="danger">Quitar este borrador</button>' : ''}
+        ${mode === 'mine' && has ? '<button data-mine-clear class="danger">Vaciar mi horario</button>' : ''}
       </div></details>
     </div>
   </div>
-  ${mode === 'mine' && !o.classes.length ? `<div class="sched-empty glass">
-      <h3>${t('Aún no tienes tu horario del semestre')}</h3>
-      <p>${t('Arma borradores en «Preparar la inscripción» y, cuando te inscribas, usa el que quedó como tu horario. O agrega tus clases aquí directamente.')}</p>
-      <div class="actions"><button class="button primary" data-mode="prep">${t('Preparar la inscripción')}</button><button class="button ghost" data-add>${t('Agregar una clase')}</button></div>
-    </div>` : `<div class="sched-body">${week(o)}${side(o)}</div>`}`;
+  <div class="sched-body">${week(o)}${side(o)}</div>`}`;
   paintWhere();
 }
 
@@ -272,7 +268,7 @@ function addClass(raw, list = view()) {
   if (cls.nrc && list.classes.some((c) => c.nrc === cls.nrc)) return { added: false };
   const hits = list.classes.filter((c) => meets(c, cls));
   list.classes.push(cls);
-  if (hits.length && list === state.options[state.active] && mode === 'prep') pending = { cls, with: hits.map(label) };
+  if (hits.length && list === state.options[state.active] && mode === 'prep') pending = { cls, with: hits.map(which) };
   save(); sfx.tick();
   return { added: true, cls };
 }
@@ -305,71 +301,67 @@ function moveToNewDraft() {
   state.options.push(next); state.active = state.options.length - 1;
   pending = null; save(); paint(); sfx.chime?.();
 }
-// Copies a class, and the parts of its group with it, to another list.
-function copyTo(id, target) {
+// Takes a class, and the parts of its group with it, from this list to another: «pasar clases de un horario
+// preliminar a otro».
+function moveTo(id, target) {
   const from = view();
   const c = from.classes.find((x) => x.id === id);
   if (!c || target === from) return 0;
   const group = [c, ...from.classes.filter((x) => x !== c && x.code === c.code && c.group && x.group === c.group)];
   let n = 0;
-  for (const g of group) if (!target.classes.some((x) => (g.nrc && x.nrc === g.nrc) || (!g.nrc && x.name === g.name && JSON.stringify(x.slots) === JSON.stringify(g.slots)))) { target.classes.push({ ...g, id: rid(), slots: g.slots.map((s) => ({ ...s })) }); n += 1; }
+  for (const g of group) {
+    const there = target.classes.some((x) => (g.nrc && x.nrc === g.nrc) || (!g.nrc && x.name === g.name && JSON.stringify(x.slots) === JSON.stringify(g.slots)));
+    if (!there) { target.classes.push({ ...g, id: rid(), slots: g.slots.map((s) => ({ ...s })) }); n += 1; }
+  }
+  from.classes = from.classes.filter((x) => !group.includes(x));
   save();
-  return n;
+  return n || group.length;
 }
 
 /* ---------- a class by hand ---------- */
 function classDialog(id) {
   const o = view();
-  const c = o.classes.find((x) => x.id === id) ?? cleanClass({ credits: 3 }, o.classes.length);
+  const c = o.classes.find((x) => x.id === id) ?? cleanClass({ credits: 3, slots: [] }, o.classes.length);
   const isNew = !o.classes.some((x) => x.id === id);
   const dlg = $('#sched-dialog');
-  const slotRow = (s, i) => `<div class="slot" data-slot="${i}">
-    <div class="days">${DAYS.map((d, k) => `<label class="chip"><input type="checkbox" value="${k}" ${s.days.includes(k) ? 'checked' : ''}><span>${t(SHORT[k])}</span></label>`).join('')}</div>
-    <div class="blocks">${BLOCKS.map((b) => `<button type="button" class="chip ${b.s === s.s && b.e === s.e ? 'on' : ''}" data-block="${b.s}">${hhmm(b.s)}</button>`).join('')}</div>
-    <div class="times"><label>${t('De')} <input type="time" value="${hhmm(s.s).padStart(5, '0')}" data-s></label><label>${t('a')} <input type="time" value="${hhmm(s.e).padStart(5, '0')}" data-e></label>
-      ${i ? `<button type="button" class="link" data-slot-remove="${i}">${t('Quitar')}</button>` : ''}</div></div>`;
-  const groups = [];
-  for (const s of c.slots) { const g = groups.find((x) => x.s === s.s && x.e === s.e); if (g) g.days.push(s.d); else groups.push({ s: s.s, e: s.e, days: [s.d] }); }
-  if (!groups.length) groups.push({ s: 600, e: 680, days: [0, 2] });
-  dlg.innerHTML = `<form method="dialog" class="sched-form">
-    <h2>${isNew ? t('Agregar una clase') : t('Editar la clase')}</h2>
-    <label class="field"><span>${t('Materia')}</span><input name="name" value="${esc(isNew ? '' : c.name)}" maxlength="80" required autocomplete="off"></label>
-    <div class="slots">${groups.map(slotRow).join('')}</div>
-    <button type="button" class="link" data-slot-add>${t('Otro horario para esta clase (por ejemplo, el laboratorio)')}</button>
-    <div class="grid three">
-      <label class="field"><span>${t('Créditos')}</span><input name="credits" type="number" min="0" max="10" value="${c.credits}"></label>
-      <label class="field"><span>${t('Código (opcional)')}</span><input name="code" value="${esc(c.code)}" maxlength="20" placeholder="MAT-1202"></label>
-      <label class="field"><span>NRC</span><input name="nrc" value="${esc(c.nrc)}" maxlength="12"></label>
-    </div>
-    <details ${c.prof || c.room ? 'open' : ''}><summary>${t('Profe y aula (opcional)')}</summary><div class="grid">
-      <label class="field"><span>${t('Profe')}</span><input name="prof" value="${esc(c.prof)}" maxlength="80"></label>
-      <label class="field"><span>${t('Aula')}</span><input name="room" value="${esc(c.room)}" maxlength="20"></label></div></details>
-    <div class="colors">${COLORS.map((k) => `<label class="swatch c-${k}"><input type="radio" name="color" value="${k}" ${k === c.color ? 'checked' : ''}><span></span></label>`).join('')}</div>
+  const first = c.slots[0];
+  const days = first ? c.slots.filter((s) => s.s === first.s && s.e === first.e).map((s) => s.d) : [];
+  const extra = first ? c.slots.filter((s) => !(s.s === first.s && s.e === first.e)) : [];
+  const start = first?.s ?? null; const end = first?.e ?? null;
+  dlg.innerHTML = `<form method="dialog" class="sched-form quick">
+    <h2>${isNew ? 'Agregar una clase' : 'Editar la clase'}</h2>
+    <label class="field"><span>Materia</span><input name="name" value="${esc(isNew ? '' : c.name)}" maxlength="80" required autocomplete="off" placeholder="Cálculo Integral"></label>
+    <div class="field"><span>Días</span><div class="days">${DAYS.map((d, k) => `<label><input type="checkbox" value="${k}" ${days.includes(k) ? 'checked' : ''}><span>${SHORT[k]}</span></label>`).join('')}</div></div>
+    <div class="field"><span>Hora</span><div class="blocks">${BLOCKS.map((b) => `<label><input type="radio" name="block" value="${b.s}" ${start === b.s && end === b.e ? 'checked' : ''}><span>${hhmm(b.s)}</span></label>`).join('')}</div></div>
+    <details ${!isNew && (c.nrc || c.prof || c.room || extra.length || (start !== null && !BLOCKS.some((b) => b.s === start && b.e === end))) ? 'open' : ''}><summary>Más detalles</summary><div class="more">
+      <div class="grid three">
+        <label class="field"><span>Créditos</span><input name="credits" type="number" min="0" max="10" value="${c.credits}"></label>
+        <label class="field"><span>Código</span><input name="code" value="${esc(c.code)}" maxlength="20" placeholder="MAT-1202"></label>
+        <label class="field"><span>NRC</span><input name="nrc" value="${esc(c.nrc)}" maxlength="12"></label>
+      </div>
+      <div class="grid"><label class="field"><span>Profe</span><input name="prof" value="${esc(c.prof)}" maxlength="80"></label>
+        <label class="field"><span>Aula</span><input name="room" value="${esc(c.room)}" maxlength="20"></label></div>
+      <div class="times">Otra hora: <label>de <input type="time" data-s value="${start !== null ? hhmm(start).padStart(5, '0') : ''}"></label><label>a <input type="time" data-e value="${end !== null ? hhmm(end).padStart(5, '0') : ''}"></label></div>
+    </div></details>
     <p class="msg" role="alert"></p>
-    <div class="actions"><button class="button primary" value="save">${t('Guardar')}</button><button class="button ghost" value="cancel" formnovalidate>${t('Cancelar')}</button>
-      ${isNew ? '' : `<button type="button" class="link danger" data-class-remove>${t('Quitar de aquí')}</button>`}</div></form>`;
+    <div class="actions"><button class="button primary" value="save">${isNew ? 'Agregar' : 'Guardar'}</button><button class="button ghost" value="cancel" formnovalidate>Cancelar</button>
+      ${isNew ? '' : '<button type="button" class="link danger" data-class-remove>Quitar</button>'}</div></form>`;
   const form = $('form', dlg);
+  // A block picked sets the hours; hours typed clear the block.
+  form.addEventListener('change', (e) => {
+    if (e.target.name === 'block') { const s = Number(e.target.value); $('[data-s]', form).value = hhmm(s).padStart(5, '0'); $('[data-e]', form).value = hhmm(s + 80).padStart(5, '0'); sfx.tick(); }
+    if (e.target.matches('[data-s], [data-e]')) form.querySelectorAll('[name=block]').forEach((x) => { x.checked = false; });
+  });
   form.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-block]');
-    if (b) {
-      const row = b.closest('.slot'); const s = Number(b.dataset.block);
-      row.querySelectorAll('[data-block]').forEach((x) => x.classList.toggle('on', x === b));
-      $('[data-s]', row).value = hhmm(s).padStart(5, '0'); $('[data-e]', row).value = hhmm(s + 80).padStart(5, '0');
-      sfx.tick();
-    }
-    if (e.target.closest('[data-slot-add]')) $('.slots', form).insertAdjacentHTML('beforeend', slotRow({ s: 600, e: 680, days: [] }, form.querySelectorAll('.slot').length));
-    const rm = e.target.closest('[data-slot-remove]'); if (rm) rm.closest('.slot').remove();
     if (e.target.closest('[data-class-remove]')) { o.classes = o.classes.filter((x) => x.id !== c.id); save(); dlg.close(); paint(); sfx.drop?.(); }
   });
   form.addEventListener('submit', (e) => {
     if (e.submitter?.value !== 'save') return;
     const f = new FormData(form);
-    const slots = [...form.querySelectorAll('.slot')].flatMap((row) => {
-      const s = toMin($('[data-s]', row).value); const en = toMin($('[data-e]', row).value);
-      return [...row.querySelectorAll('.days input:checked')].map((x) => ({ d: Number(x.value), s, e: en }));
-    });
-    if (!slots.length || slots.some((s) => !(s.e > s.s))) { e.preventDefault(); $('.msg', form).textContent = t('Marca al menos un día, con una hora de inicio antes de la de fin.'); return; }
-    const next = { ...c, name: f.get('name'), credits: f.get('credits'), code: f.get('code'), nrc: f.get('nrc'), prof: f.get('prof'), room: f.get('room'), color: f.get('color'), slots };
+    const s = toMin($('[data-s]', form).value); const en = toMin($('[data-e]', form).value);
+    const picked = [...form.querySelectorAll('.days input:checked')].map((x) => Number(x.value));
+    if (!picked.length || !Number.isFinite(s) || !Number.isFinite(en) || en <= s) { e.preventDefault(); $('.msg', form).textContent = 'Elige al menos un día y una hora.'; return; }
+    const next = { ...c, name: f.get('name'), credits: f.get('credits'), code: f.get('code'), nrc: f.get('nrc'), prof: f.get('prof'), room: f.get('room'), slots: [...picked.map((d) => ({ d, s, e: en })), ...extra] };
     if (isNew) addClass(next, o); else { o.classes[o.classes.findIndex((x) => x.id === c.id)] = cleanClass(next, 0); save(); }
     paint(); sfx.tick();
   });
@@ -455,28 +447,6 @@ function importDialog() {
       save(); dlg.close(); paint(); sfx.chime?.();
     }
   });
-  dlg.showModal();
-}
-
-/* ---------- tips: a panel the person opens ---------- */
-// Advice, never orders: Studium suggests what to consider and the student decides. Where a rule is the university's,
-// it says so.
-const TIPS = [
-  ['Los códigos de periodo', 'El periodo aparece como un número de seis cifras: el año en que empieza el año académico y el periodo. 202610 es el Primer Semestre (agosto a diciembre), 202620 el Segundo Semestre (enero a mayo) y 202630 el Verano.'],
-  ['Teoría con ejercicios o laboratorio', 'Las materias con «+ Ej» o «+ Lab» tienen dos partes, cada una con su propio NRC: la teoría y sus ejercicios o laboratorio. Van juntas: en la Oferta de cursos comparten el mismo grupo («Agrupado con»). Considera inscribirte en un NRC de cada parte, del mismo grupo; Studium te marca cuáles son «de tu grupo».'],
-  ['Un NRC a la vez', 'En la inscripción cada NRC se agrega por separado: la teoría, sus ejercicios, su laboratorio. Ten a mano la lista de NRC de tu borrador (la descargas en Excel) para no perder tiempo en tu hora de inscripción.'],
-  ['Cómo usar la Oferta de cursos', 'Busca por código (por ejemplo, MAT-1202) y copia el resultado: una clase o la página entera. Pégalo aquí y eliges el paralelo sin escribir nada. Si la búsqueda tiene varias páginas, puedes pegarlas una tras otra.'],
-  ['Los créditos del semestre', 'El semestre incluye 16 créditos y lo usual son 15 (cinco materias de 3), así que suele sobrar uno que ya está pagado. Si quieres, puedes aprovecharlo con una materia de 1 crédito de tu malla, como Deportes o Cultura Gastronómica. Fuera del semestre, esas materias se pagan por crédito.'],
-  ['Las horas de clase', 'Las clases empiezan cada hora y media desde las 7:00 y terminan diez minutos antes del siguiente bloque: 8:30 a 9:50, 10:00 a 11:20, y así. Así tienes tiempo para cambiar de edificio.'],
-  ['Antes de elegir', 'Mira la hora, el profe y el semestre de cada clase. Revisa que no sea un paralelo de Galápagos, que materias como Cultura Gastronómica empiezan en otra fecha que el semestre, y que los idiomas van en dos módulos por semestre.'],
-  ['Quién te puede ayudar', 'La Oficina de Consejería Académica ayuda a elegir materias y a planificar tu horario, sobre todo en primer semestre (consejeriaacademica@usfq.edu.ec). Y la oficina de Registro responde en persona.'],
-];
-function tipsDialog(focus) {
-  const dlg = $('#sched-dialog');
-  dlg.innerHTML = `<form method="dialog" class="sched-form tips"><h2>${t('Pistas para tu horario')}</h2>
-    <div class="sched-tips">${TIPS.map(([h, p], i) => `<details ${focus === 'credits' ? (i === 4 ? 'open' : '') : i === 0 ? 'open' : ''}><summary>${t(h)}</summary><p>${t(p)}</p></details>`).join('')}</div>
-    <div class="actions"><a class="button ghost" href="${OFFER_URL}" target="_blank" rel="noopener">${t('Abrir la Oferta de cursos')} ↗</a><button class="button primary" value="cancel">${t('Cerrar')}</button></div></form>`;
-  if (focus === 'credits') ui('tip-credit', 'no');
   dlg.showModal();
 }
 
@@ -612,7 +582,6 @@ export function mountSchedule() {
     if ('png' in d) return void downloadPng();
     if ('add' in d) return classDialog(null);
     if ('import' in d) return importDialog();
-    if ('tips' in d) return tipsDialog(d.tips);
     if ('pasteAdd' in d) return pasteAdd();
     if ('pickerClose' in d) { catalog = []; paint(); return; }
     if (d.pick) { const s = catalog.find((x) => x.nrc === d.pick); if (s) { addClass(s); paint(); } return; }
@@ -630,14 +599,14 @@ export function mountSchedule() {
   document.addEventListener('dragstart', (e) => {
     const el = e.target.closest?.('[data-drag]');
     if (!el || !root?.contains(el)) return;
-    dragged = el.dataset.drag; e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('text/plain', dragged);
+    dragged = el.dataset.drag; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', dragged);
     root.classList.add('dragging');
   });
   document.addEventListener('dragend', () => { dragged = null; root?.classList.remove('dragging'); root?.querySelectorAll('.drop-on').forEach((x) => x.classList.remove('drop-on')); });
   document.addEventListener('dragover', (e) => {
     const tgt = dragged && e.target.closest?.('[data-drop]');
     if (!tgt || !root.contains(tgt)) return;
-    e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move';
     root.querySelectorAll('.drop-on').forEach((x) => x !== tgt && x.classList.remove('drop-on')); tgt.classList.add('drop-on');
   });
   document.addEventListener('drop', (e) => {
@@ -645,10 +614,10 @@ export function mountSchedule() {
     if (!tgt || !root.contains(tgt)) return;
     e.preventDefault();
     const target = tgt.dataset.drop === 'mine' ? state.mine : state.options[Number(tgt.dataset.drop)];
-    const n = copyTo(dragged, target);
+    const n = moveTo(dragged, target);
     dragged = null; root.classList.remove('dragging');
     paint();
-    $('[data-paste-msg]', root) && ($('[data-paste-msg]', root).textContent = n ? `${t('Copiada a')} ${target === state.mine ? t('Mi horario') : target.name}.` : t('Ya estaba allí.'));
+    const msg = $('[data-paste-msg]', root); if (msg) msg.textContent = `${n === 1 ? 'Pasada' : 'Pasadas'} a ${target === state.mine ? 'Mi horario' : target.name}.`;
     if (n) sfx.chime?.();
   });
 }

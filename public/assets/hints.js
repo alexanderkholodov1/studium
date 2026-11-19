@@ -28,6 +28,14 @@ const HINTS = [
   { id: 'h-eggs', where: ['', 'guias', 'bienvenida'], anchor: '.brand', text: 'Studium esconde algunos secretos. Toca las cosas pequeñas, o escribe alguna palabra mágica.' },
   { id: 'h-letters', where: ['bienvenida'], anchor: '#wordmark', text: 'Las letras de «studium» se pueden arrastrar.' },
   { id: 'h-ask', where: ['mapa'], anchor: '#map-q', text: '¿Sabías que puedes preguntarle al mapa en palabras? Por ejemplo: «la ruta para el Examen 2 de redes».' },
+  // Your schedule: advice for enrollment, each leading to its tip in the student guide.
+  { id: 'h-s-paste', where: ['horario'], anchor: '[data-paste]', more: 'oferta', text: '¿Sabías que puedes pegar toda la búsqueda de la Oferta de cursos? Eliges el paralelo sin escribir nada.' },
+  { id: 'h-s-group', where: ['horario'], anchor: '.sched-pick.partner, .sched-list .miss', more: 'grupo', text: 'La teoría y sus ejercicios o laboratorio van juntos, cada uno con su NRC: si te quedas en una parte, por lo general te quedas en la materia.' },
+  { id: 'h-s-period', where: ['horario'], anchor: '.sched-picker h3 small', more: 'periodo', text: '202610, 202620, 202630: el año y el periodo. ¿Sabes cuál es cuál?' },
+  { id: 'h-s-credits', where: ['horario'], anchor: '.sched-total', more: 'creditos', text: 'El semestre incluye 16 créditos y lo usual son 15: suele sobrar uno ya pagado, por si quieres aprovecharlo.' },
+  { id: 'h-s-drag', where: ['horario'], anchor: '.sched-options .sched-opt:nth-child(2):not(.add)', text: 'Arrastra una clase a la pestaña de otro borrador para pasarla allí, con sus ejercicios o laboratorio.' },
+  { id: 'h-s-mine', where: ['horario'], anchor: '[data-use-mine]', more: 'despues', text: 'Cuando te inscribas, el borrador que quedó puede ser tu horario del semestre: se queda en «Mi horario».' },
+  { id: 'h-s-how', where: ['horario'], anchor: '.sched-modes', more: 'como', text: '¿Sabes cómo se asigna tu día y tu hora de inscripción?' },
   { id: 'h-views', where: ['mapa'], anchor: '#map-view-open', text: 'El mapa se ve de muchas formas: lo más preguntado, la dificultad, lo que te falta, la línea de tiempo de una materia…' },
 ];
 
@@ -63,6 +71,7 @@ function close(mark) {
   el.classList.add('out');
   el.addEventListener('animationend', () => el.remove(), { once: true });
   setTimeout(() => el.remove(), 900);
+  if (page() === 'horario') schedule();
 }
 // Next to its subject, below it when there is room, above it otherwise; in page coordinates, so it scrolls with it.
 function place(el, anchor) {
@@ -87,20 +96,23 @@ function show() {
   bubble.className = `hint-bubble glass${ambience() === 'sereno' ? ' still' : ''}`;
   bubble.dataset.hint = hint.id;
   bubble.setAttribute('role', 'status');
-  bubble.innerHTML = `<p></p><div class="actions"><button class="link" data-hint-ok>${t('Entendido')}</button><button class="link" data-hint-off>${t('No más pistas')}</button></div>`;
+  bubble.innerHTML = `<p></p><div class="actions">${hint.more ? `<a class="link" href="#/guia-estudiante/${hint.more}" data-hint-more>${t('Leer más')}</a>` : ''}<button class="link" data-hint-ok>${t('Entendido')}</button><button class="link" data-hint-off>${t('No más pistas')}</button></div>`;
   bubble.querySelector('p').textContent = t(hint.text);
   document.body.append(bubble);
   place(bubble, anchor);
   bubble.querySelector('[data-hint-ok]').addEventListener('click', () => close(true));
   bubble.querySelector('[data-hint-off]').addEventListener('click', () => { setHints(false); close(true); });
+  bubble.querySelector('[data-hint-more]')?.addEventListener('click', () => close(true));
   // Seen once it has been on screen; it leaves by itself.
   setTimeout(() => { if (bubble?.dataset.hint === hint.id) { markSeen(hint.id); close(false); } }, 16000);
 }
 // Wait until the person has been on a page for a while, and leave several minutes between hints.
 function schedule() {
   clearTimeout(timer);
-  const wait = ambience() === 'sereno' ? 70000 : 35000;
-  const gap = Math.max(0, lastShown + 240000 - Date.now());
+  // Where the hints are advice for something being done now (the schedule), they come sooner and closer together.
+  const soon = page() === 'horario';
+  const wait = ambience() === 'sereno' ? (soon ? 20000 : 70000) : (soon ? 7000 : 35000);
+  const gap = Math.max(0, lastShown + (soon ? 45000 : 240000) - Date.now());
   timer = setTimeout(show, Math.max(wait, gap));
 }
 export function mountHints() {

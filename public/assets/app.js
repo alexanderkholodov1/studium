@@ -23,6 +23,7 @@ import { mountCommunity, loadCommunity, kudosRow, renderKudos, renderProfes } fr
 import { mountDemos } from './demos.js';
 import { mountScenes } from './scenes.js';
 import { renderSchedule, mountSchedule } from './schedule.js';
+import { renderStudentGuide } from './student.js';
 import { mountLibrary, renderLibrary } from './library.js';
 import { mountEditor, openEditor } from './editor.js';
 import * as ai from './ai.js';
@@ -110,8 +111,8 @@ document.addEventListener('click', (e) => {
 });
 
 /* ---------- views ---------- */
-const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'horario', 'catalog', 'map', 'library', 'profes', 'contribute', 'settings', 'about', 'sources', 'guide', 'admin'];
-const TABS = { home: 'home', horario: 'horario', catalog: 'catalog', map: 'map', library: 'library', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', admin: 'admin' };
+const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'horario', 'student', 'catalog', 'map', 'library', 'profes', 'contribute', 'settings', 'about', 'sources', 'guide', 'admin'];
+const TABS = { home: 'home', horario: 'horario', student: 'horario', catalog: 'catalog', map: 'map', library: 'library', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', admin: 'admin' };
 const PUBLIC = ['landing', 'auth', 'about', 'denied', 'verify'];
 let current = 'boot';
 function show(view) {
@@ -492,6 +493,7 @@ async function route() {
     const views = {
       biblioteca: ['library', 'Biblioteca', renderLibrary],
       horario: ['horario', 'Tu horario', renderSchedule],
+      'guia-estudiante': ['student', 'Guía del estudiante', () => renderStudentGuide(arg[0])],
       mapa: ['map', 'Mapa', () => openMap(arg.join('/'))],
       fuentes: ['sources', 'Fuentes', renderSources],
       profes: ['profes', 'Profes', renderProfes],
