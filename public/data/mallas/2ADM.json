@@ -1,0 +1,928 @@
+{
+ "code": "2ADM",
+ "name": "ADMINISTRACIÓN DE EMPRESAS",
+ "title": "Licenciado en Administración de Empresas",
+ "college": "Colegio de Administración de Empresas",
+ "modality": "MODALIDAD EN LÍNEA - 8 SEMESTRES",
+ "total": 126,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "ADM 1001",
+     "name": "Principios de Administración",
+     "en": "Principles of Management",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "MAT 1009",
+     "name": "Matemática Empresarial +Ej",
+     "en": "Business Mathematics+Pr",
+     "credits": 3
+    },
+    {
+     "code": "FIN 2002",
+     "name": "Contabilidad Empresarial",
+     "en": "Financial Accounting",
+     "credits": 3
+    },
+    {
+     "code": "MAK 1001",
+     "name": "Principios de Marketing",
+     "en": "Fundamentals of Marketing",
+     "credits": 3
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "LIT/FIL",
+     "name": "Humanidades",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "FIN 2003",
+     "name": "Gerencia de Costos",
+     "en": "Cost Management",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "FIN 2002",
+        "name": "Contabilidad Financiera",
+        "grade": "C"
+       },
+       {
+        "code": "FIN 2002E",
+        "name": "Business Accounting",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "SEG 1001",
+     "name": "Principios de Seguros",
+     "en": "Principles of Insurance",
+     "credits": 3
+    },
+    {
+     "code": "ARTE",
+     "name": "Arte",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "CCSS",
+     "name": "CG - Ciencias Sociales",
+     "credits": 3,
+     "slot": "ccss"
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "MAT 2009",
+     "name": "Estadística Empresarial +Lab",
+     "en": "Business Statistics + Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1009",
+        "name": "Matemática Empresarial +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1009E",
+        "name": "Business Mathematics+Pr",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1003",
+        "name": "Cálculo para Cs de la Vida +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1201",
+        "name": "Cálculo Diferencial + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1008",
+        "name": "Razonamiento Matemático",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1203",
+        "name": "Cálculo Diferencial Avanz. +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ADM 2003",
+     "name": "Análisis de Datos",
+     "en": "Business Analytics",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "ADM 2004",
+          "name": "Tecnología en los Negocios",
+          "grade": "C"
+         },
+         {
+          "code": "ADM 2004E",
+          "name": "",
+          "grade": "C"
+         },
+         {
+          "code": "FIN 2003",
+          "name": "Gestión de Costos",
+          "grade": "C"
+         },
+         {
+          "code": "MAK 3002",
+          "name": "Investigación de Mercados",
+          "grade": "C"
+         },
+         {
+          "code": "ADM 4008",
+          "name": "Emprendimiento Sostenible",
+          "grade": "C"
+         },
+         {
+          "code": "MAK 4001",
+          "name": "Marketing Digital",
+          "grade": "C"
+         },
+         {
+          "code": "SEG 1001",
+          "name": "Principios de Seguros",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "MAT 2009",
+          "name": "Estadística Empresarial +Lab",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 2008",
+          "name": "Probabilidad y Estadística +Ej",
+          "grade": ""
+         },
+         {
+          "code": "MAT 1101",
+          "name": "Estadística para CCSS",
+          "grade": ""
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "FIN 2001",
+     "name": "Principios de Finanzas",
+     "en": "Fundamentals of Finance",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "FIN 2002",
+        "name": "Contabilidad Financiera",
+        "grade": "C"
+       },
+       {
+        "code": "FIN 2002E",
+        "name": "Business Accounting",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    },
+    {
+     "code": "ELECTIVA 1",
+     "name": "CG Electiva libre 1/2",
+     "credits": 3,
+     "slot": "electiva"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ADM 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "FIN 3001",
+     "name": "Finanzas Corporativas",
+     "en": "Corporate Finance",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "FIN 2001",
+        "name": "Principios de Finanzas",
+        "grade": "C"
+       },
+       {
+        "code": "FIN 2001E",
+        "name": "Fundamentals of Finance",
+        "grade": "C"
+       },
+       {
+        "code": "FIN 3005",
+        "name": "Principios de Finanzas",
+        "grade": "C"
+       },
+       {
+        "code": "FIN 3005E",
+        "name": "Fundamentals of Finance",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "MAK 4001",
+     "name": "Marketing Digital",
+     "en": "Digital Marketing",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "MAK 2001",
+          "name": "Comportamiento del Consumidor",
+          "grade": "C"
+         },
+         {
+          "code": "MAK 2001E",
+          "name": "Consumer Behavior",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "ADM 2003",
+          "name": "Análisis de Datos",
+          "grade": "C"
+         },
+         {
+          "code": "ADM 2003E",
+          "name": "Business Analytics",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "ADM 3005",
+     "name": "Negociación",
+     "en": "Negotiation",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "ADM 2005",
+        "name": "Integridad Empresarial",
+        "grade": "C"
+       },
+       {
+        "code": "ADM 2005E",
+        "name": "",
+        "grade": "C"
+       },
+       {
+        "code": "FIN 2001",
+        "name": "Principios de Finanzas",
+        "grade": "C"
+       },
+       {
+        "code": "FIN 2001E",
+        "name": "Fundamentals of Finance",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ADM 2002",
+     "name": "Operaciones +Lab",
+     "en": "Operations and Technology",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "ADM 2003",
+        "name": "Análisis de Datos",
+        "grade": "C"
+       },
+       {
+        "code": "ADM 2003E",
+        "name": "Business Analytics",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ENG 1001E",
+     "name": "Writing and Rhetoric",
+     "credits": 3,
+     "english": true
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ECN 3009",
+     "name": "Economía y Negocios",
+     "en": "Economics and Business",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "ECN 1001",
+          "name": "Introducción a la Economía",
+          "grade": "D"
+         },
+         {
+          "code": "ECN 1001E",
+          "name": "Introduction to Economics",
+          "grade": "D"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "ADM 2003",
+          "name": "Análisis de Datos",
+          "grade": "C"
+         },
+         {
+          "code": "ADM 2003E",
+          "name": "Business Analytics",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "ADM 3001",
+     "name": "Recursos Humanos",
+     "en": "Human Resources",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "all": [
+         {
+          "code": "ADM 2005",
+          "name": "Integridad Empresarial",
+          "grade": "C"
+         },
+         {
+          "code": "FIN 2001",
+          "name": "Principios de Finanzas",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "code": "FIN 2001E",
+        "name": "Fundamentals of Finance",
+        "grade": "C"
+       },
+       {
+        "code": "FIN 3005",
+        "name": "Principios de Finanzas",
+        "grade": "C"
+       },
+       {
+        "code": "JUR 2001",
+        "name": "Introducción Derecho Laboral",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 2402",
+        "name": "Psicología Organizacional",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 2402E",
+        "name": "Organizational Psychology",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 3406",
+        "name": "Desarrollo Organizacional",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 3406E",
+        "name": "Organizational Development",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "MAK 3002",
+     "name": "Investigación de Mercados",
+     "en": "Market Research",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "MAT 2009",
+          "name": "Estadística Empresarial +Lab",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 2009E",
+          "name": "Business Statistics + Lab",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "MAK 2001",
+          "name": "Comportamiento del Consumidor",
+          "grade": "C"
+         },
+         {
+          "code": "MAK 2001E",
+          "name": "Consumer Behavior",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "ADM 2003",
+          "name": "Análisis de Datos",
+          "grade": "C"
+         },
+         {
+          "code": "ADM 2003E",
+          "name": "Business Analytics",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "ELECTIVA 2",
+     "name": "CG Electiva Libre 2/2",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "CIENCIAS",
+     "name": "CG - Ciencias",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PAS 4000",
+     "name": "Práctica Pre-Profesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 5
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ADM 4003",
+     "name": "Creatividad Empresarial",
+     "en": "Entrepreneurship Management",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "ADM 3002",
+          "name": "Emprendimiento",
+          "grade": "D"
+         },
+         {
+          "code": "ADM 3002E",
+          "name": "Entrepreneurship",
+          "grade": "D"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "FIN 2001",
+          "name": "Principios de Finanzas",
+          "grade": "C"
+         },
+         {
+          "code": "FIN 2001E",
+          "name": "Fundamentals of Finance",
+          "grade": "C"
+         },
+         {
+          "code": "FIN 3084",
+          "name": "Finanzas y Emprendimiento",
+          "grade": "C"
+         },
+         {
+          "code": "FIN 3005",
+          "name": "Principios de Finanzas",
+          "grade": "C"
+         },
+         {
+          "code": "FIN 3005E",
+          "name": "Fundamentals of Finance",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "ADM 3004",
+     "name": "Negocios Internacionales",
+     "en": "International Business",
+     "credits": 3
+    },
+    {
+     "code": "ADM 4006",
+     "name": "Proyectos Empresariales",
+     "en": "Project Management",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "FIN 3001",
+          "name": "Finanzas Corporativas",
+          "grade": "C"
+         },
+         {
+          "code": "FIN 3001E",
+          "name": "Corporate Finance",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "ADM 2003",
+          "name": "Análisis de Datos",
+          "grade": "C"
+         },
+         {
+          "code": "ADM 2003E",
+          "name": "Business Analytics",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "OPT 1",
+     "name": "Opt. School of Business 1/3",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "OPT 2",
+     "name": "Opt. School of Business 2/3",
+     "credits": 3,
+     "slot": "optativa"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "ADM 4008",
+     "name": "Emprendimiento Sostenible",
+     "en": "Innovation & Sustainability",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "ADM 3002",
+        "name": "Emprendimiento",
+        "grade": "C"
+       },
+       {
+        "code": "ADM 3002E",
+        "name": "Entrepreneurship",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "FIN 4008",
+     "name": "Tributación y Entorno Legal",
+     "en": "Taxation",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "FIN 2002",
+        "name": "Contabilidad Financiera",
+        "grade": "C"
+       },
+       {
+        "code": "FIN 2002E",
+        "name": "Business Accounting",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "OPT 3",
+     "name": "Opt. School of Business 3/3",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "ADM 4991",
+     "name": "Análisis Estratégico",
+     "en": "Comprehensive Assessment ADM",
+     "credits": 5,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "ADM 4003",
+          "name": "Gestión de Emprendimiento",
+          "grade": "C"
+         },
+         {
+          "code": "ADM 4003E",
+          "name": "Business Creativity",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "ADM 3005",
+          "name": "Negociación",
+          "grade": "C"
+         },
+         {
+          "code": "ADM 3005E",
+          "name": "Negotiation",
+          "grade": "C"
+         },
+         {
+          "code": "ADM 4013",
+          "name": "Negociación",
+          "grade": "C"
+         },
+         {
+          "code": "ADM 4013E",
+          "name": "Negotiation",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "notes": [],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=2ADM",
+  "read": "2026-11-19"
+ }
+}

@@ -1,0 +1,567 @@
+{
+ "code": "1ARF",
+ "name": "ARTES VISUALES",
+ "title": "Licenciado en Artes Visuales",
+ "college": "Colegio de Comunicación y Artes Contemporáneas",
+ "modality": "FOTOGRAFÍA",
+ "total": 149,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "MAT 1001",
+     "name": "Matemáticas Cotidianas",
+     "en": "Daily Mathematics",
+     "credits": 3
+    },
+    {
+     "code": "DIC 1101",
+     "name": "Herramientas Digitales 1",
+     "en": "Digital Tools 1",
+     "credits": 3
+    },
+    {
+     "code": "ART 1101",
+     "name": "Dibujo 1",
+     "en": "Drawing 1",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "ART 1701",
+     "name": "Fundamentos de las Artes",
+     "en": "Fundamentals of Arts",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "TIC 1001",
+     "name": "Herramientas de Oficina",
+     "en": "Office Tools",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "ARH 2102",
+     "name": "Historia del Arte 2",
+     "en": "Art History 2",
+     "credits": 3
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ARTE",
+     "name": "CG - ARTE",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ART 1501",
+     "name": "Técnicas Básicas de Pintura",
+     "en": "Basic Painting Techniques",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "CCO 2101",
+     "name": "Teoría Crítica 1: Arte & Media",
+     "en": "Critical Theory 1: Art & Media",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "CCO 1001",
+        "name": "Fundamentos de Comunicación",
+        "grade": "C"
+       },
+       {
+        "code": "ART 1701",
+        "name": "Fundamentos de las Artes",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "DIC 1101",
+     "name": "Herramientas Digitales 1",
+     "en": "Digital Tools 1",
+     "credits": 3
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "FOT 2101",
+     "name": "Fotografía 1",
+     "en": "Photography 1",
+     "credits": 3
+    },
+    {
+     "code": "ART 2102",
+     "name": "Dibujo de Retrato y Caricatura",
+     "en": "Portrait Drawing",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ART 3803",
+     "name": "Experimentación Audiovisual",
+     "en": "Audiovisual Experimentation",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "ART 3704",
+     "name": "Laboratorio de Creación 3",
+     "en": "Creative Lab 3",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "CCO 2102",
+     "name": "Teoría Crítica 2: Arte & Media",
+     "en": "Critical Theory 2: Art & Media",
+     "credits": 3
+    },
+    {
+     "code": "FOT 2102",
+     "name": "Fotografía 2",
+     "en": "Photography 2",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "FOT 2101",
+        "name": "Fotografía 1",
+        "grade": "C"
+       },
+       {
+        "code": "FOT 2101E",
+        "name": "Photography 1",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "CCSS 2000",
+     "name": "GC- Ciencias Sociales 2000",
+     "credits": 3,
+     "slot": "ccss"
+    },
+    {
+     "code": "LIT/FIL",
+     "name": "Humanidades",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "CCO 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "DIC 1004",
+     "name": "Cromática",
+     "en": "Color",
+     "credits": 3
+    },
+    {
+     "code": "CCO 3001",
+     "name": "Taller de Medios Mixtos",
+     "en": "Mixed Media Workshop",
+     "credits": 3
+    },
+    {
+     "code": "ARH 2006",
+     "name": "Fotografía: Historia y Teoría",
+     "en": "Photography: History & Theory",
+     "credits": 3
+    },
+    {
+     "code": "CCSS 3000",
+     "name": "CG - Ciencias Sociales 3000",
+     "credits": 3,
+     "slot": "ccss"
+    },
+    {
+     "code": "CIENCIAS",
+     "name": "CG - Ciencias",
+     "credits": 3
+    },
+    {
+     "code": "ELECTIVA",
+     "name": "Electivas Libres 1/2",
+     "credits": 3,
+     "slot": "electiva"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "FOT 3001",
+     "name": "Técnicas Fotográficas Análogas",
+     "en": "Analog Photography Techniques",
+     "credits": 3
+    },
+    {
+     "code": "ARH 3005",
+     "name": "Arte Contemporáneo",
+     "en": "Contemporary Art",
+     "credits": 3
+    },
+    {
+     "code": "ART 2802",
+     "name": "Nuevos Medios",
+     "en": "New Media",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "CCO 3002",
+     "name": "Taller de Investigación",
+     "en": "Research Workshop",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "CCO 1001",
+          "name": "Fundamentos de Comunicación",
+          "grade": "C"
+         },
+         {
+          "code": "ART 1701",
+          "name": "Fundamentos de las Artes",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "CCO 2101",
+          "name": "Teoría Crítica 1: Arte & Media",
+          "grade": "C"
+         },
+         {
+          "code": "CCO 2101E",
+          "name": "Critical Theory 1: Art & Media",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "ENG 1001E",
+     "name": "Writing and Rhetoric",
+     "credits": 3,
+     "english": true
+    },
+    {
+     "code": "ELECTIVA",
+     "name": "Electiva Libre 2/2",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "ART 4000",
+     "name": "Práctica Preprofesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 0,
+     "slot": "arte"
+    },
+    {
+     "code": "DEP",
+     "name": "Deportes",
+     "credits": 0
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ART 3706",
+     "name": "Gestión y Producción Cultural",
+     "en": "Cultural Production Management",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "FOT 4001",
+     "name": "Procesamiento Digital",
+     "en": "Digital Processing",
+     "credits": 3,
+     "pre": {
+      "code": "FOT 2102",
+      "name": "Fotografía 2",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "FOT 4201",
+     "name": "Fotografía Documental 1",
+     "en": "Documentary Photography 1",
+     "credits": 3
+    },
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    },
+    {
+     "code": "ARH 3011",
+     "name": "Teorías del Arte Contemporáneo",
+     "en": "Theories of Contemporary Art",
+     "credits": 3,
+     "pre": {
+      "code": "ARH 3005",
+      "name": "Arte Contemporáneo",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "PREP TIT",
+     "name": "Preparación Opción Titulación",
+     "credits": 3
+    },
+    {
+     "code": "CCO",
+     "name": "Temas en Comunicación y Arte",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ART 3705",
+     "name": "Educación Artística",
+     "en": "Art Education",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "ARH 3006",
+     "name": "Fotografía Contemporánea",
+     "en": "Contemporary Photography",
+     "credits": 3
+    },
+    {
+     "code": "ART 4707",
+     "name": "Curaduría",
+     "en": "Curatorship",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "FOT 4202",
+     "name": "Fotografía Documental 2",
+     "en": "Documentary Photography 2",
+     "credits": 3
+    },
+    {
+     "code": "FOT 4002",
+     "name": "Fotografía de Estudio",
+     "en": "Studio Photography",
+     "credits": 3,
+     "pre": {
+      "code": "FOT 2102",
+      "name": "Fotografía 2",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "DES TIT",
+     "name": "Desarrollo Opción TItulación",
+     "credits": 3
+    }
+   ]
+  }
+ ],
+ "notes": [],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=1ARF",
+  "read": "2026-11-19"
+ }
+}

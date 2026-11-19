@@ -1,0 +1,530 @@
+[
+ {
+  "code": "2ADM",
+  "name": "ADMINISTRACIÓN DE EMPRESAS",
+  "title": "Licenciado en Administración de Empresas",
+  "college": "Colegio de Administración de Empresas",
+  "modality": "MODALIDAD EN LÍNEA - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1ADM",
+  "name": "ADMINISTRACIÓN DE EMPRESAS",
+  "title": "Licenciado en Administración de Empresas",
+  "college": "Colegio de Administración de Empresas",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "3ADM",
+  "name": "ADMINISTRACIÓN DE EMPRESAS",
+  "title": "Licenciado en Administración de Empresas",
+  "college": "Colegio de Administración de Empresas",
+  "modality": "MODALIDAD SEMIPRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1AND",
+  "name": "ANIMACIÓN DIGITAL",
+  "title": "Licenciado en Animación Digital",
+  "college": "Colegio de Comunicación y Artes Contemporáneas",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1ANT",
+  "name": "ANTROPOLOGÍA",
+  "title": "Licenciado en Antropología",
+  "college": "Colegio de Ciencias Sociales y Humanidades",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1AQQ",
+  "name": "ARQUITECTURA",
+  "title": "Arquitecto",
+  "college": "Colegio de Arquitectura y Diseño Interior",
+  "modality": "MODALIDAD PRESENCIAL - 10 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1ARQ",
+  "name": "ARQUITECTURA",
+  "title": "Arquitecto",
+  "college": "Colegio de Arquitectura y Diseño Interior",
+  "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1ARL",
+  "name": "ARTES LIBERALES",
+  "title": "Licenciado en Artes Liberales",
+  "college": "Colegio de Ciencias Sociales y Humanidades",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1ARF",
+  "name": "ARTES VISUALES",
+  "title": "Licenciado en Artes Visuales",
+  "college": "Colegio de Comunicación y Artes Contemporáneas",
+  "modality": "FOTOGRAFÍA",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1ARM",
+  "name": "ARTES VISUALES",
+  "title": "Licenciado en Artes Visuales",
+  "college": "Colegio de Comunicación y Artes Contemporáneas",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1ARV",
+  "name": "ARTES VISUALES",
+  "title": "Licenciado en Artes Visuales",
+  "college": "Colegio de Comunicación y Artes Contemporáneas",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1BIG",
+  "name": "BIOLOGÍA",
+  "title": "Biólogo",
+  "college": "Colegio de Ciencias Biológicas y Ambientales",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1BIO",
+  "name": "BIOLOGÍA",
+  "title": "Biólogo",
+  "college": "Colegio de Ciencias Biológicas y Ambientales",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1POL",
+  "name": "CIENCIAS POLÍTICAS/ POLITICAL SCIENCE",
+  "title": "Licenciado en Ciencias Políticas",
+  "college": "Colegio de Ciencias Sociales y Humanidades",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1CIN",
+  "name": "CINE",
+  "title": "Licenciado en Cine",
+  "college": "Colegio de Comunicación y Artes Contemporáneas",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1CMC",
+  "name": "COMPOSICIÓN PARA MEDIOS CONTEMPORÁNEOS",
+  "title": "Licenciado en Composición para Medios Contemporáneos",
+  "college": "Colegio de Música",
+  "modality": "COMPOSITION FOR CONTEMPORARY MEDIA",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "2COM",
+  "name": "COMUNICACIÓN",
+  "title": "Licenciado en Comunicación",
+  "college": "Colegio de Comunicación y Artes Contemporáneas",
+  "modality": "MODALIDAD EN LÍNEA - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1COM",
+  "name": "COMUNICACIÓN",
+  "title": "Licenciado en Comunicación",
+  "college": "Colegio de Comunicación y Artes Contemporáneas",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1JUR",
+  "name": "DERECHO/LAW",
+  "title": "Abogado",
+  "college": "Colegio de Jurisprudencia",
+  "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1DMI",
+  "name": "DISEÑO EN MEDIOS INTERACTIVOS",
+  "title": "Licenciado en Diseño de Medios Interactivos",
+  "college": "Colegio de Comunicación y Artes Contemporáneas",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1DIM",
+  "name": "DISEÑO GRÁFICO: MEDIOS INTERACTIVOS",
+  "title": "Licenciado en Diseño Gráfico",
+  "college": "Colegio de Comunicación y Artes Contemporáneas",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1DIC",
+  "name": "DISEÑO GRÁFICO:DISEÑO COMUNICACIONAL",
+  "title": "Licenciado en Diseño Gráfico",
+  "college": "Colegio de Comunicación y Artes Contemporáneas",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1DIT",
+  "name": "DISEÑO INTERIOR",
+  "title": "Licenciado en Diseño Interior",
+  "college": "Colegio de Arquitectura y Diseño Interior",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1ECN",
+  "name": "ECONOMÍA",
+  "title": "Economista",
+  "college": "Colegio de Administración de Empresas",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1ECO",
+  "name": "ECONOMÍA",
+  "title": "Economista",
+  "college": "Colegio de Economía",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1EDU",
+  "name": "EDUCACIÓN/EDUCATION",
+  "title": "Licenciado en Ciencias de la Educación",
+  "college": "Colegio de Ciencias Sociales y Humanidades",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1MUS",
+  "name": "EJECUCIÓN DE MÚSICA CONTEMPORÁNEA",
+  "title": "Licenciado en Artes Musicales",
+  "college": "Colegio de Música",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1EMC",
+  "name": "EJECUCIÓN DE MÚSICA CONTEMPORÁNEA",
+  "title": "Licenciado en Ejecución de Música Contemporánea",
+  "college": "Colegio de Música",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES 1 VERANO",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1IEL",
+  "name": "ELECTRÓNICA Y AUTOMATIZACIÓN/ ELECTRONICS ENGINEERING",
+  "title": "Ingeniero en Electrónica",
+  "college": "Colegio de Ciencias e Ingenierías",
+  "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1FIN",
+  "name": "FINANZAS",
+  "title": "Licenciado en Finanzas",
+  "college": "Colegio de Administración de Empresas",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1FIS",
+  "name": "FÍSICA",
+  "title": "Físico",
+  "college": "Colegio de Ciencias e Ingenierías",
+  "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1GST",
+  "name": "GASTRONOMÍA",
+  "title": "Licenciado en Gastronomía",
+  "college": "Colegio de Hospitalidad, Arte Culinario y Turismo",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "3GAM",
+  "name": "GESTIÓN AMBIENTAL",
+  "title": "Licenciado en Gestión Ambiental",
+  "college": "Colegio de Ciencias Biológicas y Ambientales",
+  "modality": "MODALIDAD SEMIPRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "2HSP",
+  "name": "HOSPITALIDAD Y HOTELERÍA",
+  "title": "Licenciado en Hospitalidad y Hotelería",
+  "college": "Colegio de Hospitalidad, Arte Culinario y Turismo",
+  "modality": "MODALIDAD EN LÍNEA - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1HSP",
+  "name": "HOSPITALIDAD Y HOTELERÍA",
+  "title": "Licenciado en Hospitalidad y Hotelería",
+  "college": "Colegio de Hospitalidad, Arte Culinario y Turismo",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1INA",
+  "name": "INGENIERÍA AMBIENTAL",
+  "title": "Ingeniero Ambiental",
+  "college": "Colegio de Ciencias e Ingenierías",
+  "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1ICV",
+  "name": "INGENIERÍA CIVIL",
+  "title": "Ingeniero Civil",
+  "college": "Colegio de Ciencias e Ingenierías",
+  "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1ALI",
+  "name": "INGENIERÍA DE ALIMENTOS",
+  "title": "Ingeniero en Alimentos",
+  "college": "Colegio de Ciencias e Ingenierías",
+  "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1AGE",
+  "name": "INGENIERÍA EN AGROEMPRESA",
+  "title": "Ingeniero en Agroempresa",
+  "college": "Colegio de Ciencias e Ingenierías",
+  "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1AGR",
+  "name": "INGENIERÍA EN AGRONOMÍA",
+  "title": "Ingeniero Agrónomo",
+  "college": "Colegio de Ciencias e Ingenierías",
+  "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1BTC",
+  "name": "INGENIERÍA EN BIOTECNOLOGÍA",
+  "title": "Ingeniero Biotecnólogo",
+  "college": "Colegio de Ciencias Biológicas y Ambientales",
+  "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1CMP",
+  "name": "INGENIERÍA EN CIENCIAS DE LA COMPUTACIÓN",
+  "title": "Ingeniero en Ciencias de la Computación",
+  "college": "Colegio de Ciencias e Ingenierías",
+  "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1IIN",
+  "name": "INGENIERÍA INDUSTRIAL",
+  "title": "Ingeniero Industrial",
+  "college": "Colegio de Ciencias e Ingenierías",
+  "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1IME",
+  "name": "INGENIERÍA MECÁNICA",
+  "title": "Ingeniero Mecánico",
+  "college": "Colegio de Ciencias e Ingenierías",
+  "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1INQ",
+  "name": "INGENIERÍA QUÍMICA",
+  "title": "Ingeniero Químico",
+  "college": "Colegio de Ciencias e Ingenierías",
+  "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1LIT",
+  "name": "LITERATURA",
+  "title": "Licenciado en Literatura",
+  "college": "Colegio de Ciencias Sociales y Humanidades",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1MAK",
+  "name": "MARKETING",
+  "title": "Licenciado en Marketing",
+  "college": "Colegio de Administración de Empresas",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1MAT",
+  "name": "MATEMÁTICA",
+  "title": "Matemático",
+  "college": "Colegio de Ciencias e Ingenierías",
+  "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1MAC",
+  "name": "MATEMÁTICAS APLICADAS Y COMPUTACIÓN",
+  "title": "Ingeniero en Matemáticas Aplicadas y Computación",
+  "college": "Colegio de Ciencias e Ingenierías",
+  "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES 1 VERANO",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1MED",
+  "name": "MEDICINA",
+  "title": "Médico",
+  "college": "Colegio de Ciencias de la Salud",
+  "modality": "MODALIDAD PRESENCIAL - 12 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1VET",
+  "name": "MEDICINA VETERINARIA",
+  "title": "Médico Veterinario",
+  "college": "Colegio de Ciencias de la Salud",
+  "modality": "MODALIDAD PRESENCIAL - 10 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "2MAK",
+  "name": "MERCADOTECNIA",
+  "title": "Licenciado en Mercadotecnia",
+  "college": "Colegio de Administración de Empresas",
+  "modality": "MODALIDAD EN LÍNEA - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1MMC",
+  "name": "MUSICAL ARTS: COMPOSITION FOR CONTEMPORARY MEDIA",
+  "title": "Licenciado en Artes Musicales",
+  "college": "Colegio de Música",
+  "modality": "",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1NIT",
+  "name": "NEGOCIOS INTERNACIONALES",
+  "title": "Licenciado en Negocios Internacionales",
+  "college": "Colegio de Administración de Empresas",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1NUT",
+  "name": "NUTRICIÓN Y DIETÉTICA",
+  "title": "Licenciado en Nutrición y Dietética",
+  "college": "Colegio de Ciencias de la Salud Nutrición",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1NUD",
+  "name": "NUTRICIÓN Y DIETÉTICA",
+  "title": "Licenciado en Nutrición y Dietética",
+  "college": "Colegio de Ciencias de la Salud Nutrición",
+  "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1ODT",
+  "name": "ODONTOLOGÍA/ODONTOLOGY",
+  "title": "Odontólogo",
+  "college": "Colegio de Ciencias de la Salud",
+  "modality": "MODALIDAD PRESENCIAL - 10 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1PER",
+  "name": "PERIODISMO",
+  "title": "Licenciado en Periodismo",
+  "college": "Colegio de Comunicación y Artes Contemporáneas",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1PMC",
+  "name": "PRODUCCIÓN MEDIOS COMUNICACIÓN",
+  "title": "Licenciado en Producción para Medios de Comunicación",
+  "college": "Colegio de Comunicación y Artes Contemporáneas",
+  "modality": "TELEVISION PRODUCTION AND DIGITAL MEDIA",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1MPS",
+  "name": "PRODUCCIÓN MUSICAL Y SONORA/ MUSIC AND SOUND PRODUCTION",
+  "title": "Licenciado en Producción Musical y Sonora",
+  "college": "Colegio de Música",
+  "modality": "",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1PCA",
+  "name": "PRODUCCIÓN PARA MEDIOS DE COMUNICACIÓN",
+  "title": "Licenciado en Producción para Medios de Comunicación",
+  "college": "Colegio de Comunicación y Artes Contemporáneas",
+  "modality": "COMUNICACIÓN AMBIENTAL",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "2PSI",
+  "name": "PSICOLOGÍA",
+  "title": "Licenciado en Psicología",
+  "college": "Colegio de Ciencias Sociales y Humanidades",
+  "modality": "MODALIDAD EN LINEA - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1PSI",
+  "name": "PSICOLOGÍA",
+  "title": "Licenciado en Psicología",
+  "college": "Colegio de Ciencias Sociales y Humanidades",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1PSC",
+  "name": "PSICOLOGÍA CLÍNICA",
+  "title": "Licenciado en Psicología Clínica",
+  "college": "Colegio de Ciencias Sociales y Humanidades",
+  "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1PUB",
+  "name": "PUBLICIDAD",
+  "title": "Licenciado en Publicidad",
+  "college": "Colegio de Comunicación y Artes Contemporáneas",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ },
+ {
+  "code": "1REL",
+  "name": "RELACIONES INTERNACIONALES",
+  "title": "Licenciado en Relaciones Internacionales",
+  "college": "Colegio de Ciencias Sociales y Humanidades",
+  "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+  "read": "2026-11-19"
+ }
+]

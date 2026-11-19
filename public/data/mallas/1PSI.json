@@ -1,0 +1,692 @@
+{
+ "code": "1PSI",
+ "name": "PSICOLOGÍA",
+ "title": "Licenciado en Psicología",
+ "college": "Colegio de Ciencias Sociales y Humanidades",
+ "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+ "total": 127,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "PSI 2101",
+     "name": "Desarrollo: Niño y Adolescente",
+     "en": "Development: Children",
+     "credits": 3
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "PSI 2103",
+     "name": "Introducción a la Psicología",
+     "en": "Principles of Psychology",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "BIO 1002",
+     "name": "Biología Básica",
+     "en": "Basic Biology",
+     "credits": 3
+    },
+    {
+     "code": "PSI 2102",
+     "name": "Desarrollo: Adultez y Vejez",
+     "en": "Development: Adults",
+     "credits": 3,
+     "pre": {
+      "code": "PSI 2101",
+      "name": "Desarrollo: Niño y Adolescente",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "MAT 1101",
+     "name": "Estadística para CCSS",
+     "en": "Statistics for Social Sciences",
+     "credits": 3
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "PSI 2501",
+     "name": "Bases de Neurociencia",
+     "en": "Basic Neuroscience",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "BIO 1002",
+        "name": "Biología Básica",
+        "grade": "C"
+       },
+       {
+        "code": "BIO 1102",
+        "name": "Biología General +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PSI 2110",
+     "name": "Psicología del Aprendizaje",
+     "en": "Psychology of Learning",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "PSI 2103",
+        "name": "Introducción a la Psicología",
+        "grade": "C"
+       },
+       {
+        "code": "GREXO",
+        "name": "Exoneración Prerreq Posgrado",
+        "grade": "1"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PSI 2401",
+     "name": "Psicología Social",
+     "en": "Social Psychology",
+     "credits": 3
+    },
+    {
+     "code": "ARTE",
+     "name": "Arte: ART/MUS/DAN/TEA",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "HUM",
+     "name": "Humanidades: LIT/FIL/ARH/ESC",
+     "credits": 3,
+     "slot": "humanidades"
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "DEP 0010",
+     "name": "Deportes",
+     "en": "Sports",
+     "credits": 1
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "PSI 1001",
+     "name": "Fundamentos de Investigación",
+     "en": "Fundamentals of Research",
+     "credits": 3
+    },
+    {
+     "code": "PSI 2402",
+     "name": "Psicología Organizacional",
+     "en": "Organizational Psychology",
+     "credits": 3
+    },
+    {
+     "code": "PSI 2106",
+     "name": "Psicología de la Personalidad",
+     "en": "Personality Psychology",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "PSI 2103",
+        "name": "Introducción a la Psicología",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 2103E",
+        "name": "Introduction to Psychology",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "PSI 3001",
+     "name": "Psicología Educativa",
+     "en": "Educational Psychology",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "PSI 2110",
+        "name": "Psicología del Aprendizaje",
+        "grade": "C"
+       },
+       {
+        "code": "EDU 1002",
+        "name": "Teorías del Aprendizaje",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PSI 3003",
+     "name": "Psicología de la Salud",
+     "en": "Health Psychology",
+     "credits": 3
+    },
+    {
+     "code": "PSI 3502E",
+     "name": "Neuroscience and Behavior",
+     "credits": 3,
+     "english": true,
+     "pre": {
+      "code": "PSI 2501",
+      "name": "Bases de Neurociencia",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "PSI 3301",
+     "name": "Psico Patología y Farmacología",
+     "en": "Psychopathology",
+     "credits": 3,
+     "pre": {
+      "code": "PSI 2501",
+      "name": "Bases de Neurociencia",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ELECTIVA 1",
+     "name": "Electiva Libre 1/3",
+     "credits": 3,
+     "slot": "electiva"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "PSI 3002",
+     "name": "Psicología Clínica",
+     "en": "Clincal Psychology",
+     "credits": 3
+    },
+    {
+     "code": "PSI 2109",
+     "name": "Psicología Cognitiva",
+     "en": "Cognitive Psychology",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "PSI 3502",
+        "name": "Neurociencia y Conducta",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 2501",
+        "name": "Bases de Neurociencia",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PSI 4204",
+     "name": "Investigación en Psicología",
+     "en": "Research in Psychology",
+     "credits": 3,
+     "pre": {
+      "code": "PSI 1001",
+      "name": "Fundamentos de Investigación",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ELECTIVA 2",
+     "name": "Electiva Libre 2/3",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "CCSS",
+     "name": "CCSS:HIS/SOC/ANT/POL/REL/EDU",
+     "credits": 3,
+     "slot": "ccss"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PAS 4000",
+     "name": "Práctica Pre-Profesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 5
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "PSI 2108",
+     "name": "Ética en Psicología",
+     "en": "Ethics in Psychology",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "PSI 3002",
+        "name": "Psicología Clínica",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 3002E",
+        "name": "Clinical Psychology",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 3301",
+        "name": "Psico Patología y Farmacología",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PSI 3201",
+     "name": "Medición en Psicología",
+     "en": "Measurements in Psychology",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1004",
+        "name": "Bioestadística +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1001",
+        "name": "Matemáticas Cotidianas",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1101",
+        "name": "Estadística para CCSS",
+        "grade": "C"
+       },
+       {
+        "code": "MED 3001",
+        "name": "Bioestadística",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1003",
+        "name": "Cálculo para Cs de la Vida +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ELECTIVA 3",
+     "name": "Electiva Libre 3/3",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "OPT 1",
+     "name": "Optativa 1/5",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "OPT 2",
+     "name": "Optativa 2/5",
+     "credits": 3,
+     "slot": "optativa"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ALB 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "OPT 3",
+     "name": "Optativa 3/5",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "OPT 4",
+     "name": "Optativa 4/5",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "OPT 5",
+     "name": "Optativa 5/5",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "PSI 4991",
+     "name": "Proyecto Integrador PSI",
+     "en": "Capstone Project PSI",
+     "credits": 5
+    }
+   ]
+  }
+ ],
+ "notes": [
+  {
+   "title": "Niveles de Inglés ESL (B2 Marco Común Europeo)",
+   "text": "A los estudiantes se les asigna un nivel de inglés (English as a Second Language ESL) con base en el examen de suficiencia rendido durante el proceso de admisión. Los estudiantes también pueden validar sus conocimientos de inglés con certificados internacionales detallados en la sección Suficiencia de Aprendizaje de Lengua Extranjera: Idioma Inglés del Manual del Estudiante. Para poder cumplir con los requisitos de graduación obligatorios todos los estudiantes deben demostrar la suficiencia de inglés a través del examen que exige la USFQ, un certificado internacional validado por la USFQ o la aprobación de los 6 niveles de inglés (ESL).\nPara poder tomar cursos de cualquier área académica en inglés y cursos de otros idiomas los requisitos de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "ESP 1001 - Escritura Académica",
+   "text": "Se sugiere que se tome temprano en la carrera. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Ciencias",
+   "text": "El requisito de CIENCIAS de Colegio General se cumple con la materia BIO 1002 Biología Básica. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Matemáticas",
+   "text": "El requisito de MATEMÁTICAS de Colegio General se cumple con la materia MAT 1101 Estadística para CCSS. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ADM 3002 - Emprendimiento",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ECN 1001 - Introducción a la Economía",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ARL 1001 - Autoconocimiento ARL 1002 - Cosmos ARL 2001 - Ser y Cosmos",
+   "text": "La nota mínima para aprobación de estos requisitos de CG es C."
+  },
+  {
+   "title": "Ciencias Sociales",
+   "text": "El requisito de CIENCIAS SOCIALES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nANT- Antropología/ EDU - Educación/ HIS- Historia/ REL- Relaciones Internacionales/ POL- Ciencias Políticas/ SOC- Sociología"
+  },
+  {
+   "title": "Humanidades",
+   "text": "El requisito de HUMANIDADES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nLIT- Literatura/ FIL- Filosofía/ ESC- Escritura Creativa/ ARH- Historia del Arte"
+  },
+  {
+   "title": "Arte",
+   "text": "El requisito de ARTE se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nART - Arte/ DAN - Danza/ TEA - Teatro/ MUS - Música"
+  },
+  {
+   "title": "Electivas Libres",
+   "text": "Cualquier materia que no se encuentre como requisito obligatorio en la malla curricular puede servir como Electiva Libre de Colegio General. Las Electivas Libres pueden ser utilizadas para cumplir con las exigencias de una segunda carrera o de una subespecialización (minor).\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Prácticas de Servicio Comunitario PRC 2000 - Aprendizaje y Servicio PASEC",
+   "text": "Las prácticas comunitarias se cumplen a través del seminario de APRENDIZAJE Y SERVICIO PASEC. Los estudiantes deben asistir a clases y además cumplir con las horas de servicio comunitario.\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "PAS 4000 - Prácticas Pre-profesionales PASEM",
+   "text": "Las prácticas preprofesionales pueden comenzar a partir del sexto semestre y/o con 75 créditos aprobados, deberán cumplir un mínimo de 240 horas. Los estudiantes deben inscribirse en PASEM en el último verano según su malla académica, la clase se aprueba con las horas de pasantías y la clase teórica. El estudiante debe asegurarse que la fecha de finalización de la clase coincida con su último semestre."
+  },
+  {
+   "title": "Deportes",
+   "text": "Todo estudiante deberá elegir una clase de DEPORTES de las diferentes opciones que se ofrecen cada semestre."
+  },
+  {
+   "title": "GST 0010 - Cultura Gastronómica",
+   "text": "Todo estudiante debe tomar un seminario de Cultura Gastronómica a partir de segundo semestre."
+  },
+  {
+   "title": "Coloquios",
+   "text": "El requisito de Coloquios varía en cada carrera. Consultar en el Decanato Académico de cada Colegio."
+  },
+  {
+   "title": "Materia en Inglés",
+   "text": "El estudiante debe aprobar cualquier materia impartida en inglés, de la carrera o de Colegio General durante la duración de la carrera. Si una materia tiene en su código la terminación (E), (por ejemplo ADM 1001E) significa que la materia se imparte en idioma inglés. Toda materia impartida en inglés tendrá como prerrequisito haber aprobado ESL 0006 Inglés Nivel 6. Para poder tomar cursos de otros idiomas los niveles de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "Writing Intensive",
+   "text": "El estudiante debe aprobar cualquier materia con el atributo Writing Intensive. Para registrarse en un curso Writing Intensive los estudiantes deben haber aprobado todos los niveles de inglés. Se pueden identificar los paralelos con este atributo con un ícono específico en el Catálogo de Cursos Ofertados cada semestre."
+  },
+  {
+   "title": "COL 2000 - Ser Dragón",
+   "text": "Ser Dragón es un seminario de acompañamiento para estudiantes de primer semestre que tiene como objetivo principal facilitar la transición del colegio a la vida universitaria. Todo estudiante que haya ingresado a partir del semestre 202210 deberá cursar y aprobar COL 2000. La nota de aprobación de este requisito es P."
+  },
+  {
+   "title": "",
+   "text": "*Algunas materias del Colegio General, se cumplen con materias designadas para este propósito por cada carrera."
+  },
+  {
+   "title": "",
+   "text": "*Para cumplir con Colegio General en algunos casos los estudiantes deben elegir una materia de posibles áreas académicas (verificar en malla curricular y ver detalle a continuación)."
+  },
+  {
+   "title": "",
+   "text": "* Es necesario obtener mínimo C en las asignaturas de Especialización. Sin embargo, hay carreras que requieren una nota mayor; consulta en el Manual del Estudiante o en el reglamento específico de la carrera."
+  },
+  {
+   "title": "",
+   "text": "* Para conocer el listado de cursos optativos consultar con el responsable académico de la carrera."
+  },
+  {
+   "title": "",
+   "text": "* Para cumplir los requisitos de Optativa de Psicología (5 cursos), los estudiantes puede escoger materias dentro de una concentración (ver página siguiente) y recibirán un certificado correspondiente. Los estudiantes no están obligados a optar por una concentración."
+  },
+  {
+   "title": "",
+   "text": "*Si optas por un curso de otra área para completar una concentración (por ejemplo EDU o ADM) el curso no va a ser validado como una Optativa de Psicología."
+  },
+  {
+   "title": "",
+   "text": "* En los títulos de licenciatura y profesionales no se hace mención a ninguna subespecialización, pero sí en el kárdex académico y en un certificado que otorga la Universidad. Sin embargo, las subespecializaciones no se registran en la plataforma de la Secretaría Nacional de Educación Superior, Ciencia, Tecnología e Innovación SENESCYT."
+  },
+  {
+   "title": "",
+   "text": "* Para poder acceder a una concentración los alumnos deberán completar 5 materias dentro de las siguientes listas. En paréntesis se especifica el prerrequisito de cada curso:"
+  },
+  {
+   "title": "",
+   "text": "*Los cursos con código ADM no serán validados como Optativas de Psicología."
+  },
+  {
+   "title": "",
+   "text": "*Esta concentración también se puede completar con cursos del área de Educación, sin embargo, no serán validados como Optativas de Psicología."
+  },
+  {
+   "title": "",
+   "text": "* Para obtener el certificado de tu concentración, el estudiante declara la subespecialidad o concentración en la solicitud de graduación, el Coordinador revisa y aprueba en Banner. Puedes revisar si el Coordinador aprobó el Minor o Concentración desde Banner en la opción Alumnos/Graduación/Verificar Checks administrativos."
+  }
+ ],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=1PSI",
+  "read": "2026-11-19"
+ }
+}

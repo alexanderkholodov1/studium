@@ -1,0 +1,658 @@
+{
+ "code": "1ARQ",
+ "name": "ARQUITECTURA",
+ "title": "Arquitecto",
+ "college": "Colegio de Arquitectura y Diseño Interior",
+ "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+ "total": 145,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "MAT 1006",
+     "name": "Cálculo Diferencial e Integral",
+     "en": "Differential Calc.",
+     "credits": 3
+    },
+    {
+     "code": "ARQ 2002",
+     "name": "Dibujo Arquitectónico",
+     "en": "Graphic Representation 1",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ARQ 1101",
+     "name": "Taller 1 Fundamentos",
+     "en": "Design Studio 1",
+     "credits": 6
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "ARQ 2001",
+     "name": "Representación Gráfica 2",
+     "en": "Graphic Representation 2",
+     "credits": 3,
+     "pre": {
+      "code": "ARQ 2002",
+      "name": "Representación Gráfica 1",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "ARQ 1102",
+     "name": "Taller 2 Fundamentos",
+     "en": "Design Studio 2",
+     "credits": 6,
+     "pre": {
+      "code": "ARQ 1101",
+      "name": "Taller 1 Fundamentos",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ARQ 2401",
+     "name": "Historia de la Arquitectura 1",
+     "en": "Architectural History 1",
+     "credits": 3,
+     "pre": {
+      "code": "ESP 1001",
+      "name": "Escritura Académica",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ARQ 2501",
+     "name": "Estructuras 1",
+     "en": "Structures 1",
+     "credits": 3,
+     "pre": {
+      "code": "MAT 1006",
+      "name": "Cálculo Diferencial e Integral",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ARQ 2201",
+     "name": "Taller 3 Formación",
+     "en": "Design Studio 3",
+     "credits": 6,
+     "pre": {
+      "code": "ARQ 1102",
+      "name": "Taller 2 Fundamentos",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ARQ 2402",
+     "name": "Historia de la Arquitectura 2",
+     "en": "Architectural History 2",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "ARQ 2401",
+        "name": "Historia de la Arquitectura 1",
+        "grade": "C"
+       },
+       {
+        "code": "ARQ 2401E",
+        "name": "History of Architecture 1",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "ARQ 3502",
+     "name": "Estructuras 2",
+     "en": "Structures 2",
+     "credits": 3,
+     "pre": {
+      "code": "ARQ 2501",
+      "name": "Estructuras 1",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ARQ 2202",
+     "name": "Taller 4 Formación",
+     "en": "Design Studio 4",
+     "credits": 6,
+     "pre": {
+      "code": "ARQ 2201",
+      "name": "Taller 3 Formación",
+      "grade": "C"
+     }
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "DEP 0010",
+     "name": "Deportes",
+     "en": "Sports",
+     "credits": 1
+    },
+    {
+     "code": "ARQ 3403",
+     "name": "Historia de la Arquitectura 3",
+     "en": "Architectural History 3",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "ARQ 2402",
+        "name": "Historia de la Arquitectura 2",
+        "grade": "C"
+       },
+       {
+        "code": "ARQ 2402E",
+        "name": "History of Architecture 2",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ARQ 2301",
+     "name": "Construcciones 1",
+     "en": "Building Systems 1",
+     "credits": 3,
+     "pre": {
+      "code": "ARQ 3502",
+      "name": "Estructuras 2",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ELECTIVA 1",
+     "name": "Electiva Libre 1/3",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "ARQ 3203",
+     "name": "Taller 5 Formación",
+     "en": "Design Studio 5",
+     "credits": 6,
+     "pre": {
+      "code": "ARQ 2202",
+      "name": "Taller 4 Formación",
+      "grade": "C"
+     }
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ARQ 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "ARQ 2302",
+     "name": "Construcciones 2",
+     "en": "Building Systems 2",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "ARQ 2301",
+        "name": "Construcciones 1",
+        "grade": "C"
+       },
+       {
+        "code": "ARQ 2301E",
+        "name": "Building Systems 1",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "CCSS",
+     "name": "CCSS:HIS/SOC/ANT/POL/REL/PSI",
+     "credits": 3,
+     "slot": "ccss"
+    },
+    {
+     "code": "ARQ 3204",
+     "name": "Taller 6 Formación",
+     "en": "Design Studio 6",
+     "credits": 6,
+     "pre": {
+      "code": "ARQ 3203",
+      "name": "Taller 5 Formación",
+      "grade": "C"
+     }
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ARQ 3303",
+     "name": "Construcciones 3",
+     "en": "Building Systems 3",
+     "credits": 3,
+     "pre": {
+      "code": "ARQ 2302",
+      "name": "Construcciones 2",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ARQ OPT 1",
+     "name": "Optativa 1/3",
+     "credits": 3
+    },
+    {
+     "code": "HUM",
+     "name": "Humanidades: LIT/FIL/ARH/ESC",
+     "credits": 3,
+     "slot": "humanidades"
+    },
+    {
+     "code": "ARQ 4205",
+     "name": "Taller 7 Formación",
+     "en": "Design Studio 7",
+     "credits": 6,
+     "pre": {
+      "any": [
+       {
+        "code": "ARQ 3204",
+        "name": "Taller 6 Formación",
+        "grade": "C"
+       },
+       {
+        "code": "ARQ 3204E",
+        "name": "Design Studio 6",
+        "grade": "C"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ARQ 3601",
+     "name": "Teoría Urbana 1",
+     "en": "Urban Theory 1",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "ARQ 3403",
+        "name": "Historia de la Arquitectura 3",
+        "grade": "C"
+       },
+       {
+        "code": "ARQ 3403E",
+        "name": "History of Architecture 3",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ARQ OPT 2",
+     "name": "Optativa 2/3",
+     "credits": 3
+    },
+    {
+     "code": "ELECTIVA 2",
+     "name": "Electiva Libre 2/3",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "ARQ 4206",
+     "name": "Taller 8 Formación /Taller Int",
+     "en": "Design Studio 8",
+     "credits": 6,
+     "pre": {
+      "code": "ARQ 4205",
+      "name": "Taller 7 Formación",
+      "grade": "C"
+     }
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PAS 4000",
+     "name": "Práctica Pre-Profesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 5
+    }
+   ]
+  },
+  {
+   "year": "QUINTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "ARQ OPT 3",
+     "name": "Optativa 3/3",
+     "credits": 3
+    },
+    {
+     "code": "ELECTIVA 3",
+     "name": "Electiva Libre 3/3",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "CIENCIAS",
+     "name": "CC:FIS/QUI/BIO/ECL/NUT/GEO",
+     "credits": 3
+    },
+    {
+     "code": "ARQ 5992",
+     "name": "Taller Avanzado ARQ",
+     "en": "Advanced Design Studio ARQ",
+     "credits": 5,
+     "pre": {
+      "all": [
+       {
+        "code": "ARQ 4206",
+        "name": "Taller 8 Formación",
+        "grade": "C"
+       },
+       {
+        "code": "PAS 4000",
+        "name": "Práctica Pre-Profesional PASEM",
+        "grade": "P"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "notes": [
+  {
+   "title": "Niveles de Inglés ESL (B2 Marco Común Europeo)",
+   "text": "Debes rendir el examen de evaluación de suficiencia en inglés lo más temprano en la carrera para conocer en qué nivel te encuentras y cuáles niveles lograste exonerarte mediante el examen. Puedes validar tus conocimientos de inglés con certificados internacionales (ver Manual del Estudiante para más información) Todos los estudiantes deben cumplir con los 6 niveles de inglés (ESL) antes de tomar la materia ENG 1001E Writing and Rhetoric."
+  },
+  {
+   "title": "Escritura Académica (ESP 1001)",
+   "text": "Se sugiere que se tome temprano en la carrera. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Arte",
+   "text": "El requisito de ARTE de Colegio General se cumple con la materia ARQ 2002 Dibujo Arquitectónico. La nota mínima para aprobación de este requisito de CG para esta carrera es C."
+  },
+  {
+   "title": "Matemáticas",
+   "text": "El requisito de MATEMÁTICAS de Colegio General se cumple con la materia MAT 1006 Cálculo Diferencial e Integral. La nota mínima para aprobación de este requisito de CG para esta carrera es C."
+  },
+  {
+   "title": "Ciencias Sociales",
+   "text": "El requisito de CIENCIAS SOCIALES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito para esta carrera es D.\nANT- Antropología/EDU - Educación/ RCL- Resolución de Conflictos/ HIS- Historia/ REL- Relaciones Internacionales/ POL- Ciencias Políticas/ SOC- Sociología/ PSI - Psicología"
+  },
+  {
+   "title": "Humanidades",
+   "text": "El requisito de HUMANIDADES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito para esta carrera es D.\nLIT- Literatura/ FIL- Filosofía/ ESC- Escritura Creativa/ ARH- Historia del Arte"
+  },
+  {
+   "title": "Ciencias",
+   "text": "El requisito de CIENCIAS se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG para esta carrera es D.\nBIO- Biología/ QUI- Química/ FIS- Física/ ECL- Ecología/ NUT- Nutrición/ GEO- Geología"
+  },
+  {
+   "title": "Prácticas de Servicio Comunitario Aprendizaje y Servicio PASEC (PRC 2000)",
+   "text": "Las prácticas comunitarias se cumplen a través del seminario de APRENDIZAJE Y SERVICIO PASEC. Los estudiantes deben asistir a clases y además cumplir con las horas de servicio comunitario."
+  },
+  {
+   "title": "Prácticas Pre-profesionales PASEM (PAS 4000)",
+   "text": "Las prácticas preprofesionales pueden comenzar a partir del sexto semestre y/o con 75 créditos aprobados, deberán cumplir un mínimo de 240 horas. Los estudiantes deben inscribirse en PASEM en el último verano según su malla académica, la clase se aprueba con las horas de pasantías y la clase teórica. El estudiante debe asegurarse que la fecha de finalización de la clase coincida con su último semestre."
+  },
+  {
+   "title": "Deportes (DEP 0010)",
+   "text": "Todo estudiante deberá elegir una clase de DEPORTES de las diferentes opciones que se ofrecen cada semestre."
+  },
+  {
+   "title": "Cultura Gastronómica (GST 0010)",
+   "text": "Todo estudiante debe tomar un seminario de Cultura Gastronómica a partir de segundo semestre."
+  },
+  {
+   "title": "Coloquios",
+   "text": "El requisito de Coloquios varía en cada carrera. Consultar en el Decanato Académico de cada Colegio."
+  },
+  {
+   "title": "Materia en Inglés",
+   "text": "El estudiante debe registrarse en cualquier materia impartida en inglés, de la carrera o de Colegio General. Si una materia tiene en su código la terminación (E), (ADM 1001E) significa que la materia se imparte en idioma inglés. Toda materia impartida en inglés tendrá como prerrequisito ESL 0006 Inglés Nivel 6. Para poder tomar cursos de otros idiomas los niveles de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "Electivas Libres",
+   "text": "Cualquier materia que no se encuentre como requisito obligatorio en la malla curricular puede servir como Electiva Libre de Colegio General. Las Electivas Libres pueden ser utilizadas para cumplir con las exigencias de una segunda carrera o de una subespecialización (minor)."
+  },
+  {
+   "title": "",
+   "text": "*Algunas materias del Colegio General, se cumplen con materias designadas para este propósito por cada carrera. Cuando una carrera designa una materia en particular para cumplir con el requisito de Colegio General, esa materia requiere nota aprobatoria de C."
+  },
+  {
+   "title": "",
+   "text": "*Para cumplir con Colegio General en algunos casos los estudiantes deben elegir una materia de posibles áreas académicas (verificar en malla curricular y ver detalle a continuación)."
+  },
+  {
+   "title": "",
+   "text": "* Es necesario obtener mínimo C en las asignaturas de Especialización. Sin embargo, hay carreras que requieren una nota mayor, consultar en el Manual del Estudiante o consultar el reglamento específico de su carrera."
+  },
+  {
+   "title": "",
+   "text": "* Las Electivas Libres de Colegio General pueden ser validadas con Optativas de Diseño Interior o Arquitectura."
+  },
+  {
+   "title": "",
+   "text": "* Se recomienda tomar materias ARH (Historia del Arte) para satisfacer el requisito de Humanidades."
+  },
+  {
+   "title": "",
+   "text": "* Para conocer el listado de cursos optativos de ARQ y DIS, consultar con el responsable académico de la carrera."
+  },
+  {
+   "title": "",
+   "text": "*Taller 8 Formación / Taller Internacional, es una materia que se dicta el segundo semestre de cada año académico (enero-mayo). Los temas tratados, abordan ejercicios con desafíos en los panoramas internacionales. Cuando las condiciones se prestan (número de alumnos y disponibilidad económica), el taller se oferta en el período de verano, para brindar a los alumnos la oportunidad de recibir críticas de profesores invitados o el desarrollo total del taller en el extranjero."
+  }
+ ],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=1ARQ",
+  "read": "2026-11-19"
+ }
+}

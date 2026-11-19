@@ -1,0 +1,562 @@
+{
+ "code": "1NUT",
+ "name": "NUTRICIÓN Y DIETÉTICA",
+ "title": "Licenciado en Nutrición y Dietética",
+ "college": "Colegio de Ciencias de la Salud Nutrición",
+ "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+ "total": 127,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "NUT 1003",
+     "name": "Fundamentos de Nutrición +Lab",
+     "en": "Bases of Nutrition +Lab",
+     "credits": 3
+    },
+    {
+     "code": "BIO 1102",
+     "name": "Biología General + Lab/Ej",
+     "en": "General Biology +Lab",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "MAT 1003",
+     "name": "Matemáticas Cs de la Salud +Ej",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "NUT 1004",
+     "name": "Anatomía +Lab",
+     "en": "Anatomy +Lab",
+     "credits": 3
+    },
+    {
+     "code": "QUI 1005",
+     "name": "Elementos Química General +Ej",
+     "en": "Elements General Chemistry+Pr",
+     "credits": 3
+    },
+    {
+     "code": "NUT 2101",
+     "name": "Ciclo de Vida 1 +Lab",
+     "en": "Life Cycle 1 +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "NUT 1003",
+      "name": "Fundamentos de Nutrición +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "LIT/FIL",
+     "name": "Humanidades LIT/FIL/ARH/ESC",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "NUT 2102",
+     "name": "Ciclo de Vida 2 +Lab",
+     "en": "Life Cycle 2 +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "NUT 2101",
+      "name": "Ciclo de Vida 1 +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "NUT 2001",
+     "name": "Fisiología +Lab",
+     "en": "Morphofunctional +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "NUT 1003",
+      "name": "Fundamentos de Nutrición +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "NUT 2201",
+     "name": "Evaluación Nutricional 1 +Lab",
+     "en": "Nutritional Assessment 1 +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "MED 1006",
+      "name": "Intro a la Fisioanatomía +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ARTE",
+     "name": "Arte",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "MED 2001",
+     "name": "Bioquímica Médica +Lab",
+     "en": "Medical Biochemistry +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "MED 1001",
+      "name": "Química Médica +Lab",
+      "grade": "B"
+     }
+    },
+    {
+     "code": "NUT 2202",
+     "name": "Evaluación Nutricional 2 +Lab",
+     "en": "Nutritional Assessment 2 +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "NUT 2201",
+      "name": "Evaluación Nutricional 1 +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "NUT 2002",
+     "name": "Fisiopatología Nutricional+Lab",
+     "en": "Pathophysiology of Nutrition +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "NUT 2001",
+      "name": "Morfofuncional +Lab",
+      "grade": "C"
+     }
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "DEP 0010",
+     "name": "Deportes",
+     "en": "Sports",
+     "credits": 1
+    },
+    {
+     "code": "NUT 3501",
+     "name": "Técnicas Dietéticas +Lab",
+     "en": "Dietary Techniques +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "NUT 1005",
+      "name": "Bioseguridad Alimentaria +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "NUT 1005",
+     "name": "Bioseguridad Alimentaria + Lab",
+     "en": "Food Biosecurity + Lab",
+     "credits": 3,
+     "pre": {
+      "code": "BIO 1102",
+      "name": "Biología General +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "NUT 3302",
+     "name": "Metabolismo Nutricional +Lab",
+     "en": "Nutritional Metabolism +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "NUT 2002",
+      "name": "Fisiopatología Nutricional+Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ENG 1001E",
+     "name": "Writing and Rhetoric",
+     "credits": 3,
+     "english": true
+    },
+    {
+     "code": "CCSS",
+     "name": "CG - Ciencias Sociales",
+     "credits": 3,
+     "slot": "ccss"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "MAT 1004",
+     "name": "Bioestadística +Ej",
+     "en": "Biostatistics +Pr",
+     "credits": 3
+    },
+    {
+     "code": "NUT 3401",
+     "name": "Dietoterapia Básica +Lab",
+     "en": "Diet Therapy 1 +Lab",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "NUT 3302",
+        "name": "Metabolismo Nutricional +Lab",
+        "grade": "C"
+       },
+       {
+        "any": [
+         {
+          "code": "MED 2001",
+          "name": "Bioquímica Básica +Lab",
+          "grade": "C"
+         },
+         {
+          "code": "MED 2011",
+          "name": "Bioquímica para Cs Salud + Lab",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "NUT 4003",
+     "name": "Nutrición y Salud Pública +Lab",
+     "en": "Nutrition and Public Health +Lab",
+     "credits": 3
+    },
+    {
+     "code": "ELECTIVA 1",
+     "name": "Electiva Libre 1/2",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "OPT 1",
+     "name": "Optativa Nutrición 1/3",
+     "credits": 3,
+     "slot": "optativa"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PAS 4000",
+     "name": "Práctica Pre-Profesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 5
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "NUT 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1,
+     "pre": {
+      "code": "NUT 2102",
+      "name": "Ciclo de Vida 2 +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "NUT 4601",
+     "name": "Nutrición Comunitaria +Lab",
+     "en": "Community Nutrition +Lab",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "NUT 4003",
+        "name": "Nutrición y Salud Pública +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "NUT 3401",
+        "name": "Dietoterapia Básica +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "NUT 3402",
+     "name": "Dietoterapia del Adulto +Lab",
+     "en": "Diet Therapy 2 +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "NUT 3401",
+      "name": "Dietoterapia Básica +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "NUT 3001",
+     "name": "Epidemiología Nutricional +Lab",
+     "en": "Nutritional Epidemiology+Lab",
+     "credits": 3,
+     "pre": {
+      "code": "MAT 1004",
+      "name": "Bioestadística +Ej",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    },
+    {
+     "code": "OPT 2",
+     "name": "Optativa Nutrición 2/3",
+     "credits": 3,
+     "slot": "optativa"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "NUT 4403",
+     "name": "Dietoterapia Pediátrica + Lab",
+     "en": "Pediatric Diet Therapy +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "NUT 3402",
+      "name": "Dietoterapia del Adulto +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ELECTIVA 2",
+     "name": "Electiva Libre 2/2",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "OPT 3",
+     "name": "Optativa Nutrición 3/3",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "NUT 4992",
+     "name": "Taller Integrador NUT",
+     "en": "Capstone Project NUT",
+     "credits": 5,
+     "pre": {
+      "all": [
+       {
+        "code": "NUT 3402",
+        "name": "Dietoterapia del Adulto +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "NUT 4003",
+        "name": "Nutrición y Salud Pública +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "NUT 3001",
+        "name": "Epidemiología Nutricional +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "NUT 3402",
+        "name": "Dietoterapia del Adulto +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "notes": [],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=1NUT",
+  "read": "2026-11-19"
+ }
+}

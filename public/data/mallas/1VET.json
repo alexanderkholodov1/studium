@@ -1,0 +1,859 @@
+{
+ "code": "1VET",
+ "name": "MEDICINA VETERINARIA",
+ "title": "Médico Veterinario",
+ "college": "Colegio de Ciencias de la Salud",
+ "modality": "MODALIDAD PRESENCIAL - 10 SEMESTRES",
+ "total": 148,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "VET 1302",
+     "name": "Anatomía Animal +Lab",
+     "en": "Animal Anatomy +Lab",
+     "credits": 3
+    },
+    {
+     "code": "MAT 1003",
+     "name": "Cálculo para Cs de la Vida +Ej",
+     "en": "Calculus for Life Science +Ej",
+     "credits": 3
+    },
+    {
+     "code": "ODT 1201",
+     "name": "Principios de Química +Ej",
+     "en": "Chemistry Principles +Ex",
+     "credits": 3
+    },
+    {
+     "code": "VET 1401",
+     "name": "Zootecnia General +Lab",
+     "en": "General Zoothecnics +Lab",
+     "credits": 3
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "VET 2303",
+     "name": "Histología Animal +Lab",
+     "en": "Animal Histology +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "VET 1302",
+      "name": "Anatomía Animal +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "BIO 1102",
+     "name": "Biología General +Lab",
+     "en": "General Biology +Lab",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "VET 2001",
+     "name": "Etología y Bienestar +Lab",
+     "en": "Animal Behavior and Welfare +Lab",
+     "credits": 3
+    },
+    {
+     "code": "MED 2011",
+     "name": "Bioquímica para Cs Salud + Lab",
+     "en": "Biochemistry in Health Sc +Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MED 1001",
+        "name": "Química Médica +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "QUI 1005",
+        "name": "Elementos Química General +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "ODT 1201",
+        "name": "Principios de Química +Ej",
+        "grade": "B"
+       },
+       {
+        "code": "ODT 1211",
+        "name": "Química Orgánica Básica",
+        "grade": "B"
+       },
+       {
+        "code": "QUI 1003",
+        "name": "Química General 1 +Lab/Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "MCR 2003",
+     "name": "Microbiología Veterinaria +Lab",
+     "en": "Veterinary Microbiology +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "BIO 1102",
+      "name": "Biología General +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "VET 2301",
+     "name": "Fisiología Veterinaria 1",
+     "en": "Veterinary Physiology 1",
+     "credits": 3,
+     "pre": {
+      "code": "VET 1302",
+      "name": "Anatomía Animal +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "CCSS/ART",
+     "name": "Ciencias Sociales/Arte",
+     "credits": 3,
+     "slot": "ccss"
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "VET 3004",
+     "name": "Reproducción Animal +Lab",
+     "en": "Animal Reproduction +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "VET 2301",
+      "name": "Fisiología Veterinaria 1",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "VET 2401",
+     "name": "Enfermedades Infecciosas",
+     "en": "Infectious Diseases",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MCR 2003",
+        "name": "Microbiología Veterinaria +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "MCR 2002",
+        "name": "Microbiología Patogénica +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "BTC 3002",
+     "name": "Biología Molecular +Lab",
+     "en": "Molecular Biology +Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "BIO 1102",
+        "name": "Biología General +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "GREXO",
+        "name": "Exoneración Prerreq Posgrado",
+        "grade": "1"
+       }
+      ]
+     }
+    },
+    {
+     "code": "VET 2302",
+     "name": "Fisiología Veterinaria 2 +Lab",
+     "en": "Veterinary Physiology 2 +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "VET 2301",
+      "name": "Fisiología Veterinaria 1",
+      "grade": "C"
+     }
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "MCR 4001",
+     "name": "Inmunología Animal +Lab",
+     "en": "Animal Immunology +Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "BTC 3002",
+        "name": "Biología Molecular +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "GREXO",
+        "name": "Exoneración Prerreq Posgrado",
+        "grade": "1"
+       }
+      ]
+     }
+    },
+    {
+     "code": "VET 3601",
+     "name": "Patología General",
+     "en": "General Pathology",
+     "credits": 3,
+     "pre": {
+      "code": "VET 2302",
+      "name": "Fisiología Veterinaria 2 +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "VET 3402",
+     "name": "Enfermedades Parasitarias +Lab",
+     "en": "Parasitic Diseases +Lab",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "VET 2401",
+        "name": "Enfermedades Infecciosas",
+        "grade": "C"
+       },
+       {
+        "code": "VET 2302",
+        "name": "Fisiología Veterinaria 2 +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "VET 2501",
+     "name": "Fund. de Farmacología +Lab",
+     "en": "Pharmacology Fund. +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "VET 2302",
+      "name": "Fisiología Veterinaria 2 +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "DEP 0010",
+     "name": "Deportes",
+     "en": "Sports",
+     "credits": 1
+    },
+    {
+     "code": "VET 4003",
+     "name": "Bioestadística y Epidemiología",
+     "en": "Bioestatistics and Epidemiology",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1003",
+        "name": "Cálculo para Cs de la Vida +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1008",
+        "name": "Razonamiento Matemático",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1201",
+        "name": "Cálculo Diferencial + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1006",
+        "name": "Cálculo Diferencial e Integral",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "VET 3502",
+     "name": "Farmacología y Toxicología VET",
+     "en": "Pharmacology and Toxicology",
+     "credits": 3,
+     "pre": {
+      "code": "VET 2501",
+      "name": "Fund. de Farmacología +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    },
+    {
+     "code": "VET 3602",
+     "name": "Patología Especial +Lab",
+     "en": "Special Pathology +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "VET 3601",
+      "name": "Patología General",
+      "grade": "C"
+     }
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "VET 3002",
+     "name": "Nutrición Animal +Lab",
+     "en": "Animal Nutrition +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "VET 2302",
+      "name": "Fisiología Veterinaria 2 +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "VET 3005",
+     "name": "Diagnóstico Clínico +Lab",
+     "en": "Clinical Diagnostics +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "VET 3602",
+      "name": "Patología Especial +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "VET 3006",
+     "name": "Laboratorio Clínico +Lab",
+     "en": "Clinical Laboratory +Lab",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "VET 3602",
+        "name": "Patología Especial +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "MCR 4001",
+        "name": "Inmunología Animal +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "VET 2002",
+     "name": "Imagenología +Lab",
+     "en": "Imaging +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "VET 3602",
+      "name": "Patología Especial +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "HUM",
+     "name": "Humanidades LIT/FIL/ESC/ARH",
+     "credits": 3,
+     "slot": "humanidades"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "VET 3003",
+     "name": "Fundamentos de Cirugía +Lab",
+     "en": "Fundamentals of Surgery +Lab",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "VET 3005",
+        "name": "Diagnóstico Clínico +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "VET 3006",
+        "name": "Laboratorio Clínico +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "VET 4008",
+     "name": "Clínica de Pequeñas +Lab",
+     "en": "Small Animal Clinics + Lab",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "VET 3006",
+        "name": "Laboratorio Clínico +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "VET 3005",
+        "name": "Diagnóstico Clínico +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "OPT 1",
+     "name": "Optativa Veterinaria 1/3 + Lab",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "OPT 2",
+     "name": "Optativa Veterinara 2/3 +Lab",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "OPT 3",
+     "name": "Optativa Veterinaria 3/3 +Lab",
+     "credits": 3,
+     "slot": "optativa"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PAS 4000",
+     "name": "Práctica Pre-Profesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 5
+    }
+   ]
+  },
+  {
+   "year": "QUINTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "IR 1",
+     "name": "Internado Rotativo 1",
+     "credits": 1
+    },
+    {
+     "code": "IR 2",
+     "name": "Internado Rotativo 2",
+     "credits": 1
+    },
+    {
+     "code": "IR 3",
+     "name": "Internado Rotativo 3",
+     "credits": 1
+    },
+    {
+     "code": "IR 4",
+     "name": "Internado Rotativo 4",
+     "credits": 1
+    },
+    {
+     "code": "IR 5",
+     "name": "Internado Rotativo 5",
+     "credits": 1
+    },
+    {
+     "code": "IR 6",
+     "name": "Internado Rotativo 6",
+     "credits": 1
+    },
+    {
+     "code": "IR 7",
+     "name": "Internado Rotativo 7",
+     "credits": 1
+    },
+    {
+     "code": "IR 8",
+     "name": "Internado Rotativo 8",
+     "credits": 1
+    },
+    {
+     "code": "IR 9",
+     "name": "Internado Rotativo 9",
+     "credits": 1
+    },
+    {
+     "code": "VET 4006",
+     "name": "One Health VET",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "QUINTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "VET 0001",
+     "name": "Coloquios de Veterinaria",
+     "en": "Veterinary Medicine Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "IR 10",
+     "name": "Internado Rotativo 10",
+     "credits": 1
+    },
+    {
+     "code": "IR 11",
+     "name": "Internado Rotativo 11",
+     "credits": 1
+    },
+    {
+     "code": "IR 12",
+     "name": "Internado Rotativo 12",
+     "credits": 1
+    },
+    {
+     "code": "IR 13",
+     "name": "Internado Rotativo 13",
+     "credits": 1
+    },
+    {
+     "code": "IR 14",
+     "name": "Internado Rotativo 14",
+     "credits": 1
+    },
+    {
+     "code": "IR 15",
+     "name": "Internado Rotativo 15",
+     "credits": 1
+    },
+    {
+     "code": "VET 5992",
+     "name": "Evaluación Integral VET",
+     "en": "VET Comprehensive Assessment",
+     "credits": 5
+    }
+   ]
+  }
+ ],
+ "notes": [
+  {
+   "title": "Niveles de Inglés ESL (B2 Marco Común Europeo)",
+   "text": "A los estudiantes se les asigna un nivel de inglés (English as a Second Language ESL) con base en el examen de suficiencia rendido durante el proceso de admisión. Los estudiantes también pueden validar sus conocimientos de inglés con certificados internacionales detallados en la sección Suficiencia de Aprendizaje de Lengua Extranjera: Idioma Inglés del Manual del Estudiante. Para poder cumplir con los requisitos de graduación obligatorios todos los estudiantes deben demostrar la suficiencia de inglés a través del examen que exige la USFQ, un certificado internacional validado por la USFQ o la aprobación de los 6 niveles de inglés (ESL).\nPara poder tomar cursos de cualquier área académica en inglés y cursos de otros idiomas los requisitos de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "Matemáticas",
+   "text": "El requisito de MATEMÁTICAS de Colegio General se cumple con la materia MAT 1003 Cálculo para Cs de la Vida +Ej. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ESP 1001 - Escritura Académica",
+   "text": "Se sugiere que se tome temprano en la carrera. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ADM 3002 - Emprendimiento",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ECN 1001 - Introducción a la Economía",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ARL 1001 - Autoconocimiento ARL 1002 - Cosmos ARL 2001 - Ser y Cosmos",
+   "text": "La nota mínima para aprobación de estos requisitos de CG es C."
+  },
+  {
+   "title": "Ciencias Sociales/ Arte",
+   "text": "El requisito de CIENCIAS SOCIALES o ARTE se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nANT- Antropología/EDU - Educación/ HIS- Historia /REL- Relaciones Internacionales/ POL- Ciencias Políticas/ SOC- Sociología/ PSI- Psicología\nART - Arte/ DAN - Danza/ TEA - Teatro/ MUS - Música"
+  },
+  {
+   "title": "Humanidades",
+   "text": "El requisito de HUMANIDADES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nLIT- Literatura/ FIL- Filosofía/ ESC- Escritura Creativa/ ARH- Historia del Arte"
+  },
+  {
+   "title": "Ciencias",
+   "text": "El requisito de CIENCIAS de Colegio General se cumple con la materia BIO 1102 Biología General +Lab. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Electivas Libres",
+   "text": "Los estudiantes de Medicina Veterinaria no requieren aprobar Electivas Libres de Colegio General."
+  },
+  {
+   "title": "Prácticas de Servicio Comunitario PRC 2000 - Aprendizaje y Servicio PASEC",
+   "text": "Las prácticas comunitarias se cumplen a través del seminario de APRENDIZAJE Y SERVICIO PASEC. Los estudiantes deben asistir a clases y además cumplir con las horas de servicio comunitario.\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "PAS 4000 - Prácticas Pre-profesionales PASEM",
+   "text": "Las prácticas preprofesionales pueden comenzar a partir del sexto semestre y/o con 75 créditos aprobados, deberán cumplir un mínimo de 240 horas. Los estudiantes deben inscribirse en PASEM en el último verano según su malla académica, la clase se aprueba con las horas de pasantías y la clase teórica. El estudiante debe asegurarse que la fecha de finalización de la clase coincida con su último semestre."
+  },
+  {
+   "title": "Deportes",
+   "text": "Todo estudiante deberá elegir una clase de DEPORTES de las diferentes opciones que se ofrecen cada semestre."
+  },
+  {
+   "title": "GST 0010 - Cultura Gastronómica",
+   "text": "Todo estudiante debe tomar un seminario de Cultura Gastronómica a partir de segundo semestre."
+  },
+  {
+   "title": "Coloquios",
+   "text": "El requisito de Coloquios varía en cada carrera. Consultar en el Decanato Académico de cada Colegio."
+  },
+  {
+   "title": "Materia en Inglés",
+   "text": "El estudiante debe aprobar cualquier materia impartida en inglés, de la carrera o de Colegio General durante la duración de la carrera. Si una materia tiene en su código la terminación (E), (por ejemplo ADM 1001E) significa que la materia se imparte en idioma inglés. Toda materia impartida en inglés tendrá como prerrequisito haber aprobado ESL 0006 Inglés Nivel 6. Para poder tomar cursos de otros idiomas los niveles de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "Writing Intensive",
+   "text": "El estudiante debe aprobar cualquier materia con el atributo Writing Intensive. Para registrarse en un curso Writing Intensive los estudiantes deben haber aprobado todos los niveles de inglés. Se pueden identificar los paralelos con este atributo con un ícono específico en el Catálogo de Cursos Ofertados cada semestre."
+  },
+  {
+   "title": "COL 2000 - Ser Dragón",
+   "text": "Ser Dragón es un seminario de acompañamiento para estudiantes de primer semestre que tiene como objetivo principal facilitar la transición del colegio a la vida universitaria. Todo estudiante que haya ingresado a partir del semestre 202210 deberá cursar y aprobar COL 2000. La nota de aprobación de este requisito es P."
+  },
+  {
+   "title": "Optativas",
+   "text": "* Para cumplir los requisitos de Optativa Veterinaria, los estudiantes pueden cursar las siguientes materias:\nVET 4005 - Avicultura +Lab\nVET 4009 - Clínica de Fauna +Lab\nVET 4010 - Clínica de Grandes +Lab\nVET 4081 - Clínica de Equinos +Lab"
+  },
+  {
+   "title": "Internado Rotativo",
+   "text": "Las materias que son parte del Internado Rotativo son:\nVET 5009 - Rotación Anestesia\nVET 5011 - Rotación de Bienestar Animal\nVET 5012 - Rotación Cirugía Pequeñas Esp\nVET 5013 - Rotación Consulta\nVET 5014 - Rotación de Equinos\nVET 5015 - Rotación de Fauna Silvestre\nVET 5016 - Rotación Hospitalización\nVET 5018 - Rotación Patología Anatómica\nVET 5019 - Rotación de Patología Clínica\nVET 5021 - Rotación de Rumiantes\nVET 5022 - Rotación Externado 1\nVET 5023 - Rotación Externado 2\nVET 5024 - Rotación Imagenología\nVET 5025 - Rotación Imagen\nVET 5026 - Rotación Ganadería"
+  },
+  {
+   "title": "",
+   "text": "*Algunas materias del Colegio General, se cumplen con materias designadas para este propósito por cada carrera."
+  },
+  {
+   "title": "",
+   "text": "*Para cumplir con Colegio General en algunos casos los estudiantes deben elegir una materia de posibles áreas académicas (verificar en malla curricular y ver detalle a continuación)."
+  },
+  {
+   "title": "",
+   "text": "* Es necesario obtener mínimo C en las asignaturas de Especialización. Sin embargo, hay carreras que requieren una nota mayor; consulta en el Manual del Estudiante o en el reglamento específico de la carrera."
+  },
+  {
+   "title": "",
+   "text": "* Las asignaturas con código MED, BTC y MCR deben ser aprobadas en el semestre que corresponde."
+  },
+  {
+   "title": "",
+   "text": "* El estudiante, para poder graduarse, deberá completar el requerimiento académico del GPA de 3 sobre 4. Caso contario deberá registrar materias adicionales para poder graduarse o repetir materias código VET para subir su GPA."
+  },
+  {
+   "title": "",
+   "text": "* Medicina Veterinaria cuenta con Reglamento específico el cual debe ser consultado por los estudiantes."
+  },
+  {
+   "title": "",
+   "text": "* La carrera de Medicina Veterinaria permite un número mínimo de notas C en sus asignaturas. Por lo tanto, las asignaturas que superen el máximo estipulado deberán ser repetidas. Esta escuela no acepta notas inferiores a C. El estudiante debe verificar el reglamento de la carrera para mayor información."
+  },
+  {
+   "title": "",
+   "text": "* Para que el alumno se registre en PASEM en el Verano del Cuarto Año, se requiere verificación previa con el decano o coordinador a fin de demostrar que efectivamente al alumno le faltan solo dos semestres para culminar la carrera."
+  },
+  {
+   "title": "",
+   "text": "* Para cumplir los requisitos de Optativa Veterinaria, los estudiantes pueden cursar las siguientes materias:"
+  }
+ ],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=1VET",
+  "read": "2026-11-19"
+ }
+}

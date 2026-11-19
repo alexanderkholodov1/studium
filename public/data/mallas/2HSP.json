@@ -1,0 +1,633 @@
+{
+ "code": "2HSP",
+ "name": "HOSPITALIDAD Y HOTELERÍA",
+ "title": "Licenciado en Hospitalidad y Hotelería",
+ "college": "Colegio de Hospitalidad, Arte Culinario y Turismo",
+ "modality": "MODALIDAD EN LÍNEA - 8 SEMESTRES",
+ "total": 126,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "MAT 1009",
+     "name": "Matemática Empresarial +Ej",
+     "en": "Business Mathematics+Pr",
+     "credits": 3
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "HSP 1001",
+     "name": "Introducción a la Hospitalidad",
+     "en": "Introduction to Hospitality",
+     "credits": 3
+    },
+    {
+     "code": "ADM 1001",
+     "name": "Principios de Administración",
+     "en": "Principles of Management",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "FIN 2002",
+     "name": "Contabilidad Empresarial",
+     "en": "Financial Accounting",
+     "credits": 3
+    },
+    {
+     "code": "HSP 1003",
+     "name": "Introducción al Turismo",
+     "en": "Introduction to Tourism",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "MAT 2009",
+     "name": "Estadística Empresarial +Lab",
+     "en": "Business Statistics + Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1009",
+        "name": "Matemática Empresarial +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1009E",
+        "name": "Business Mathematics+Pr",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1003",
+        "name": "Cálculo para Cs de la Vida +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1201",
+        "name": "Cálculo Diferencial + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1008",
+        "name": "Razonamiento Matemático",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1203",
+        "name": "Cálculo Diferencial Avanz. +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "HSP 2001",
+     "name": "Administración de A & B",
+     "en": "Food and Beverage Management",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "MAT 1009",
+        "name": "Matemática Empresarial +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "HSP 1001",
+        "name": "Introducción a la Hospitalidad",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "GST 2001",
+     "name": "Servicio y Protocolo",
+     "en": "Service and Protocol",
+     "credits": 3,
+     "pre": {
+      "code": "HSP 1001",
+      "name": "Introducción a la Hospitalidad",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "CCSS",
+     "name": "CG- Ciencias Sociales",
+     "credits": 3,
+     "slot": "ccss"
+    },
+    {
+     "code": "LIT/FIL",
+     "name": "Humanidades",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "HSP 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "GST 3004",
+     "name": "Arte Culinario para Foodies",
+     "en": "Culinary Arts for Foodies",
+     "credits": 3
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "MAK 1001",
+     "name": "Principios de Marketing",
+     "en": "Fundamentals of Marketing",
+     "credits": 3
+    },
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    },
+    {
+     "code": "CIENCIAS",
+     "name": "CG- Ciencias",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "GST 4003",
+     "name": "Enología y Coctelería",
+     "en": "Enology and Mixology",
+     "credits": 3,
+     "pre": {
+      "code": "GST 2001",
+      "name": "Servicio y Protocolo",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "HSP 3008",
+     "name": "Prácticas de Hospitalidad",
+     "en": "Hospitality Practices",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "HSP 1001",
+        "name": "Introducción a la Hospitalidad",
+        "grade": "C"
+       },
+       {
+        "code": "GST 2001",
+        "name": "Servicio y Protocolo",
+        "grade": "C"
+       },
+       {
+        "code": "HSP 2002",
+        "name": "Operaciones Hoteleras",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "HSP 2002",
+     "name": "Operaciones Hoteleras",
+     "en": "Hotel Operations",
+     "credits": 3,
+     "pre": {
+      "code": "HSP 1001",
+      "name": "Introducción a la Hospitalidad",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ELECTIVA 1",
+     "name": "Electiva Libre 1/2",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "OPT 1",
+     "name": "Optativa Hospitalidad 1/6",
+     "credits": 3,
+     "slot": "optativa"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "HSP 4001",
+     "name": "Gerencia Financiera HSP",
+     "en": "Financial Management for HSP",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "HSP 2001",
+        "name": "Administración de A & B",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1009",
+        "name": "Matemática Empresarial +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "FIN 2002",
+        "name": "Contabilidad Financiera",
+        "grade": "C"
+       },
+       {
+        "code": "HSP 1005",
+        "name": "Finanzas para Hospitalidad",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "HSP 3009",
+     "name": "Marketing de Hospitalidad",
+     "en": "Hospitality Marketing",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "HSP 1001",
+        "name": "Introducción a la Hospitalidad",
+        "grade": "C"
+       },
+       {
+        "any": [
+         {
+          "code": "HSP 2003",
+          "name": "Introducción al Marketing HSP",
+          "grade": "C"
+         },
+         {
+          "code": "MAK 1001",
+          "name": "Principios de Marketing",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "HSP 3001",
+     "name": "Recursos Humanos HSP",
+     "en": "Human Resources for HSP",
+     "credits": 3,
+     "pre": {
+      "code": "HSP 1001",
+      "name": "Introducción a la Hospitalidad",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ENG 1001E",
+     "name": "Writing and Rhetoric",
+     "credits": 3,
+     "english": true
+    },
+    {
+     "code": "OPT 2",
+     "name": "Optativa Hospitalidad 2/6",
+     "credits": 3,
+     "slot": "optativa"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PAS 4000",
+     "name": "Práctica Pre-Profesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 5
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "HSP 3002",
+     "name": "Administración de Eventos",
+     "en": "Event Management",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "all": [
+         {
+          "code": "GST 2001",
+          "name": "Servicio y Protocolo",
+          "grade": "C"
+         },
+         {
+          "code": "HSP 1001",
+          "name": "Introducción a la Hospitalidad",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "code": "COM 2101",
+        "name": "Relaciones Públicas 1",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "HSP 4002",
+     "name": "Revenue Management",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "HSP 2001",
+        "name": "Administración de A & B",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 2009",
+        "name": "Estadística Empresarial +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "HSP 2002",
+        "name": "Operaciones Hoteleras",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "OPT 3",
+     "name": "Optativa Hospitalidad 3/6",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "OPT 4",
+     "name": "Optativa Hospitalidad 4/6",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "ARTE",
+     "name": "CG- Arte",
+     "credits": 3,
+     "slot": "arte"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ELECTIVA 2",
+     "name": "CG Electiva Libre 2/2",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "OPT 5",
+     "name": "Optativa Hospitalidad 5/6",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "OPT 6",
+     "name": "Optativa Hospitalidad 6/6",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "HSP 4992",
+     "name": "Proyectos Hospitalidad",
+     "en": "Capstone Project HSP",
+     "credits": 5,
+     "pre": {
+      "all": [
+       {
+        "code": "HSP 4001",
+        "name": "Gerencia Financiera HSP",
+        "grade": "C"
+       },
+       {
+        "code": "HSP 2002",
+        "name": "Operaciones Hoteleras",
+        "grade": "C"
+       },
+       {
+        "code": "HSP 3008",
+        "name": "Prácticas de Hospitalidad",
+        "grade": "C"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "notes": [
+  {
+   "title": "",
+   "text": "*Algunas materias del Colegio General, se cumplen con materias designadas para este propósito por cada carrera. Cuando una carrera designa una materia en particular para cumplir con el requisito de Colegio General, esa materia requiere nota aprobatoria de C."
+  },
+  {
+   "title": "",
+   "text": "*Para cumplir con Colegio General en algunos casos los estudiantes deben elegir una materia de posibles áreas académicas (verificar en malla curricular y ver detalle a continuación)."
+  }
+ ],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=2HSP",
+  "read": "2026-11-19"
+ }
+}

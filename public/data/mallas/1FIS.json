@@ -1,0 +1,1327 @@
+{
+ "code": "1FIS",
+ "name": "FÍSICA",
+ "title": "Físico",
+ "college": "Colegio de Ciencias e Ingenierías",
+ "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+ "total": 142,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "MAT 1203",
+     "name": "Cálculo Diferencial Avanz. +Ej",
+     "en": "Adv. Differential Calculus +Ej",
+     "credits": 3
+    },
+    {
+     "code": "QUI 1003",
+     "name": "Química General 1 +Lab/Ej",
+     "en": "General Chemistry 1 +Lab+Pr",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "MAT 1303",
+     "name": "Cálculo Integral Avanzado +Ej",
+     "en": "Advanced Integral Calculus +Ej",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1203",
+        "name": "Cálculo Diferencial Avanz. +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1203E",
+        "name": "Adv. Differential Calculus +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301E",
+        "name": "Calculus for Sciences 1 +Pr",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "CMP 1101",
+     "name": "Programación en C++ +EJ",
+     "en": "C++ Programming +Pr",
+     "credits": 3
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "MAT 1401",
+     "name": "Álgebra Lineal +Ej",
+     "en": "Linear Algebra +Pr",
+     "credits": 3
+    },
+    {
+     "code": "FIS 1004",
+     "name": "Taller Introducción a Física",
+     "en": "Physics Introductory Seminar",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "CMP 2102",
+     "name": "Programación Avanzada en C++",
+     "en": "Advanced C++ Programming",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "CMP 1101",
+        "name": "Programación en C++ +EJ",
+        "grade": "C"
+       },
+       {
+        "code": "IEE 3080",
+        "name": "Programación para IEE +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "MAT 2403",
+     "name": "Cálculo Vectorial Avanzado",
+     "en": "Advanced Vector Calculus",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "MAT 1303",
+          "name": "Cálculo Integral Avanzado +Ej",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 1303E",
+          "name": "Advanced Integral Calculus +Ej",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 1301",
+          "name": "Cálculo para Ciencias 1 +Ej",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 1302",
+          "name": "Cálculo para Ciencias 2 +Ej",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "MAT 1401",
+          "name": "Álgebra Lineal +Ej",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 1401E",
+          "name": "Linear Algebra 1 +Pr",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "MAT 2002",
+     "name": "Ecuaciones Diferenciales",
+     "en": "Differential Equations",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1202",
+        "name": "Cálculo Integral + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1202E",
+        "name": "Integral Calculus +Pr",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1302",
+        "name": "Cálculo para Ciencias 2 +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1302E",
+        "name": "Calculus for Sciences 2 +Pr",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1303",
+        "name": "Cálculo Integral Avanzado +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1303E",
+        "name": "Advanced Integral Calculus +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "FIS 1201",
+     "name": "Física 1 para Ciencias +Lab/Ej",
+     "en": "Physics for Sciences 1 +Lab/Pr",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1202",
+        "name": "Cálculo Integral + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1303",
+        "name": "Cálculo Integral Avanzado +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1302",
+        "name": "Cálculo para Ciencias 2 +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "MAT 3002",
+     "name": "Variable Compleja",
+     "en": "Complex Variable",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 2403",
+        "name": "Cálculo Vectorial Avanzado",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 2403E",
+        "name": "Advanced Vector Calculus",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 2203",
+        "name": "Cálculo Vectorial",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 2203E",
+        "name": "Vector Calculus",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1302",
+        "name": "Cálculo para Ciencias 2 +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1302E",
+        "name": "Calculus for Sciences 2 +Pr",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "MAT 2003",
+     "name": "Introducción a Probabilidades",
+     "en": "Introduction to Probability",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1202",
+        "name": "Cálculo Integral + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1202E",
+        "name": "Integral Calculus +Pr",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1302",
+        "name": "Cálculo para Ciencias 2 +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1302E",
+        "name": "Calculus for Sciences 2 +Pr",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1303",
+        "name": "Cálculo Integral Avanzado +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1303E",
+        "name": "Advanced Integral Calculus +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "FIS 2202",
+     "name": "Física 2 para Ciencias +Lab/Ej",
+     "en": "Physics for Sciences 2 +Lab/Pr",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "FIS 1201",
+          "name": "Física 1 para Ciencias +Lab/Ej",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 2701",
+          "name": "Física para Ing. 1 +Lab/Ej",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "MAT 1302",
+          "name": "Cálculo para Ciencias 2 +Ej",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 2203",
+          "name": "Cálculo Vectorial",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 2403",
+          "name": "Cálculo Vectorial Avanzado",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    },
+    {
+     "code": "FIS 2002",
+     "name": "Termodinámica e Int. a Fluidos",
+     "en": "Thermodynamics & Intro to Fluids",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "FIS 1201",
+          "name": "Física 1 para Ciencias +Lab/Ej",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 2701",
+          "name": "Física para Ing. 1 +Lab/Ej",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "MAT 1301",
+          "name": "Cálculo para Ciencias 1 +Ej",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 1202",
+          "name": "Cálculo Integral + Ej",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 1303",
+          "name": "Cálculo Integral Avanzado +Ej",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "FIS 3002",
+     "name": "Métodos Matemáticos en Física",
+     "en": "Math Methods for Physics",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "FIS 2202",
+          "name": "Física 2 para Ciencias +Lab/Ej",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 2702",
+          "name": "Física para Ing. 2 +Lab/Ej",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "MAT 2002",
+          "name": "Ecuaciones Diferenciales",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 1401",
+          "name": "Álgebra Lineal +Ej",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "FIS 2001E",
+     "name": "Optics and Waves +Lab",
+     "credits": 3,
+     "english": true,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "FIS 1201",
+          "name": "Física 1 para Ciencias +Lab/Ej",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 2701",
+          "name": "Física para Ing. 1 +Lab/Ej",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "MAT 2403",
+          "name": "Cálculo Vectorial Avanzado",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 1302",
+          "name": "Cálculo para Ciencias 2 +Ej",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 2203",
+          "name": "Cálculo Vectorial",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "FIS 3001",
+     "name": "Instrumentación Científica",
+     "en": "Scientific Instrumentation",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "FIS 2202",
+          "name": "Física 2 para Ciencias +Lab/Ej",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 2702",
+          "name": "Física para Ing. 2 +Lab/Ej",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "code": "CMP 2102",
+        "name": "Programación Avanzada en C++",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ELECTIVA 1",
+     "name": "Electiva Libre 1/2",
+     "credits": 3,
+     "slot": "electiva"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "FIS 3003",
+     "name": "Mecánica Clásica",
+     "en": "Classical Mechanics",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "FIS 2202",
+          "name": "Física 2 para Ciencias +Lab/Ej",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 2702",
+          "name": "Física para Ing. 2 +Lab/Ej",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "code": "MAT 2002",
+        "name": "Ecuaciones Diferenciales",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "FIS 3401",
+     "name": "Física Experimental 1 +Lab",
+     "en": "Experimental Physics 1 +Lab",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "FIS 2001",
+          "name": "Óptica y Ondas +Lab",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 2001E",
+          "name": "Optics and Waves +Lab",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "code": "FIS 2002",
+        "name": "Termodinámica e Int. a Fluidos",
+        "grade": "C"
+       },
+       {
+        "any": [
+         {
+          "code": "FIS 3001",
+          "name": "Instrumentación Científica",
+          "grade": "C"
+         },
+         {
+          "code": "IEE 2001",
+          "name": "Electrónica Básica +Lab",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "FIS 3301",
+     "name": "Física Moderna 1",
+     "en": "Modern Physics I",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "FIS 2202",
+          "name": "Física 2 para Ciencias +Lab/Ej",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 2702",
+          "name": "Física para Ing. 2 +Lab/Ej",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "code": "MAT 2002",
+        "name": "Ecuaciones Diferenciales",
+        "grade": "C"
+       },
+       {
+        "any": [
+         {
+          "code": "MAT 2003",
+          "name": "Introducción a Probabilidades",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 2008",
+          "name": "Probabilidad y Estadística +Ej",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "OPT 1",
+     "name": "Optativa Área Temática 1/3",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "CCSS",
+     "name": "CCSS:HIS/SOC/ANT/POL/REL/PSI",
+     "credits": 3,
+     "slot": "ccss"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "DEP 0010",
+     "name": "Deportes",
+     "en": "Sports",
+     "credits": 1
+    },
+    {
+     "code": "FIS 4601E",
+     "name": "Electromagnetic Theory",
+     "credits": 3,
+     "english": true,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "FIS 2202",
+          "name": "Física 2 para Ciencias +Lab/Ej",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 2702",
+          "name": "Física para Ing. 2 +Lab/Ej",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "code": "FIS 3002",
+        "name": "Métodos Matemáticos en Física",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "FIS 4501E",
+     "name": "Quantum Mechanics 1",
+     "credits": 3,
+     "english": true,
+     "pre": {
+      "all": [
+       {
+        "code": "FIS 3301",
+        "name": "Física Moderna 1",
+        "grade": "C"
+       },
+       {
+        "code": "FIS 3002",
+        "name": "Métodos Matemáticos en Física",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "FIS 4001",
+     "name": "Mecánica Estadística",
+     "en": "Statistical Mechanics",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "FIS 3301",
+        "name": "Física Moderna 1",
+        "grade": "C"
+       },
+       {
+        "any": [
+         {
+          "code": "MAT 2003",
+          "name": "Introducción a Probabilidades",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 2008",
+          "name": "Probabilidad y Estadística +Ej",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "code": "MAT 2002",
+        "name": "Ecuaciones Diferenciales",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "OPT 2",
+     "name": "Optativa Área Temática 2/3",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "HUM",
+     "name": "Humanidades: LIT/FIL/ARH/ESC",
+     "credits": 3,
+     "slot": "humanidades"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "FIS 4302",
+     "name": "Física Moderna 2",
+     "en": "Modern Physics 2",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "FIS 4601",
+          "name": "Teoría Electromagnética",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 4601E",
+          "name": "Electromagnetic Theory",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "FIS 4501",
+          "name": "Mecánica Cuántica 1",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 4501E",
+          "name": "Quantum Mechanics 1",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "FIS 4001",
+          "name": "Mecánica Estadística",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 4001E",
+          "name": "Statistical Mechanics",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "FIS 4502",
+     "name": "Mecánica Cuántica 2",
+     "en": "Quantum Mechanics 2",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "FIS 4501",
+          "name": "Mecánica Cuántica 1",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 4501E",
+          "name": "Quantum Mechanics 1",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "FIS 4001",
+          "name": "Mecánica Estadística",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 4001E",
+          "name": "Statistical Mechanics",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "FIS 4002",
+     "name": "Física del Estado Sólido",
+     "en": "Solid State Physics",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "FIS 4501",
+          "name": "Mecánica Cuántica 1",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 4501E",
+          "name": "Quantum Mechanics 1",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "FIS 4001",
+          "name": "Mecánica Estadística",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 4001E",
+          "name": "Statistical Mechanics",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "OPT 3",
+     "name": "Optativa Área Temática 3/3",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "ARTE",
+     "name": "Arte: ART/MUS/DAN/TEA",
+     "credits": 3,
+     "slot": "arte"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PAS 4000",
+     "name": "Práctica Pre-Profesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 5
+    }
+   ]
+  },
+  {
+   "year": "QUINTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ING 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "FIS 5002",
+     "name": "Física Computacional",
+     "en": "Computational Physics",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "CMP 2102",
+        "name": "Programación Avanzada en C++",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 2002",
+        "name": "Ecuaciones Diferenciales",
+        "grade": "C"
+       },
+       {
+        "any": [
+         {
+          "code": "FIS 4001",
+          "name": "Mecánica Estadística",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 4001E",
+          "name": "Statistical Mechanics",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "FIS 4501",
+          "name": "Mecánica Cuántica 1",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 4501E",
+          "name": "Quantum Mechanics 1",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "ELECTIVA 2",
+     "name": "Electiva Libre 2/2",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "OPT 4",
+     "name": "Optativa de Física",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "FIS 5992",
+     "name": "Proyecto Integrador FIS",
+     "en": "Capstone Project FIS",
+     "credits": 5,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "FIS 4601",
+          "name": "Teoría Electromagnética",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 4601E",
+          "name": "Electromagnetic Theory",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "FIS 4001",
+          "name": "Mecánica Estadística",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 4001E",
+          "name": "Statistical Mechanics",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "FIS 4302",
+          "name": "Física Moderna 2",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 4302E",
+          "name": "Modern Physics 2",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "FIS 4502",
+          "name": "Mecánica Cuántica 2",
+          "grade": "C"
+         },
+         {
+          "code": "FIS 4502E",
+          "name": "Quantum Mechanics 2",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "code": "FIS 4002",
+        "name": "Física del Estado Sólido",
+        "grade": "C"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "notes": [
+  {
+   "title": "Niveles de Inglés ESL (B2 Marco Común Europeo)",
+   "text": "A los estudiantes se les asigna un nivel de inglés (English as a Second Language ESL) con base en el examen de suficiencia rendido durante el proceso de admisión. Los estudiantes también pueden validar sus conocimientos de inglés con certificados internacionales detallados en la sección Suficiencia de Aprendizaje de Lengua Extranjera: Idioma Inglés del Manual del Estudiante. Para poder cumplir con los requisitos de graduación obligatorios todos los estudiantes deben demostrar la suficiencia de inglés a través del examen que exige la USFQ, un certificado internacional validado por la USFQ o la aprobación de los 6 niveles de inglés (ESL).\nPara poder tomar cursos de cualquier área académica en inglés y cursos de otros idiomas los requisitos de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "ESP 1001 - Escritura Académica",
+   "text": "Se sugiere que se tome temprano en la carrera. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Matemáticas",
+   "text": "El requisito de MATEMÁTICAS de Colegio General se cumple con la materia MAT 1203 - Cálculo Diferencial Avanz. +Ej La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Ciencias",
+   "text": "El requisito de CIENCIAS de Colegio General se cumple con la materia QUI 1003 Química General 1 +Lab/Ej. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ADM 3002 - Emprendimiento",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ECN 1001 - Introducción a la Economía",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ARL 1001 - Autoconocimiento ARL 1002 - Cosmos ARL 2001 - Ser y Cosmos",
+   "text": "La nota mínima para aprobación de estos requisitos de CG es C."
+  },
+  {
+   "title": "Arte",
+   "text": "El requisito de ARTE se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nART - Arte/ DAN - Danza/ TEA - Teatro/ MUS - Música"
+  },
+  {
+   "title": "Ciencias Sociales",
+   "text": "El requisito de CIENCIAS SOCIALES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nANT- Antropología/EDU - Educación / HIS - Historia/ REL - Relaciones Internacionales/ POL - Ciencias Políticas/ SOC - Sociología/ PSI - Psicología"
+  },
+  {
+   "title": "Humanidades",
+   "text": "El requisito de HUMANIDADES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nLIT - Literatura/ FIL - Filosofía/ ESC - Escritura Creativa/ ARH - Historia del Arte"
+  },
+  {
+   "title": "Electivas Libres",
+   "text": "Cualquier materia que no se encuentre como requisito obligatorio en la malla curricular puede servir como Electiva Libre de Colegio General. Las Electivas Libres pueden ser utilizadas para cumplir con las exigencias de una segunda carrera o de una subespecialización (minor).\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Prácticas de Servicio Comunitario PRC 2000 - Aprendizaje y Servicio PASEC",
+   "text": "Las prácticas comunitarias se cumplen a través del seminario de APRENDIZAJE Y SERVICIO PASEC. Los estudiantes deben asistir a clases y además cumplir con las horas de servicio comunitario.\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "PAS 4000 - Prácticas Pre-profesionales PASEM",
+   "text": "Las prácticas preprofesionales pueden comenzar a partir del sexto semestre y/o con 75 créditos aprobados, deberán cumplir un mínimo de 240 horas. Los estudiantes deben inscribirse en PASEM en el último verano según su malla académica, la clase se aprueba con las horas de pasantías y la clase teórica. El estudiante debe asegurarse que la fecha de finalización de la clase coincida con su último semestre."
+  },
+  {
+   "title": "Deportes",
+   "text": "Todo estudiante deberá elegir una clase de DEPORTES de las diferentes opciones que se ofrecen cada semestre."
+  },
+  {
+   "title": "GST 0010 - Cultura Gastronómica",
+   "text": "Todo estudiante debe tomar un seminario de Cultura Gastronómica a partir de segundo semestre."
+  },
+  {
+   "title": "Coloquios",
+   "text": "El requisito de Coloquios varía en cada carrera. Consultar en el Decanato Académico de cada Colegio."
+  },
+  {
+   "title": "Materia en Inglés",
+   "text": "El estudiante debe aprobar cualquier materia impartida en inglés, de la carrera o de Colegio General durante la duración de la carrera. Si una materia tiene en su código la terminación (E), (por ejemplo ADM 1001E) significa que la materia se imparte en idioma inglés. Toda materia impartida en inglés tendrá como prerrequisito haber aprobado ESL 0006 Inglés Nivel 6. Para poder tomar cursos de otros idiomas los niveles de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "Writing Intensive",
+   "text": "El estudiante debe aprobar cualquier materia con el atributo Writing Intensive. Para registrarse en un curso Writing Intensive los estudiantes deben haber aprobado todos los niveles de inglés. Se pueden identificar los paralelos con este atributo con un ícono específico en el Catálogo de Cursos Ofertados cada semestre."
+  },
+  {
+   "title": "COL 2000 - Ser Dragón",
+   "text": "Ser Dragón es un seminario de acompañamiento para estudiantes de primer semestre que tiene como objetivo principal facilitar la transición del colegio a la vida universitaria. Todo estudiante que haya ingresado a partir del semestre 202210 deberá cursar y aprobar COL 2000. La nota de aprobación de este requisito es P."
+  },
+  {
+   "title": "",
+   "text": "*Algunas materias del Colegio General, se cumplen con materias designadas para este propósito por cada carrera."
+  },
+  {
+   "title": "",
+   "text": "*Para cumplir con Colegio General en algunos casos los estudiantes deben elegir una materia de posibles áreas académicas (verificar en malla curricular y ver detalle a continuación)."
+  },
+  {
+   "title": "",
+   "text": "* Cumplir con 40 asistencias a Coloquios de Ciencias e Ingenierías durante la carrera. Registrarse en la secretaría del colegio."
+  },
+  {
+   "title": "",
+   "text": "* Todas las materias ofertadas por el Colegio de Ciencias e Ingenierías deben aprobarse con nota mínima de C."
+  },
+  {
+   "title": "",
+   "text": "* Las optativas de área temática son un bloque de tres materias, cada una de 3 créditos, que pertenecen a la misma área de conocimiento."
+  }
+ ],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=1FIS",
+  "read": "2026-11-19"
+ }
+}

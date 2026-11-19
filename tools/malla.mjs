@@ -134,7 +134,7 @@ for (const code of codes) {
     const n = m.semesters.reduce((a, s) => a + s.classes.length, 0);
     if (!n) { console.log(`${code}: la página no tiene materias, se omite`); continue; }
     await writeFile(new URL(`${code}.json`, OUT), JSON.stringify(m, null, 1) + '\n');
-    index = [...index.filter((c) => c.code !== code), { code, name: m.name, title: m.title, college: m.college, read: m.source.read }].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+    index = [...index.filter((c) => c.code !== code), { code, name: m.name, title: m.title, college: m.college, modality: m.modality, read: m.source.read }].sort((a, b) => a.name.localeCompare(b.name, 'es'));
     await writeFile(new URL('index.json', OUT), JSON.stringify(index, null, 1) + '\n');
     console.log(`${code}: ${m.name}, ${m.semesters.length} semestres, ${n} materias, ${m.total} créditos`);
   } catch (e) { console.log(`${code}: ${e.message}`); }

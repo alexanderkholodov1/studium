@@ -1,0 +1,540 @@
+{
+ "code": "1PCA",
+ "name": "PRODUCCIÓN PARA MEDIOS DE COMUNICACIÓN",
+ "title": "Licenciado en Producción para Medios de Comunicación",
+ "college": "Colegio de Comunicación y Artes Contemporáneas",
+ "modality": "COMUNICACIÓN AMBIENTAL",
+ "total": 137,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "MAT 1001",
+     "name": "Matemáticas Cotidianas",
+     "en": "Daily Mathematics",
+     "credits": 3
+    },
+    {
+     "code": "DIC 1101",
+     "name": "Herramientas Digitales 1",
+     "en": "Digital Tools 1",
+     "credits": 3
+    },
+    {
+     "code": "CCO 1001",
+     "name": "Fundamentos de Comunicación",
+     "en": "Fundamentals of Communication",
+     "credits": 3
+    },
+    {
+     "code": "TIC 1001",
+     "name": "Herramientas de Oficina",
+     "en": "Office Tools",
+     "credits": 3
+    },
+    {
+     "code": "FOT 2101",
+     "name": "Fotografía 1",
+     "en": "Photography 1",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Requisito CG - Nivel 1 Inglés",
+     "en": "English Level I",
+     "credits": 0
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "PMC 1002",
+     "name": "Lenguaje Audiovisual",
+     "en": "Audiovisual Language",
+     "credits": 3
+    },
+    {
+     "code": "BIO 1102",
+     "name": "Biología General +Lab",
+     "en": "General Biology +Lab",
+     "credits": 3
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "CG ARTE",
+     "name": "ART/DAN/TEA/MUS",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Requisito CG - Nivel 2 Inglés",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Requisito CG - Nivel 3 Inglés",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "PER 1002",
+     "name": "Redacción Multimedios Básica",
+     "en": "Basic Multimedia Writing",
+     "credits": 3,
+     "pre": {
+      "code": "ESP 1001",
+      "name": "Escritura Académica",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "CCO 2101",
+     "name": "Teoría Crítica 1: Arte & Media",
+     "en": "Critical Theory 1: Art & Media",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "CCO 1001",
+        "name": "Fundamentos de Comunicación",
+        "grade": "C"
+       },
+       {
+        "code": "ART 1701",
+        "name": "Fundamentos de las Artes",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "AMB 2101",
+     "name": "Comunicación Ambiental 1",
+     "en": "Environmental Communication 1",
+     "credits": 3
+    },
+    {
+     "code": "PMC 2001",
+     "name": "Estructuras Narrativas",
+     "en": "Narratives Structures",
+     "credits": 3
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Requisito CG - Nivel 4 Inglés",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Requisito CG - Nivel 5 Inglés",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "CCO 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "PER 2003",
+     "name": "Redacción Audiovisual Avanzada",
+     "en": "Advanced Audiovisual Writing",
+     "credits": 3,
+     "pre": {
+      "code": "PER 1002",
+      "name": "Redacción Multimedios Básica",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "CCO 2102",
+     "name": "Teoría Crítica 2: Arte & Media",
+     "en": "Critical Theory 2: Art & Media",
+     "credits": 3
+    },
+    {
+     "code": "PMC 1001",
+     "name": "Herramientas de Montaje",
+     "en": "Montage Tools",
+     "credits": 3
+    },
+    {
+     "code": "PMC 2004",
+     "name": "Preproducción",
+     "en": "Preproduction",
+     "credits": 3
+    },
+    {
+     "code": "MAT 1101",
+     "name": "Estadística para CCSS",
+     "en": "Statistics for Social Sciences",
+     "credits": 3
+    },
+    {
+     "code": "CG LIT/FIL",
+     "name": "CG Humanidades LIT/FIL",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Requisito CG - Nivel 6 Inglés",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "PMC 2002",
+     "name": "Narrativa Audiovisual",
+     "en": "Audiovisual Narratives",
+     "credits": 3
+    },
+    {
+     "code": "AMB 3002",
+     "name": "Campañas Ambientales",
+     "en": "Environmental Campaigns",
+     "credits": 3
+    },
+    {
+     "code": "AMB 3001",
+     "name": "Pensamiento Ambiental",
+     "en": "Environmental Thought",
+     "credits": 3
+    },
+    {
+     "code": "CCO 3002",
+     "name": "Taller de Investigación",
+     "en": "Research Workshop",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "CCO 1001",
+          "name": "Fundamentos de Comunicación",
+          "grade": "C"
+         },
+         {
+          "code": "ART 1701",
+          "name": "Fundamentos de las Artes",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "CCO 2101",
+          "name": "Teoría Crítica 1: Arte & Media",
+          "grade": "C"
+         },
+         {
+          "code": "CCO 2101E",
+          "name": "Critical Theory 1: Art & Media",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "CCSS 2000",
+     "name": "Ciencias Sociales 2000",
+     "credits": 3,
+     "slot": "ccss"
+    },
+    {
+     "code": "CIENCIAS",
+     "name": "FIS/QUI/BIO/ECL/GEO/NUT",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ANT 3108",
+     "name": "Ecoantropología",
+     "en": "Ecoanthropology",
+     "credits": 3
+    },
+    {
+     "code": "AMB 3003",
+     "name": "Educación Ambiental",
+     "en": "Environmental Education",
+     "credits": 3
+    },
+    {
+     "code": "PMC 2003",
+     "name": "Técnicas de Campo",
+     "en": "Field Techniques",
+     "credits": 3
+    },
+    {
+     "code": "CCO 3001",
+     "name": "Taller de Medios Mixtos",
+     "en": "Mixed Media Workshop",
+     "credits": 3
+    },
+    {
+     "code": "ENG 1001E",
+     "name": "Writing and Rhetoric",
+     "credits": 3,
+     "english": true
+    },
+    {
+     "code": "CCSS 3000",
+     "name": "Ciencias Sociales 3000",
+     "credits": 3,
+     "slot": "ccss"
+    },
+    {
+     "code": "AMB 4000",
+     "name": "Práctica Preprofesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 0,
+     "pre": {
+      "code": "AMB 3003",
+      "name": "Educación Ambiental",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "DEP",
+     "name": "Deportes",
+     "credits": 0
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "COM 2101",
+     "name": "Relaciones Públicas 1",
+     "en": "Public Relations 1",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "COM 1001",
+        "name": "Hablar en Público",
+        "grade": "C"
+       },
+       {
+        "code": "GST 2001",
+        "name": "Servicio y Protocolo",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "COM 4002E",
+     "name": "Social Media",
+     "credits": 3,
+     "english": true
+    },
+    {
+     "code": "CG ELECT",
+     "name": "Electiva Libre 1/2",
+     "credits": 3
+    },
+    {
+     "code": "PREP TIT",
+     "name": "Preparación Opción Titulación",
+     "credits": 3
+    },
+    {
+     "code": "CCO 4001",
+     "name": "",
+     "credits": 0
+    },
+    {
+     "code": "DIC 2102",
+     "name": "",
+     "credits": 0
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "PER 4003",
+     "name": "Comunicación: Leyes y Ética",
+     "en": "Communication: Law and Ethics",
+     "credits": 3
+    },
+    {
+     "code": "REC 4106",
+     "name": "Políticas Ambientales",
+     "en": "Environmental Policies",
+     "credits": 3
+    },
+    {
+     "code": "PMC 4004",
+     "name": "Productos Interactivos",
+     "en": "Interactive Products",
+     "credits": 3
+    },
+    {
+     "code": "CG ELECT",
+     "name": "Electiva Libre 2/2",
+     "credits": 3
+    },
+    {
+     "code": "DES TIT",
+     "name": "Desarrollo Opción Titulación",
+     "credits": 3
+    }
+   ]
+  }
+ ],
+ "notes": [],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=1PCA",
+  "read": "2026-11-19"
+ }
+}

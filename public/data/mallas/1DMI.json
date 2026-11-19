@@ -1,0 +1,667 @@
+{
+ "code": "1DMI",
+ "name": "DISEÑO EN MEDIOS INTERACTIVOS",
+ "title": "Licenciado en Diseño de Medios Interactivos",
+ "college": "Colegio de Comunicación y Artes Contemporáneas",
+ "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+ "total": 127,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "DIC 2003",
+     "name": "Diseño y Cultura Digital",
+     "en": "Design and Digital Culture",
+     "credits": 3
+    },
+    {
+     "code": "DIC 1101",
+     "name": "Herramientas Digitales 1",
+     "en": "Digital Tools 1",
+     "credits": 3
+    },
+    {
+     "code": "ART 2001",
+     "name": "Dibujo para Arte y Diseño",
+     "en": "Drawing for Art and Design",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "CCO 1001",
+     "name": "Fundamentos de Comunicación",
+     "en": "Fundamentals of Communication",
+     "credits": 3
+    },
+    {
+     "code": "ART 2002",
+     "name": "Fotografía 1",
+     "en": "Photography 1",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "DIM 1101",
+     "name": "Programación para Diseño 1",
+     "en": "Programming for Design 1",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "DIC 1201",
+     "name": "Composición Visual 1",
+     "en": "Visual Composition 1",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "MAT 1001",
+     "name": "Matemáticas Cotidianas",
+     "en": "Daily Mathematics",
+     "credits": 3
+    },
+    {
+     "code": "DIM 2102",
+     "name": "Programación para Diseño 2",
+     "en": "Programming for Design 2",
+     "credits": 3,
+     "pre": {
+      "code": "DIM 1101",
+      "name": "Programación para Diseño 1",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "DIM 2201",
+     "name": "Desarrollo Web 1",
+     "en": "Web Development 1",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "DIM 1101",
+        "name": "Programación para Diseño 1",
+        "grade": "C"
+       },
+       {
+        "code": "DIC 1201",
+        "name": "Composición Visual 1",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "CCSS",
+     "name": "CCSS:HIS/SOC/ANT/POL/REL/PSI",
+     "credits": 3,
+     "slot": "ccss"
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "DEP 0010",
+     "name": "Deportes",
+     "en": "Sports",
+     "credits": 1
+    },
+    {
+     "code": "CCO 2101",
+     "name": "Teoría Crítica 1: Arte & Media",
+     "en": "Critical Theory 1: Art & Media",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "CCO 1001",
+        "name": "Fundamentos de Comunicación",
+        "grade": "C"
+       },
+       {
+        "code": "ART 1701",
+        "name": "Fundamentos de las Artes",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "DIM 3103",
+     "name": "Programación para Diseño 3",
+     "en": "Programming for Design 3",
+     "credits": 3,
+     "pre": {
+      "code": "DIM 2102",
+      "name": "Programación para Diseño 2",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    },
+    {
+     "code": "DIM 2202",
+     "name": "Desarrollo Web 2",
+     "en": "Web Development 2",
+     "credits": 3,
+     "pre": {
+      "code": "DIM 2201",
+      "name": "Desarrollo Web 1",
+      "grade": "C"
+     }
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "CCO 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "DIM 4001E",
+     "name": "Games & Interactive Narrative",
+     "credits": 3,
+     "english": true
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "CCO 3002",
+     "name": "Taller de Investigación",
+     "en": "Research Workshop",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "CCO 1001",
+          "name": "Fundamentos de Comunicación",
+          "grade": "C"
+         },
+         {
+          "code": "ART 1701",
+          "name": "Fundamentos de las Artes",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "CCO 2101",
+          "name": "Teoría Crítica 1: Arte & Media",
+          "grade": "C"
+         },
+         {
+          "code": "CCO 2101E",
+          "name": "Critical Theory 1: Art & Media",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "DIM 3203",
+     "name": "Desarrollo Web 3",
+     "en": "Web Development 3",
+     "credits": 3,
+     "pre": {
+      "code": "DIM 2202",
+      "name": "Desarrollo Web 2",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "CIENCIAS",
+     "name": "CC:FIS/QUI/BIO/ECL/NUT/GEO",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "DIM 3002",
+     "name": "Diseño de Interfaces Físicas",
+     "en": "Physical Interface Design",
+     "credits": 3,
+     "pre": {
+      "code": "DIM 1101",
+      "name": "Programación para Diseño 1",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ELECTIVA 1",
+     "name": "Electiva Libre 1/3",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "ELECTIVA 2",
+     "name": "Electiva Libre 2/3",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "OPT 1",
+     "name": "Optativa 1/3",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "HUM",
+     "name": "Humanidades: LIT/FIL/ARH/ESC",
+     "credits": 3,
+     "slot": "humanidades"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PAS 4000",
+     "name": "Práctica Pre-Profesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 5
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "DIC 3004",
+     "name": "Investigación en Diseño",
+     "en": "Design Research",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "CCO 3002",
+        "name": "Taller de Investigación",
+        "grade": "C"
+       },
+       {
+        "any": [
+         {
+          "code": "DIC 3005",
+          "name": "Diseño de Información",
+          "grade": "C"
+         },
+         {
+          "code": "DIM 3203",
+          "name": "Desarrollo Web 3",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "AND 1002",
+     "name": "Video y Motion Graphics",
+     "en": "Video and Motion Graphics",
+     "credits": 3,
+     "pre": {
+      "code": "DIC 1101",
+      "name": "Herramientas Digitales 1",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "OPT COCOA",
+     "name": "Optativa COCOA",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "OPT 2",
+     "name": "Optativa 2/3",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "CCO",
+     "name": "Temas en Comunicación y Arte",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "DIC 4004",
+     "name": "Prácticas y Portafolio",
+     "en": "Practice and Portfolio",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "DIC 3003",
+          "name": "Materiales y Procesos",
+          "grade": "C"
+         },
+         {
+          "code": "DIM 3002",
+          "name": "Diseño de Interfaces Físicas",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "DIM 2201",
+          "name": "Desarrollo Web 1",
+          "grade": "C"
+         },
+         {
+          "code": "DIM 4001",
+          "name": "Juegos y Narrativa Interactiva",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "ELECTIVA 3",
+     "name": "Electiva Libre 3/3",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "OPT 3",
+     "name": "Optativa 3/3",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "DIM 4992",
+     "name": "Proyecto Interactivo",
+     "en": "Capstone Project DIM",
+     "credits": 5
+    }
+   ]
+  }
+ ],
+ "notes": [
+  {
+   "title": "Niveles de Inglés ESL (B2 Marco Común Europeo)",
+   "text": "A los estudiantes se les asigna un nivel de inglés (English as a Second Language ESL) con base en el examen de suficiencia rendido durante el proceso de admisión. Los estudiantes también pueden validar sus conocimientos de inglés con certificados internacionales detallados en la sección Suficiencia de Aprendizaje de Lengua Extranjera: Idioma Inglés del Manual del Estudiante. Para poder cumplir con los requisitos de graduación obligatorios todos los estudiantes deben demostrar la suficiencia de inglés a través del examen que exige la USFQ, un certificado internacional validado por la USFQ o la aprobación de los 6 niveles de inglés (ESL).\nPara poder tomar cursos de cualquier área académica en inglés y cursos de otros idiomas los requisitos de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "ESP 1001 - Escritura Académica",
+   "text": "Se sugiere que se tome temprano en la carrera. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Arte",
+   "text": "El requisito de ARTE de Colegio General se cumple con la materia ART 2001 Dibujo para Arte y Diseño. La nota mínima para aprobación de este requisito de CG para esta carrera es C."
+  },
+  {
+   "title": "Matemáticas",
+   "text": "El requisito de MATEMÁTICAS se cumple con la aprobación de cualquier curso de código MAT. El curso MAT 1001 MATEMÁTICAS COTIDIANAS es el curso más básico que cumple con este requisito, pero en esta carrera puedes aprobar cualquier curso MAT para cumplir con este requisito. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ADM 3002 - Emprendimiento",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ECN 1001 - Introducción a la Economía",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ARL 1001 - Autoconocimiento ARL 1002 - Cosmos ARL 2001 - Ser y Cosmos",
+   "text": "La nota mínima para aprobación de estos requisitos de CG es C."
+  },
+  {
+   "title": "Ciencias Sociales",
+   "text": "El requisito de CIENCIAS SOCIALES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nANT- Antropología/EDU - Educación/ HIS- Historia/ REL- Relaciones Internacionales/ POL- Ciencias Políticas/ SOC- Sociología/ PSI - Psicología"
+  },
+  {
+   "title": "Humanidades",
+   "text": "El requisito de HUMANIDADES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nLIT- Literatura/ FIL- Filosofía/ ESC- Escritura Creativa/ ARH- Historia del Arte"
+  },
+  {
+   "title": "Ciencias",
+   "text": "El requisito de CIENCIAS se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nBIO- Biología/ QUI- Química/ FIS- Física/ ECL- Ecología/ NUT- Nutrición/ GEO- Geología"
+  },
+  {
+   "title": "Electivas Libres",
+   "text": "Cualquier materia que no se encuentre como requisito obligatorio en la malla curricular puede servir como Electiva Libre de Colegio General. Las Electivas Libres pueden ser utilizadas para cumplir con las exigencias de una segunda carrera o de una subespecialización (minor).\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Prácticas de Servicio Comunitario PRC 2000 - Aprendizaje y Servicio PASEC",
+   "text": "Las prácticas comunitarias se cumplen a través del seminario de APRENDIZAJE Y SERVICIO PASEC. Los estudiantes deben asistir a clases y además cumplir con las horas de servicio comunitario.\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "PAS 4000 - Prácticas Pre-profesionales PASEM",
+   "text": "Las prácticas preprofesionales pueden comenzar a partir del sexto semestre y/o con 75 créditos aprobados, deberán cumplir un mínimo de 240 horas. Los estudiantes deben inscribirse en PASEM en el último verano según su malla académica, la clase se aprueba con las horas de pasantías y la clase teórica. El estudiante debe asegurarse que la fecha de finalización de la clase coincida con su último semestre."
+  },
+  {
+   "title": "Deportes",
+   "text": "Todo estudiante deberá elegir una clase de DEPORTES de las diferentes opciones que se ofrecen cada semestre."
+  },
+  {
+   "title": "GST 0010 - Cultura Gastronómica",
+   "text": "Todo estudiante debe tomar un seminario de Cultura Gastronómica a partir de segundo semestre."
+  },
+  {
+   "title": "Materia en Inglés",
+   "text": "El estudiante debe aprobar cualquier materia impartida en inglés, de la carrera o de Colegio General durante la duración de la carrera. Si una materia tiene en su código la terminación (E), (por ejemplo ADM 1001E) significa que la materia se imparte en idioma inglés. Toda materia impartida en inglés tendrá como prerrequisito haber aprobado ESL 0006 Inglés Nivel 6. Para poder tomar cursos de otros idiomas los niveles de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "Writing Intensive",
+   "text": "El estudiante debe aprobar cualquier materia con el atributo Writing Intensive. Para registrarse en un curso Writing Intensive los estudiantes deben haber aprobado todos los niveles de inglés. Se pueden identificar los paralelos con este atributo con un ícono específico en el Catálogo de Cursos Ofertados cada semestre."
+  },
+  {
+   "title": "COL 2000 - Ser Dragón",
+   "text": "Ser Dragón es un seminario de acompañamiento para estudiantes de primer semestre que tiene como objetivo principal facilitar la transición del colegio a la vida universitaria. Todo estudiante que haya ingresado a partir del semestre 202210 deberá cursar y aprobar COL 2000. La nota de aprobación de este requisito es P."
+  },
+  {
+   "title": "",
+   "text": "*Algunas materias del Colegio General, se cumplen con materias designadas para este propósito por cada carrera."
+  },
+  {
+   "title": "",
+   "text": "*Para cumplir con Colegio General en algunos casos los estudiantes deben elegir una materia de posibles áreas académicas (verificar en malla curricular y ver detalle a continuación)."
+  },
+  {
+   "title": "",
+   "text": "* Es necesario obtener mínimo C en las asignaturas de Especialización. Sin embargo, hay carreras que requieren una nota mayor; consulta en el Manual del Estudiante o en el reglamento específico de la carrera."
+  },
+  {
+   "title": "",
+   "text": "* Para cumplir la Optativa COCOA los estudiantes deben tomar un curso adicional de cualquiera de las áreas del COCOA."
+  }
+ ],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=1DMI",
+  "read": "2026-11-19"
+ }
+}

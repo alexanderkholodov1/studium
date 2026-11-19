@@ -1,0 +1,601 @@
+{
+ "code": "1BIG",
+ "name": "BIOLOGÍA",
+ "title": "Biólogo",
+ "college": "Colegio de Ciencias Biológicas y Ambientales",
+ "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+ "total": 127,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "MAT 1003",
+     "name": "Cálculo para Cs de la Vida +Ej",
+     "en": "Calculus for Life Science +Ej",
+     "credits": 3
+    },
+    {
+     "code": "BIO 1102",
+     "name": "Biología General + Lab",
+     "en": "General Biology +Lab",
+     "credits": 3
+    },
+    {
+     "code": "QUI 1003",
+     "name": "Química General 1 +Lab/Ej",
+     "en": "General Chemistry 1 +Lab+Pr",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "BTC 2001",
+     "name": "Genética General +Lab",
+     "en": "General Genetics +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "BIO 1102",
+      "name": "Biología General +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "BIO 1101",
+     "name": "Introducción a la Biología +Ej",
+     "en": "Introduction to Biology +Ex",
+     "credits": 3
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "FIS 1005",
+     "name": "Física Cs de la Vida +Lab",
+     "en": "Physics for Life Sciences +Lab",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "BTC 4001",
+     "name": "Bioquímica y Metabolismo",
+     "en": "Biochemistry and Metabolism",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "QUI 1003",
+        "name": "Química General 1 +Lab/Ej",
+        "grade": "C"
+       },
+       {
+        "code": "QUI 1003E",
+        "name": "General Chemistry 1 +Lab/Pr",
+        "grade": "C"
+       },
+       {
+        "code": "ODT 1201",
+        "name": "Principios de Química +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ECL 2002",
+     "name": "Ecología de Ecosistemas",
+     "en": "Ecosystem Ecology",
+     "credits": 3,
+     "pre": {
+      "code": "BIO 1102",
+      "name": "Biología General +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "BIO 2301",
+     "name": "Zoología +Lab",
+     "en": "Zoology +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "BIO 1102",
+      "name": "Biología General +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "CCSS",
+     "name": "CCSS:HIS/SOC/ANT/POL/REL/PSI",
+     "credits": 3,
+     "slot": "ccss"
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "DEP 0010",
+     "name": "Deportes",
+     "en": "Sports",
+     "credits": 1
+    },
+    {
+     "code": "BIO 2203",
+     "name": "Botánica +Lab",
+     "en": "General Botany +Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "BIO 1102",
+        "name": "Biología General +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "GREXO",
+        "name": "Exoneración Prerreq Posgrado",
+        "grade": "1"
+       }
+      ]
+     }
+    },
+    {
+     "code": "MCR 2001",
+     "name": "Microbiología +Lab",
+     "en": "Microbiology +Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "BIO 1102",
+        "name": "Biología General +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "GREXO",
+        "name": "Exoneración Prerreq Posgrado",
+        "grade": "1"
+       }
+      ]
+     }
+    },
+    {
+     "code": "BTC 3002",
+     "name": "Biología Molecular +Lab",
+     "en": "Molecular Biology +Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "BIO 1102",
+        "name": "Biología General +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "GREXO",
+        "name": "Exoneración Prerreq Posgrado",
+        "grade": "1"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ARTE",
+     "name": "Arte: ART/MUS/DAN/TEA",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "HUM",
+     "name": "Humanidades: LIT/FIL/ARH/ESC",
+     "credits": 3,
+     "slot": "humanidades"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "MAT 1004",
+     "name": "Bioestadística +Ej",
+     "en": "Biostatistics +Pr",
+     "credits": 3
+    },
+    {
+     "code": "ECL 3102",
+     "name": "Ecología de Poblaciones",
+     "en": "Ecology of Populations",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "ECL 2002",
+        "name": "Ecología de Ecosistemas",
+        "grade": "C"
+       },
+       {
+        "code": "ECL 2101",
+        "name": "Ecología General",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "BIO 3001",
+     "name": "Evolución",
+     "en": "Evolution",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "ECL 2101",
+        "name": "Ecología General",
+        "grade": "C"
+       },
+       {
+        "code": "ECL 2002",
+        "name": "Ecología de Ecosistemas",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "BIO 4002",
+     "name": "Fisiología +Lab",
+     "en": "Physiology +Lab",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "BIO 2301",
+        "name": "Zoología +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "BIO 2203",
+        "name": "Botánica +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "FIS 1005",
+        "name": "Física Cs de la Vida +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ELECTIVA 1",
+     "name": "Electiva Libre 1/2",
+     "credits": 3,
+     "slot": "electiva"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "BIO 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    },
+    {
+     "code": "BIO OPT 1",
+     "name": "Optativa 1/5",
+     "credits": 3
+    },
+    {
+     "code": "BIO OPT 2",
+     "name": "Optativa 2/5",
+     "credits": 3
+    },
+    {
+     "code": "ECL 1",
+     "name": "Experim Design/Marine Research",
+     "credits": 3
+    },
+    {
+     "code": "ECL 2",
+     "name": "Trop Ecology /Marine Ecology",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PAS 4000",
+     "name": "Práctica Pre-Profesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 5
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "REC 3101",
+     "name": "Biología de la Conservación",
+     "en": "Conservation Biology",
+     "credits": 3,
+     "pre": {
+      "code": "ECL 3102",
+      "name": "Ecología de Poblaciones",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "REC 3103",
+     "name": "SIG y Sensores Remotos",
+     "en": "GIS and Remote Sensing",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "ECL 2101",
+        "name": "Ecología General",
+        "grade": "C"
+       },
+       {
+        "code": "ECL 2002",
+        "name": "Ecología de Ecosistemas",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "BIO OPT 3",
+     "name": "Optativa 3/5",
+     "credits": 3
+    },
+    {
+     "code": "BIO OPT 4",
+     "name": "Optativa 4/5",
+     "credits": 3
+    },
+    {
+     "code": "ELECTIVA 2",
+     "name": "Electiva Libre 2/2",
+     "credits": 3,
+     "slot": "electiva"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "REC 5110",
+     "name": "Monitoreo Ambiental",
+     "en": "Environmental Monitoring",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "ECL 3001",
+        "name": "Diseño Experimental +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "ECL 3110E",
+        "name": "Tech. of Marine Research 1",
+        "grade": "C"
+       },
+       {
+        "code": "GREXO",
+        "name": "Exoneración Prerreq Posgrado",
+        "grade": "1"
+       }
+      ]
+     }
+    },
+    {
+     "code": "BIO OPT 5",
+     "name": "Optativa 5/5",
+     "credits": 3
+    },
+    {
+     "code": "BIO 5992",
+     "name": "Proyectos BIO",
+     "en": "Capstone Project BIO",
+     "credits": 5,
+     "pre": {
+      "any": [
+       {
+        "code": "ECL 3001",
+        "name": "Diseño Experimental +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "ECL 3110E",
+        "name": "Tech. of Marine Research 1",
+        "grade": "C"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "notes": [],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=1BIG",
+  "read": "2026-11-19"
+ }
+}

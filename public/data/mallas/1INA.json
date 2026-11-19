@@ -1,0 +1,771 @@
+{
+ "code": "1INA",
+ "name": "INGENIERÍA AMBIENTAL",
+ "title": "Ingeniero Ambiental",
+ "college": "Colegio de Ciencias e Ingenierías",
+ "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+ "total": 142,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "MAT 1201",
+     "name": "Cálculo Diferencial + Ej",
+     "en": "Differential Calculus + Pr",
+     "credits": 3
+    },
+    {
+     "code": "INA 1002",
+     "name": "Taller de Ing. Ambiental",
+     "en": "Environmental Eng. Workshop",
+     "credits": 3
+    },
+    {
+     "code": "QUI 1003",
+     "name": "Química General 1 +Lab/Ej",
+     "en": "General Chemistry 1 +Lab+Pr",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "BIO 1102",
+     "name": "Biología General + Lab/Ej",
+     "en": "General Biology +Lab",
+     "credits": 3
+    },
+    {
+     "code": "QUI 1004",
+     "name": "Química General 2 +Ej",
+     "en": "General Chemistry 2 +Pr",
+     "credits": 3,
+     "pre": {
+      "code": "QUI 1003",
+      "name": "Química General 1 +Lab/Ej",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "MAT 1202",
+     "name": "Cálculo Integral + Ej",
+     "en": "Integral Calculus +Pr",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1201",
+        "name": "Cálculo Diferencial + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1203",
+        "name": "Cálculo Diferencial Avanz. +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "MAT 2002",
+     "name": "Ecuaciones Diferenciales",
+     "en": "Differential Equations",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1202",
+        "name": "Cálculo Integral + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1202E",
+        "name": "Integral Calculus +Pr",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1302",
+        "name": "Cálculo para Ciencias 2 +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1302E",
+        "name": "Calculus for Sciences 2 +Pr",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1303",
+        "name": "Cálculo Integral Avanzado +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1303E",
+        "name": "Advanced Integral Calculus +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "INA 2101",
+     "name": "Herramientas Ing. Ambiental 1",
+     "en": "Engineering Calculations 1",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "QUI 1004",
+          "name": "Química General 2 +Ej",
+          "grade": "C"
+         },
+         {
+          "code": "QUI 2001",
+          "name": "Química Orgánica Básica +Ej",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "code": "MAT 1201",
+        "name": "Cálculo Diferencial + Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "FIS 2701",
+     "name": "Física para Ing. 1+Lab/Ej",
+     "en": "Physics for Eng. 1 +Lab+Pr",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1202",
+        "name": "Cálculo Integral + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "D"
+       }
+      ]
+     }
+    },
+    {
+     "code": "MAT 2008",
+     "name": "Probabilidad y Estadística +Ej",
+     "en": "Statistics and Probability +Pr",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1202",
+        "name": "Cálculo Integral + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ARTE",
+     "name": "Arte: ART/MUS/DAN/TEA",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "INA 2102",
+     "name": "Herramientas Ing. Ambiental 2",
+     "en": "Engineering Calculations 2",
+     "credits": 3,
+     "pre": {
+      "code": "INA 2101",
+      "name": "Herramientas Ing. Ambiental 1",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ECL 2101",
+     "name": "Ecología General",
+     "en": "General Ecology",
+     "credits": 3,
+     "pre": {
+      "code": "BIO 1102",
+      "name": "Biología General +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "REC 3103",
+     "name": "SIG y Sensores Remotos",
+     "en": "GIS and Remote Sensing",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "ECL 2101",
+        "name": "Ecología General",
+        "grade": "C"
+       },
+       {
+        "code": "ECL 2002",
+        "name": "Ecología de Ecosistemas",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "FIS 2702",
+     "name": "Física para Ing. 2 +Lab/Ej",
+     "en": "Physics for Eng. 2 +Lab+Pr",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "FIS 2701",
+        "name": "Física para Ing. 1 +Lab/Ej",
+        "grade": "C"
+       },
+       {
+        "code": "FIS 2101",
+        "name": "Física General 1 +Lab/Ej",
+        "grade": "C"
+       },
+       {
+        "code": "FIS 1201",
+        "name": "Física 1 para Ciencias +Lab/Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "CCSS",
+     "name": "CCSS:HIS/SOC/ ANT /POL/REL/PSI",
+     "credits": 3,
+     "slot": "ccss"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "DEP 0010",
+     "name": "Deportes",
+     "en": "Sports",
+     "credits": 1
+    },
+    {
+     "code": "INA 4001",
+     "name": "Calidad del Aire",
+     "en": "Air Quality Control",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "INA 2102",
+        "name": "Htas. Ing. Ambiental 2 +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 2008",
+        "name": "Probabilidad y Estadística +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "INA 3004",
+     "name": "Ingeniería del Flujo +Lab",
+     "en": "Flow Engineering +Lab",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "FIS 2701",
+        "name": "Física para Ing. 1 +Lab/Ej",
+        "grade": "C"
+       },
+       {
+        "code": "INA 2102",
+        "name": "Htas. Ing. Ambiental 2 +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "INA 4080",
+     "name": "Seguridad, Salud y Ambiente",
+     "en": "Health, Safety and Environment",
+     "credits": 3
+    },
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "INA 3001",
+     "name": "Caracterización Ambiental +Lab",
+     "en": "Environm Characterization +Lab",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "INA 2102",
+        "name": "Htas. Ing. Ambiental 2 +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "FIS 2702",
+        "name": "Física para Ing. 2 +Lab/Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "INA 3003E",
+     "name": "Environmental Chemistry +Lab",
+     "credits": 3,
+     "english": true
+    },
+    {
+     "code": "INA 4005",
+     "name": "Contaminación Industrial",
+     "en": "Industrial Pollution",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "INA 4001",
+        "name": "Calidad del Aire",
+        "grade": "C"
+       },
+       {
+        "code": "INA 4001E",
+        "name": "Air Quality Control",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "INA 3005",
+     "name": "Transporte de Contaminantes",
+     "en": "Transport of Pollutants",
+     "credits": 3,
+     "pre": {
+      "code": "INA 3004",
+      "name": "Ingeniería del Flujo +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ELECTIVA 1",
+     "name": "Electiva Libre 1/2",
+     "credits": 3,
+     "slot": "electiva"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "BTC 5001",
+     "name": "Biorremediación +Lab",
+     "en": "Bioremediation +Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "GREXO",
+        "name": "Exoneración Prerreq Posgrado",
+        "grade": "1"
+       },
+       {
+        "all": [
+         {
+          "code": "MCR 2001",
+          "name": "Microbiología +Lab",
+          "grade": "C"
+         },
+         {
+          "any": [
+           {
+            "code": "INA 2101",
+            "name": "Herramientas Ing. Ambiental 1",
+            "grade": "C"
+           },
+           {
+            "code": "BTC 5005",
+            "name": "Cálculos en Bioprocesos",
+            "grade": "C"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "INA 5003E",
+     "name": "Climate Change and Society",
+     "credits": 3,
+     "english": true
+    },
+    {
+     "code": "INA 4003E",
+     "name": "Meteorology",
+     "credits": 3,
+     "english": true,
+     "pre": {
+      "code": "INA 3005",
+      "name": "Transporte de Contaminantes",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "INA 5201E",
+     "name": "Wastewater Treatment 1 +Lab",
+     "credits": 3,
+     "english": true
+    },
+    {
+     "code": "HUM",
+     "name": "Humanidades: LIT/FIL/ARH/ESC",
+     "credits": 3,
+     "slot": "humanidades"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "INA 3081E",
+     "name": "Atmospheric Monitoring",
+     "credits": 3,
+     "english": true,
+     "pre": {
+      "code": "INA 4003",
+      "name": "Meteorología",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "INA 5001",
+     "name": "Modelado Ambiental",
+     "en": "Environmental Modeling",
+     "credits": 3,
+     "pre": {
+      "code": "INA 4005",
+      "name": "Contaminación Industrial",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "INA 4082E",
+     "name": "Renewable Energy",
+     "credits": 3,
+     "english": true
+    },
+    {
+     "code": "INA 4006E",
+     "name": "Waste Management + Lab",
+     "en": "Waste Management +Lab",
+     "credits": 3,
+     "english": true
+    },
+    {
+     "code": "INA 5202E",
+     "name": "Wastewater Treatment 2 +Lab",
+     "credits": 3,
+     "english": true
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PAS 4000",
+     "name": "Práctica Pre-Profesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 5
+    }
+   ]
+  },
+  {
+   "year": "QUINTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ING 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "INA 5004E",
+     "name": "Env. Impact and Sustainability",
+     "credits": 3,
+     "english": true,
+     "pre": {
+      "code": "INA 5001",
+      "name": "Modelado Ambiental",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ELECTIVA 2",
+     "name": "Electiva Libre 2/2",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "OPT INA",
+     "name": "Optativa INA",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "INA 5992",
+     "name": "Proyecto Integrador INA",
+     "en": "Capstone Project INA",
+     "credits": 5,
+     "pre": {
+      "code": "INA 5001E",
+      "name": "Environmental Modelling",
+      "grade": "C"
+     }
+    }
+   ]
+  }
+ ],
+ "notes": [
+  {
+   "title": "",
+   "text": "*Algunas materias del Colegio General, se cumplen con materias designadas para este propósito por cada carrera. Cuando una carrera designa una materia en particular para cumplir con el requisito de Colegio General, esa materia requiere nota aprobatoria de C."
+  },
+  {
+   "title": "",
+   "text": "*Para cumplir con Colegio General en algunos casos los estudiantes deben elegir una materia de posibles áreas académicas (verificar en malla curricular y ver detalle a continuación)."
+  },
+  {
+   "title": "",
+   "text": "* Todas las materias ofertadas por el Colegio de Ciencias e Ingenierías deben aprobarse con nota mínima de C."
+  },
+  {
+   "title": "",
+   "text": "* Muchas de las materias de especialización se ofrecen exclusivamente en inglés. Es imprescindible que los estudiantes cumplan con el nivel 6 de inglés lo antes posible para no retrasar sus estudios."
+  },
+  {
+   "title": "",
+   "text": "* Para cumplir con el requisito de Optativa INA, los estudiantes pueden optar por los siguientes cursos:"
+  }
+ ],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=1INA",
+  "read": "2026-11-19"
+ }
+}

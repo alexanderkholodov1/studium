@@ -1,0 +1,947 @@
+{
+ "code": "1BTC",
+ "name": "INGENIERÍA EN BIOTECNOLOGÍA",
+ "title": "Ingeniero Biotecnólogo",
+ "college": "Colegio de Ciencias Biológicas y Ambientales",
+ "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+ "total": 139,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "MAT 1201",
+     "name": "Cálculo Diferencial + Ej",
+     "en": "Differential Calculus + Pr",
+     "credits": 3
+    },
+    {
+     "code": "BIO 1102",
+     "name": "Biología General +Lab",
+     "en": "General Biology +Lab",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "QUI 1003",
+     "name": "Química General 1 +Lab/Ej",
+     "en": "General Chemistry 1 +Lab+Pr",
+     "credits": 3
+    },
+    {
+     "code": "MAT 1202",
+     "name": "Cálculo Integral + Ej",
+     "en": "Integral Calculus +Pr",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1201",
+        "name": "Cálculo Diferencial + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1203",
+        "name": "Cálculo Diferencial Avanz. +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "BTC 1001",
+     "name": "Introducción Biotecnología",
+     "en": "Introduction to Biotechnology",
+     "credits": 3
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "ARTE",
+     "name": "Arte: ART/MUS/DAN/TEA",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "QUI 2001",
+     "name": "Química Orgánica Básica +Ej",
+     "en": "Basic Organic Chemistry +Pr",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "QUI 1003",
+        "name": "Química General 1 +Lab/Ej",
+        "grade": "C"
+       },
+       {
+        "code": "ODT 1201",
+        "name": "Principios de Química +Ej",
+        "grade": "B"
+       }
+      ]
+     }
+    },
+    {
+     "code": "BTC 2001",
+     "name": "Genética General +Lab",
+     "en": "General Genetics +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "BIO 1102",
+      "name": "Biología General +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "FIS 1005",
+     "name": "Física Cs de la Vida +Lab",
+     "en": "Physics for Life Sciences +Lab",
+     "credits": 3
+    },
+    {
+     "code": "MAT 2008",
+     "name": "Probabilidad y Estadística +Ej",
+     "en": "Statistics and Probability +Pr",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1202",
+        "name": "Cálculo Integral + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "BTC 4001",
+     "name": "Bioquímica y Metabolismo",
+     "en": "Biochemistry and Metabolism",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "QUI 1003",
+        "name": "Química General 1 +Lab/Ej",
+        "grade": "C"
+       },
+       {
+        "code": "QUI 1003E",
+        "name": "General Chemistry 1 +Lab/Pr",
+        "grade": "C"
+       },
+       {
+        "code": "ODT 1201",
+        "name": "Principios de Química +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ECL 2101",
+     "name": "Ecología General",
+     "en": "General Ecology",
+     "credits": 3,
+     "pre": {
+      "code": "BIO 1102",
+      "name": "Biología General +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "BTC 3002",
+     "name": "Biología Molecular +Lab",
+     "en": "Molecular Biology +Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "BIO 1102",
+        "name": "Biología General +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "GREXO",
+        "name": "Exoneración Prerreq Posgrado",
+        "grade": "1"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ELECTIVA 1",
+     "name": "Electiva Libre 1/2",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "HUM",
+     "name": "Humanidades: LIT/FIL/ARH/ESC",
+     "credits": 3,
+     "slot": "humanidades"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "BTC 5005",
+     "name": "Cálculos en Bioprocesos",
+     "en": "Calculations in Bioprocesses",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "QUI 1004",
+          "name": "Química General 2 +Ej",
+          "grade": "C"
+         },
+         {
+          "code": "QUI 2001",
+          "name": "Química Orgánica Básica +Ej",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "code": "MAT 1202",
+        "name": "Cálculo Integral + Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "BTC 3001",
+     "name": "Biotecnología de Animales +Lab",
+     "en": "Animal Biotechnology +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "BTC 3002",
+      "name": "Biología Molecular +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "BIO 3001",
+     "name": "Evolución",
+     "en": "Evolution",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "ECL 2101",
+        "name": "Ecología General",
+        "grade": "C"
+       },
+       {
+        "code": "ECL 2002",
+        "name": "Ecología de Ecosistemas",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "MCR 2001",
+     "name": "Microbiología +Lab",
+     "en": "Microbiology +Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "BIO 1102",
+        "name": "Biología General +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "GREXO",
+        "name": "Exoneración Prerreq Posgrado",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "BIO 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "BTC 3005",
+     "name": "Biotecnología Médica +Lab",
+     "en": "Medical Biotechnology +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "BTC 3002",
+      "name": "Biología Molecular +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "BTC 3004",
+     "name": "Biotecnología de Plantas +Lab",
+     "en": "Plant Biotechnology +Lab",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "BTC 3002",
+          "name": "Biología Molecular +Lab",
+          "grade": "C"
+         },
+         {
+          "code": "BTC 3002E",
+          "name": "Molecular Biology +Lab",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "BTC 2001",
+          "name": "Genética General +Lab",
+          "grade": "C"
+         },
+         {
+          "code": "BTC 2001E",
+          "name": "General Genetics +Lab",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    },
+    {
+     "code": "CCSS",
+     "name": "CCSS:HIS/SOC/ANT/POL/REL/PSI",
+     "credits": 3,
+     "slot": "ccss"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "BTC 5001",
+     "name": "Biorremediación +Lab",
+     "en": "Bioremediation +Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "GREXO",
+        "name": "Exoneración Prerreq Posgrado",
+        "grade": "1"
+       },
+       {
+        "all": [
+         {
+          "code": "MCR 2001",
+          "name": "Microbiología +Lab",
+          "grade": "C"
+         },
+         {
+          "any": [
+           {
+            "code": "INA 2101",
+            "name": "Herramientas Ing. Ambiental 1",
+            "grade": "C"
+           },
+           {
+            "code": "BTC 5005",
+            "name": "Cálculos en Bioprocesos",
+            "grade": "C"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "BTC 5003",
+     "name": "Bioseguridad",
+     "en": "Biosafety",
+     "credits": 3,
+     "pre": {
+      "code": "BTC 3004",
+      "name": "Biotecnología de Plantas +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "BTC 4004",
+     "name": "Genética y Bioinformática +Lab",
+     "en": "Genetic and Bioinformatics +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "BTC 3002",
+      "name": "Biología Molecular +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "BTC 2002E",
+     "name": "Topics in Biotechnology",
+     "credits": 3,
+     "english": true,
+     "pre": {
+      "code": "BTC 3001",
+      "name": "Biotecnología de Animales +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ELECTIVA 2",
+     "name": "Electiva Libre 2/2",
+     "credits": 3,
+     "slot": "electiva"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "BTC 5006",
+     "name": "Bioética",
+     "en": "Bioethics",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "BTC 3002",
+        "name": "Biología Molecular +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "BTC 1001",
+        "name": "Introducción Biotecnología",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "IIN 3005",
+     "name": "Diseño de Experimentos +Lab",
+     "en": "Design of Experiments +Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 2008",
+        "name": "Probabilidad y Estadística +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 2009",
+        "name": "Estadística Empresarial +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1101",
+        "name": "Estadística para CCSS",
+        "grade": "C"
+       },
+       {
+        "code": "MED 3001",
+        "name": "Bioestadística",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1004",
+        "name": "Bioestadística +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "ECN 3401",
+        "name": "Econometría 1 +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "BTC 3003",
+     "name": "Biotecnología Alimentos +Lab",
+     "en": "Food Biotechnology +Lab",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "BTC 3002",
+          "name": "Biología Molecular +Lab",
+          "grade": "C"
+         },
+         {
+          "code": "BTC 3002E",
+          "name": "Molecular Biology +Lab",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "MCR 2001",
+          "name": "Microbiología +Lab",
+          "grade": "C"
+         },
+         {
+          "code": "MCR 2001E",
+          "name": "Applied Microbiology +Lab",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "BTC 4001",
+          "name": "Bioquímica y Metabolismo",
+          "grade": "C"
+         },
+         {
+          "code": "BTC 4001E",
+          "name": "Metabolic Processes",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "BTC 5002",
+     "name": "Ingeniería Genética +Lab",
+     "en": "Genetic Engineering +Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "BTC 3002",
+        "name": "Biología Molecular +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "BTC 3002E",
+        "name": "Molecular Biology +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "GREXO",
+        "name": "Exoneración Prerreq Posgrado",
+        "grade": "1"
+       }
+      ]
+     }
+    },
+    {
+     "code": "OPT1",
+     "name": "Optativa 1/2",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PAS 4000",
+     "name": "Práctica Pre-Profesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 5
+    }
+   ]
+  },
+  {
+   "year": "QUINTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "DEP 0010",
+     "name": "Deportes",
+     "en": "Sports",
+     "credits": 1
+    },
+    {
+     "code": "BTC 4006",
+     "name": "Procesos Industriales + Lab",
+     "en": "Industrial Processes +Lab",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "QUI 2001",
+          "name": "Química Orgánica Básica +Ej",
+          "grade": "C"
+         },
+         {
+          "code": "QUI 1004",
+          "name": "Química General 2 +Ej",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "code": "FIS 1005",
+        "name": "Física Cs de la Vida +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1202",
+        "name": "Cálculo Integral + Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "IIN 4011",
+     "name": "Gestión de Proyectos",
+     "en": "Project Management",
+     "credits": 3
+    },
+    {
+     "code": "OPT2",
+     "name": "Optativa 2/2",
+     "credits": 3
+    },
+    {
+     "code": "BTC 5992",
+     "name": "Proyectos BTC",
+     "en": "Capstone Project BTC",
+     "credits": 5,
+     "pre": {
+      "code": "BTC 5002",
+      "name": "Ingeniería Genética +Lab",
+      "grade": "C"
+     }
+    }
+   ]
+  }
+ ],
+ "notes": [
+  {
+   "title": "Niveles de Inglés ESL (B2 Marco Común Europeo)",
+   "text": "A los estudiantes se les asigna un nivel de inglés (English as a Second Language ESL) con base en el examen de suficiencia rendido durante el proceso de admisión. Los estudiantes también pueden validar sus conocimientos de inglés con certificados internacionales detallados en la sección Suficiencia de Aprendizaje de Lengua Extranjera: Idioma Inglés del Manual del Estudiante. Para poder cumplir con los requisitos de graduación obligatorios todos los estudiantes deben demostrar la suficiencia de inglés a través del examen que exige la USFQ, un certificado internacional validado por la USFQ o la aprobación de los 6 niveles de inglés (ESL).\nPara poder tomar cursos de cualquier área académica en inglés y cursos de otros idiomas los requisitos de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "ESP 1001 - Escritura Académica",
+   "text": "Se sugiere que se tome temprano en la carrera. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Ciencias",
+   "text": "El requisito de CIENCIAS de Colegio General se cumple con la materia QUI 1003 Química General 1 +Lab/Ej. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Matemáticas",
+   "text": "El requisito de MATEMÁTICAS de Colegio General se cumple con la materia MAT 1201 Cálculo Diferencial +Ej. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ADM 3002 - Emprendimiento",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ECN 1001 - Introducción a la Economía",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ARL 1001 - Autoconocimiento ARL 1002 - Cosmos ARL 2001 - Ser y Cosmos",
+   "text": "La nota mínima para aprobación de estos requisitos de CG es C."
+  },
+  {
+   "title": "Arte",
+   "text": "El requisito de ARTE se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nART - Arte/ DAN - Danza/ TEA - Teatro/ MUS - Música"
+  },
+  {
+   "title": "Ciencias Sociales",
+   "text": "El requisito de CIENCIAS SOCIALES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nANT- Antropología/EDU - Educación / HIS - Historia/ REL - Relaciones Internacionales/ POL - Ciencias Políticas/ SOC - Sociología/ PSI - Psicología"
+  },
+  {
+   "title": "Humanidades",
+   "text": "El requisito de HUMANIDADES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nLIT - Literatura/ FIL - Filosofía/ ESC - Escritura Creativa/ ARH - Historia del Arte"
+  },
+  {
+   "title": "Electivas Libres",
+   "text": "Cualquier materia que no se encuentre como requisito obligatorio en la malla curricular puede servir como Electiva Libre de Colegio General. Las Electivas Libres pueden ser utilizadas para cumplir con las exigencias de una segunda carrera o de una subespecialización (minor).\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Prácticas de Servicio Comunitario PRC 2000 - Aprendizaje y Servicio PASEC",
+   "text": "Las prácticas comunitarias se cumplen a través del seminario de APRENDIZAJE Y SERVICIO PASEC. Los estudiantes deben asistir a clases y además cumplir con las horas de servicio comunitario.\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "PAS 4000 - Prácticas Pre-profesionales PASEM",
+   "text": "Las prácticas preprofesionales pueden comenzar a partir del sexto semestre y/o con 75 créditos aprobados, deberán cumplir un mínimo de 240 horas. Los estudiantes deben inscribirse en PASEM en el último verano según su malla académica, la clase se aprueba con las horas de pasantías y la clase teórica. El estudiante debe asegurarse que la fecha de finalización de la clase coincida con su último semestre."
+  },
+  {
+   "title": "Deportes",
+   "text": "Todo estudiante deberá elegir una clase de DEPORTES de las diferentes opciones que se ofrecen cada semestre."
+  },
+  {
+   "title": "GST 0010 - Cultura Gastronómica",
+   "text": "Todo estudiante debe tomar un seminario de Cultura Gastronómica a partir de segundo semestre."
+  },
+  {
+   "title": "Coloquios",
+   "text": "El requisito de Coloquios varía en cada carrera. Consultar en el Decanato Académico de cada Colegio."
+  },
+  {
+   "title": "Materia en Inglés",
+   "text": "El estudiante debe aprobar cualquier materia impartida en inglés, de la carrera o de Colegio General durante la duración de la carrera. Si una materia tiene en su código la terminación (E), (por ejemplo ADM 1001E) significa que la materia se imparte en idioma inglés. Toda materia impartida en inglés tendrá como prerrequisito haber aprobado ESL 0006 Inglés Nivel 6. Para poder tomar cursos de otros idiomas los niveles de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "Writing Intensive",
+   "text": "El estudiante debe aprobar cualquier materia con el atributo Writing Intensive. Para registrarse en un curso Writing Intensive los estudiantes deben haber aprobado todos los niveles de inglés. Se pueden identificar los paralelos con este atributo con un ícono específico en el Catálogo de Cursos Ofertados cada semestre."
+  },
+  {
+   "title": "COL 2000 - Ser Dragón",
+   "text": "Ser Dragón es un seminario de acompañamiento para estudiantes de primer semestre que tiene como objetivo principal facilitar la transición del colegio a la vida universitaria. Todo estudiante que haya ingresado a partir del semestre 202210 deberá cursar y aprobar COL 2000. La nota de aprobación de este requisito es P."
+  },
+  {
+   "title": "",
+   "text": "*Algunas materias del Colegio General, se cumplen con materias designadas para este propósito por cada carrera."
+  },
+  {
+   "title": "",
+   "text": "*Para cumplir con Colegio General en algunos casos los estudiantes deben elegir una materia de posibles áreas académicas (verificar en malla curricular y ver detalle a continuación)."
+  },
+  {
+   "title": "",
+   "text": "* Es necesario obtener mínimo C en las asignaturas de Especialización. Sin embargo, hay carreras que requieren una nota mayor, consultar en el Manual del Estudiante o consultar el reglamento específico de su carrera."
+  },
+  {
+   "title": "",
+   "text": "* Para respaldar el buen desempeño de algunas de las materias de especialización se sugiere que los estudiantes tomen las siguientes materias como parte de los cursos de Electivas Libres de Colegio General: MAT 2002 Ecuaciones Diferenciales y MAT 2003 Introducción a Probabilidades."
+  },
+  {
+   "title": "",
+   "text": "* Asistir a por lo menos 40 coloquios del Colegio de Ciencias Biológicas y Ambientales a lo largo de su carrera. Deben registrarse en el curso BIO 0001 Coloquios cuando hayan asistido ya a 30 coloquios."
+  },
+  {
+   "title": "",
+   "text": "* Se aconseja realizar voluntariados a lo largo de su carrera en laboratorios o institutos de la USFQ afines a su carrera. Esto les dará experiencia práctica y contribuirá a su formación académica."
+  },
+  {
+   "title": "",
+   "text": "*Para conocer el listado de cursos optativos consultar con el responsable académico de la carrera."
+  }
+ ],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=1BTC",
+  "read": "2026-11-19"
+ }
+}

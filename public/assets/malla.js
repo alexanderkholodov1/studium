@@ -90,10 +90,19 @@ let open = '';
 // «INGENIERÍA EN CIENCIAS DE LA COMPUTACIÓN» reads «Ingeniería en Ciencias de la Computación».
 const SMALL = new Set(['de', 'del', 'la', 'las', 'los', 'el', 'en', 'y', 'e', 'con', 'para', 'a']);
 export const title = (s) => String(s ?? '').toLowerCase().replace(/[\p{L}]+/gu, (w, i) => (i && SMALL.has(w) ? w : w[0].toUpperCase() + w.slice(1)));
+// Careers with the same name (online and in person, or two plans) say which is which: the modality, the semesters,
+// and the code if they still match.
+const mode = (c) => String(c.modality ?? '').toLowerCase().replace(/^modalidad\s*/, '').replace(/\s+-\s+/, ', ');
+function careerLabel(c, list) {
+  const same = list.filter((x) => x.name === c.name);
+  if (same.length < 2) return title(c.name);
+  const m = mode(c);
+  return `${title(c.name)} · ${m}${same.filter((x) => mode(x) === m).length > 1 ? ` (${c.code})` : ''}`;
+}
 function picker(list, current) {
   return `<label class="field malla-career"><span>Tu carrera</span><select data-malla-career>
     <option value="">Elige tu carrera…</option>
-    ${list.map((c) => `<option value="${esc(c.code)}" ${c.code === current ? 'selected' : ''}>${esc(title(c.name))}</option>`).join('')}
+    ${list.map((c) => `<option value="${esc(c.code)}" ${c.code === current ? 'selected' : ''}>${esc(careerLabel(c, list))}</option>`).join('')}
   </select></label>`;
 }
 function card(c, passed, malla) {

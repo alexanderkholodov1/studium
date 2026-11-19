@@ -1,0 +1,1023 @@
+{
+ "code": "1PSC",
+ "name": "PSICOLOGÍA CLÍNICA",
+ "title": "Licenciado en Psicología Clínica",
+ "college": "Colegio de Ciencias Sociales y Humanidades",
+ "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+ "total": 137,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "PSI 2101",
+     "name": "Desarrollo: Niño y Adolescente",
+     "en": "Development: Children",
+     "credits": 3
+    },
+    {
+     "code": "BIO 1102",
+     "name": "Biología General +Lab",
+     "en": "General Biology +Lab",
+     "credits": 3
+    },
+    {
+     "code": "PSI 2103",
+     "name": "Introducción a la Psicología",
+     "en": "Principles of Psychology",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "PSI 2501",
+     "name": "Bases de Neurociencia",
+     "en": "Basic Neuroscience",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "BIO 1002",
+        "name": "Biología Básica",
+        "grade": "C"
+       },
+       {
+        "code": "BIO 1102",
+        "name": "Biología General +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PSI 2102",
+     "name": "Desarrollo: Adultez y Vejez",
+     "en": "Development: Adults",
+     "credits": 3,
+     "pre": {
+      "code": "PSI 2101",
+      "name": "Desarrollo: Niño y Adolescente",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "PSI 2109",
+     "name": "Psicología Cognitiva",
+     "en": "Cognitive Psychology",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "PSI 3502",
+        "name": "Neurociencia y Conducta",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 2501",
+        "name": "Bases de Neurociencia",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PSI 3502",
+     "name": "Neurociencia y Conducta",
+     "en": "Neuroscience and Behavior",
+     "credits": 3,
+     "pre": {
+      "code": "PSI 2501",
+      "name": "Bases de Neurociencia",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "PSI 2106",
+     "name": "Psicología de la Personalidad",
+     "en": "Personality Psychology",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "PSI 2103",
+        "name": "Introducción a la Psicología",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 2103E",
+        "name": "Introduction to Psychology",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "MAT 1101",
+     "name": "Estadística para CCSS",
+     "en": "Statistics for Social Sciences",
+     "credits": 3
+    },
+    {
+     "code": "ARTE",
+     "name": "Arte: ART/MUS/DAN/TEA",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "DEP 0010",
+     "name": "Deportes",
+     "en": "Sports",
+     "credits": 1
+    },
+    {
+     "code": "PSC 2001",
+     "name": "Habilidades Clínicas",
+     "en": "Clinical Skills",
+     "credits": 3
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "PSC 3201E",
+     "name": "Measurement in Psychology",
+     "credits": 3,
+     "english": true
+    },
+    {
+     "code": "PSC 2201",
+     "name": "Psicopatología 1",
+     "en": "Psychopathology 1",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "PSI 3502",
+        "name": "Neurociencia y Conducta",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 3502E",
+        "name": "Neuroscience and Behavior",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PSI 2401",
+     "name": "Psicología Social",
+     "en": "Social Psychology",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "PSC 3008",
+     "name": "Entrevista Clínica",
+     "en": "Clinical Interview",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "PSC 2001",
+        "name": "Habilidades Clínicas",
+        "grade": "C"
+       },
+       {
+        "code": "PSC 2001E",
+        "name": "",
+        "grade": "C"
+       },
+       {
+        "all": [
+         {
+          "any": [
+           {
+            "code": "PSI 2001",
+            "name": "Habilidades Clínicas +Lab",
+            "grade": "C"
+           },
+           {
+            "code": "PSI 2001E",
+            "name": "Clinical Skills +Lab",
+            "grade": "C"
+           }
+          ]
+         },
+         {
+          "any": [
+           {
+            "code": "PSC 2201",
+            "name": "Psicopatología 1",
+            "grade": "C"
+           },
+           {
+            "code": "PSC 2201E",
+            "name": "",
+            "grade": "C"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "code": "PSI 2201",
+        "name": "Psicopatología 1 +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 2201E",
+        "name": "Psychopathology 1 +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PSI 1001",
+     "name": "Fundamentos de Investigación",
+     "en": "Fundamentals of Research",
+     "credits": 3
+    },
+    {
+     "code": "PSC 3202",
+     "name": "Psicopatología 2",
+     "en": "Psychopathology 2",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "PSC 2201",
+        "name": "Psicopatología 1",
+        "grade": "C"
+       },
+       {
+        "code": "PSC 2201E",
+        "name": "",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 2201",
+        "name": "Psicopatología 1 +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 2201E",
+        "name": "Psychopathology 1 +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ELECTIVA 1",
+     "name": "Electiva Libre 1/3",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "CCSS",
+     "name": "CCSS:HIS/SOC/ANT/POL/REL/EDU",
+     "credits": 3,
+     "slot": "ccss"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ALB 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "PSC 3501",
+     "name": "Intervención Clínica 1",
+     "en": "Clinical Intervention 1",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "PSC 2201",
+        "name": "Psicopatología 1",
+        "grade": "C"
+       },
+       {
+        "code": "PSC 2201E",
+        "name": "",
+        "grade": "C"
+       },
+       {
+        "all": [
+         {
+          "any": [
+           {
+            "code": "PSI 2201",
+            "name": "Psicopatología 1 +Lab",
+            "grade": "C"
+           },
+           {
+            "code": "PSI 2201E",
+            "name": "Psychopathology 1 +Lab",
+            "grade": "C"
+           }
+          ]
+         },
+         {
+          "any": [
+           {
+            "code": "PSC 3008",
+            "name": "Entrevista Clínica",
+            "grade": "C"
+           },
+           {
+            "code": "PSC 3008E",
+            "name": "",
+            "grade": "C"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "code": "PSI 3008",
+        "name": "Entrevista Clínica +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 3008E",
+        "name": "Clinical Interview+Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PSC 3401",
+     "name": "Psicoterapia 1",
+     "en": "Psychotherapy 1",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "PSC 2201",
+        "name": "Psicopatología 1",
+        "grade": "C"
+       },
+       {
+        "code": "PSC 2201E",
+        "name": "",
+        "grade": "C"
+       },
+       {
+        "all": [
+         {
+          "any": [
+           {
+            "code": "PSI 2201",
+            "name": "Psicopatología 1 +Lab",
+            "grade": "C"
+           },
+           {
+            "code": "PSI 2201E",
+            "name": "Psychopathology 1 +Lab",
+            "grade": "C"
+           }
+          ]
+         },
+         {
+          "any": [
+           {
+            "code": "PSC 3008",
+            "name": "Entrevista Clínica",
+            "grade": "C"
+           },
+           {
+            "code": "PSC 3008E",
+            "name": "",
+            "grade": "C"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "code": "PSI 3008",
+        "name": "Entrevista Clínica +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 3008E",
+        "name": "Clinical Interview+Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PSI 4204",
+     "name": "Investigación en Psicología",
+     "en": "Research in Psychology",
+     "credits": 3,
+     "pre": {
+      "code": "PSI 1001",
+      "name": "Fundamentos de Investigación",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ELECTIVA 2",
+     "name": "Electiva Libre 2/3",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "HUM",
+     "name": "Humanidades: LIT/FIL/ARH/ESC",
+     "credits": 3,
+     "slot": "humanidades"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "PSC 4008",
+     "name": "Intervención en Crisis",
+     "en": "Crisis Intervention",
+     "credits": 2,
+     "pre": {
+      "any": [
+       {
+        "code": "PSC 3202",
+        "name": "Psicopatología 2",
+        "grade": "C"
+       },
+       {
+        "code": "PSC 3202E",
+        "name": "",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 2202",
+        "name": "Psicopatología 2 +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 2202E",
+        "name": "Psychopathology 2 +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PSC 4502",
+     "name": "Intervención Clínica 2",
+     "en": "Clinical Intervention 2",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "PSC 3501",
+        "name": "Intervención Clínica 1",
+        "grade": "C"
+       },
+       {
+        "code": "PSC 3501E",
+        "name": "",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 3501",
+        "name": "Intervención Clínica 1 +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 3501E",
+        "name": "Clinical Intervention 1 +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PSC 4002",
+     "name": "Terapia Familiar",
+     "en": "Family Therapy",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "PSC 3501",
+        "name": "Intervención Clínica 1",
+        "grade": "C"
+       },
+       {
+        "code": "PSC 3501E",
+        "name": "",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 3501",
+        "name": "Intervención Clínica 1 +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 3501E",
+        "name": "Clinical Intervention 1 +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PSC 3004",
+     "name": "Ética Profesional",
+     "en": "Professional Ethics",
+     "credits": 3
+    },
+    {
+     "code": "PSC 4402",
+     "name": "Psicoterapia 2",
+     "en": "Psychotherapy 2",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "PSC 2201",
+        "name": "Psicopatología 1",
+        "grade": "C"
+       },
+       {
+        "code": "PSC 2201E",
+        "name": "",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 2201",
+        "name": "Psicopatología 1 +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 2201E",
+        "name": "Psychopathology 1 +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "PSC 4101",
+     "name": "Observación Clínica Práctica 1",
+     "en": "Practice 1: Clinical Observations",
+     "credits": 2,
+     "pre": {
+      "any": [
+       {
+        "code": "PSC 4502",
+        "name": "Intervención Clínica 2",
+        "grade": "C"
+       },
+       {
+        "code": "PSC 4502E",
+        "name": "",
+        "grade": "C"
+       },
+       {
+        "all": [
+         {
+          "any": [
+           {
+            "code": "PSI 4502",
+            "name": "Intervención Clínica 2 +Lab",
+            "grade": "C"
+           },
+           {
+            "code": "PSI 4502E",
+            "name": "Clinical Intervention 2 +Lab",
+            "grade": "C"
+           }
+          ]
+         },
+         {
+          "any": [
+           {
+            "code": "PSC 4008",
+            "name": "Intervención en Crisis",
+            "grade": "C"
+           },
+           {
+            "code": "PSC 4008E",
+            "name": "",
+            "grade": "C"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "code": "PSI 4008",
+        "name": "Intervención en Crisis",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 4008E",
+        "name": "Crisis Intervention +Pr",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PSC 4006",
+     "name": "Evaluación Personalidad",
+     "en": "Personality Assessment",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "PSI 3201",
+        "name": "Medición en Psicología",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 3201E",
+        "name": "Measurements in Psychology+Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PSC 4009",
+     "name": "Psicofarmacología",
+     "en": "Psychopharmacology",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "PSC 2201",
+        "name": "Psicopatología 1",
+        "grade": "C"
+       },
+       {
+        "code": "PSC 2201E",
+        "name": "",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 2201",
+        "name": "Psicopatología 1 +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 2201E",
+        "name": "Psychopathology 1 +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ELECTIVA 3",
+     "name": "Electiva Libre 3/3",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "OPT 1",
+     "name": "Optativa 1/3",
+     "credits": 3,
+     "slot": "optativa"
+    }
+   ]
+  },
+  {
+   "year": "QUINTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "OPT 2",
+     "name": "Optativa 2/3",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "OPT 3",
+     "name": "Optativa 3/3",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "PSC 5991",
+     "name": "Proyecto Integrador PSC CLI",
+     "en": "Capstone Project PSC CLI",
+     "credits": 5
+    },
+    {
+     "code": "PSC 4000",
+     "name": "Prácticas Clínicas",
+     "en": "Clinical Practicum",
+     "credits": 5,
+     "pre": {
+      "any": [
+       {
+        "code": "PSC 4101",
+        "name": "Observación Clínica Práctica 1",
+        "grade": "C"
+       },
+       {
+        "code": "PSC 4101E",
+        "name": "",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 4101",
+        "name": "Observación Clínica Práctica 1",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 4101E",
+        "name": "Practice 1: Clinical Observati",
+        "grade": "C"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "notes": [
+  {
+   "title": "Niveles de Inglés ESL (B2 Marco Común Europeo)",
+   "text": "A los estudiantes se les asigna un nivel de inglés (English as a Second Language ESL) con base en el examen de suficiencia rendido durante el proceso de admisión. Los estudiantes también pueden validar sus conocimientos de inglés con certificados internacionales detallados en la sección Suficiencia de Aprendizaje de Lengua Extranjera: Idioma Inglés del Manual del Estudiante. Para poder cumplir con los requisitos de graduación obligatorios todos los estudiantes deben demostrar la suficiencia de inglés a través del examen que exige la USFQ, un certificado internacional validado por la USFQ o la aprobación de los 6 niveles de inglés (ESL).\nPara poder tomar cursos de cualquier área académica en inglés y cursos de otros idiomas los requisitos de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "ESP 1001 - Escritura Académica",
+   "text": "Se sugiere que se tome temprano en la carrera. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Ciencias",
+   "text": "El requisito de CIENCIAS de Colegio General se cumple con la materia BIO 1102 Biología General +Lab. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Matemáticas",
+   "text": "El requisito de MATEMÁTICAS de Colegio General se cumple con la materia MAT 1101 Estadística para CCSS. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ADM 3002 - Emprendimiento",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ECN 1001 - Introducción a la Economía",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ARL 1001 - Autoconocimiento ARL 1002 - Cosmos ARL 2001 - Ser y Cosmos",
+   "text": "La nota mínima para aprobación de estos requisitos de CG es C."
+  },
+  {
+   "title": "Ciencias Sociales",
+   "text": "El requisito de CIENCIAS SOCIALES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nANT- Antropología/ EDU - Educación/ HIS- Historia/ REL- Relaciones Internacionales/ POL- Ciencias Políticas/ SOC- Sociología"
+  },
+  {
+   "title": "Humanidades",
+   "text": "El requisito de HUMANIDADES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nLIT- Literatura/ FIL- Filosofía/ ESC- Escritura Creativa/ ARH- Historia del Arte"
+  },
+  {
+   "title": "Arte",
+   "text": "El requisito de ARTE se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nART - Arte/ DAN - Danza/ TEA - Teatro/ MUS - Música"
+  },
+  {
+   "title": "Electivas Libres",
+   "text": "Electivas Libres pueden ser utilizadas para cumplir con las exigencias de una segunda carrera o de una subespecialización (minor).\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "PSC 4008 - Intervención en Crisis",
+   "text": "La clase PSC 4008 - Intervención en Crisis permite cumplir el requisito de prácticas comunitarias. Los estudiantes deben asistir a clases y además cumplir con las horas de servicio comunitario que se asignen en el curso. La nota mínima para aprobación de este requisito es C."
+  },
+  {
+   "title": "PSC 4000 - Prácticas Clínicas",
+   "text": "En el último semestre deberán realizar las prácticas clínicas (240 horas). Una vez inscrito en la clase el profesor entregará el listado de los convenios y plazas para cada lugar. Se dará prioridad a los estudiantes con mejor GPA."
+  },
+  {
+   "title": "Deportes",
+   "text": "Todo estudiante deberá elegir una clase de DEPORTES de las diferentes opciones que se ofrecen cada semestre."
+  },
+  {
+   "title": "GST 0010 - Cultura Gastronómica",
+   "text": "Todo estudiante debe tomar un seminario de Cultura Gastronómica a partir de segundo semestre."
+  },
+  {
+   "title": "Coloquios",
+   "text": "El requisito de Coloquios varía en cada carrera. Consultar en el Decanato Académico de cada Colegio."
+  },
+  {
+   "title": "Materia en Inglés",
+   "text": "El estudiante debe aprobar cualquier materia impartida en inglés, de la carrera o de Colegio General durante la duración de la carrera. Si una materia tiene en su código la terminación (E), (por ejemplo ADM 1001E) significa que la materia se imparte en idioma inglés. Toda materia impartida en inglés tendrá como prerrequisito haber aprobado ESL 0006 Inglés Nivel 6. Para poder tomar cursos de otros idiomas los niveles de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "Writing Intensive",
+   "text": "El estudiante debe aprobar cualquier materia con el atributo Writing Intensive. Para registrarse en un curso Writing Intensive los estudiantes deben haber aprobado todos los niveles de inglés. Se pueden identificar los paralelos con este atributo con un ícono específico en el Catálogo de Cursos Ofertados cada semestre."
+  },
+  {
+   "title": "COL 2000 - Ser Dragón",
+   "text": "Ser Dragón es un seminario de acompañamiento para estudiantes de primer semestre que tiene como objetivo principal facilitar la transición del colegio a la vida universitaria. Todo estudiante que haya ingresado a partir del semestre 202210 deberá cursar y aprobar COL 2000. La nota de aprobación de este requisito es P."
+  },
+  {
+   "title": "",
+   "text": "*Algunas materias del Colegio General, se cumplen con materias designadas para este propósito por cada carrera."
+  },
+  {
+   "title": "",
+   "text": "*Para cumplir con Colegio General en algunos casos los estudiantes deben elegir una materia de posibles áreas académicas (verificar en malla curricular y ver detalle a continuación)."
+  },
+  {
+   "title": "",
+   "text": "* Es necesario obtener mínimo C en las asignaturas de Especialización. Sin embargo, hay carreras que requieren una nota mayor; consulta en el Manual del Estudiante o en el reglamento específico de la carrera."
+  }
+ ],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=1PSC",
+  "read": "2026-11-19"
+ }
+}

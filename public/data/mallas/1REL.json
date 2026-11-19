@@ -1,0 +1,758 @@
+{
+ "code": "1REL",
+ "name": "RELACIONES INTERNACIONALES",
+ "title": "Licenciado en Relaciones Internacionales",
+ "college": "Colegio de Ciencias Sociales y Humanidades",
+ "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+ "total": 127,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "REL 3411",
+     "name": "Historia Sistema Internacional",
+     "en": "History International System",
+     "credits": 3
+    },
+    {
+     "code": "REL 2101",
+     "name": "Intro. Rel. Internacionales",
+     "en": "Intro International Relations",
+     "credits": 3
+    },
+    {
+     "code": "POL 2101",
+     "name": "Introducción Ciencia Política",
+     "en": "Introduction Political Science",
+     "credits": 3
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "REL 3083",
+     "name": "Geopolítica Contemporánea",
+     "en": "Contemporary Geopolitics",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "REL 2101",
+        "name": "Intro. Rel. Internacionales",
+        "grade": "C"
+       },
+       {
+        "code": "REL 2101E",
+        "name": "Intro International Relations",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "MAT 1101",
+     "name": "Estadística para CCSS",
+     "en": "Statistics for Social Sciences",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ALB 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "REL 3102",
+     "name": "Miradas Críticas de las RRII",
+     "en": "Critical Perspectives on IR",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "REL 2101",
+        "name": "Intro. Rel. Internacionales",
+        "grade": "C"
+       },
+       {
+        "code": "REL 2101E",
+        "name": "Intro International Relations",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "REL 3203",
+     "name": "Investigación Cualitativa",
+     "en": "Qualitative Research",
+     "credits": 3
+    },
+    {
+     "code": "ELECTIVA 1",
+     "name": "Electiva Libre 1/3",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "ARTE",
+     "name": "Arte: ART/MUS/DAN/TEA",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "CCSS",
+     "name": "CCSS:HIS/SOC/ANT/POL/REL/PSI",
+     "credits": 3,
+     "slot": "ccss"
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "DEP 0010",
+     "name": "Deportes",
+     "en": "Sports",
+     "credits": 1
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "REL 3001E",
+     "name": "International Organization",
+     "credits": 3,
+     "english": true,
+     "pre": {
+      "any": [
+       {
+        "code": "REL 3102",
+        "name": "Miradas Críticas de las RRII",
+        "grade": "C"
+       },
+       {
+        "code": "REL 3102E",
+        "name": "Contemporary Theories of IR",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "POL 2000",
+     "name": "Investigación Cuantitativa",
+     "en": "Quantitative Research",
+     "credits": 3,
+     "pre": {
+      "code": "MAT 1101",
+      "name": "Estadística para CCSS",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    },
+    {
+     "code": "TEM 1",
+     "name": "Optativa Temática 1/3",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "REL 3003E",
+     "name": "Foreign Policy",
+     "credits": 3,
+     "english": true,
+     "pre": {
+      "any": [
+       {
+        "code": "REL 3001",
+        "name": "Organización Internacional",
+        "grade": "C"
+       },
+       {
+        "code": "REL 3001E",
+        "name": "International Organization",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "REL 3002",
+     "name": "Economía Política Intl.",
+     "en": "Int. Political Economy",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "ECN 1001",
+          "name": "Introducción a la Economía",
+          "grade": "D"
+         },
+         {
+          "code": "ECN 1001E",
+          "name": "Introduction to Economics",
+          "grade": "D"
+         },
+         {
+          "code": "ECN 1002",
+          "name": "Introducción a la Economía",
+          "grade": "D"
+         }
+        ]
+       },
+       {
+        "code": "POL 2101",
+        "name": "Introducción Ciencia Política",
+        "grade": "C"
+       },
+       {
+        "any": [
+         {
+          "code": "REL 2101",
+          "name": "Intro. Rel. Internacionales",
+          "grade": "C"
+         },
+         {
+          "code": "REL 2101E",
+          "name": "Intro International Relations",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "ELECTIVA 2",
+     "name": "Electiva Libre 2/3",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "CIENCIAS",
+     "name": "CC:FIS/QUI/BIO/ECL/NUT/GEO",
+     "credits": 3
+    },
+    {
+     "code": "HUM",
+     "name": "Humanidades: LIT/FIL/ARH/ESC",
+     "credits": 3,
+     "slot": "humanidades"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "REL 4001",
+     "name": "Derecho Internacional",
+     "en": "International Law",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "REL 3003E",
+        "name": "Foreign Policy",
+        "grade": "C"
+       },
+       {
+        "code": "REL 3003",
+        "name": "Política Exterior",
+        "grade": "C"
+       },
+       {
+        "code": "POL 3084",
+        "name": "Política Exterior de la UE",
+        "grade": "C"
+       },
+       {
+        "code": "POL 3084E",
+        "name": "EU Foreign Policy",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "REL 4005",
+     "name": "Diseño y Evaluación Proyectos",
+     "en": "Project Management in IR",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "REL 2101",
+        "name": "Intro. Rel. Internacionales",
+        "grade": "C"
+       },
+       {
+        "code": "POL 2101",
+        "name": "Introducción Ciencia Política",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "REL 4006",
+     "name": "Comercio Global",
+     "en": "World Trade",
+     "credits": 3,
+     "pre": {
+      "code": "REL 3002",
+      "name": "Economía Política Intl.",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ELECTIVA 3",
+     "name": "Electiva Libre 3/3",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "TOPICOS 1",
+     "name": "Tópicos RRII 1/3",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PAS 4000",
+     "name": "Práctica Pre-Profesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 5
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "REL 4003",
+     "name": "Derechos Humanos",
+     "en": "Human Rights",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "REL 4001",
+        "name": "Derecho Internacional",
+        "grade": "C"
+       },
+       {
+        "code": "REL 4001E",
+        "name": "International Law",
+        "grade": "C"
+       },
+       {
+        "code": "JUR 2203",
+        "name": "Derecho Internacional Público",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "REL 4002",
+     "name": "Seguridad Internacional",
+     "en": "International Security",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "REL 3003E",
+        "name": "Foreign Policy",
+        "grade": "C"
+       },
+       {
+        "code": "REL 3003",
+        "name": "Política Exterior",
+        "grade": "C"
+       },
+       {
+        "code": "POL 3084",
+        "name": "Política Exterior de la UE",
+        "grade": "C"
+       },
+       {
+        "code": "POL 3084E",
+        "name": "EU Foreign Policy",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "TEM 2",
+     "name": "Optativa Temática 2/3",
+     "credits": 3
+    },
+    {
+     "code": "TEM 3",
+     "name": "Optativa Temática 3/3",
+     "credits": 3
+    },
+    {
+     "code": "TOPICOS 2",
+     "name": "Tópicos RRII 2/3",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "REL 4084E",
+     "name": "Global Environmental Politics",
+     "credits": 3,
+     "english": true
+    },
+    {
+     "code": "REL 4004",
+     "name": "Manejo Conflicto Global",
+     "en": "Managing Global Conflict",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "REL 4002",
+        "name": "Seguridad Internacional",
+        "grade": "C"
+       },
+       {
+        "code": "REL 4002E",
+        "name": "International Security",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "TOPICOS 3",
+     "name": "Tópicos RRII 3/3",
+     "credits": 3
+    },
+    {
+     "code": "REL 4991",
+     "name": "Proyecto Integrador REL",
+     "en": "Capstone Project REL",
+     "credits": 5,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "REL 3203",
+          "name": "Investigación Cualitativa",
+          "grade": "C"
+         },
+         {
+          "code": "REL 3203E",
+          "name": "Qualitative Research",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "POL 2000",
+          "name": "Investigación Cuantitativa",
+          "grade": "C"
+         },
+         {
+          "code": "POL 2000E",
+          "name": "Quantitative Research",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "notes": [
+  {
+   "title": "Niveles de Inglés ESL (B2 Marco Común Europeo)",
+   "text": "A los estudiantes se les asigna un nivel de inglés (English as a Second Language ESL) con base en el examen de suficiencia rendido durante el proceso de admisión. Los estudiantes también pueden validar sus conocimientos de inglés con certificados internacionales detallados en la sección Suficiencia de Aprendizaje de Lengua Extranjera: Idioma Inglés del Manual del Estudiante. Para poder cumplir con los requisitos de graduación obligatorios todos los estudiantes deben demostrar la suficiencia de inglés a través del examen que exige la USFQ, un certificado internacional validado por la USFQ o la aprobación de los 6 niveles de inglés (ESL).\nPara poder tomar cursos de cualquier área académica en inglés y cursos de otros idiomas los requisitos de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "ESP 1001 - Escritura Académica",
+   "text": "Se sugiere que se tome temprano en la carrera. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Matemáticas",
+   "text": "El requisito de MATEMÁTICAS de Colegio General se cumple con la materia MAT 1101 Estadística para CCSS. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ADM 3002 - Emprendimiento",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ECN 1001 - Introducción a la Economía",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ARL 1001 - Autoconocimiento ARL 1002 - Cosmos ARL 2001 - Ser y Cosmos",
+   "text": "La nota mínima para aprobación de estos requisitos de CG es C."
+  },
+  {
+   "title": "Ciencias Sociales",
+   "text": "El requisito de CIENCIAS SOCIALES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nANT- Antropología/EDU - Educación/ HIS- Historia/ REL- Relaciones Internacionales/ POL- Ciencias Políticas/ SOC- Sociología/ PSI - Psicología"
+  },
+  {
+   "title": "Ciencias",
+   "text": "El requisito de CIENCIAS se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nBIO- Biología/ QUI- Química/ FIS- Física/ ECL- Ecología/ NUT- Nutrición/ GEO- Geología"
+  },
+  {
+   "title": "Humanidades",
+   "text": "El requisito de HUMANIDADES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nLIT- Literatura/ FIL- Filosofía/ ESC- Escritura Creativa/ ARH- Historia del Arte"
+  },
+  {
+   "title": "Arte",
+   "text": "El requisito de ARTE se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nART - Arte/ DAN - Danza/ TEA - Teatro/ MUS - Música"
+  },
+  {
+   "title": "Electivas Libres",
+   "text": "Cualquier materia que no se encuentre como requisito obligatorio en la malla curricular puede servir como Electiva Libre de Colegio General. Las Electivas Libres pueden ser utilizadas para cumplir con las exigencias de una segunda carrera o de una subespecialización (minor).\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Prácticas de Servicio Comunitario PRC 2000 - Aprendizaje y Servicio PASEC",
+   "text": "Las prácticas comunitarias se cumplen a través del seminario de APRENDIZAJE Y SERVICIO PASEC. Los estudiantes deben asistir a clases y además cumplir con las horas de servicio comunitario.\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "PAS 4000 - Prácticas Pre-profesionales PASEM",
+   "text": "Las prácticas preprofesionales pueden comenzar a partir del sexto semestre y/o con 75 créditos aprobados, deberán cumplir un mínimo de 240 horas. Los estudiantes deben inscribirse en PASEM en el último verano según su malla académica, la clase se aprueba con las horas de pasantías y la clase teórica. El estudiante debe asegurarse que la fecha de finalización de la clase coincida con su último semestre."
+  },
+  {
+   "title": "Deportes",
+   "text": "Todo estudiante deberá elegir una clase de DEPORTES de las diferentes opciones que se ofrecen cada semestre."
+  },
+  {
+   "title": "GST 0010 - Cultura Gastronómica",
+   "text": "Todo estudiante debe tomar un seminario de Cultura Gastronómica a partir de segundo semestre."
+  },
+  {
+   "title": "Coloquios",
+   "text": "El requisito de Coloquios varía en cada carrera. Consultar en el Decanato Académico de cada Colegio."
+  },
+  {
+   "title": "Materia en Inglés",
+   "text": "El estudiante debe aprobar cualquier materia impartida en inglés, de la carrera o de Colegio General durante la duración de la carrera. Si una materia tiene en su código la terminación (E), (por ejemplo ADM 1001E) significa que la materia se imparte en idioma inglés. Toda materia impartida en inglés tendrá como prerrequisito haber aprobado ESL 0006 Inglés Nivel 6. Para poder tomar cursos de otros idiomas los niveles de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "Writing Intensive",
+   "text": "El estudiante debe aprobar cualquier materia con el atributo Writing Intensive. Para registrrse en un curso Writing Intensive los estudiantes deben haber aprobado todos los niveles de inglés. Se pueden identificar los paralelos con este atributo con un ícono específico en el Catálogo de Cursos Ofertados cada semestre."
+  },
+  {
+   "title": "COL 2000 - Ser Dragón",
+   "text": "Ser Dragón es un seminario de acompañamiento para estudiantes de primer semestre que tiene como objetivo principal facilitar la transición del colegio a la vida universitaria. Todo estudiante que haya ingresado a partir del semestre 202210 deberá cursar y aprobar COL 2000. La nota de aprobación de este requisito es P."
+  },
+  {
+   "title": "",
+   "text": "*Algunas materias del Colegio General, se cumplen con materias designadas para este propósito por cada carrera."
+  },
+  {
+   "title": "",
+   "text": "*Para cumplir con Colegio General en algunos casos los estudiantes deben elegir una materia de posibles áreas académicas (verificar en malla curricular y ver detalle a continuación)."
+  },
+  {
+   "title": "",
+   "text": "* Es necesario obtener mínimo C en las asignaturas de Especialización. Sin embargo, hay carreras que requieren una nota mayor, consultar en el Manual del Estudiante o consultar el reglamento específico de su carrera."
+  },
+  {
+   "title": "",
+   "text": "* Para cumplir con los requisitos de Tópicos de Relaciones Internacionales (3) el estudiante debe aprobar tres materias de la siguiente lista:"
+  },
+  {
+   "title": "",
+   "text": "* Para cumplir con el requisito de todas las Optativas Temáticas (3), el estudiante debe aprobar una de las opciones en cada una de las listas de la siguiente sección:"
+  }
+ ],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=1REL",
+  "read": "2026-11-19"
+ }
+}

@@ -1,0 +1,678 @@
+{
+ "code": "1GST",
+ "name": "GASTRONOMÍA",
+ "title": "Licenciado en Gastronomía",
+ "college": "Colegio de Hospitalidad, Arte Culinario y Turismo",
+ "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+ "total": 127,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "MAT 1009",
+     "name": "Matemática Empresarial +Ej",
+     "en": "Business Mathematics+Pr",
+     "credits": 3
+    },
+    {
+     "code": "GST 1101",
+     "name": "Conceptos y Técnicas 1",
+     "en": "Concepts and Techniques 1",
+     "credits": 3
+    },
+    {
+     "code": "ADM 1001",
+     "name": "Principios de Administración",
+     "en": "Principles of Management",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 2002",
+     "name": "Panadería",
+     "en": "Bakery",
+     "credits": 3
+    },
+    {
+     "code": "NUT 1001",
+     "name": "Nutrición Humana +Lab",
+     "en": "Human Nutrition +Lab",
+     "credits": 3
+    },
+    {
+     "code": "HSP 1001",
+     "name": "Introducción a la Hospitalidad",
+     "en": "Introduction to Hospitality",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 2003",
+     "name": "Carnicería",
+     "en": "Butchery",
+     "credits": 3,
+     "pre": {
+      "code": "GST 1101",
+      "name": "Conceptos y Técnicas 1",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "GST 2102",
+     "name": "Conceptos y Técnicas 2",
+     "en": "Concepts and Techniques 2",
+     "credits": 3,
+     "pre": {
+      "code": "GST 1101",
+      "name": "Conceptos y Técnicas 1",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "FIN 2002",
+     "name": "Contabilidad Financiera",
+     "en": "Financial Accounting",
+     "credits": 3
+    },
+    {
+     "code": "HSP 2001",
+     "name": "Administración de A & B",
+     "en": "Food and Beverage Management",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "MAT 1009",
+        "name": "Matemática Empresarial +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "HSP 1001",
+        "name": "Introducción a la Hospitalidad",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "GST 1200",
+     "name": "Práctica Culinaria 1",
+     "en": "Culinary Practice 1",
+     "credits": 3,
+     "pre": {
+      "code": "GST 2102",
+      "name": "Conceptos y Técnicas 2",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "GST 3001",
+     "name": "Alta Cocina Ecuatoriana",
+     "en": "Ecuadorian Haute Cuisine",
+     "credits": 3,
+     "pre": {
+      "code": "GST 2102",
+      "name": "Conceptos y Técnicas 2",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "HSP 1005",
+     "name": "Finanzas para Hospitalidad",
+     "en": "Finances for Hospitality",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "FIN 2002",
+        "name": "Contabilidad Financiera",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1009",
+        "name": "Matemática Empresarial +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    },
+    {
+     "code": "CCSS",
+     "name": "CCSS:HIS/SOC/ ANT /POL/REL/PSI",
+     "credits": 3,
+     "slot": "ccss"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "HSP 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "GST 3005",
+     "name": "Alta Cocina Francesa",
+     "en": "French Haute Cuisine",
+     "credits": 3,
+     "pre": {
+      "code": "GST 3001",
+      "name": "Alta Cocina Ecuatoriana",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "HSP 2003",
+     "name": "Introducción al Marketing HSP",
+     "en": "Introduction to HSP Marketing",
+     "credits": 3,
+     "pre": {
+      "code": "HSP 1001",
+      "name": "Introducción a la Hospitalidad",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "GST 3003",
+     "name": "Pastelería",
+     "en": "Patisserie",
+     "credits": 3,
+     "pre": {
+      "code": "GST 2102",
+      "name": "Conceptos y Técnicas 2",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "GST 2001",
+     "name": "Servicio y Protocolo",
+     "en": "Service and Protocol",
+     "credits": 3,
+     "pre": {
+      "code": "HSP 1001",
+      "name": "Introducción a la Hospitalidad",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "HUM",
+     "name": "Humanidades:LIT/FIL/ARH/ESC",
+     "credits": 3,
+     "slot": "humanidades"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 3200",
+     "name": "Práctica Culinaria 2",
+     "en": "Culinary Practice 2",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "GST 1200",
+        "name": "Práctica Culinaria 1",
+        "grade": "C"
+       },
+       {
+        "code": "GST 3003",
+        "name": "Pastelería",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "GST 4002",
+     "name": "Alta Cocina Mundial",
+     "en": "International Haute Cuisine",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "GST 3001",
+        "name": "Alta Cocina Ecuatoriana",
+        "grade": "C"
+       },
+       {
+        "code": "GST 3005",
+        "name": "Alta Cocina Francesa",
+        "grade": "C"
+       },
+       {
+        "code": "GST 2001",
+        "name": "Servicio y Protocolo",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "GST 3007",
+     "name": "Repostería y Chocolatería",
+     "en": "Pastries and Chocolate",
+     "credits": 3,
+     "pre": {
+      "code": "GST 3003",
+      "name": "Pastelería",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ELECTIVA 1",
+     "name": "Electiva Libre 1/3",
+     "credits": 3,
+     "slot": "electiva"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PAS 4000",
+     "name": "Práctica Pre-Profesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 5
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 4006E",
+     "name": "Culinary Innovation",
+     "credits": 3,
+     "english": true,
+     "pre": {
+      "code": "GST 3200",
+      "name": "Práctica Culinaria 2",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "GST 4003",
+     "name": "Enología y Coctelería",
+     "en": "Enology and Mixology",
+     "credits": 3,
+     "pre": {
+      "code": "GST 2001",
+      "name": "Servicio y Protocolo",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "HSP 3002",
+     "name": "Administración de Eventos",
+     "en": "Event Management",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "all": [
+         {
+          "code": "GST 2001",
+          "name": "Servicio y Protocolo",
+          "grade": "C"
+         },
+         {
+          "code": "HSP 1001",
+          "name": "Introducción a la Hospitalidad",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "code": "COM 2101",
+        "name": "Relaciones Públicas 1",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "OPT 1",
+     "name": "Optativa 1/2",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "OPT 2",
+     "name": "Optativa 2/2",
+     "credits": 3,
+     "slot": "optativa"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "DEP 0010",
+     "name": "Deportes",
+     "en": "Sports",
+     "credits": 1
+    },
+    {
+     "code": "ELECTIVA 2",
+     "name": "Electiva Libre 2/3",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "ELECTIVA 3",
+     "name": "Electiva Libre 3/3",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "ARTE",
+     "name": "Arte ART/MUS/DAN/TEA",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "GST 4992",
+     "name": "Identidad Culinaria",
+     "en": "Capstone Project GST",
+     "credits": 5,
+     "pre": {
+      "code": "GST 3200",
+      "name": "Práctica Culinaria 2",
+      "grade": "C"
+     }
+    }
+   ]
+  }
+ ],
+ "notes": [
+  {
+   "title": "Niveles de Inglés ESL (B2 Marco Común Europeo)",
+   "text": "A los estudiantes se les asigna un nivel de inglés (English as a Second Language ESL) con base en el examen de suficiencia rendido durante el proceso de admisión. Los estudiantes también pueden validar sus conocimientos de inglés con certificados internacionales detallados en la sección Suficiencia de Aprendizaje de Lengua Extranjera: Idioma Inglés del Manual del Estudiante. Para poder cumplir con los requisitos de graduación obligatorios todos los estudiantes deben demostrar la suficiencia de inglés a través del examen que exige la USFQ, un certificado internacional validado por la USFQ o la aprobación de los 6 niveles de inglés (ESL).\nPara poder tomar cursos de cualquier área académica en inglés y cursos de otros idiomas los requisitos de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "ESP 1001 - Escritura Académica",
+   "text": "Se sugiere que se tome temprano en la carrera. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Matemáticas",
+   "text": "El requisito de MATEMÁTICAS de Colegio General se cumple con la materia MAT 1009 Matemática Empresarial +Ej. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Ciencias",
+   "text": "El requisito de CIENCIAS de Colegio General se cumple con la materia NUT 1001 Nutrición Humana +Lab. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ADM 3002 - Emprendimiento",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ECN 1001 - Introducción a la Economía",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ARL 1001 - Autoconocimiento ARL 1002 - Cosmos ARL 2001 - Ser y Cosmos",
+   "text": "La nota mínima para aprobación de estos requisitos de CG es C."
+  },
+  {
+   "title": "Ciencias Sociales",
+   "text": "El requisito de CIENCIAS SOCIALES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nANT- Antropología/EDU - Educación / HIS- Historia/ REL- Relaciones Internacionales/ POL- Ciencias Políticas/ SOC- Sociología/ PSI - Psicología"
+  },
+  {
+   "title": "Humanidades",
+   "text": "El requisito de HUMANIDADES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nLIT- Literatura/ FIL- Filosofía/ ESC- Escritura Creativa/ ARH- Historia del Arte"
+  },
+  {
+   "title": "Arte",
+   "text": "El requisito de ARTE se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nART - Arte/ DAN - Danza/ TEA - Teatro/ MUS - Música"
+  },
+  {
+   "title": "Electivas Libres",
+   "text": "Cualquier materia que no se encuentre como requisito obligatorio en la malla curricular puede servir como Electiva Libre de Colegio General. Las Electivas Libres pueden ser utilizadas para cumplir con las exigencias de una segunda carrera o de una subespecialización (minor).\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Prácticas de Servicio Comunitario PRC 2000 - Aprendizaje y Servicio PASEC",
+   "text": "Las prácticas comunitarias se cumplen a través del seminario de APRENDIZAJE Y SERVICIO PASEC. Los estudiantes deben asistir a clases y además cumplir con las horas de servicio comunitario.\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "PAS 4000 - Prácticas Pre-profesionales PASEM",
+   "text": "Las prácticas preprofesionales pueden comenzar a partir del sexto semestre y/o con 75 créditos aprobados, deberán cumplir un mínimo de 240 horas. Los estudiantes deben inscribirse en PASEM en el último verano según su malla académica, la clase se aprueba con las horas de pasantías y la clase teórica. El estudiante debe asegurarse que la fecha de finalización de la clase coincida con su último semestre."
+  },
+  {
+   "title": "Deportes",
+   "text": "Todo estudiante deberá elegir una clase de DEPORTES de las diferentes opciones que se ofrecen cada semestre."
+  },
+  {
+   "title": "GST 0010 - Cultura Gastronómica",
+   "text": "Todo estudiante debe tomar un seminario de Cultura Gastronómica a partir de segundo semestre."
+  },
+  {
+   "title": "Coloquios",
+   "text": "El requisito de Coloquios varía en cada carrera. Consultar en el Decanato Académico de cada Colegio."
+  },
+  {
+   "title": "Materia en Inglés",
+   "text": "El estudiante debe aprobar cualquier materia impartida en inglés, de la carrera o de Colegio General durante la duración de la carrera. Si una materia tiene en su código la terminación (E), (por ejemplo ADM 1001E) significa que la materia se imparte en idioma inglés. Toda materia impartida en inglés tendrá como prerrequisito haber aprobado ESL 0006 Inglés Nivel 6. Para poder tomar cursos de otros idiomas los niveles de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "Writing Intensive",
+   "text": "El estudiante debe aprobar cualquier materia con el atributo Writing Intensive. Para registrarse en un curso Writing Intensive los estudiantes deben haber aprobado todos los niveles de inglés. Se pueden identificar los paralelos con este atributo con un ícono específico en el Catálogo de Cursos Ofertados cada semestre."
+  },
+  {
+   "title": "COL 2000 - Ser Dragón",
+   "text": "Ser Dragón es un seminario de acompañamiento para estudiantes de primer semestre que tiene como objetivo principal facilitar la transición del colegio a la vida universitaria. Todo estudiante que haya ingresado a partir del semestre 202210 deberá cursar y aprobar COL 2000. La nota de aprobación de este requisito es P."
+  },
+  {
+   "title": "",
+   "text": "*Algunas materias del Colegio General, se cumplen con materias designadas para este propósito por cada carrera."
+  },
+  {
+   "title": "",
+   "text": "*Para cumplir con Colegio General en algunos casos los estudiantes deben elegir una materia de posibles áreas académicas (verificar en malla curricular y ver detalle a continuación)."
+  },
+  {
+   "title": "",
+   "text": "* Es necesario obtener mínimo C en las asignaturas de Especialización. Sin embargo, hay carreras que requieren una nota mayor; consulta en el Manual del Estudiante o en el reglamento específico de la carrera."
+  },
+  {
+   "title": "",
+   "text": "* Para cumplir con las Optativas de Gastronomía, el estudiante debe escoger dos cursos de la siguiente lista:"
+  },
+  {
+   "title": "",
+   "text": "* Materias que se pueden revalidar con el programa Disney:"
+  },
+  {
+   "title": "",
+   "text": "* Materias que se pueden revalidar con el programa de Paul Bocuse:"
+  }
+ ],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=1GST",
+  "read": "2026-11-19"
+ }
+}

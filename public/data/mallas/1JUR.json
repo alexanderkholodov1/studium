@@ -1,0 +1,829 @@
+{
+ "code": "1JUR",
+ "name": "DERECHO/LAW",
+ "title": "Abogado",
+ "college": "Colegio de Jurisprudencia",
+ "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+ "total": 147,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "JUR 1101",
+     "name": "Teoría de la Norma Jurídica",
+     "en": "General Theory of Law",
+     "credits": 3
+    },
+    {
+     "code": "JUR 1001",
+     "name": "Historia del Derecho",
+     "en": "History of Law",
+     "credits": 3
+    },
+    {
+     "code": "JUR 1201",
+     "name": "Estado y Sociedad",
+     "en": "Law and Society",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "DEP 0010",
+     "name": "Deportes",
+     "en": "Sports",
+     "credits": 1
+    },
+    {
+     "code": "JUR 1202",
+     "name": "Derecho Constitucional",
+     "en": "Constitutional Law",
+     "credits": 3,
+     "pre": {
+      "code": "JUR 1201",
+      "name": "Estado y Sociedad",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "MAT 1001",
+     "name": "Matemáticas Cotidianas",
+     "en": "Daily Mathematics",
+     "credits": 3
+    },
+    {
+     "code": "JUR 2001",
+     "name": "Introducción Derecho Laboral",
+     "en": "Employment Law",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "all": [
+         {
+          "code": "JUR 1101",
+          "name": "Teoría de la Norma Jurídica",
+          "grade": "C"
+         },
+         {
+          "code": "JUR 1201",
+          "name": "Estado y Sociedad",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "code": "ADM 3001",
+        "name": "Gestión del Talento",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 2402",
+        "name": "Psicología Organizacional",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "JUR 1102",
+     "name": "Sujetos del Derecho",
+     "en": "Introduction to Civil Law",
+     "credits": 3,
+     "pre": {
+      "code": "JUR 1101",
+      "name": "Teoría de la Norma Jurídica",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "JUR 2401",
+     "name": "Derecho Penal 1",
+     "en": "Criminal Law 1",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "JUR 1202",
+        "name": "Derecho Constitucional",
+        "grade": "C"
+       },
+       {
+        "code": "PSI 3088",
+        "name": "Perfilación Criminal",
+        "grade": ""
+       }
+      ]
+     }
+    },
+    {
+     "code": "JUR 2301",
+     "name": "Introducción Derecho Procesal",
+     "en": "Introduction to Procedural Law",
+     "credits": 3,
+     "pre": {
+      "code": "JUR 1202",
+      "name": "Derecho Constitucional",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "JUR 1003",
+     "name": "Filosofía y Lógica Jurídica",
+     "en": "Legal Reasoning",
+     "credits": 3,
+     "pre": {
+      "code": "JUR 1102",
+      "name": "Sujetos del Derecho",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "JUR 2103",
+     "name": "Objetos del Derecho",
+     "en": "Property Law",
+     "credits": 3,
+     "pre": {
+      "code": "JUR 1102",
+      "name": "Sujetos del Derecho",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ARTE",
+     "name": "Arte ART/MUS/DAN/TEA",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "JUR 2402",
+     "name": "Derecho Penal 2",
+     "en": "Criminal Law 2",
+     "credits": 3,
+     "pre": {
+      "code": "JUR 2401",
+      "name": "Derecho Penal 1",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "JUR 2104",
+     "name": "Negocio Jurídico",
+     "en": "Introduction to Contract Law",
+     "credits": 3,
+     "pre": {
+      "code": "JUR 2103",
+      "name": "Objetos del Derecho",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "JUR 3302",
+     "name": "Procesos Generales",
+     "en": "Procedural Law",
+     "credits": 3,
+     "pre": {
+      "code": "JUR 2301",
+      "name": "Introducción Derecho Procesal",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "JUR 2203",
+     "name": "Derecho Internacional Público",
+     "en": "Public International Law",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "JUR 1202",
+        "name": "Derecho Constitucional",
+        "grade": "C"
+       },
+       {
+        "code": "JUR 2301",
+        "name": "Introducción Derecho Procesal",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "JUR 3304",
+     "name": "Derecho Procesal Penal",
+     "en": "Criminal Procedure",
+     "credits": 3,
+     "pre": {
+      "code": "JUR 2402",
+      "name": "Derecho Penal 2",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "JUR 3303",
+     "name": "Teoría de la Prueba",
+     "en": "Evidence",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "JUR 3302",
+        "name": "Procesos Generales",
+        "grade": "C"
+       },
+       {
+        "code": "JUR 2203",
+        "name": "Derecho Internacional Público",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "JUR 3105",
+     "name": "Teoría de las Obligaciones",
+     "en": "Theory of Obligations",
+     "credits": 3,
+     "pre": {
+      "code": "JUR 2104",
+      "name": "Negocio Jurídico",
+      "grade": "C"
+     }
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "JUR 3204",
+     "name": "Derecho Administrativo 1",
+     "en": "Administrative Law 1",
+     "credits": 3,
+     "pre": {
+      "code": "JUR 3303",
+      "name": "Teoría de la Prueba",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "JUR 3106",
+     "name": "Derecho de Familia",
+     "en": "Family Law",
+     "credits": 3,
+     "pre": {
+      "code": "JUR 3105",
+      "name": "Teoría de las Obligaciones",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "JUR 5002E",
+     "name": "Litigation",
+     "credits": 3,
+     "english": true,
+     "pre": {
+      "code": "JUR 3303",
+      "name": "Teoría de la Prueba",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ELECTIVA 1",
+     "name": "Electiva Libre 1/2",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "CIENCIAS",
+     "name": "CC: FIS/QUI/BIO/ECL/NUT/GEO",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "JUR 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "JUR 3205",
+     "name": "Derecho Administrativo 2",
+     "en": "Administrative Law 2",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "JUR 3204",
+        "name": "Derecho Administrativo 1",
+        "grade": "C"
+       },
+       {
+        "code": "JUR 2203",
+        "name": "Derecho Internacional Público",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "JUR 4305",
+     "name": "Procesos Constitucionales",
+     "en": "Constitutional Procedures",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "JUR 3204",
+        "name": "Derecho Administrativo 1",
+        "grade": "C"
+       },
+       {
+        "code": "JUR 1202",
+        "name": "Derecho Constitucional",
+        "grade": "C"
+       },
+       {
+        "code": "JUR 5002",
+        "name": "Litigación Oral",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "JUR 3107",
+     "name": "Contratos",
+     "en": "Contracts",
+     "credits": 3,
+     "pre": {
+      "code": "JUR 3106",
+      "name": "Derecho de Familia",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "JUR OPT 1",
+     "name": "Optativa Derecho 1/3",
+     "credits": 3
+    },
+    {
+     "code": "CCSS/HUM",
+     "name": "Ciencias Sociales/Humanidades",
+     "credits": 3,
+     "slot": "ccss"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "JUR 4108",
+     "name": "Derecho Mercantil",
+     "en": "Commercial Law",
+     "credits": 3,
+     "pre": {
+      "code": "JUR 3205",
+      "name": "Derecho Administrativo 2",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "JUR 4501",
+     "name": "Clínicas Jurídicas 1",
+     "en": "Law Clinics 1",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "JUR 3106",
+        "name": "Derecho de Familia",
+        "grade": "C"
+       },
+       {
+        "code": "JUR 4305",
+        "name": "Procesos Constitucionales",
+        "grade": "C"
+       },
+       {
+        "code": "JUR 2203",
+        "name": "Derecho Internacional Público",
+        "grade": "C"
+       },
+       {
+        "code": "JUR 3204",
+        "name": "Derecho Administrativo 1",
+        "grade": "C"
+       },
+       {
+        "code": "JUR 3302",
+        "name": "Procesos Generales",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "JUR 4206",
+     "name": "Derecho Tributario",
+     "en": "Taxation",
+     "credits": 3,
+     "pre": {
+      "code": "JUR 3205",
+      "name": "Derecho Administrativo 2",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ELECTIVA 2",
+     "name": "Electiva Libre 2/2",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "JUR OPT 2",
+     "name": "Optativa Derecho 2/3",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PAS 4000",
+     "name": "Práctica Pre-Profesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 5
+    }
+   ]
+  },
+  {
+   "year": "QUINTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "JUR 4110",
+     "name": "Derecho Societario",
+     "en": "Company Law",
+     "credits": 2,
+     "pre": {
+      "code": "JUR 4108",
+      "name": "Derecho Mercantil",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "JUR 4109",
+     "name": "Derecho Internacional Privado",
+     "en": "International Conflicts of Law",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "JUR 4108",
+        "name": "Derecho Mercantil",
+        "grade": "C"
+       },
+       {
+        "code": "JUR 4206",
+        "name": "Derecho Tributario",
+        "grade": "C"
+       },
+       {
+        "code": "JUR 4501",
+        "name": "Clínicas Jurídicas 1",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "JUR 5111",
+     "name": "Derecho de Daños",
+     "en": "Tort Law",
+     "credits": 3,
+     "pre": {
+      "code": "JUR 4108",
+      "name": "Derecho Mercantil",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "JUR OPT 3",
+     "name": "Optativa de Derecho 3/3",
+     "credits": 3
+    },
+    {
+     "code": "JUR 5991",
+     "name": "Evaluación Integral JUR",
+     "en": "Integral Assessment JUR",
+     "credits": 5
+    }
+   ]
+  }
+ ],
+ "notes": [
+  {
+   "title": "Niveles de Inglés ESL (B2 Marco Común Europeo)",
+   "text": "A los estudiantes se les asigna un nivel de inglés (English as a Second Language ESL) con base en el examen de suficiencia rendido durante el proceso de admisión. Los estudiantes también pueden validar sus conocimientos de inglés con certificados internacionales detallados en la sección Suficiencia de Aprendizaje de Lengua Extranjera: Idioma Inglés del Manual del Estudiante. Para poder cumplir con los requisitos de graduación obligatorios todos los estudiantes deben demostrar la suficiencia de inglés a través del examen que exige la USFQ, un certificado internacional validado por la USFQ o la aprobación de los 6 niveles de inglés (ESL).\nPara poder tomar cursos de cualquier área académica en inglés y cursos de otros idiomas los requisitos de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "ESP 1001 - Escritura Académica",
+   "text": "Se sugiere que se tome temprano en la carrera. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Matemáticas",
+   "text": "El requisito de MATEMÁTICAS se cumple con la aprobación de cualquier curso de código MAT. El curso MAT 1001 Matemáticas Cotidianas es el curso más básico que cumple con este requisito, pero en esta carrera puedes aprobar cualquier curso MAT para cumplir con este requisito. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ADM 3002 - Emprendimiento",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ECN 1001 - Introducción a la Economía",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ARL 1001 - Autoconocimiento ARL 1002 - Cosmos ARL 2001 - Ser y Cosmos",
+   "text": "La nota mínima para aprobación de estos requisitos de CG es C."
+  },
+  {
+   "title": "Ciencias",
+   "text": "El requisito de CIENCIAS se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nBIO - Biología/ QUI - Química/ FIS - Física/ ECL - Ecología/ NUT - Nutrición/ GEO - Geología"
+  },
+  {
+   "title": "Arte",
+   "text": "El requisito de ARTE se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nART - Arte/ DAN - Danza/ TEA - Teatro/ MUS - Música"
+  },
+  {
+   "title": "Ciencias Sociales/ Humanidades",
+   "text": "El requisito de CIENCIAS SOCIALES o HUMANIDADES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nANT- Antropología/EDU - Educación/ HIS- Historia /REL- Relaciones Internacionales/ POL- Ciencias Políticas/ SOC- Sociología/ PSI- Psicología/ LIT- Literatura/ FIL- Filosofía/ ESC- Escritura Creativa/ ARH- Historia del Arte"
+  },
+  {
+   "title": "Electivas Libres",
+   "text": "Cualquier materia que no se encuentre como requisito obligatorio en la malla curricular puede servir como Electiva Libre de Colegio General. Las Electivas Libres pueden ser utilizadas para cumplir con las exigencias de una segunda carrera o de una subespecialización (minor).\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Prácticas de Servicio Comunitario PRC 2000 - Aprendizaje y Servicio PASEC",
+   "text": "Las prácticas comunitarias se cumplen a través del seminario de APRENDIZAJE Y SERVICIO PASEC. Los estudiantes deben asistir a clases y además cumplir con las horas de servicio comunitario.\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "PAS 4000 - Prácticas Pre-profesionales PASEM",
+   "text": "Las prácticas preprofesionales pueden comenzar a partir del sexto semestre y/o con 75 créditos aprobados, deberán cumplir un mínimo de 240 horas. Los estudiantes deben inscribirse en PASEM en el último verano según su malla académica, la clase se aprueba con las horas de pasantías y la clase teórica. El estudiante debe asegurarse que la fecha de finalización de la clase coincida con su último semestre."
+  },
+  {
+   "title": "Deportes",
+   "text": "Todo estudiante deberá elegir una clase de DEPORTES de las diferentes opciones que se ofrecen cada semestre."
+  },
+  {
+   "title": "GST 0010 - Cultura Gastronómica",
+   "text": "Todo estudiante debe tomar un seminario de Cultura Gastronómica a partir de segundo semestre."
+  },
+  {
+   "title": "Coloquios",
+   "text": "El requisito de Coloquios varía en cada carrera. Consultar en el Decanato Académico de cada Colegio."
+  },
+  {
+   "title": "Materia en Inglés",
+   "text": "El estudiante debe aprobar cualquier materia impartida en inglés, de la carrera o de Colegio General durante la duración de la carrera. Si una materia tiene en su código la terminación (E), (por ejemplo ADM 1001E) significa que la materia se imparte en idioma inglés. Toda materia impartida en inglés tendrá como prerrequisito haber aprobado ESL 0006 Inglés Nivel 6. Para poder tomar cursos de otros idiomas los niveles de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "Writing Intensive",
+   "text": "El estudiante debe aprobar cualquier materia con el atributo Writing Intensive. Para registrarse en un curso Writing Intensive los estudiantes deben haber aprobado todos los niveles de inglés. Se pueden identificar los paralelos con este atributo con un ícono específico en el Catálogo de Cursos Ofertados cada semestre."
+  },
+  {
+   "title": "COL 2000 - Ser Dragón",
+   "text": "Ser Dragón es un seminario de acompañamiento para estudiantes de primer semestre que tiene como objetivo principal facilitar la transición del colegio a la vida universitaria. Todo estudiante que haya ingresado a partir del semestre 202210 deberá cursar y aprobar COL 2000. La nota de aprobación de este requisito es P."
+  },
+  {
+   "title": "Optativas * El listado de cursos optativos incluye los siguientes cursos: OPTATIVAS GENERALES - JUR 2081 Constitucionalismo Latino - JUR 3066E Women on Trial - JUR 3080 Literatura y Derecho - JUR 3080E Law & Literature: Censorship - JUR 3083E Constitution in Modern Context - JUR 3100E Contract Drafting - JUR 4089E Comparative Constitutional Law - JUR 4095 Derecho Sucesorio - JUR 4097 Consultorio Jurídico 1 - JUR 5080E Legal English - JUR 5083 Consultorio Jurídico 2 - POL 3088 Derecho Europeo *Para conocer los prerrequisitos de estos cursos se debe consultar a la coordinación de la carrera. Optativas relacionadas con las concentraciones y minors de la carrera",
+   "text": "-Las concentraciones ofertadas por el Colegio de Jurisprudencia están dirigidas exclusivamente a estudiantes de la carrera de Derecho.\n-Las subespecializaciones o minors se encuentran disponibles para estudiantes de todas las carreras de la USFQ, incluida la carrera de Derecho.\nEl listado de optativas incluye los siguientes cursos:\nCONCENTRACIÓN EN DERECHO EMPRESARIAL\n- JUR 3096 Teoría General de la Empresa\n- JUR 3081 Derecho de la Competencia\n- JUR 4085 Economía para la Competencia\n- JUR 5081 Práctica Societaria\n- JUR 3097 Regulación Finan. y Bancaria\n- JUR 4099 Fiscalidad Internacional\n- JUR 2082 Derecho de Consumo\n- JUR 2002 Derecho Laboral Colectivo\n- JUR 3084 Propiedad Intelectual\n- JUR 2080 Contabilidad para Abogados\n- JUR 3061 Fusiones y Adquisiciones\n- JUR 3076 Compliance Corporativo\n- JUR 3060 Innovación Legal\n- JUR 4096 Impuestos\n- JUR 3072 Insolvencia Empresarial\n- JUR 3077 Derecho de Seguros\n- JUR 3071 Derecho Finanzas Corporativas\n- JUR 2083 Derecho del Entretenimiento\n- JUR 2084 Protección Datos Personales\n- JUR 3069 Legal Tech\n- JUR 3058 Transacciones Corporativas\nCONCENTRACIÓN EN DERECHO PENAL\n- JUR 3090 Delitos de Peligro y Omisión\n- JUR 3099 Psicología Forense\n- JUR 3093E Organised Crime & Corruption\n- JUR 4080 Delitos en Particular 2\n- JUR 4082 Derecho Penal Económico\n- JUR 4081 Criminología\n- JUR 3087 Medicina Legal Forense\n- JUR 4094 Infracciones Tránsito y Drogas\n- JUR 4083 Investig. en Escena Crimen\n- JUR 3086 Delitos contra los DDHH\n- JUR 4092 Derecho Penal Ambiental\n- JUR 3092 Derecho Penal Internacional\n- JUR 3068 Victimología\n- JUR 3067 El Riesgo y el Derecho Penal\nCONCENTRACIÓN EN MANEJO DE CONFLICTOS, NEGOCIACIÓN, MEDIACIÓN Y ARBITRAJE\n- JUR 3082 Introducción a los MASC\n- JUR 4086 Procesos Arbitrales\n- JUR 4098 Arbitraje Internacional\n- JUR 4088 Arbitraje Comercial\n- JUR 5082 Negociación\n- JUR 4087 Práctica de la Mediación\n- JUR 3062E Ethics and Conflict Resolution\nMINOR EN DERECHO AMBIENTAL, SOSTENIBILIDAD Y RECURSOS NATURALES\n- JUR 3088 Derecho Ambiental\n- JUR 4093 Derecho Internacional Ambiental\n- JUR 3089 Derecho y Protección del Mar\n- JUR 3094 Derecho Minero e Hidrocarburos\n- JUR 4092 Derecho Penal Ambiental\n- JUR 3085 Constitucionalismo Ambiental\n- JUR 3070 Derecho de Aguas\n- JUR 3075 Derecho de los Desastres\n- JUR 3059 Derecho Energético\n- JUR 3098 DESCA\nMINOR EN DERECHO HUMANOS\n- JUR 4090 Introducción a los DDHH\n- JUR 3091 Género y Derechos Humanos\n- JUR 3074 Protección Universal de DDHH\n- JUR 3078 Derecho Intl Refugiados\n- JUR 5085 Interamericano de DDHH\n- JUR 3079 Justicia Transicional\n- JUR 3098 DESCA\n- JUR 3086 Delitos contra los DDHH\n- JUR 4091 Derecho Intl Humanitario\n- JUR 3092 Derecho Penal Internacional\n- JUR 3075 Derecho de los Desastres\n- JUR 3206 Filosofía de los Derechos\n- JUR 4093 Derecho Internacional Ambiental\n*Para conocer los prerrequisitos de estos cursos se debe consultar a la coordinación de la carrera."
+  },
+  {
+   "title": "",
+   "text": "*Algunas materias del Colegio General, se cumplen con materias designadas para este propósito por cada carrera."
+  },
+  {
+   "title": "",
+   "text": "*Para cumplir con Colegio General en algunos casos los estudiantes deben elegir una materia de posibles áreas académicas (verificar en malla curricular y ver detalle a continuación)."
+  },
+  {
+   "title": "",
+   "text": "* Es necesario obtener mínimo C en las asignaturas de Especialización. Sin embargo, hay carreras que requieren una nota mayor, consultar en el Manual del Estudiante o consultar el reglamento específico de su carrera."
+  },
+  {
+   "title": "",
+   "text": "* El GPA mínimo en la carrera de Derecho es de 3.0. Sin este promedio, los estudiantes no pueden tomar las clases de Clínicas Jurídicas 1 y Evaluación Integral JUR, ni graduarse del Colegio de Jurisprudencia."
+  },
+  {
+   "title": "",
+   "text": "* Los estudiantes pueden seguir una subespecialización o concentración en Derecho Empresarial, Derecho Penal, Manejo de Conflictos, Derecho Ambiental, Sostenibilidad y Recursos Naturales, y Derechos Humanos."
+  },
+  {
+   "title": "",
+   "text": "* El listado de cursos optativos incluye los siguientes cursos:"
+  },
+  {
+   "title": "",
+   "text": "*Para conocer los prerrequisitos de estos cursos se debe consultar a la coordinación de la carrera."
+  }
+ ],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=1JUR",
+  "read": "2026-11-19"
+ }
+}

@@ -1,0 +1,539 @@
+{
+ "code": "1PMC",
+ "name": "PRODUCCIÓN MEDIOS COMUNICACIÓN",
+ "title": "Licenciado en Producción para Medios de Comunicación",
+ "college": "Colegio de Comunicación y Artes Contemporáneas",
+ "modality": "TELEVISION PRODUCTION AND DIGITAL MEDIA",
+ "total": 127,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "CCO 1001",
+     "name": "Fundamentos de Comunicación",
+     "en": "Fundamentals of Communication",
+     "credits": 3
+    },
+    {
+     "code": "CIN 2006",
+     "name": "Narrativas Audiovisuales",
+     "en": "Storytelling",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "CIN 2007",
+     "name": "Lenguaje Visual y Montaje",
+     "en": "Visual Grammar and Editing",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "CIN 1002",
+     "name": "Lenguaje del Cine 1",
+     "en": "Cinematic Language",
+     "credits": 3
+    },
+    {
+     "code": "FOT 2101",
+     "name": "Fotografía 1",
+     "en": "Photography 1",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "ARTE",
+     "name": "CG - Arte",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "CCSS",
+     "name": "CG - Ciencias Sociales",
+     "credits": 3,
+     "slot": "ccss"
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "CIN 2008",
+     "name": "Cinematografía",
+     "en": "Cinematography",
+     "credits": 3,
+     "pre": {
+      "code": "CIN 2007",
+      "name": "Lenguaje Visual y Montaje",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "CCO 2101",
+     "name": "Teoría Crítica 1: Arte & Media",
+     "en": "Critical Theory 1: Art & Media",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "CCO 1001",
+        "name": "Fundamentos de Comunicación",
+        "grade": "C"
+       },
+       {
+        "code": "ART 1701",
+        "name": "Fundamentos de las Artes",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "CIN 2003",
+     "name": "Sonido",
+     "en": "Sound",
+     "credits": 3
+    },
+    {
+     "code": "CIN 3004",
+     "name": "Dirección",
+     "en": "Storytelling Directing",
+     "credits": 3
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "CIN 2009",
+     "name": "Dirección 2",
+     "en": "Filmmaking",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "CIN 3004",
+        "name": "Storytelling & Dirección",
+        "grade": "C"
+       },
+       {
+        "code": "CIN 2010",
+        "name": "Guion",
+        "grade": "C"
+       },
+       {
+        "code": "CIN 2008",
+        "name": "Cinematografía",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "CIN 2011",
+     "name": "Producción Creativa",
+     "en": "Preproduction",
+     "credits": 3,
+     "pre": {
+      "code": "CIN 2007",
+      "name": "Lenguaje Visual y Montaje",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "CIN 2010",
+     "name": "CIN 2010 Guion",
+     "en": "Scriptwriting",
+     "credits": 3
+    },
+    {
+     "code": "LIT/FIL",
+     "name": "Humanidades LIT/FIL/ARH/ESC",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "CIN 3007",
+     "name": "Montaje de Ficción",
+     "en": "Fiction Editing",
+     "credits": 3,
+     "pre": {
+      "code": "CIN 2011",
+      "name": "Preproducción",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "CIN 3006",
+     "name": "Lenguaje del Cine 2",
+     "en": "Film Language 2",
+     "credits": 3,
+     "pre": {
+      "code": "CIN 1002",
+      "name": "Lenguaje del Cine",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "CCO 3002",
+     "name": "Taller de Investigación",
+     "en": "Research Workshop",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "CCO 1001",
+          "name": "Fundamentos de Comunicación",
+          "grade": "C"
+         },
+         {
+          "code": "ART 1701",
+          "name": "Fundamentos de las Artes",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "CCO 2101",
+          "name": "Teoría Crítica 1: Arte & Media",
+          "grade": "C"
+         },
+         {
+          "code": "CCO 2101E",
+          "name": "Critical Theory 1: Art & Media",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "CCO 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "MAT 1001",
+     "name": "Matemáticas Cotidianas",
+     "en": "Daily Mathematics",
+     "credits": 3
+    },
+    {
+     "code": "DIC 1101",
+     "name": "Herramientas Digitales 1",
+     "en": "Digital Tools 1",
+     "credits": 3
+    },
+    {
+     "code": "CIN 4003",
+     "name": "Finalización",
+     "en": "Final Stages",
+     "credits": 3,
+     "pre": {
+      "code": "CIN 3007",
+      "name": "Montaje de Ficción",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "CIN 4400",
+     "name": "Showrunner + Writers Room",
+     "credits": 3,
+     "pre": {
+      "code": "CIN 2010",
+      "name": "Guion",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ENG 1001E",
+     "name": "Writing and Rhetoric",
+     "credits": 3,
+     "english": true
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PAS 4000",
+     "name": "Práctica Pre-Profesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 5
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "COM 4402",
+     "name": "Estrategias Digitales",
+     "en": "Digital Strategies",
+     "credits": 3
+    },
+    {
+     "code": "CIN 4401",
+     "name": "Producción de Series",
+     "en": "Series Production",
+     "credits": 3,
+     "pre": {
+      "code": "CIN 4400",
+      "name": "Showrunner + Writers Room",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ELECTIVA 1",
+     "name": "CG Electiva Libre 1/2",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "OPT COCOA",
+     "name": "Optativa COCOA",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "CIENCIAS",
+     "name": "CG - Ciencias",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "DEP 0010",
+     "name": "Deportes",
+     "en": "Sports",
+     "credits": 1
+    },
+    {
+     "code": "CIN 4403",
+     "name": "Formatos Comerciales",
+     "en": "Commercial Short Forms",
+     "credits": 3,
+     "pre": {
+      "code": "CIN 4003",
+      "name": "Finalización +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ELECTIVA 2",
+     "name": "CG Electiva Libre 2/2",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "CCO",
+     "name": "Temas en Comunicación y Arte",
+     "credits": 3
+    },
+    {
+     "code": "CIN 4991",
+     "name": "Piloto de Una Serie",
+     "en": "Capstone Project CIN",
+     "credits": 5,
+     "pre": {
+      "code": "CIN 4400",
+      "name": "Showrunner + Writers Room",
+      "grade": "C"
+     }
+    }
+   ]
+  }
+ ],
+ "notes": [],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=1PMC",
+  "read": "2026-11-19"
+ }
+}

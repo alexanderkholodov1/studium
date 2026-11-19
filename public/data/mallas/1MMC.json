@@ -1,0 +1,668 @@
+{
+ "code": "1MMC",
+ "name": "MUSICAL ARTS: COMPOSITION FOR CONTEMPORARY MEDIA",
+ "title": "Licenciado en Artes Musicales",
+ "college": "Colegio de Música",
+ "modality": "",
+ "total": 125,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "MUS 1500",
+     "name": "Intro. Tecnología Música",
+     "en": "Intro to Music Technology",
+     "credits": 2
+    },
+    {
+     "code": "MUS 1110",
+     "name": "Aplicación Musical Teoría +Lab",
+     "en": "Music Application Theory +Lab",
+     "credits": 2
+    },
+    {
+     "code": "CPRIVADAS",
+     "name": "Clases Privadas 1/4 +Lab",
+     "credits": 2
+    },
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "MAT 1001",
+     "name": "Matemáticas Cotidianas",
+     "en": "Daily Mathematics",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ENSAMBLES1",
+     "name": "Ensambles 1/4",
+     "credits": 1
+    },
+    {
+     "code": "MUS 1820",
+     "name": "Entrenamiento Auditivo 1",
+     "en": "Ear Training 1",
+     "credits": 2
+    },
+    {
+     "code": "MUS 1111",
+     "name": "Armonía 2",
+     "en": "Harmony 2",
+     "credits": 2,
+     "pre": {
+      "code": "MUS 1110",
+      "name": "Aplicación Musical Teoría +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "MUS 1120",
+     "name": "Armonía Tonal y Composición 1",
+     "en": "Tonal Harmony and Composition 1",
+     "credits": 2,
+     "pre": {
+      "code": "MUS 1110",
+      "name": "Aplicación Musical Teoría +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "CPRIVADAS",
+     "name": "Clases Privadas 2/4 +Lab",
+     "credits": 2
+    },
+    {
+     "code": "MUS 1501",
+     "name": "Acústica",
+     "en": "Acoustics",
+     "credits": 3,
+     "pre": {
+      "code": "MAT 1001",
+      "name": "Matemáticas Cotidianas",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "MUS 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "ENSAMBLES2",
+     "name": "Ensambles 2/4",
+     "credits": 1
+    },
+    {
+     "code": "MUS 2821",
+     "name": "Entrenamiento Auditivo 2",
+     "en": "Ear Training 2",
+     "credits": 2,
+     "pre": {
+      "code": "MUS 1820",
+      "name": "Entrenamiento Auditivo 1",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "MUS 1600",
+     "name": "Generalidades Industria Música",
+     "en": "General Aspects Music Industry",
+     "credits": 2,
+     "pre": {
+      "code": "ESP 1001",
+      "name": "Escritura Académica",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "MUS 2112",
+     "name": "Armonía 3",
+     "en": "Harmony 3",
+     "credits": 2,
+     "pre": {
+      "code": "MUS 1111",
+      "name": "Armonía 2",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "MUS 2121",
+     "name": "Armonía Tonal y Comp 2",
+     "en": "Tonal Harmony and Composition 2",
+     "credits": 2,
+     "pre": {
+      "code": "MUS 1120",
+      "name": "Armonía Tonal y Composición 1",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "CPRIVADAS",
+     "name": "Clases Privadas 3/4",
+     "credits": 2
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "DEP 0010",
+     "name": "Deportes",
+     "en": "Sports",
+     "credits": 1
+    },
+    {
+     "code": "ENSAMBLES3",
+     "name": "Ensambles 3/4",
+     "credits": 1
+    },
+    {
+     "code": "MUS 2130",
+     "name": "Arreglos 1",
+     "en": "Arrangements 1",
+     "credits": 2,
+     "pre": {
+      "code": "MUS 1111",
+      "name": "Armonía 2",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "MUS 3410",
+     "name": "Comp. Medios Contemporáneos",
+     "en": "Contemporary Media Composition",
+     "credits": 2
+    },
+    {
+     "code": "MUS 2822",
+     "name": "Entrenamiento Auditivo 3",
+     "en": "Ear Training 3",
+     "credits": 2,
+     "pre": {
+      "code": "MUS 2821",
+      "name": "Entrenamiento Auditivo 2",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "MUS 2113",
+     "name": "Armonía 4",
+     "en": "Harmony 4",
+     "credits": 2,
+     "pre": {
+      "code": "MUS 2112",
+      "name": "Armonía 3",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "MUS 3100",
+     "name": "Formas Musicales",
+     "en": "Musical Forms",
+     "credits": 2,
+     "pre": {
+      "code": "MUS 1111",
+      "name": "Armonía 2",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "MUS 2122",
+     "name": "El Arte del Contrapunto",
+     "en": "The Art of Counterpoint",
+     "credits": 3,
+     "pre": {
+      "code": "MUS 1120",
+      "name": "Armonía Tonal y Composición 1",
+      "grade": "C"
+     }
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ENSAMBLES4",
+     "name": "Ensambles 4/4",
+     "credits": 1
+    },
+    {
+     "code": "MUS 3131",
+     "name": "Arreglos 2",
+     "en": "Arranging 2",
+     "credits": 2,
+     "pre": {
+      "code": "MUS 2130",
+      "name": "Arreglos 1",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "MUS 4402",
+     "name": "Orquestación Dramática",
+     "en": "Dramatic Orchestration",
+     "credits": 2,
+     "pre": {
+      "code": "MUS 2113",
+      "name": "Armonía 4",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "MUS 3823",
+     "name": "Entrenamiento Auditivo 4",
+     "en": "Ear Training 4",
+     "credits": 2,
+     "pre": {
+      "code": "MUS 2822",
+      "name": "Entrenamiento Auditivo 3",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "MUS 3401",
+     "name": "Tecnología de la Composición 1",
+     "en": "Scoring Technology 1",
+     "credits": 2,
+     "pre": {
+      "code": "MUS 2113",
+      "name": "Armonía 4",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "LIT/FIL",
+     "name": "Humanidades LIT/FIL/ARH/ESC",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "MUS 4800",
+     "name": "Conducción 1",
+     "en": "Conducting 1",
+     "credits": 1,
+     "pre": {
+      "code": "MUS 2822",
+      "name": "Entrenamiento Auditivo 3",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "MUS 3411",
+     "name": "Composición Dramática 1",
+     "en": "Dramatic Composition 1",
+     "credits": 2,
+     "pre": {
+      "all": [
+       {
+        "code": "MUS 3401",
+        "name": "Tecnología en la Composición 1",
+        "grade": "C"
+       },
+       {
+        "code": "MUS 2113",
+        "name": "Armonía 4",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "MUS 4400",
+     "name": "Tecnología en la Composición 2",
+     "en": "Scoring Technology 2",
+     "credits": 2,
+     "pre": {
+      "code": "MUS 3401",
+      "name": "Tecnología en la Composición 1",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    },
+    {
+     "code": "ENG 1001E",
+     "name": "Writing and Rhetoric",
+     "credits": 3,
+     "english": true
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PAS 4000",
+     "name": "Práctica Pre-Profesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 5
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "MUS 4420",
+     "name": "Composición Dramática 2",
+     "en": "Dramatic Composition 2",
+     "credits": 2,
+     "pre": {
+      "code": "MUS 3411",
+      "name": "Composición Dramática 1",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "MUS 3402",
+     "name": "Composición Post Romántica",
+     "en": "Post Romantic Scoring",
+     "credits": 2,
+     "pre": {
+      "code": "MUS 2113",
+      "name": "Armonía 4",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "CPRIVADAS",
+     "name": "Clases Privadas 4/4 +Lab",
+     "credits": 2
+    },
+    {
+     "code": "MUS 2100",
+     "name": "Historia de la Música",
+     "en": "History of Music",
+     "credits": 3
+    },
+    {
+     "code": "ELECTIVA 1",
+     "name": "Electiva Libre 1/2",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "CCSS",
+     "name": "Ciencias Sociales",
+     "credits": 3,
+     "slot": "ccss"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "MUS 4421",
+     "name": "Composición Dramática 3",
+     "en": "Dramatic Composition 3",
+     "credits": 2,
+     "pre": {
+      "code": "MUS 4420",
+      "name": "Composición Dramática 2",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "MUS 4401",
+     "name": "Tecnología en la Composición 3",
+     "en": "Scoring Technology 3",
+     "credits": 2,
+     "pre": {
+      "all": [
+       {
+        "code": "MUS 4420",
+        "name": "Composición Dramática 2",
+        "grade": "C"
+       },
+       {
+        "code": "MUS 4400",
+        "name": "Tecnología en la Composición 2",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "MUS 4100E",
+     "name": "The Evolution of Jazz",
+     "credits": 3,
+     "english": true
+    },
+    {
+     "code": "ELECTIVA 2",
+     "name": "Electiva Libre 2/2",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "MUS 4992",
+     "name": "Proyecto Integrador CMC",
+     "en": "Final Composition Project",
+     "credits": 5,
+     "pre": {
+      "all": [
+       {
+        "code": "MUS 4400",
+        "name": "Tecnología en la Composición 2",
+        "grade": "C"
+       },
+       {
+        "code": "MUS 4420",
+        "name": "Composición Dramática 2",
+        "grade": "C"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "notes": [
+  {
+   "title": "",
+   "text": "*Algunas materias del Colegio General, se cumplen con materias designadas para este propósito por cada carrera. Cuando una carrera designa una materia en particular para cumplir con el requisito de Colegio General, esa materia requiere nota aprobatoria de C."
+  },
+  {
+   "title": "",
+   "text": "*Para cumplir con Colegio General en algunos casos los estudiantes deben elegir una materia de posibles áreas académicas (verificar en malla curricular y ver detalle a continuación)."
+  },
+  {
+   "title": "",
+   "text": "* Es necesario obtener mínimo C en las asignaturas de Especialización. Sin embargo, hay carreras que requieren una nota mayor, consultar en el Manual del Estudiante o consultar el reglamento específico de su carrera."
+  },
+  {
+   "title": "",
+   "text": "* Para registrarse por primera vez en una clase privada del CoM, el alumno debe rendir una audición del instrumento correspondiente ante el profesor asignado por el Colegio. En esta audición se determinará si el estudiante tiene el nivel necesario para cursar clase privada 1. De no ser el caso, el alumno deberá registrarse y aprobar uno o dos cursos remediales extracurriculares, según determine la audición. Los cursos remediales son:"
+  },
+  {
+   "title": "",
+   "text": "* Estos cursos no reemplazan bajo ninguna circunstancia a un nivel de clase privada, ya que son asignaturas remediales para alcanzar el nivel adecuado que permita el ingreso a la clase privada 1. Esta situación puede retrasar el avance en los niveles de clases privadas, ante lo cual es recomendable que una vez aprobada(s) la(s) clase(s) remedial(es), el estudiante curse un nivel de la clase privada durante una sesión de verano. Con esto el alumno seguirá avanzando en la secuencia de cursos de la malla curricular de la carrera y sin retrasar sus estudios. El estudiante deberá cubrir el valor por concepto de aranceles correspondiente a cualquier curso que tome durante la sesión de verano."
+  },
+  {
+   "title": "",
+   "text": "*La carga de cada curso de Fundamentos de Instrumento es de una hora-crédito. El estudiante podrá tomar el curso remedial en el semestre que corresponda dentro de su carga académica regular de horas-créditos, luego de haber realizado el pago por concepto de matrícula y aranceles. Las horas-crédito cursadas en un curso remedial, no reemplazan ni son equivalentes a las horas-créditos requeridas en los cursos que forman parte de la malla curricular de la carrera."
+  }
+ ],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=1MMC",
+  "read": "2026-11-19"
+ }
+}

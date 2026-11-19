@@ -1,0 +1,1011 @@
+{
+ "code": "1ALI",
+ "name": "INGENIERÍA DE ALIMENTOS",
+ "title": "Ingeniero en Alimentos",
+ "college": "Colegio de Ciencias e Ingenierías",
+ "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+ "total": 142,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "MAT 1201",
+     "name": "Cálculo Diferencial + Ej",
+     "en": "Differential Calculus + Pr",
+     "credits": 3
+    },
+    {
+     "code": "ALI 1003",
+     "name": "Taller de Ing. en Alimentos",
+     "en": "Food Engineering Workshop",
+     "credits": 3
+    },
+    {
+     "code": "QUI 1003",
+     "name": "Química General 1 +Lab/Ej",
+     "en": "General Chemistry 1 +Lab+Pr",
+     "credits": 3
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "BIO 1102",
+     "name": "Biología General +Lab",
+     "en": "General Biology +Lab",
+     "credits": 3
+    },
+    {
+     "code": "QUI 1004",
+     "name": "Química General 2 +Ej",
+     "en": "General Chemistry 2 +Pr",
+     "credits": 3,
+     "pre": {
+      "code": "QUI 1003",
+      "name": "Química General 1 +Lab/Ej",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "MAT 1202",
+     "name": "Cálculo Integral + Ej",
+     "en": "Integral Calculus +Pr",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1201",
+        "name": "Cálculo Diferencial + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1203",
+        "name": "Cálculo Diferencial Avanz. +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "INQ 2001",
+     "name": "Balance de Masa y Energía +Ej",
+     "en": "Mass and Energy Balance +Pr",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1201",
+        "name": "Cálculo Diferencial + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1201E",
+        "name": "Differential Calculus + Pr",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301E",
+        "name": "Calculus for Sciences 1 +Pr",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "MAT 2002",
+     "name": "Ecuaciones Diferenciales",
+     "en": "Differential Equations",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1202",
+        "name": "Cálculo Integral + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1202E",
+        "name": "Integral Calculus +Pr",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1302",
+        "name": "Cálculo para Ciencias 2 +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1302E",
+        "name": "Calculus for Sciences 2 +Pr",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1303",
+        "name": "Cálculo Integral Avanzado +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1303E",
+        "name": "Advanced Integral Calculus +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "QUI 2002",
+     "name": "Química Orgánica +Lab",
+     "en": "Organic Chemistry +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "QUI 1004",
+      "name": "Química General 2 +Ej",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "FIS 2701",
+     "name": "Física para Ing. 1+Lab/Ej",
+     "en": "Physics for Eng. 1 +Lab+Pr",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1202",
+        "name": "Cálculo Integral + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "D"
+       }
+      ]
+     }
+    },
+    {
+     "code": "INQ 3001",
+     "name": "Termodinámica de Procesos +Ej",
+     "en": "Process Thermodynamics +Pr",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "INQ 2001",
+          "name": "Balance de Masa y Energía +Ej",
+          "grade": "C"
+         },
+         {
+          "code": "ALI 1001",
+          "name": "Propiedades Físicas +Lab",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "code": "QUI 1004",
+        "name": "Química General 2 +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1202",
+        "name": "Cálculo Integral + Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ALI 3002",
+     "name": "Química de Alimentos +Lab",
+     "en": "Food Chemistry +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "QUI 2002",
+      "name": "Química Orgánica +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "FIS 2702",
+     "name": "Física para Ing. 2 +Lab/Ej",
+     "en": "Physics for Eng. 2 +Lab+Pr",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "FIS 2701",
+        "name": "Física para Ing. 1 +Lab/Ej",
+        "grade": "C"
+       },
+       {
+        "code": "FIS 2101",
+        "name": "Física General 1 +Lab/Ej",
+        "grade": "C"
+       },
+       {
+        "code": "FIS 1201",
+        "name": "Física 1 para Ciencias +Lab/Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    },
+    {
+     "code": "MAT 2008",
+     "name": "Probabilidad y Estadística +Ej",
+     "en": "Statistics and Probability +Pr",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1202",
+        "name": "Cálculo Integral + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "INQ 3003",
+     "name": "Fenómenos de Transporte +Lab",
+     "en": "Transport Phenomena +Lab",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "INQ 3001",
+          "name": "Termodinámica de Procesos +Ej",
+          "grade": "C"
+         },
+         {
+          "code": "INQ 3001E",
+          "name": "Process Thermodynamics +Pr",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "MAT 2002",
+          "name": "Ecuaciones Diferenciales",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 2002E",
+          "name": "Differential Equations",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 1202",
+          "name": "Cálculo Integral + Ej",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 1202E",
+          "name": "Integral Calculus +Pr",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "IIN 3005",
+     "name": "Diseño de Experimentos +Lab",
+     "en": "Design of Experiments +Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 2008",
+        "name": "Probabilidad y Estadística +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 2009",
+        "name": "Estadística Empresarial +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1101",
+        "name": "Estadística para CCSS",
+        "grade": "C"
+       },
+       {
+        "code": "MED 3001",
+        "name": "Bioestadística",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1004",
+        "name": "Bioestadística +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "ECN 3401",
+        "name": "Econometría 1 +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "ALI 3004",
+     "name": "Análisis de Alimentos +Lab",
+     "en": "Food Analysis +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "ALI 3002",
+      "name": "Química de Alimentos +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "MCR 3001",
+     "name": "Microbiología Alimentos +Lab",
+     "en": "Food Microbiology +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "BIO 1102",
+      "name": "Biología General +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ELECTIVA 1",
+     "name": "Electiva Libre 1/2",
+     "credits": 3,
+     "slot": "electiva"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ALI 3003",
+     "name": "Alimentos Funcionales +Lab",
+     "en": "Functional Foods +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "ALI 3004",
+      "name": "Análisis de Alimentos +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "IIN 3002",
+     "name": "Gestión por Procesos",
+     "en": "Process Management",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 2008",
+        "name": "Probabilidad y Estadística +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 2009",
+        "name": "Estadística Empresarial +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1101",
+        "name": "Estadística para CCSS",
+        "grade": "C"
+       },
+       {
+        "code": "MED 3001",
+        "name": "Bioestadística",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1004",
+        "name": "Bioestadística +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "ECN 3401",
+        "name": "Econometría 1 +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "INQ 4201",
+     "name": "Operaciones Unitarias 1 +Lab",
+     "en": "Unit Operations 1 +Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "INQ 3003",
+        "name": "Fenómenos de Transporte +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "INQ 3003E",
+        "name": "Transport Phenomena +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "CCSS",
+     "name": "CCSS:HIS/SOC/ ANT /POL/REL/PSI",
+     "credits": 3,
+     "slot": "ccss"
+    },
+    {
+     "code": "HUM",
+     "name": "Humanidades: LIT/FIL/ARH/ESC",
+     "credits": 3,
+     "slot": "humanidades"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "DEP 0010",
+     "name": "Deportes",
+     "en": "Sports",
+     "credits": 1
+    },
+    {
+     "code": "ALI 4003",
+     "name": "Evaluación Sensorial +Lab",
+     "en": "Food Sensory Evaluation +Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 2008",
+        "name": "Probabilidad y Estadística +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1004",
+        "name": "Bioestadística +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ALI 4004",
+     "name": "Frutas y Hortalizas +Lab",
+     "en": "Fruits and Vegetables +Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "INQ 4201",
+        "name": "Operaciones Unitarias 1 +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "INQ 4009",
+        "name": "Procesos Industriales +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "AGR 4102",
+        "name": "Cultivos de la Sierra",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ALI 4002",
+     "name": "Cárnicos +Lab",
+     "en": "Meat Products +Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "INQ 4201",
+        "name": "Operaciones Unitarias 1 +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "INQ 4009",
+        "name": "Procesos Industriales +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "AGR 4102",
+        "name": "Cultivos de la Sierra",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "INQ 4202E",
+     "name": "Unit Operations 2 +Lab",
+     "credits": 3,
+     "english": true,
+     "pre": {
+      "any": [
+       {
+        "code": "INQ 4201",
+        "name": "Operaciones Unitarias 1 +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "INQ 4201E",
+        "name": "Unit Operations 1 +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "INQ 3003",
+        "name": "Fenómenos de Transporte +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "INQ 3003E",
+        "name": "Transport Phenomena +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "OPT 1",
+     "name": "Optativa 1/2",
+     "credits": 3,
+     "slot": "optativa"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "AGR 4005E",
+     "name": "Agrobiotechnology + Lab",
+     "credits": 3,
+     "english": true,
+     "pre": {
+      "all": [
+       {
+        "code": "AGR 3001",
+        "name": "Fruticultura",
+        "grade": "C"
+       },
+       {
+        "code": "AGR 4102",
+        "name": "Cultivos de la Sierra",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ALI 4008",
+     "name": "Lácteos +Lab",
+     "en": "Dairy Products +Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "INQ 4201",
+        "name": "Operaciones Unitarias 1 +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "INQ 4009",
+        "name": "Procesos Industriales +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "AGR 4102",
+        "name": "Cultivos de la Sierra",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ALI 5001",
+     "name": "Desarrollo de Nuevos Productos",
+     "en": "Development of New Products/Capstone Project",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "ALI 4003",
+        "name": "Evaluación Sensorial +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "IIN 3005",
+        "name": "Diseño de Experimentos +Lab",
+        "grade": "C"
+       },
+       {
+        "code": "ALI 3003",
+        "name": "Alimentos Funcionales +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "IIN 3009",
+     "name": "Control Est. de Procesos +Lab",
+     "en": "Statistical Quality Control+Lab",
+     "credits": 3,
+     "pre": {
+      "code": "IIN 3002",
+      "name": "Gestión por Procesos",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ARTE",
+     "name": "Arte: ART/MUS/DAN/TEA",
+     "credits": 3,
+     "slot": "arte"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PAS 4000",
+     "name": "Práctica Pre-Profesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 5
+    }
+   ]
+  },
+  {
+   "year": "QUINTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ING 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "IIN 4011",
+     "name": "Gestión de Proyectos",
+     "en": "Project Management",
+     "credits": 3
+    },
+    {
+     "code": "ELECTIVA 2",
+     "name": "Electiva Libre 2/2",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "OPT 2",
+     "name": "Optativa 2/2",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "ALI 5992",
+     "name": "Proyecto Integrador ALI",
+     "en": "Senior Project",
+     "credits": 5
+    }
+   ]
+  }
+ ],
+ "notes": [
+  {
+   "title": "Niveles de Inglés ESL (B2 Marco Común Europeo)",
+   "text": "A los estudiantes se les asigna un nivel de inglés (English as a Second Language ESL) con base en el examen de suficiencia rendido durante el proceso de admisión. Los estudiantes también pueden validar sus conocimientos de inglés con certificados internacionales detallados en la sección Suficiencia de Aprendizaje de Lengua Extranjera: Idioma Inglés del Manual del Estudiante. Para poder cumplir con los requisitos de graduación obligatorios todos los estudiantes deben demostrar la suficiencia de inglés a través del examen que exige la USFQ, un certificado internacional validado por la USFQ o la aprobación de los 6 niveles de inglés (ESL).\nPara poder tomar cursos de cualquier área académica en inglés y cursos de otros idiomas los requisitos de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "ESP 1001 - Escritura Académica",
+   "text": "Se sugiere que se tome temprano en la carrera. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Matemáticas",
+   "text": "El requisito de MATEMÁTICAS de Colegio General se cumple con la materia MAT 1201 Cálculo Diferencial +Ej. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Ciencias",
+   "text": "El requisito de CIENCIAS de Colegio General se cumple con la materia QUI 1003 Química General 1 +Lab/Ej. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ADM 3002 - Emprendimiento",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ECN 1001 - Introducción a la Economía",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ARL 1001 - Autoconocimiento ARL 2001 - Ser y Cosmos",
+   "text": "La nota mínima para aprobación de estos requisitos de CG es C."
+  },
+  {
+   "title": "Arte",
+   "text": "El requisito de ARTE se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nART - Arte/ DAN - Danza/ TEA - Teatro/ MUS - Música"
+  },
+  {
+   "title": "Ciencias Sociales",
+   "text": "El requisito de CIENCIAS SOCIALES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nANT- Antropología/EDU - Educación/ HIS- Historia/ REL- Relaciones Internacionales/ POL- Ciencias Políticas/ SOC- Sociología/ PSI - Psicología"
+  },
+  {
+   "title": "Humanidades",
+   "text": "El requisito de HUMANIDADES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nLIT- Literatura/ FIL- Filosofía/ ESC- Escritura Creativa/ ARH- Historia del Arte"
+  },
+  {
+   "title": "Electivas Libres",
+   "text": "Cualquier materia que no se encuentre como requisito obligatorio en la malla curricular puede servir como Electiva Libre de Colegio General. Las Electivas Libres pueden ser utilizadas para cumplir con las exigencias de una segunda carrera o de una subespecialización (minor).\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Prácticas de Servicio Comunitario PRC 2000 - Aprendizaje y Servicio PASEC",
+   "text": "Las prácticas comunitarias se cumplen a través del seminario de APRENDIZAJE Y SERVICIO PASEC. Los estudiantes deben asistir a clases y además cumplir con las horas de servicio comunitario.\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "PAS 4000 - Prácticas Pre-profesionales PASEM",
+   "text": "Las prácticas preprofesionales pueden comenzar a partir del sexto semestre y/o con 75 créditos aprobados, deberán cumplir un mínimo de 240 horas. Los estudiantes deben inscribirse en PASEM en el último verano según su malla académica, la clase se aprueba con las horas de pasantías y la clase teórica. El estudiante debe asegurarse que la fecha de finalización de la clase coincida con su último semestre."
+  },
+  {
+   "title": "Deportes",
+   "text": "Todo estudiante deberá elegir una clase de DEPORTES de las diferentes opciones que se ofrecen cada semestre."
+  },
+  {
+   "title": "GST 0010 - Cultura Gastronómica",
+   "text": "Todo estudiante debe tomar un seminario de Cultura Gastronómica a partir de segundo semestre."
+  },
+  {
+   "title": "Coloquios",
+   "text": "El requisito de Coloquios varía en cada carrera. Consultar en el Decanato Académico de cada Colegio."
+  },
+  {
+   "title": "Materia en Inglés",
+   "text": "El estudiante debe aprobar cualquier materia impartida en inglés, de la carrera o de Colegio General durante la duración de la carrera. Si una materia tiene en su código la terminación (E), (por ejemplo ADM 1001E) significa que la materia se imparte en idioma inglés. Toda materia impartida en inglés tendrá como prerrequisito haber aprobado ESL 0006 Inglés Nivel 6. Para poder tomar cursos de otros idiomas los niveles de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "Writing Intensive",
+   "text": "El estudiante debe aprobar cualquier materia con el atributo Writing Intensive. Para registrrse en un curso Writing Intensive los estudiantes deben haber aprobado todos los niveles de inglés. Se pueden identificar los paralelos con este atributo con un ícono específico en el Catálogo de Cursos Ofertados cada semestre."
+  },
+  {
+   "title": "COL 2000 - Ser Dragón",
+   "text": "Ser Dragón es un seminario de acompañamiento para estudiantes de primer semestre que tiene como objetivo principal facilitar la transición del colegio a la vida universitaria. Todo estudiante que haya ingresado a partir del semestre 202210 deberá cursar y aprobar COL 2000. La nota de aprobación de este requisito es P."
+  },
+  {
+   "title": "",
+   "text": "*Algunas materias del Colegio General, se cumplen con materias designadas para este propósito por cada carrera."
+  },
+  {
+   "title": "",
+   "text": "*Para cumplir con Colegio General en algunos casos los estudiantes deben elegir una materia de posibles áreas académicas (verificar en malla curricular y ver detalle a continuación)."
+  },
+  {
+   "title": "",
+   "text": "* Todas las materias ofertadas por el Colegio de Ciencias e Ingenierías deben aprobarse con nota mínima de C."
+  },
+  {
+   "title": "",
+   "text": "*Para cumplir con los requisitos de Optativas de Alimentos, los estudiantes deben optar por dos cursos de la siguiente lista:"
+  }
+ ],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=1ALI",
+  "read": "2026-11-19"
+ }
+}

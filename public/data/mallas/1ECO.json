@@ -1,0 +1,801 @@
+{
+ "code": "1ECO",
+ "name": "ECONOMÍA",
+ "title": "Economista",
+ "college": "Colegio de Economía",
+ "modality": "MODALIDAD PRESENCIAL - 8 SEMESTRES",
+ "total": 127,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "MAT 1201",
+     "name": "Cálculo Diferencial + Ej",
+     "en": "Differential Calculus + Pr",
+     "credits": 3
+    },
+    {
+     "code": "FIN 2002",
+     "name": "Contabilidad Financiera",
+     "en": "Financial Accounting",
+     "credits": 3
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ECN 1003",
+     "name": "Métodos Matemáticos",
+     "en": "Mathematical Methods",
+     "credits": 3,
+     "pre": {
+      "code": "MAT 1201",
+      "name": "Cálculo Diferencial + Ej",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ADM 1001",
+     "name": "Principios de Administración",
+     "en": "Principles of Management",
+     "credits": 3
+    },
+    {
+     "code": "ECN 1101",
+     "name": "Principios de Microeconomía",
+     "en": "Principles of Microeconomics",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1201",
+        "name": "Cálculo Diferencial + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1000",
+        "name": "Precálculo",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ECN 2002",
+     "name": "Economía Financiera",
+     "en": "Financial Economics",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "ECN 1101",
+        "name": "Principios de Microeconomía",
+        "grade": "C"
+       },
+       {
+        "code": "FIN 2002",
+        "name": "Contabilidad Financiera",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ECN 2003",
+     "name": "Fundamentos para Econometría",
+     "en": "Fundamentals for Econometrics",
+     "credits": 3,
+     "pre": {
+      "code": "ECN 1003",
+      "name": "Métodos Matemáticos",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ECN 2301",
+     "name": "Economía Matemática 1",
+     "en": "Mathematical Economics 1",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "ECN 1003",
+        "name": "Métodos Matemáticos",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1202",
+        "name": "Cálculo Integral + Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ECN 2201",
+     "name": "Principios de Macroeconomía",
+     "en": "Principles of Macroeconomics",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "ECN 1001",
+        "name": "Introducción a la Economía",
+        "grade": "C"
+       },
+       {
+        "any": [
+         {
+          "code": "MAT 1201",
+          "name": "Cálculo Diferencial + Ej",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 1301",
+          "name": "Cálculo para Ciencias 1 +Ej",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "HUM",
+     "name": "Humanidades: LIT/FIL/ARH/ESC",
+     "credits": 3,
+     "slot": "humanidades"
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "DEP 0010",
+     "name": "Deportes",
+     "en": "Sports",
+     "credits": 1
+    },
+    {
+     "code": "ECN 3401",
+     "name": "Econometría 1 +Ej",
+     "en": "Econometrics 1 +Ej",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "ECN 2003",
+        "name": "Fundamentos para Econometría",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 2003",
+        "name": "Introducción a Probabilidades",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ECN 2102",
+     "name": "Microeconomía Intermedia",
+     "en": "Intermediate Microeconomics",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "ECN 1101",
+        "name": "Principios de Microeconomía",
+        "grade": "C"
+       },
+       {
+        "code": "ECN 2301",
+        "name": "Economía Matemática 1",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ECN 2302",
+     "name": "Economía Matemática 2",
+     "en": "Mathematical Economics 2",
+     "credits": 3,
+     "pre": {
+      "code": "ECN 2301",
+      "name": "Economía Matemática 1",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ARTE",
+     "name": "Arte: ART/MUS/DAN/TEA",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "CIENCIAS",
+     "name": "CC:FIS/QUI/BIO/ECL/NUT/GEO",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "ECN 3402",
+     "name": "Econometría 2 +Ej",
+     "en": "Econometrics 2 +Ex",
+     "credits": 3,
+     "pre": {
+      "code": "ECN 3401",
+      "name": "Econometría 1 +Ej",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "ECN 3202",
+     "name": "Macroeconomía Intermedia",
+     "en": "Intermediate Macroeconomics",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "ECN 2201",
+        "name": "Principios de Macroeconomía",
+        "grade": "C"
+       },
+       {
+        "code": "ECN 2301",
+        "name": "Economía Matemática 1",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ECN 4001E",
+     "name": "International Economics",
+     "credits": 3,
+     "english": true,
+     "pre": {
+      "all": [
+       {
+        "code": "ECN 1101",
+        "name": "Principios de Microeconomía",
+        "grade": "C"
+       },
+       {
+        "code": "ECN 2201",
+        "name": "Principios de Macroeconomía",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "CCSS",
+     "name": "CCSS:HIS/SOC/ANT/POL/REL/PSI",
+     "credits": 3,
+     "slot": "ccss"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ECN 3004",
+     "name": "Pensamiento Económico",
+     "en": "Economic Thought",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "ECN 1101",
+        "name": "Principios de Microeconomía",
+        "grade": "C"
+       },
+       {
+        "code": "ECN 2201",
+        "name": "Principios de Macroeconomía",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ECN 3002",
+     "name": "Teoría de Juegos",
+     "en": "Game Theory",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "ECN 2102",
+        "name": "Microeconomía Intermedia",
+        "grade": "C"
+       },
+       {
+        "code": "GREXO",
+        "name": "Exoneración Prerreq Posgrado",
+        "grade": "1"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ECN 3003",
+     "name": "Evaluación de Proyectos",
+     "en": "Project Evaluation",
+     "credits": 3,
+     "pre": {
+      "code": "ECN 2102",
+      "name": "Microeconomía Intermedia",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    },
+    {
+     "code": "OPT 1",
+     "name": "Optativa 1/3",
+     "credits": 3,
+     "slot": "optativa"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PAS 4000",
+     "name": "Práctica Pre-Profesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 5
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ECN 4003",
+     "name": "Economía Experimental",
+     "en": "Experimental Economics",
+     "credits": 3,
+     "pre": {
+      "code": "ECN 2102",
+      "name": "Microeconomía Intermedia",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ECN 4004",
+     "name": "Política Monetaria y Fiscal",
+     "en": "Fiscal and Monetary Policies",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "ECN 3202",
+        "name": "Macroeconomía Intermedia",
+        "grade": "C"
+       },
+       {
+        "code": "ECN 2302",
+        "name": "Economía Matemática 2",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ELECTIVA 1",
+     "name": "Electiva Libre 1/3",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "ELECTIVA 2",
+     "name": "Electiva Libre 2/3",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "OPT 2",
+     "name": "Optativa 2/3",
+     "credits": 3,
+     "slot": "optativa"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ECN 3005",
+     "name": "Coloquios Economía",
+     "en": "Economics Seminars",
+     "credits": 1,
+     "pre": {
+      "all": [
+       {
+        "code": "ECN 2102",
+        "name": "Microeconomía Intermedia",
+        "grade": "C"
+       },
+       {
+        "code": "ECN 3202",
+        "name": "Macroeconomía Intermedia",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ECN 4005",
+     "name": "Desarrollo del Ecuador",
+     "en": "Ecuadorian Development",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "ECN 1101",
+          "name": "Principios de Microeconomía",
+          "grade": "C"
+         },
+         {
+          "code": "ECN 2001",
+          "name": "Principios de Microeconomía",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "code": "ECN 3004",
+        "name": "Pensamiento Económico",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ELECTIVA 3",
+     "name": "Electiva Libre 3/3",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "OPT 3",
+     "name": "Optativa 3/3",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "ECN 4992",
+     "name": "Economía Empírica",
+     "en": "Capstone Project",
+     "credits": 5,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "ECN 2102",
+          "name": "Microeconomía Intermedia",
+          "grade": "C"
+         },
+         {
+          "code": "ECN 2102E",
+          "name": "Intermediate Microeconomics",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "ECN 3202",
+          "name": "Macroeconomía Intermedia",
+          "grade": "C"
+         },
+         {
+          "code": "ECN 3202E",
+          "name": "Intermediate Macroeconomics",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "ECN 3402",
+          "name": "Econometría 2 +Ej",
+          "grade": "C"
+         },
+         {
+          "code": "ECN 3402E",
+          "name": "Econometrics 2 +Pr",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "notes": [
+  {
+   "title": "Niveles de Inglés ESL (B2 Marco Común Europeo)",
+   "text": "A los estudiantes se les asigna un nivel de inglés (English as a Second Language ESL) con base en el examen de suficiencia rendido durante el proceso de admisión. Los estudiantes también pueden validar sus conocimientos de inglés con certificados internacionales detallados en la sección Suficiencia de Aprendizaje de Lengua Extranjera: Idioma Inglés del Manual del Estudiante. Para poder cumplir con los requisitos de graduación obligatorios todos los estudiantes deben demostrar la suficiencia de inglés a través del examen que exige la USFQ, un certificado internacional validado por la USFQ o la aprobación de los 6 niveles de inglés (ESL).\nPara poder tomar cursos de cualquier área académica en inglés y cursos de otros idiomas los requisitos de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "ESP 1001 - Escritura Académica",
+   "text": "Se sugiere que se tome temprano en la carrera. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Matemáticas",
+   "text": "El requisito de MATEMÁTICAS de Colegio General se cumple con la materia MAT 1201 Cálculo Diferencial +Ej. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ECN 1001 - Introducción a la Economía",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ADM 3002 - Emprendimiento",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ARL 1001 - Autoconocimiento ARL 1002 - Cosmos ARL 2001 - Ser y Cosmos",
+   "text": "La nota mínima para aprobación de estos requisitos de CG es C."
+  },
+  {
+   "title": "Ciencias Sociales",
+   "text": "El requisito de CIENCIAS SOCIALES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nANT- Antropología/EDU - Educación / HIS- Historia/ REL- Relaciones Internacionales/ POL- Ciencias Políticas/ SOC- Sociología/ PSI - Psicología"
+  },
+  {
+   "title": "Humanidades",
+   "text": "El requisito de HUMANIDADES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nLIT- Literatura/ FIL- Filosofía/ ESC- Escritura Creativa/ ARH- Historia del Arte"
+  },
+  {
+   "title": "Arte",
+   "text": "El requisito de ARTE se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG para esta carrera es C.\nART - Arte/ DAN - Danza/ TEA - Teatro/ MUS - Música"
+  },
+  {
+   "title": "Ciencias",
+   "text": "El requisito de CIENCIAS se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nBIO- Biología/ QUI- Química/ FIS- Física/ ECL- Ecología/ NUT- Nutrición/ GEO- Geología"
+  },
+  {
+   "title": "Electivas Libres",
+   "text": "Electivas Libres pueden ser utilizadas para cumplir con las exigencias de una segunda carrera o de una subespecialización (minor).\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Prácticas de Servicio Comunitario PRC 2000 - Aprendizaje y Servicio PASEC",
+   "text": "Las prácticas comunitarias se cumplen a través del seminario de APRENDIZAJE Y SERVICIO PASEC. Los estudiantes deben asistir a clases y además cumplir con las horas de servicio comunitario.\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "PAS 4000 - Prácticas Pre-profesionales PASEM",
+   "text": "Las prácticas preprofesionales pueden comenzar a partir del sexto semestre y/o con 75 créditos aprobados, deberán cumplir un mínimo de 240 horas. Los estudiantes deben inscribirse en PASEM en el último verano según su malla académica, la clase se aprueba con las horas de pasantías y la clase teórica. El estudiante debe asegurarse que la fecha de finalización de la clase coincida con su último semestre."
+  },
+  {
+   "title": "Deportes",
+   "text": "Todo estudiante deberá elegir una clase de DEPORTES de las diferentes opciones que se ofrecen cada semestre."
+  },
+  {
+   "title": "GST 0010 - Cultura Gastronómica",
+   "text": "Todo estudiante debe tomar un seminario de Cultura Gastronómica a partir de segundo semestre."
+  },
+  {
+   "title": "Coloquios",
+   "text": "El requisito de Coloquios varía en cada carrera. Consultar en el Decanato Académico de cada Colegio."
+  },
+  {
+   "title": "Materia en Inglés",
+   "text": "El estudiante debe aprobar cualquier materia impartida en inglés, de la carrera o de Colegio General durante la duración de la carrera. Si una materia tiene en su código la terminación (E), (por ejemplo ADM 1001E) significa que la materia se imparte en idioma inglés. Toda materia impartida en inglés tendrá como prerrequisito haber aprobado ESL 0006 Inglés Nivel 6. Para poder tomar cursos de otros idiomas los niveles de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "Writing Intensive",
+   "text": "El estudiante debe aprobar cualquier materia con el atributo Writing Intensive. Para registrarse en un curso Writing Intensive los estudiantes deben haber aprobado todos los niveles de inglés. Se pueden identificar los paralelos con este atributo con un ícono específico en el Catálogo de Cursos Ofertados cada semestre."
+  },
+  {
+   "title": "COL 2000 - Ser Dragón",
+   "text": "Ser Dragón es un seminario de acompañamiento para estudiantes de primer semestre que tiene como objetivo principal facilitar la transición del colegio a la vida universitaria. Todo estudiante que haya ingresado a partir del semestre 202210 deberá cursar y aprobar COL 2000. La nota de aprobación de este requisito es P."
+  },
+  {
+   "title": "",
+   "text": "*Algunas materias del Colegio General, se cumplen con materias designadas para este propósito por cada carrera."
+  },
+  {
+   "title": "",
+   "text": "*Para cumplir con Colegio General en algunos casos los estudiantes deben elegir una materia de posibles áreas académicas (verificar en malla curricular y ver detalle a continuación)."
+  },
+  {
+   "title": "",
+   "text": "* Es necesario obtener mínimo C en las asignaturas de Especialización. Sin embargo, hay carreras que requieren una nota mayor; consulta en el Manual del Estudiante o en el reglamento específico de la carrera."
+  },
+  {
+   "title": "",
+   "text": "* Para conocer el listado de cursos optativos consultar con el responsable académico de la carrera."
+  }
+ ],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=1ECO",
+  "read": "2026-11-19"
+ }
+}

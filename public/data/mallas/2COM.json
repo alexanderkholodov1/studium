@@ -1,0 +1,602 @@
+{
+ "code": "2COM",
+ "name": "COMUNICACIÓN",
+ "title": "Licenciado en Comunicación",
+ "college": "Colegio de Comunicación y Artes Contemporáneas",
+ "modality": "MODALIDAD EN LÍNEA - 8 SEMESTRES",
+ "total": 126,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "DIC 1101",
+     "name": "Herramientas Digitales 1",
+     "en": "Digital Tools 1",
+     "credits": 3
+    },
+    {
+     "code": "CCO 1001",
+     "name": "Fundamentos de Comunicación",
+     "en": "Fundamentals of Communication",
+     "credits": 3
+    },
+    {
+     "code": "MAT 1101",
+     "name": "Estadística 1",
+     "en": "Statistics for Social Sciences",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "COM 1001",
+     "name": "Hablar en Público",
+     "en": "Public Speaking",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "CIN 2007",
+     "name": "Lenguaje Visual y Montaje",
+     "en": "Visual Grammar and Editing",
+     "credits": 3
+    },
+    {
+     "code": "ARTE",
+     "name": "CG - ARTE",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "RCL 2001",
+     "name": "Conflicto y Resolución",
+     "en": "Conflict and Its Resolution",
+     "credits": 3
+    },
+    {
+     "code": "CCO 2101",
+     "name": "Teoría Crítica 1: Arte & Media",
+     "en": "Critical Theory 1: Art & Media",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "CCO 1001",
+        "name": "Fundamentos de Comunicación",
+        "grade": "C"
+       },
+       {
+        "code": "ART 1701",
+        "name": "Fundamentos de las Artes",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "COM 2101",
+     "name": "Relaciones Públicas 1",
+     "en": "Public Relations 1",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "COM 1001",
+        "name": "Hablar en Público",
+        "grade": "C"
+       },
+       {
+        "code": "GST 2001",
+        "name": "Servicio y Protocolo",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "FOT 2101",
+     "name": "Fotografía 1",
+     "en": "Photography 1",
+     "credits": 3
+    },
+    {
+     "code": "COM 3003",
+     "name": "Comunicación Política",
+     "en": "Political Communication",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "COM 1001",
+        "name": "Hablar en Público",
+        "grade": "C"
+       },
+       {
+        "code": "COM 2101",
+        "name": "Relaciones Públicas 1",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    },
+    {
+     "code": "OPT 1",
+     "name": "Optativa Comunicación 1",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "LIT/FIL",
+     "name": "Humanidades",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "CCO 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "COM 3001",
+     "name": "Comunicación Interna",
+     "en": "Internal Communication",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "COM 1001",
+        "name": "Hablar en Público",
+        "grade": "C"
+       },
+       {
+        "code": "COM 2101",
+        "name": "Relaciones Públicas 1",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "COM 2002",
+     "name": "Marketing Comunicacional",
+     "en": "Marketing Communications",
+     "credits": 3
+    },
+    {
+     "code": "CCO 3002",
+     "name": "Taller de Investigación",
+     "en": "Research Workshop",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "CCO 1001",
+          "name": "Fundamentos de Comunicación",
+          "grade": "C"
+         },
+         {
+          "code": "ART 1701",
+          "name": "Fundamentos de las Artes",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "CCO 2101",
+          "name": "Teoría Crítica 1: Arte & Media",
+          "grade": "C"
+         },
+         {
+          "code": "CCO 2101E",
+          "name": "Critical Theory 1: Art & Media",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "CCSS",
+     "name": "CG - Ciencias Sociales",
+     "credits": 3,
+     "slot": "ccss"
+    },
+    {
+     "code": "CIENCIAS",
+     "name": "CG Ciencias",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "COM 3004",
+     "name": "Eventos y Protocolo",
+     "en": "Events and Protocol",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "all": [
+         {
+          "code": "COM 1001",
+          "name": "Hablar en Público",
+          "grade": "C"
+         },
+         {
+          "code": "COM 2101",
+          "name": "Relaciones Públicas 1",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "code": "GST 2001",
+        "name": "Servicio y Protocolo",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PUB 2003",
+     "name": "Planning e Insights",
+     "credits": 3,
+     "pre": {
+      "code": "COM 2002",
+      "name": "Marketing Comunicacional",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "COM 4102",
+     "name": "Relaciones Públicas 2",
+     "en": "Public Relations 2",
+     "credits": 3,
+     "pre": {
+      "code": "COM 2101",
+      "name": "Relaciones Públicas 1",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ENG 1001E",
+     "name": "Writing and Rhetoric",
+     "credits": 3,
+     "english": true
+    },
+    {
+     "code": "CCO",
+     "name": "Temas en Comunicación y Arte",
+     "credits": 3
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PAS 4000",
+     "name": "Práctica Pre-Profesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 5
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "COM 4003",
+     "name": "Comunicación en Crisis",
+     "en": "Crisis Communication",
+     "credits": 3,
+     "pre": {
+      "code": "COM 3001",
+      "name": "Comunicación Interna",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "COM 4005",
+     "name": "Comunicación Mercadeo Social",
+     "en": "Social Marketing Communication",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "COM 1001",
+        "name": "Hablar en Público",
+        "grade": "C"
+       },
+       {
+        "code": "COM 2101",
+        "name": "Relaciones Públicas 1",
+        "grade": "C"
+       },
+       {
+        "code": "COM 3003",
+        "name": "Comunicación Política",
+        "grade": "C"
+       },
+       {
+        "code": "COM 3001",
+        "name": "Comunicación Interna",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ELECTIVA 1",
+     "name": "CG Electiva Libre 1/2",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "OPT COCOA",
+     "name": "Optativa COCOA",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "OPT 2",
+     "name": "Optativa Comunicación 2",
+     "credits": 3,
+     "slot": "optativa"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "COM 4080",
+     "name": "Proyectos de Comunicación",
+     "en": "Communicaction Projects",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "COM 1001",
+        "name": "Hablar en Público",
+        "grade": "C"
+       },
+       {
+        "code": "COM 2101",
+        "name": "Relaciones Públicas 1",
+        "grade": "C"
+       },
+       {
+        "code": "COM 3003",
+        "name": "Comunicación Política",
+        "grade": "C"
+       },
+       {
+        "code": "COM 3001",
+        "name": "Comunicación Interna",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ELECTIVA 2",
+     "name": "CG Electiva Libre 2/2",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "OPT 3",
+     "name": "Optativa Comunicación 3",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "COM 4992",
+     "name": "Campaña de Comunicación",
+     "en": "Communication Campaign",
+     "credits": 5,
+     "pre": {
+      "code": "COM 4005",
+      "name": "Comunicación Mercadeo Social",
+      "grade": "C"
+     }
+    }
+   ]
+  }
+ ],
+ "notes": [],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=2COM",
+  "read": "2026-11-19"
+ }
+}

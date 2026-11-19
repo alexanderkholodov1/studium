@@ -1,0 +1,916 @@
+{
+ "code": "1IME",
+ "name": "INGENIERÍA MECÁNICA",
+ "title": "Ingeniero Mecánico",
+ "college": "Colegio de Ciencias e Ingenierías",
+ "modality": "MODALIDAD PRESENCIAL - 9 SEMESTRES",
+ "total": 142,
+ "semesters": [
+  {
+   "year": "PRIMER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "MAT 1201",
+     "name": "Cálculo Diferencial + Ej",
+     "en": "Differential Calculus + Pr",
+     "credits": 3
+    },
+    {
+     "code": "IME 1001",
+     "name": "Ing. Mecánica: Introducción",
+     "en": "Intro to Mechanical Eng.",
+     "credits": 3
+    },
+    {
+     "code": "ECN 1001",
+     "name": "Introducción a la Economía",
+     "en": "Introduction to Economics",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1001",
+     "name": "Autoconocimiento",
+     "en": "Self-knowledge",
+     "credits": 3
+    },
+    {
+     "code": "ARL 1002",
+     "name": "Cosmos",
+     "en": "The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ESL 0001",
+     "name": "Inglés Nivel 1",
+     "en": "English Level I",
+     "credits": 0
+    },
+    {
+     "code": "ESL 0002",
+     "name": "Inglés Nivel 2",
+     "en": "English Level II",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0001",
+        "name": "Inglés Nivel 1",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "1"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "PRIMER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ESP 1001",
+     "name": "Escritura Académica",
+     "en": "Academic Writing",
+     "credits": 3
+    },
+    {
+     "code": "QUI 1003",
+     "name": "Química General 1 +Lab/Ej",
+     "en": "General Chemistry 1 +Lab+Pr",
+     "credits": 3
+    },
+    {
+     "code": "MAT 1202",
+     "name": "Cálculo Integral + Ej",
+     "en": "Integral Calculus +Pr",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1201",
+        "name": "Cálculo Diferencial + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1203",
+        "name": "Cálculo Diferencial Avanz. +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ARL 2001",
+     "name": "Ser y Cosmos",
+     "en": "The Self and The Cosmos",
+     "credits": 3
+    },
+    {
+     "code": "ARTE",
+     "name": "Arte: ART/MUS/DAN/TEA",
+     "credits": 3,
+     "slot": "arte"
+    },
+    {
+     "code": "ESL 0003",
+     "name": "Inglés Nivel 3",
+     "en": "English Level III",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0002",
+        "name": "Inglés Nivel 2",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "2"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0004",
+     "name": "Inglés Nivel 4",
+     "en": "English Level IV",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0003",
+        "name": "Inglés Nivel 3",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "IME 2004",
+     "name": "Mecánica Computacional",
+     "en": "Computational Mechanics",
+     "credits": 3
+    },
+    {
+     "code": "MAT 2002",
+     "name": "Ecuaciones Diferenciales",
+     "en": "Differential Equations",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1202",
+        "name": "Cálculo Integral + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1202E",
+        "name": "Integral Calculus +Pr",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1302",
+        "name": "Cálculo para Ciencias 2 +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1302E",
+        "name": "Calculus for Sciences 2 +Pr",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1303",
+        "name": "Cálculo Integral Avanzado +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1303E",
+        "name": "Advanced Integral Calculus +Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "FIS 2701",
+     "name": "Física para Ing. 1+Lab/Ej",
+     "en": "Physics for Eng. 1 +Lab+Pr",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1202",
+        "name": "Cálculo Integral + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "D"
+       }
+      ]
+     }
+    },
+    {
+     "code": "MAT 2203",
+     "name": "Cálculo Vectorial",
+     "en": "Vector Calculus",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1202",
+        "name": "Cálculo Integral + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "HUM",
+     "name": "Humanidades: LIT/FIL/ARH/ESC",
+     "credits": 3,
+     "slot": "humanidades"
+    },
+    {
+     "code": "ESL 0005",
+     "name": "Inglés Nivel 5",
+     "en": "English Level V",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0004",
+        "name": "Inglés Nivel 4",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "4"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ESL 0006",
+     "name": "Inglés Nivel 6",
+     "en": "English Level VI",
+     "credits": 0,
+     "pre": {
+      "any": [
+       {
+        "code": "ESL 0005",
+        "name": "Inglés Nivel 5",
+        "grade": "P"
+       },
+       {
+        "code": "ESLEXO",
+        "name": "Nivel Máximo Exonerado ESL",
+        "grade": "5"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "SEGUNDO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "DEP 0010",
+     "name": "Deportes",
+     "en": "Sports",
+     "credits": 1
+    },
+    {
+     "code": "IME 2001",
+     "name": "Taller Mecánico",
+     "en": "Machine Shop",
+     "credits": 3
+    },
+    {
+     "code": "IME 3001",
+     "name": "Dibujo Mecánico y CAD-CAM +Lab",
+     "en": "Mechanical Drawing and CAD-CAM + Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "IME 2002",
+        "name": "Ing. Mecánica:Introducción",
+        "grade": "C"
+       },
+       {
+        "code": "IME 1001",
+        "name": "Ing. Mecánica: Introducción",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "FIS 2702",
+     "name": "Física para Ing. 2 +Lab/Ej",
+     "en": "Physics for Eng. 2 +Lab+Pr",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "FIS 2701",
+        "name": "Física para Ing. 1 +Lab/Ej",
+        "grade": "C"
+       },
+       {
+        "code": "FIS 2101",
+        "name": "Física General 1 +Lab/Ej",
+        "grade": "C"
+       },
+       {
+        "code": "FIS 1201",
+        "name": "Física 1 para Ciencias +Lab/Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "PRC 2000",
+     "name": "Aprendizaje y Servicio PASEC",
+     "en": "Service Learning PASEC",
+     "credits": 3
+    },
+    {
+     "code": "ELECTIVA 1",
+     "name": "Electiva Libre 1/2",
+     "credits": 3,
+     "slot": "electiva"
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "GST 0010",
+     "name": "Cultura Gastronómica",
+     "en": "Gastronomic Culture",
+     "credits": 1
+    },
+    {
+     "code": "IEE 2001",
+     "name": "Electrónica Básica +Lab",
+     "en": "Basic Electronics +Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "FIS 2102",
+        "name": "Física General 2 +Lab/Ej",
+        "grade": "C"
+       },
+       {
+        "code": "FIS 2702",
+        "name": "Física para Ing. 2 +Lab/Ej",
+        "grade": "C"
+       },
+       {
+        "code": "FIS 2202",
+        "name": "Física 2 para Ciencias +Lab/Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento",
+     "en": "Entrepreneurship",
+     "credits": 3
+    },
+    {
+     "code": "IME 3101",
+     "name": "Ciencia e Ing. Materiales +Lab",
+     "en": "Materials Science and Eng. +Lab",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "QUI 1003",
+        "name": "Química General 1 +Lab/Ej",
+        "grade": "C"
+       },
+       {
+        "code": "QUI 1001",
+        "name": "Química Aplicada +Lab/Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "ICV 2001",
+     "name": "Estática +Ej",
+     "en": "Statics +Pr",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "FIS 2701",
+        "name": "Física para Ing. 1 +Lab/Ej",
+        "grade": "C"
+       },
+       {
+        "code": "FIS 1201",
+        "name": "Física 1 para Ciencias +Lab/Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "IME 3201",
+     "name": "Termodinámica 1 +Ej",
+     "en": "Thermodynamics 1 +Pr",
+     "credits": 3,
+     "pre": {
+      "code": "FIS 2701",
+      "name": "Física para Ing. 1 +Lab/Ej",
+      "grade": "C"
+     }
+    }
+   ]
+  },
+  {
+   "year": "TERCER AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "IME 3002",
+     "name": "Dinámica y Vibraciones + Ej",
+     "en": "Dynamics and Vibrations +Pr",
+     "credits": 3,
+     "pre": {
+      "code": "ICV 2001",
+      "name": "Estática +Ej",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "IME 3007",
+     "name": "Métodos Numéricos para IME",
+     "en": "Numerical Methods for ME",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "IME 3004",
+          "name": "Mecánica Computacional",
+          "grade": "C"
+         },
+         {
+          "code": "IME 2004",
+          "name": "Mecánica Computacional",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "code": "MAT 2203",
+        "name": "Cálculo Vectorial",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "IME 3005",
+     "name": "Mecánica Materiales +Lab/Ej",
+     "en": "Solid Mechanics +Lab/Pr",
+     "credits": 3,
+     "pre": {
+      "code": "ICV 2001",
+      "name": "Estática +Ej",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "IME 3202",
+     "name": "Termodinámica 2 +Lab",
+     "en": "Thermodynamics 2 + Lab",
+     "credits": 3,
+     "pre": {
+      "code": "IME 3201",
+      "name": "Termodinámica 1 +Ej",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "CCSS",
+     "name": "CCSS:HIS/SOC/ANT/POL/REL/PSI",
+     "credits": 3,
+     "slot": "ccss"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "IME 4001",
+     "name": "Mecánica de Fluidos +Lab/Ej",
+     "en": "Fluid Mechanics +Lab+Pr",
+     "credits": 3,
+     "pre": {
+      "code": "IME 3201",
+      "name": "Termodinámica 1 +Ej",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "IME 4003E",
+     "name": "Heat Transfer +Lab/Pr",
+     "en": "Heat Transfer +Lab+Pr",
+     "credits": 3,
+     "english": true,
+     "pre": {
+      "code": "IME 3201",
+      "name": "Termodinámica 1 +Ej",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "IME 4002",
+     "name": "Procesamiento Materiales +Lab",
+     "en": "Materials Processing +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "IME 3101",
+      "name": "Ciencia e Ing. Materiales +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "IME 4301",
+     "name": "Diseño Mecánico",
+     "en": "Mechanical Design",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "IME 3005",
+        "name": "Mecánica Materiales +Lab/Ej",
+        "grade": "C"
+       },
+       {
+        "code": "IME 3001",
+        "name": "Dibujo Mecánico y CAD-CAM +Lab",
+        "grade": "C"
+       }
+      ]
+     }
+    },
+    {
+     "code": "MAT 2008",
+     "name": "Probabilidad y Estadística +Ej",
+     "en": "Statistics and Probability +Pr",
+     "credits": 3,
+     "pre": {
+      "any": [
+       {
+        "code": "MAT 1202",
+        "name": "Cálculo Integral + Ej",
+        "grade": "C"
+       },
+       {
+        "code": "MAT 1301",
+        "name": "Cálculo para Ciencias 1 +Ej",
+        "grade": "C"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "SEGUNDO SEMESTRE",
+   "classes": [
+    {
+     "code": "ING 0001",
+     "name": "Coloquios",
+     "en": "Colloquium",
+     "credits": 1
+    },
+    {
+     "code": "IME 4004",
+     "name": "Elementos Finitos +Lab",
+     "en": "Finite Element Method +Lab",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "code": "IME 3005",
+        "name": "Mecánica Materiales +Lab/Ej",
+        "grade": "C"
+       },
+       {
+        "any": [
+         {
+          "code": "IME 3007",
+          "name": "Métodos Numéricos para IME",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 0330",
+          "name": "Análisis Numérico",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "IME 4003",
+          "name": "Transferencia de Calor +Lab/Ej",
+          "grade": "C"
+         },
+         {
+          "code": "IME 4003E",
+          "name": "Heat Transfer +Lab/Pr",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "IIN 4011",
+     "name": "Gestión de Proyectos",
+     "en": "Project Management",
+     "credits": 3
+    },
+    {
+     "code": "IME 4008",
+     "name": "Dinámica Sistemas/Control +Lab",
+     "en": "Systems Dynamics and Control +Lab",
+     "credits": 3,
+     "pre": {
+      "all": [
+       {
+        "any": [
+         {
+          "code": "IEE 2001",
+          "name": "Electrónica Básica +Lab",
+          "grade": "C"
+         },
+         {
+          "code": "IEE 2001E",
+          "name": "Basic Electronics +Lab",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "MAT 2002",
+          "name": "Ecuaciones Diferenciales",
+          "grade": "C"
+         },
+         {
+          "code": "MAT 2002E",
+          "name": "Differential Equations",
+          "grade": "C"
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "code": "IME 4003",
+          "name": "Transferencia de Calor +Lab/Ej",
+          "grade": "C"
+         },
+         {
+          "code": "IME 4003E",
+          "name": "Heat Transfer +Lab/Pr",
+          "grade": "C"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "code": "IME 4006/7",
+     "name": "Diseño Sist.Energéticos/Manufa",
+     "credits": 3
+    },
+    {
+     "code": "OPT 1",
+     "name": "Optativa 1/2",
+     "credits": 3,
+     "slot": "optativa"
+    }
+   ]
+  },
+  {
+   "year": "CUARTO AÑO",
+   "term": "VERANO",
+   "classes": [
+    {
+     "code": "PAS 4000",
+     "name": "Práctica Pre-Profesional PASEM",
+     "en": "Professional Practicum PASEM",
+     "credits": 5
+    }
+   ]
+  },
+  {
+   "year": "QUINTO AÑO",
+   "term": "PRIMER SEMESTRE",
+   "classes": [
+    {
+     "code": "IME 5001",
+     "name": "Automatización Industrial +Lab",
+     "en": "Industrial Automation +Lab",
+     "credits": 3,
+     "pre": {
+      "code": "IME 4008",
+      "name": "Dinámica Sistemas/Control +Lab",
+      "grade": "C"
+     }
+    },
+    {
+     "code": "ELECTIVA 2",
+     "name": "Electiva Libre 2/2",
+     "credits": 3,
+     "slot": "electiva"
+    },
+    {
+     "code": "OPT 2",
+     "name": "Optativa 2/2",
+     "credits": 3,
+     "slot": "optativa"
+    },
+    {
+     "code": "IME 5992",
+     "name": "Proyecto Integrador IME",
+     "en": "ME Capstone Project",
+     "credits": 5,
+     "pre": {
+      "code": "IME 4301",
+      "name": "Diseño Mecánico",
+      "grade": "C"
+     }
+    }
+   ]
+  }
+ ],
+ "notes": [
+  {
+   "title": "Niveles de Inglés ESL (B2 Marco Común Europeo)",
+   "text": "A los estudiantes se les asigna un nivel de inglés (English as a Second Language ESL) con base en el examen de suficiencia rendido durante el proceso de admisión. Los estudiantes también pueden validar sus conocimientos de inglés con certificados internacionales detallados en la sección Suficiencia de Aprendizaje de Lengua Extranjera: Idioma Inglés del Manual del Estudiante. Para poder cumplir con los requisitos de graduación obligatorios todos los estudiantes deben demostrar la suficiencia de inglés a través del examen que exige la USFQ, un certificado internacional validado por la USFQ o la aprobación de los 6 niveles de inglés (ESL).\nPara poder tomar cursos de cualquier área académica en inglés y cursos de otros idiomas los requisitos de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "Matemáticas",
+   "text": "El requisito de MATEMÁTICAS de Colegio General se cumple con la materia MAT 1201 Cálculo Diferencial + Ej. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Ciencias",
+   "text": "El requisito de CIENCIAS de Colegio General se cumple con la materia QUI 1003 Química General 1 +Lab/Ej. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ESP 1001 - Escritura Académica",
+   "text": "Se sugiere que se tome temprano en la carrera. La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ADM 3002 - Emprendimiento",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ECN 1001 - Introducción a la Economía",
+   "text": "La nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "ARL 1001 - Autoconocimiento ARL 1002 - Cosmos ARL 2001 - Ser y Cosmos",
+   "text": "La nota mínima para aprobación de estos requisitos de CG es C."
+  },
+  {
+   "title": "Arte",
+   "text": "El requisito de ARTE se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nART - Arte/ DAN - Danza/ TEA - Teatro/ MUS - Música"
+  },
+  {
+   "title": "Ciencias Sociales",
+   "text": "El requisito de CIENCIAS SOCIALES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nANT- Antropología/EDU - Educación/ HIS- Historia/ REL- Relaciones Internacionales/ POL- Ciencias Políticas/ SOC- Sociología/ PSI - Psicología"
+  },
+  {
+   "title": "Humanidades",
+   "text": "El requisito de HUMANIDADES se cumple con la aprobación de cualquier curso de las áreas académicas detalladas a continuación. La nota mínima para aprobación de este requisito de CG es C.\nLIT- Literatura/ FIL- Filosofía/ ESC- Escritura Creativa/ ARH- Historia del Arte"
+  },
+  {
+   "title": "Electivas Libres",
+   "text": "Cualquier materia que no se encuentre como requisito obligatorio en la malla curricular puede servir como Electiva Libre de Colegio General. Las Electivas Libres pueden ser utilizadas para cumplir con las exigencias de una segunda carrera o de una subespecialización (minor).\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "Prácticas de Servicio Comunitario PRC 2000 - Aprendizaje y Servicio PASEC",
+   "text": "Las prácticas comunitarias se cumplen a través del seminario de APRENDIZAJE Y SERVICIO PASEC. Los estudiantes deben asistir a clases y además cumplir con las horas de servicio comunitario.\nLa nota mínima para aprobación de este requisito de CG es C."
+  },
+  {
+   "title": "PAS 4000 - Prácticas Pre-profesionales PASEM",
+   "text": "Las prácticas preprofesionales pueden comenzar a partir del sexto semestre y/o con 75 créditos aprobados, deberán cumplir un mínimo de 240 horas. Los estudiantes deben inscribirse en PASEM en el último verano según su malla académica, la clase se aprueba con las horas de pasantías y la clase teórica. El estudiante debe asegurarse que la fecha de finalización de la clase coincida con su último semestre."
+  },
+  {
+   "title": "Deportes",
+   "text": "Todo estudiante deberá elegir una clase de DEPORTES de las diferentes opciones que se ofrecen cada semestre."
+  },
+  {
+   "title": "GST 0010 - Cultura Gastronómica",
+   "text": "Todo estudiante debe tomar un seminario de Cultura Gastronómica a partir de segundo semestre."
+  },
+  {
+   "title": "Coloquios",
+   "text": "El requisito de Coloquios varía en cada carrera. Consultar en el Decanato Académico de cada Colegio."
+  },
+  {
+   "title": "Materia en Inglés",
+   "text": "El estudiante debe registrarse en cualquier materia impartida en inglés, de la carrera o de Colegio General. Si una materia tiene en su código la terminación (E), (ADM 1001E) significa que la materia se imparte en idioma inglés. Toda materia impartida en inglés tendrá como prerrequisito ESL 0006 Inglés Nivel 6. Para poder tomar cursos de otros idiomas los niveles de inglés deben haber sido aprobados formalmente."
+  },
+  {
+   "title": "Writing Intensive",
+   "text": "El estudiante debe aprobar cualquier materia con el atributo Writing Intensive. Para registrrse en un curso Writing Intensive los estudiantes deben haber aprobado todos los niveles de inglés. Se pueden identificar los paralelos con este atributo con un ícono específico en el Catálogo de Cursos Ofertados cada semestre."
+  },
+  {
+   "title": "COL 2000 - Ser Dragón",
+   "text": "Ser Dragón es un seminario de acompañamiento para estudiantes de primer semestre que tiene como objetivo principal facilitar la transición del colegio a la vida universitaria. Todo estudiante que haya ingresado a partir del semestre 202210 deberá cursar y aprobar COL 2000. La nota de aprobación de este requisito es P."
+  },
+  {
+   "title": "Optativas * Las Optativas de Ingeniería Mecánica se cumplen aprobando 2 cursos de la siguiente lista: OO IME 3006 Intro: Robótica +Lab IME 4005 Vibraciones +Lab IME 4006 Diseño de Sistemas Energéticos IME 4007 Diseño para Manufactura IME 4080 Instrumentación/Metrología +Ej IME 4081 Desgaste, Corrosión y Falla IME 4082 Ingeniería Automotriz IME 4083 Turbomáquinas IME 4084 Aerodinámica IME 4085 Mecanismos IME 5080 Diseño de Estructuras de Acero/ ICV 4401 Estructuras de Acero 1 IME 5082 Refrigeración y Aire Acondicionado IME 5083 Energías Renovables IME 5085 Dinámica de Fluidos (CFD) IME 5086 Confiabilidad y Mantenimiento Materias de Diseño Ingeniería Mecánica - Design Courses Mechanical Engineering",
+   "text": "Para cumplir con el componente de diseño que ofrece la carrera de Ingeniería Mecánica, los estudiantes pueden cursar las materias IME 4006 Diseño de Sistemas Energéticos ó IME 4007 Diseño para Manufactura.\nIME 4006 Diseño de Sistemas Energéticos - Energy Systems Design\nEste curso está enfocado en el diseño de sistemas de energía utilizando mecánica de fluidos, termodinámica y conceptos de transferencia de calor. Los temas cubiertos incluyen el análisis y la selección de los componentes del sistema de energía térmica, así como la simulación y optimización de diferentes sistemas y componentes de energía.\nThis course is focused on the design of energy systems using fluid mechanics, thermodynamics, and heat transfer concepts. Topics covered include analysis and selection of thermal energy system components, as well as the simulation and optimization of different systems and energy components.\nIME 4007 Diseño para Manufactura - Design for Manufacturability\nEl curso cubre una variedad de temas que incluyen: el proceso de diseño, el material y las consideraciones de fabricación, el diseño para el montaje, la calidad, el diseño robusto y la ingeniería del ciclo de vida. Las conferencias se complementarán con proyectos de laboratorio en el área de tolerancia, ensamblaje y fabricación, incluido un proyecto relacionado con la industria donde los estudiantes rediseñarán un producto real, generarán un prototipo y obtendrán comentarios de la industria con respecto a la fabricación.\nThe lecture portion of the course covers a variety of issues including: the design process, material and manufacturing considerations, design for assembly, quality, robust design, and life cycle engineering. The lectures will be augmented with laboratory projects in the area of tolerancing, assembly, and manufacturability including an industry related project where the students will redesign an actual product, generate a prototype, and obtain feedback from the industry concerning manufacturability."
+  },
+  {
+   "title": "",
+   "text": "*Algunas materias del Colegio General, se cumplen con materias designadas para este propósito por cada carrera."
+  },
+  {
+   "title": "",
+   "text": "*Para cumplir con Colegio General en algunos casos los estudiantes deben elegir una materia de posibles áreas académicas (verificar en malla curricular y ver detalle a continuación)."
+  },
+  {
+   "title": "",
+   "text": "* Todas las materias ofertadas por el Colegio de Ciencias e Ingenierías deben aprobarse con nota mínima de C."
+  },
+  {
+   "title": "",
+   "text": "* Las Optativas de Ingeniería Mecánica se cumplen aprobando 2 cursos de la siguiente lista:"
+  }
+ ],
+ "source": {
+  "url": "https://wsexternal.usfq.edu.ec/MallaCurricular-USFQ/DetalleMallaCurricular/DetalleMalla?codigoCarrera=1IME",
+  "read": "2026-11-19"
+ }
+}
