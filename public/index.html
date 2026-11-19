@@ -108,7 +108,7 @@
     <div class="hero2-copy">
       <h1 class="wordmark" id="wordmark" aria-label="studium"><span class="l" style="--i:0"><span class="g">s</span></span><span class="l" style="--i:1"><span class="g">t</span></span><span class="l" style="--i:2"><span class="g">u</span></span><span class="l" style="--i:3"><span class="g">d</span></span><span class="l i" style="--i:4"><span class="g">ı<b></b></span></span><span class="l" style="--i:5"><span class="g">u</span></span><span class="l" style="--i:6"><span class="g">m</span></span></h1>
       <div class="motto hero-motto"><p>Hecho por estudiantes, para estudiantes.</p><p class="motto-hand">Gratis, no vendo nada jaja</p></div>
-      <p class="lede hero-what">Guías de estudio, material de clases, ejercicios, exámenes de práctica, proyectos finales. Úsalo para tus clases o tus hobbies, y aporta al crecimiento de la comunidad de Studium.</p>
+      <p class="lede hero-what">Guías de estudio que hace tu IA con tus apuntes, tu horario y tu malla en orden, y lo que tu comunidad sabe de cada materia. Para tus clases o tus hobbies.</p>
       <div class="actions"><a class="button primary big" href="#/entrar">Entrar</a><a class="button ghost big" href="#/" data-scroll="que-es">Cómo es por dentro</a></div>
     </div>
     <div class="stack" aria-hidden="true">
@@ -150,50 +150,12 @@
     <div class="subjects" id="subjects"></div>
   </section>
 
-  <section class="fb fb-ai" id="tu-ia">
-    <div class="fb-in">
-      <div class="fb-copy">
-        <p class="kicker">Lo que hay dentro · 1</p>
-        <h2>IA integrada, personalizada <em>para ti</em>.</h2>
-        <p>Tu IA, la que más te guste (Claude, ChatGPT o Gemini), integrada nativamente en la plataforma con tu propia clave.</p>
-        <p class="aside">No la mía: no tengo tantos servidores ni plata. Y tampoco puedo entrar a ella. Es tuya, ¿no me escuchaste?</p>
-        <div class="chips"><button class="chip" data-ai-pick="--blue,--sky,--teal" aria-pressed="true">Claude</button><button class="chip" data-ai-pick="--teal,--butter,--sky" aria-pressed="false">ChatGPT</button><button class="chip" data-ai-pick="--sky,--red,--butter" aria-pressed="false">Gemini</button></div>
-        <p class="fine">Mueve el cursor sobre tu IA. Y arrastra <strong>tus apuntes</strong> hacia ella.</p>
-      </div>
-      <div class="fb-stage">
-        <canvas aria-label="Tu IA: un núcleo con partículas que siguen al cursor"></canvas>
-        <span class="ring" aria-hidden="true"></span>
-        <button class="file-chip" type="button" aria-label="Tus apuntes: arrástralos hacia tu IA"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 3v4h4M10 12h5M10 16h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>apuntes.pdf</span></button>
-        <span class="ai-made" aria-hidden="true">Tu guía, lista</span>
-      </div>
-    </div>
-  </section>
-
-  <section class="fb fb-graph" id="grafo">
-    <div class="fb-in">
-      <div class="fb-stage">
-        <canvas aria-label="El grafo de conocimiento: arrastra los nodos"></canvas>
-        <div class="note-card" aria-live="polite"></div>
-        <ol class="flow-steps" aria-label="Cómo llega un apunte al grafo"><li class="on">Tus apuntes</li><li>Información anónima</li><li>El grafo de conocimiento</li></ol>
-        <div class="graph-hud"><button class="button primary" data-feed>Sumar este apunte</button><span class="muted"><b data-count>3</b> conceptos en el grafo</span></div>
-      </div>
-      <div class="fb-copy">
-        <p class="kicker">Lo que hay dentro · 2</p>
-        <h2>Un grafo de todo lo que necesitas.</h2>
-        <p>Crece con la comunidad de tu universidad, tus materias y tus profesores. Todo se anonimiza automáticamente: sube sin miedo el material que más te ayude.*</p>
-        <p class="aside">No queremos que todos sepan tu nota, tus apuntes personales ni tus súplicas al profe en el examen.</p>
-        <p class="fine">* <a href="https://github.com/alexanderkholodov1/studium/blob/main/public/assets/prompts.js" target="_blank" rel="noopener noreferrer">Puedes ver el prompt que uso</a>. Tampoco tengo dónde guardar gigabytes de tus apuntes.</p>
-      </div>
-    </div>
-  </section>
-
   <section class="fb fb-guides" id="tus-guias">
     <div class="fb-in">
       <div class="fb-copy">
-        <p class="kicker">Lo que hay dentro · 3</p>
+        <p class="kicker">Lo que hay dentro · 1</p>
         <h2>Tus guías, a tu manera.</h2>
-        <p>Crea tus propias guías de estudio, a tu manera de aprender, hasta la decoración, el estilo y las distracciones. Edítalas cuando quieras, como quieras, con tu IA integrada.</p>
-        <p class="aside">Repito: no la mía. Pero si quieres hacer vaca para comprar una, te acepto.</p>
+        <p>Tu IA te arma la guía con tus apuntes, a tu manera de aprender: el nivel, cuánta práctica, hasta el estilo y la decoración. Y la cambias cuando quieras.</p>
         <div class="chips"><button class="chip" data-skin="notebook" aria-pressed="true">Cuaderno</button><button class="chip" data-skin="minimal" aria-pressed="false">Minimal</button><button class="chip" data-skin="playful" aria-pressed="false">Tierna</button><button class="chip" data-skin="night" aria-pressed="false">Nocturna</button></div>
         <button class="button ghost" data-replay>Pedirle otro cambio a la IA</button>
       </div>
@@ -208,6 +170,49 @@
         </article>
       </div>
     </div>
+  </section>
+
+  <section class="fb fb-ai" id="tu-ia">
+    <div class="fb-in">
+      <div class="fb-stage">
+        <canvas aria-label="Tu IA: un núcleo con partículas que siguen al cursor"></canvas>
+        <span class="ring" aria-hidden="true"></span>
+        <button class="file-chip" type="button" aria-label="Tus apuntes: arrástralos hacia tu IA"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 3v4h4M10 12h5M10 16h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>apuntes.pdf</span></button>
+        <span class="ai-made" aria-hidden="true">Tu guía, lista</span>
+      </div>
+      <div class="fb-copy">
+        <p class="kicker">Lo que hay dentro · 2</p>
+        <h2>IA integrada, personalizada <em>para ti</em>.</h2>
+        <p>La IA que ya usas: Claude, ChatGPT o Gemini. Con tu suscripción de siempre o con tu clave, y a Studium no le pagas nada.</p>
+        <p class="aside">No la mía: no tengo tantos servidores ni plata, y tampoco puedo entrar a ella. Pero si quieres hacer vaca para comprarme una, te acepto.</p>
+        <div class="chips"><button class="chip" data-ai-pick="--blue,--sky,--teal" aria-pressed="true">Claude</button><button class="chip" data-ai-pick="--teal,--butter,--sky" aria-pressed="false">ChatGPT</button><button class="chip" data-ai-pick="--sky,--red,--butter" aria-pressed="false">Gemini</button></div>
+        <p class="fine">Mueve el cursor sobre tu IA. Y arrastra <strong>tus apuntes</strong> hacia ella.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="fb fb-graph" id="grafo">
+    <div class="fb-in">
+      <div class="fb-copy">
+        <p class="kicker">Lo que hay dentro · 3</p>
+        <h2>Un grafo de todo lo que necesitas.</h2>
+        <p>Cada examen, deber o apunte que alguien suma une sus conceptos con los de todas las materias, y la ruta para tu próximo examen sale de ahí. Todo se anonimiza: sube sin miedo lo que más te ayudó.*</p>
+        <p class="aside">No queremos que todos sepan tu nota, tus apuntes personales ni tus súplicas al profe en el examen.</p>
+        <p class="fine">* <a href="https://github.com/alexanderkholodov1/studium/blob/main/public/assets/prompts.js" target="_blank" rel="noopener noreferrer">Puedes ver el prompt que uso</a>. Tampoco tengo dónde guardar gigabytes de tus apuntes.</p>
+      </div>
+      <div class="fb-stage">
+        <canvas aria-label="El grafo de conocimiento: arrastra los nodos"></canvas>
+        <div class="note-card" aria-live="polite"></div>
+        <ol class="flow-steps" aria-label="Cómo llega un apunte al grafo"><li class="on">Tus apuntes</li><li>Información anónima</li><li>El grafo de conocimiento</li></ol>
+        <div class="graph-hud"><button class="button primary" data-feed>Sumar este apunte</button><span class="muted"><b data-count>3</b> conceptos en el grafo</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="tu-semestre">
+    <p class="kicker">Tu semestre</p>
+    <h2>Tu horario, tu malla <mark class="hl">y lo que nadie te cuenta</mark>.</h2>
+    <p class="lede-small">Pon tu horario como lo tengas, una captura, un Excel o una foto, y Studium lo arma. Marca en tu malla lo que ya pasaste y mira qué puedes tomar ahora. Y la guía del estudiante te cuenta lo que la universidad pide y casi nadie explica.</p>
   </section>
 
   <section class="band" id="hazlo-tuyo">

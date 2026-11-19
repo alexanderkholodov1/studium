@@ -974,7 +974,7 @@ mark:not(.hl) { background: color-mix(in oklab, var(--danger) 30%, transparent);
 .fb { position: relative; padding: 70px 20px; }
 .fb-in { max-width: 1320px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 46px; align-items: center;
   padding: clamp(24px, 4vw, 48px); border-radius: 44px; position: relative; overflow: hidden; isolation: isolate; }
-.fb-graph .fb-in { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); }
+.fb-ai .fb-in { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); }
 .fb-copy { display: grid; gap: 14px; align-content: start; }
 .fb-copy h2 { font-size: clamp(36px, 4.6vw, 64px); font-weight: 800; letter-spacing: -.045em; line-height: .98; }
 .fb-copy h2 em { font-style: normal; color: var(--red); text-transform: uppercase; }
@@ -986,7 +986,7 @@ mark:not(.hl) { background: color-mix(in oklab, var(--danger) 30%, transparent);
 .fb-stage { position: relative; height: clamp(360px, 46vw, 520px); border-radius: 30px; }
 .fb-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border-radius: inherit; }
 /* 1: deep space */
-.fb-ai .fb-in { color: #f1f4fb; background: radial-gradient(90% 120% at 75% 40%, #142458, #070b18 70%); box-shadow: 0 50px 90px -40px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .1); }
+.fb-ai .fb-in { color: #f1f4fb; background: radial-gradient(90% 120% at 25% 40%, #142458, #070b18 70%); box-shadow: 0 50px 90px -40px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .1); }
 .fb-ai .fb-in::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: .5;
   background-image: radial-gradient(1px 1px at 20px 30px, #fff 60%, transparent 62%), radial-gradient(1.2px 1.2px at 140px 90px, #9db6ff 60%, transparent 62%), radial-gradient(1px 1px at 90px 160px, #fff 60%, transparent 62%);
   background-size: 200px 200px; }
@@ -1066,7 +1066,8 @@ mark:not(.hl) { background: color-mix(in oklab, var(--danger) 30%, transparent);
 .ask-bubble::before { content: attr(data-who); display: block; font: 600 18px/1 var(--hand); opacity: .85; margin-bottom: 2px; }
 .ask-bubble.show { opacity: 1; transform: none; }
 @media (max-width: 1000px) {
-  .fb-in, .fb-graph .fb-in { grid-template-columns: 1fr; }
+  .fb-in, .fb-ai .fb-in { grid-template-columns: 1fr; }
+  .fb .fb-copy { order: -1; }
   .fb-graph .fb-stage { order: 2; }
   .mock { transform: none; }
   .ask-bubble { right: 6px; }

@@ -107,3 +107,11 @@ Each is settled with him when its turn comes. His words are in `caspian-kb/rules
   admin sets, promotional codes and invitations, reports from the site's analytics (users, audience), and an honest
   word when the audience is not the one they look for. Payments need a server: his decision first (Blaze or another
   design). Their terms come with them.
+
+## The landing's depth redesign (moved out of 0.6.0 on 2026-11-20)
+
+His words: "Dejemos el rediseno para alguna version proxima". What he asked for and what failed are in
+`caspian-kb/roles/webber/TASTE.md` («Depth faked by tilting flat cards»): a background with volume, objects in front of
+the text, soft shadows, gradients that carry light, motion; never a live 3D scene that lags or pixelates, never the
+background following the mouse; not a desk seen from above, not a backdrop painted flat. It starts from a new idea,
+settled in words with him, with a reference he chooses.
