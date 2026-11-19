@@ -18,6 +18,7 @@ const css = (name) => {
   return v;
 };
 const rand = (a, b) => a + Math.random() * (b - a);
+const color = (v) => (v.startsWith('--') ? css(v) : v);
 
 function visible(el, start, stop) {
   new IntersectionObserver(([e]) => (e.isIntersecting ? start() : stop()), { threshold: 0.12 }).observe(el);
@@ -37,7 +38,12 @@ function aiScene(el) {
   const me = el.querySelector('.file-chip');
   const note = el.querySelector('.ai-made');
   let size = fitCanvas(canvas);
-  let palette = ['--blue', '--sky', '--teal'];
+  const logo = el.querySelector('.ai-logo');
+  const first = el.querySelector('[data-ai-pick][aria-pressed="true"]');
+  let palette = first ? first.dataset.aiPick.split(',') : ['--blue', '--sky', '--teal'];
+  // The AI you chose sits in the core: its own logo, in its own colors.
+  const showLogo = (b) => { logo.innerHTML = b.querySelector('svg')?.outerHTML ?? ''; logo.style.color = '#fff'; logo.classList.remove('swap'); void logo.offsetWidth; logo.classList.add('swap'); };
+  if (first && logo) showLogo(first);
   let parts = [];
   let raf = 0; let t0 = 0;
   const pointer = { x: -1e4, y: -1e4 };
@@ -54,20 +60,12 @@ function aiScene(el) {
     const { ctx, w, h } = size;
     const cx = w / 2; const cy = h / 2;
     ctx.clearRect(0, 0, w, h);
-    const colors = palette.map(css);
+    const colors = palette.map(color);
     // The core: a soft sphere that breathes.
     const R = 34 + Math.sin(time * 1.6) * 3;
     const g = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.35, 2, cx, cy, R * 2.6);
     g.addColorStop(0, '#ffffff'); g.addColorStop(0.18, colors[0]); g.addColorStop(0.55, `${colors[0]}33`); g.addColorStop(1, 'transparent');
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R * 2.6, 0, Math.PI * 2); ctx.fill();
-    // What the light is: your AI.
-    ctx.save();
-    ctx.font = `800 ${Math.round(R * 0.9)}px ${css('--display') || 'sans-serif'}`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.shadowColor = colors[0]; ctx.shadowBlur = 18;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(t('IA'), cx, cy + 1);
-    ctx.restore();
     ctx.globalCompositeOperation = 'lighter';
     for (const p of parts) {
       p.a += p.s * 0.01 * (1.4 - p.z);
@@ -93,6 +91,7 @@ function aiScene(el) {
   el.querySelectorAll('[data-ai-pick]').forEach((b) => b.addEventListener('click', () => {
     el.querySelectorAll('[data-ai-pick]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
     palette = b.dataset.aiPick.split(',');
+    if (logo) showLogo(b);
     for (const p of parts) p.r *= rand(0.7, 1.3);
     sfx.tick();
   }));
@@ -302,4 +301,5 @@ export function mountScenes() {
   const a = document.querySelector('.fb-ai'); if (a) aiScene(a);
   const g = document.querySelector('.fb-graph'); if (g) graphScene(g);
   const s = document.querySelector('.fb-guides'); if (s) guideScene(s);
+  for (const el of document.querySelectorAll('.sem, .myspace')) visible(el, () => el.classList.add('is-on'), () => el.classList.remove('is-on'));
 }

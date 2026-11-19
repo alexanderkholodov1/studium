@@ -107,9 +107,9 @@
   <section class="hero2">
     <div class="hero2-copy">
       <h1 class="wordmark" id="wordmark" aria-label="studium"><span class="l" style="--i:0"><span class="g">s</span></span><span class="l" style="--i:1"><span class="g">t</span></span><span class="l" style="--i:2"><span class="g">u</span></span><span class="l" style="--i:3"><span class="g">d</span></span><span class="l i" style="--i:4"><span class="g">ı<b></b></span></span><span class="l" style="--i:5"><span class="g">u</span></span><span class="l" style="--i:6"><span class="g">m</span></span></h1>
-      <div class="motto hero-motto"><p>Hecho por estudiantes, para estudiantes.</p><p class="motto-hand">Gratis, no vendo nada jaja</p></div>
-      <p class="lede hero-what">Guías de estudio que hace tu IA con tus apuntes, tu horario y tu malla en orden, y lo que tu comunidad sabe de cada materia. Para tus clases o tus hobbies.</p>
-      <div class="actions"><a class="button primary big" href="#/entrar">Entrar</a><a class="button ghost big" href="#/" data-scroll="que-es">Cómo es por dentro</a></div>
+      <div class="motto hero-motto"><p>Hecho por estudiantes, para estudiantes.</p><p class="motto-hand">Todo gratis, en serio jaja</p></div>
+      <p class="lede hero-what">Guías con tu IA y tu semestre en orden.</p>
+      <div class="actions"><a class="button primary big" href="#/entrar">Entrar</a><a class="button ghost big" href="#/" data-scroll="tus-guias">Cómo es por dentro</a></div>
     </div>
     <div class="stack" aria-hidden="true">
       <div class="stack-rig">
@@ -137,25 +137,12 @@
     </div>
   </section>
 
-  <section class="band" id="que-es">
-    <p class="kicker">Para lo que estudies</p>
-    <h2>Las guías de Studium <mark class="hl">se pueden tocar</mark>.</h2>
-    <p class="lede-small">Simulaciones que pausas y retrocedes, ejercicios que te corrigen al momento, diagramas que mueves con el dedo. Sirve para un parcial de Redes y para aprender biología, estadística o diseño por gusto.</p>
-    <div class="demos">
-      <figure class="demo" data-tilt><div class="demo-art" data-demo="bars"></div><figcaption><strong>Estadística</strong>Pulsa para sacar otra muestra y mira moverse la media.</figcaption></figure>
-      <figure class="demo" data-tilt><div class="demo-art" data-demo="net"></div><figcaption><strong>Redes</strong>Un paquete sigue la ruta más corta entre routers.</figcaption></figure>
-      <figure class="demo" data-tilt><div class="demo-art" data-demo="helix"></div><figcaption><strong>Biología</strong>La doble hélice, girando en 3D.</figcaption></figure>
-      <figure class="demo" data-tilt><div class="demo-art" data-demo="bezier"></div><figcaption><strong>Diseño</strong>Arrastra los puntos rojos y dobla la curva.</figcaption></figure>
-    </div>
-    <div class="subjects" id="subjects"></div>
-  </section>
 
   <section class="fb fb-guides" id="tus-guias">
     <div class="fb-in">
       <div class="fb-copy">
-        <p class="kicker">Lo que hay dentro · 1</p>
-        <h2>Tus guías, a tu manera.</h2>
-        <p>Tu IA te arma la guía con tus apuntes, a tu manera de aprender: el nivel, cuánta práctica, hasta el estilo y la decoración. Y la cambias cuando quieras.</p>
+        <h2>Guías interactivas, <mark class="hl">a tu medida</mark>.</h2>
+        <p>Simulaciones, ejercicios que se corrigen solos y diagramas que mueves. Tú eliges el nivel, la práctica y hasta el estilo.</p>
         <div class="chips"><button class="chip" data-skin="notebook" aria-pressed="true">Cuaderno</button><button class="chip" data-skin="minimal" aria-pressed="false">Minimal</button><button class="chip" data-skin="playful" aria-pressed="false">Tierna</button><button class="chip" data-skin="night" aria-pressed="false">Nocturna</button></div>
         <button class="button ghost" data-replay>Pedirle otro cambio a la IA</button>
       </div>
@@ -170,6 +157,12 @@
         </article>
       </div>
     </div>
+    <div class="demos fb-demos">
+      <figure class="demo" data-tilt><div class="demo-art" data-demo="bars"></div><figcaption><strong>Estadística</strong>Pulsa para sacar otra muestra y mira moverse la media.</figcaption></figure>
+      <figure class="demo" data-tilt><div class="demo-art" data-demo="net"></div><figcaption><strong>Redes</strong>Un paquete sigue la ruta más corta entre routers.</figcaption></figure>
+      <figure class="demo" data-tilt><div class="demo-art" data-demo="helix"></div><figcaption><strong>Biología</strong>La doble hélice, girando en 3D.</figcaption></figure>
+      <figure class="demo" data-tilt><div class="demo-art" data-demo="bezier"></div><figcaption><strong>Diseño</strong>Arrastra los puntos rojos y dobla la curva.</figcaption></figure>
+    </div>
   </section>
 
   <section class="fb fb-ai" id="tu-ia">
@@ -177,16 +170,16 @@
       <div class="fb-stage">
         <canvas aria-label="Tu IA: un núcleo con partículas que siguen al cursor"></canvas>
         <span class="ring" aria-hidden="true"></span>
+        <span class="ai-logo" aria-hidden="true"></span>
         <button class="file-chip" type="button" aria-label="Tus apuntes: arrástralos hacia tu IA"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 3v4h4M10 12h5M10 16h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>apuntes.pdf</span></button>
         <span class="ai-made" aria-hidden="true">Tu guía, lista</span>
       </div>
       <div class="fb-copy">
-        <p class="kicker">Lo que hay dentro · 2</p>
-        <h2>IA integrada, personalizada <em>para ti</em>.</h2>
-        <p>La IA que ya usas: Claude, ChatGPT o Gemini. Con tu suscripción de siempre o con tu clave, y a Studium no le pagas nada.</p>
-        <p class="aside">No la mía: no tengo tantos servidores ni plata, y tampoco puedo entrar a ella. Pero si quieres hacer vaca para comprarme una, te acepto.</p>
-        <div class="chips"><button class="chip" data-ai-pick="--blue,--sky,--teal" aria-pressed="true">Claude</button><button class="chip" data-ai-pick="--teal,--butter,--sky" aria-pressed="false">ChatGPT</button><button class="chip" data-ai-pick="--sky,--red,--butter" aria-pressed="false">Gemini</button></div>
-        <p class="fine">Mueve el cursor sobre tu IA. Y arrastra <strong>tus apuntes</strong> hacia ella.</p>
+        <h2>Bring-your-own-<em>AI</em>.</h2>
+        <p>Claude, ChatGPT o Gemini: la que ya usas, con tu suscripción o con tu clave.</p>
+        <p class="aside">La IA que lo hace es TUYA, no la mía (y yo no tengo acceso a ella)</p>
+        <div class="chips ai-picks"><button class="chip" data-ai-pick="#d97757,#f2b88f,#ffd166" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/></svg>Claude</button><button class="chip" data-ai-pick="#10a37f,#7ee0c3,#e8fff7" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg>ChatGPT</button><button class="chip" data-ai-pick="#4285f4,#7cc4ff,#ffd166" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81"/></svg>Gemini</button></div>
+        <p class="fine">Elige la tuya y arrastra <strong>tus apuntes</strong> hacia ella.</p>
       </div>
     </div>
   </section>
@@ -194,10 +187,9 @@
   <section class="fb fb-graph" id="grafo">
     <div class="fb-in">
       <div class="fb-copy">
-        <p class="kicker">Lo que hay dentro · 3</p>
-        <h2>Un grafo de todo lo que necesitas.</h2>
-        <p>Cada examen, deber o apunte que alguien suma une sus conceptos con los de todas las materias, y la ruta para tu próximo examen sale de ahí. Todo se anonimiza: sube sin miedo lo que más te ayudó.*</p>
-        <p class="aside">No queremos que todos sepan tu nota, tus apuntes personales ni tus súplicas al profe en el examen.</p>
+        <h2>Un grafo de conocimiento que <mark class="hl">crece con la comunidad</mark>.</h2>
+        <p>Cada examen, deber o apunte que alguien suma une sus conceptos con los de todas las materias. Todo se anonimiza: sube sin miedo lo que más te ayudó.*</p>
+        <p class="aside">Tu nota, tus apuntes personales y tus súplicas al profe se quedan contigo.</p>
         <p class="fine">* <a href="https://github.com/alexanderkholodov1/studium/blob/main/public/assets/prompts.js" target="_blank" rel="noopener noreferrer">Puedes ver el prompt que uso</a>. Tampoco tengo dónde guardar gigabytes de tus apuntes.</p>
       </div>
       <div class="fb-stage">
@@ -209,17 +201,44 @@
     </div>
   </section>
 
-  <section class="band" id="tu-semestre">
-    <p class="kicker">Tu semestre</p>
-    <h2>Tu horario, tu malla <mark class="hl">y lo que nadie te cuenta</mark>.</h2>
-    <p class="lede-small">Pon tu horario como lo tengas, una captura, un Excel o una foto, y Studium lo arma. Marca en tu malla lo que ya pasaste y mira qué puedes tomar ahora. Y la guía del estudiante te cuenta lo que la universidad pide y casi nadie explica.</p>
+  <section class="fb fb-semester" id="tu-semestre">
+    <div class="fb-in">
+      <div class="fb-stage">
+        <div class="sem" aria-hidden="true">
+          <div class="sem-week">
+            <span class="d" style="--col:1">Lun</span><span class="d" style="--col:2">Mar</span><span class="d" style="--col:3">Mié</span><span class="d" style="--col:4">Jue</span><span class="d" style="--col:5">Vie</span>
+            <i class="c" style="--c:var(--blue);--col:1;--row:2;--n:0">Cálculo II</i>
+            <i class="c" style="--c:var(--blue);--col:3;--row:2;--n:1">Cálculo II</i>
+            <i class="c" style="--c:var(--red);--col:2;--row:3;--n:2">Redes</i>
+            <i class="c" style="--c:var(--red);--col:4;--row:3;--n:3">Redes</i>
+            <i class="c" style="--c:var(--teal);--col:1;--row:4;--n:4">Física</i>
+            <i class="c" style="--c:var(--teal);--col:5;--row:4;--n:5">Física</i>
+            <i class="c" style="--c:var(--butter);--col:2;--row:5;--n:6">Deportes</i>
+          </div>
+          <div class="sem-tip"><b>Pista</b>Suele sobrarte un crédito: ya lo pagaste.</div>
+          <div class="sem-prof"><b>Profe</b><span>Explica con ejemplos</span><span>Da puntos extra</span></div>
+          <div class="sem-career"><span>Tu carrera</span><div class="bar"><i></i></div><b>62 %</b></div>
+        </div>
+      </div>
+      <div class="fb-copy">
+        <h2>Tu semestre, <mark class="hl">en orden</mark>.</h2>
+        <p>Te ayuda a armar tu horario y a elegir con qué profes, te da pistas que nadie te cuenta y lleva tu carrera al día.</p>
+      </div>
+    </div>
   </section>
 
   <section class="band" id="hazlo-tuyo">
-    <p class="kicker">Hazlo tuyo</p>
-    <h2>A unos les ayuda algo tierno en la pantalla. A otros, nada más que el texto.</h2>
+    <h2>Estudia <mark class="hl">a tu manera</mark>.</h2>
+    <p class="lede-small">Un espacio cozy, a tu gusto.</p>
+    <div class="myspace" aria-hidden="true">
+      <div class="ms-t t-amb"><span class="ms-sws"><i style="--c:#ffd166"></i><i style="--c:#7cc4ff"></i><i style="--c:#ff9a76"></i></span><b>Ambientes</b></div>
+      <div class="ms-t t-snd"><span class="ms-bars"><i></i><i></i><i></i><i></i><i></i></span><b>Sonidos</b></div>
+      <div class="ms-t t-time"><span class="ms-ring"><span>25:00</span></span><b>Tu temporizador</b></div>
+      <div class="ms-t ms-chart"><svg viewBox="0 0 60 36"><path d="M2 30 14 20 26 24 38 10 50 14 58 4"/></svg><b>Gráficas que tocas</b></div>
+      <div class="ms-t t-egg"><span class="ms-egg">?</span><b>Easter eggs</b></div>
+    </div>
     <div class="ambiences" data-ambience-picker></div>
-    <p class="hint">Pruébalo: cambia esta misma página. Dentro de Studium, tus ajustes se guardan en tu cuenta.</p>
+    <p class="hint">Pruébalo: cambia esta página.</p>
     <p class="drag-hint"><svg viewBox="0 0 46 30" aria-hidden="true"><path d="M3 24C12 6 26 2 41 9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="m34 3 7 6-8 4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>psst: lo que flota se puede lanzar. Las letras también.</p>
 
   </section>
