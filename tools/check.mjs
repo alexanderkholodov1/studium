@@ -1,5 +1,6 @@
 // Checks that public/ is a valid Studium release before anything is packed:
-// - only the app shell ships: public/index.html and public/assets/ (guides live in the database, never here);
+// - only the app shell ships: public/index.html, public/assets/ and the mallas in public/data/mallas/ (guides live in
+//   the database, never here);
 // - every root-absolute resource stays inside the /studium/ mount (the portfolio's rule for mounted apps);
 // - no key material, except the public Firebase web key, and only in public/assets/config.js;
 // - config.js has default settings with at least one active community, and firestore.rules reads the live ones;
@@ -25,7 +26,9 @@ const rel = (file) => path.relative(ROOT, file).split(path.sep).join('/');
 if (!existsSync(path.join(ROOT, 'index.html'))) errors.push('public/index.html is missing');
 for (const file of files) {
   const name = rel(file);
-  if (name !== 'index.html' && !name.startsWith('assets/')) errors.push(`${file}: only index.html and assets/ ship; guides go to the database`);
+  // The mallas are the university's public data, read by tools/malla.mjs; nothing else ships beside the app.
+  const malla = /^data\/mallas\/[0-9A-Z]+\.json$|^data\/mallas\/index\.json$/.test(name);
+  if (name !== 'index.html' && !name.startsWith('assets/') && !malla) errors.push(`${file}: only index.html, assets/ and data/mallas/ ship; guides go to the database`);
   if (name.startsWith('assets/') && name.endsWith('.html')) errors.push(`${file}: no HTML pages in assets/; guides go to the database`);
 }
 

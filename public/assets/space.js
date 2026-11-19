@@ -119,7 +119,7 @@ function countdownTile(span) {
   const next = agenda()[0];
   if (!next) {
     return tile('countdown', span, `<h2>Tu próximo examen</h2><p class="muted">No hay nada con fecha por venir. Agrega tus fechas en «Fechas y entregas», o crea la guía de tu próximo examen.</p>
-      <div class="actions"><button class="button ghost" data-tile-add="deadlines">Agregar fechas</button><a class="button primary" href="#/aportar/guia">Crear una guía</a></div>`);
+      <div class="actions"><button class="button ghost" data-tile-add="deadlines">Agregar fechas</button><a class="button primary" href="#/crear/guia">Crear una guía</a></div>`);
   }
   const n = daysTo(next.date);
   const sub = next.own ? next.course ?? '' : [next.professor, next.term].filter(Boolean).join(' · ');
@@ -127,7 +127,7 @@ function countdownTile(span) {
     <p class="kicker d">${next.own ? 'Tu próxima fecha' : 'Tu próximo examen'} · ${esc(longDate(next.date))}</p>
     <div class="countdown d" style="--d:26"><span class="big">${n === 0 ? 'Hoy' : n}<small>${n === 0 ? '' : n === 1 ? ' día' : ' días'}</small></span>
       <h3>${next.own ? esc(next.text) : `${esc(next.course)}: ${esc(next.title)}`}</h3><p class="muted">${esc(sub)}</p></div>
-    <div class="actions d" style="--d:14">${next.own ? '<a class="button ghost" href="#/aportar/guia">Crear su guía</a>'
+    <div class="actions d" style="--d:14">${next.own ? '<a class="button ghost" href="#/crear/guia">Crear su guía</a>'
       : `<a class="button primary" href="#/guia/${encodeURIComponent(next.id)}">Abrir la guía</a><button class="button ghost" data-goal-for="${esc(next.id)}">Ponérmelo como meta</button>`}</div>`, 'solid-blue', 'data-tilt="3"');
 }
 function deadlinesTile(span) {
@@ -215,16 +215,16 @@ function recentTile(span) {
 function newsTile(span) {
   const latest = [...ctx.state.catalog].sort((a, b) => b.updated - a.updated).slice(0, 4);
   const concepts = ctx.state.graph?.nodes.filter((n) => n.type === 'concept').length ?? 0;
-  return tile('news', span, `<h2>Lo nuevo en tu comunidad <small>${ctx.state.catalog.length} ${ctx.state.catalog.length === 1 ? 'guía' : 'guías'} · ${ctx.state.contributions.length} aportes · ${concepts} conceptos en el mapa</small></h2>
+  return tile('news', span, `<h2>Lo nuevo en tu comunidad <small>${ctx.state.catalog.length} ${ctx.state.catalog.length === 1 ? 'guía' : 'guías'} · ${ctx.state.contributions.length} aportes · ${concepts} conceptos en el grafo</small></h2>
     ${latest.length ? `<div class="mini-guides" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr))">${latest.map(guideRow).join('')}</div>` : '<p class="muted">Todavía no hay guías. La primera puede ser la tuya.</p>'}
-    <div class="actions"><a class="button ghost" href="#/guias">Todas las guías</a><a class="button ghost" href="#/mapa">El mapa</a><a class="button ghost" href="#/profes">Profes</a></div>`);
+    <div class="actions"><a class="button ghost" href="#/guias">Todas las guías</a><a class="button ghost" href="#/grafo">El grafo</a><a class="button ghost" href="#/profes">Profes</a></div>`);
 }
 function exploreTile(span) {
   const concepts = ctx.state.graph?.nodes.filter((n) => n.type === 'concept' && !n.ghost && n.summaries?.length) ?? [];
   const c = concepts[Math.floor(Math.random() * concepts.length)];
   return tile('explore', span, `<h2>Un concepto al azar</h2>
-    ${c ? `<h3 style="font-size:30px;letter-spacing:-.03em">${esc(c.name)}</h3><p class="muted">${esc(c.summaries[0].text)}</p><div class="actions"><a class="button primary" href="#/mapa/${encodeURIComponent(c.id)}">Verlo en el mapa</a><button class="button ghost" data-reroll>Otro</button></div>`
-    : '<p class="muted">Cuando el mapa tenga conceptos, aquí aparece uno distinto cada vez.</p>'}`);
+    ${c ? `<h3 style="font-size:30px;letter-spacing:-.03em">${esc(c.name)}</h3><p class="muted">${esc(c.summaries[0].text)}</p><div class="actions"><a class="button primary" href="#/grafo/${encodeURIComponent(c.id)}">Verlo en el grafo</a><button class="button ghost" data-reroll>Otro</button></div>`
+    : '<p class="muted">Cuando el grafo tenga conceptos, aquí aparece uno distinto cada vez.</p>'}`);
 }
 const RENDER = { countdown: countdownTile, deadlines: deadlinesTile, week: weekTile, goals: goalsTile, timer: timerTile, notes: notesTile, links: linksTile, recent: recentTile, news: newsTile, explore: exploreTile };
 
@@ -356,13 +356,13 @@ const AREAS = {
 function mapSettings() {
   const p = prefs.get();
   const courses = (ctx.state.graph?.courses ?? []).filter((c) => !c.planned).sort((a, b) => a.name.localeCompare(b.name, 'es'));
-  return `<section class="set glass" id="set-map"><h2>Tu mapa</h2>
-    <p>Tus materias de este semestre y lo que te interesa. En el mapa, «Solo mis materias e intereses» oculta las islas que no
+  return `<section class="set glass" id="set-map"><h2>Tu grafo</h2>
+    <p>Tus materias de este semestre y lo que te interesa. En el grafo, «Solo mis materias e intereses» oculta las islas que no
       estudias: si viniste por Redes, IEEEXtreme no te estorba.</p>
     ${courses.length ? `<h3>Mis materias</h3><div class="chips">${courses.map((c) => `<button type="button" class="chip ${p.courses.includes(c.key) ? 'on' : ''}" data-my-course="${esc(c.key)}" style="${themeStyle(c.theme)}"><i></i>${esc(c.name)}</button>`).join('')}</div>` : ''}
     <h3>Intereses y hobbies</h3>
     <div class="chips">${Object.entries(AREAS).map(([k, label]) => `<button type="button" class="chip ${p.interests.includes(`area:${k}`) ? 'on' : ''}" data-my-area="${k}" style="${themeStyle(k)}"><i></i>${esc(label)}</button>`).join('')}</div>
-    <p class="fine">${p.known.length ? `Marcaste ${p.known.length} ${p.known.length === 1 ? 'concepto' : 'conceptos'} como «Ya lo sé». <button type="button" class="link" data-known-reset>Empezar de cero</button>` : 'En el mapa, «Ya lo sé» en cada concepto te deja ver lo que te falta.'}</p>
+    <p class="fine">${p.known.length ? `Marcaste ${p.known.length} ${p.known.length === 1 ? 'concepto' : 'conceptos'} como «Ya lo sé». <button type="button" class="link" data-known-reset>Empezar de cero</button>` : 'En el grafo, «Ya lo sé» en cada concepto te deja ver lo que te falta.'}</p>
   </section>`;
 }
 

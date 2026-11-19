@@ -258,7 +258,7 @@ async function accountsSection() {
       </tbody></table></div></section>`;
 }
 
-const KINDS = { guides: 'Guías', contributions: 'Aportes', library: 'Biblioteca', tips: 'Datos de profes' };
+const KINDS = { guides: 'Guías', contributions: 'Aportes', library: 'Documentos', tips: 'Datos de profes' };
 // A whole collection, the most recent first. Some entries published with the admin tools have no «updated», so the
 // sorting happens here rather than in the query, which would leave them out.
 async function recent(name) {
@@ -279,9 +279,9 @@ async function contentSection() {
       `<button class="link" data-mod="${g.visibility === 'private' ? 'show' : 'hide'}" data-kind="guides">${g.visibility === 'private' ? 'Mostrar' : 'Ocultar'}</button><button class="link danger" data-mod="delete" data-kind="guides">Borrar</button>`); }).join('')}</tbody>`;
   } else if (contentKind === 'contributions') {
     const [snap, pack] = await Promise.all([recent('contributions'), packInfo().catch(() => null)]);
-    packCard = `<section class="set glass"><h2>Paquetes del mapa <small>${pack ? `compilados ${esc(when(pack.built))}` : 'todavía no hay'}</small></h2>
+    packCard = `<section class="set glass"><h2>Paquetes del grafo <small>${pack ? `compilados ${esc(when(pack.built))}` : 'todavía no hay'}</small></h2>
       <div class="stats">${stat('Aportes en el paquete', n(pack?.count))}${stat('Partes', n(pack?.parts))}${stat('Publicados después', n(pack?.since))}</div>
-      <p class="fine">Cada visita lee el paquete (unos pocos documentos, guardados en el navegador) y solo lo que se publicó después, en lugar de una lectura por aporte. Compílalo después de subir muchos aportes; lo que se borra u oculta desaparece del mapa al instante aunque siga en el paquete.</p>
+      <p class="fine">Cada visita lee el paquete (unos pocos documentos, guardados en el navegador) y solo lo que se publicó después, en lugar de una lectura por aporte. Compílalo después de subir muchos aportes; lo que se borra u oculta desaparece del grafo al instante aunque siga en el paquete.</p>
       <div class="actions"><button class="button primary" data-compile>Compilar ahora</button></div></section>`;
     body = `<thead><tr><th>Aporte</th><th>Materia</th><th>Tipo</th><th>Visibilidad</th><th>Cambiado</th><th></th></tr></thead><tbody>${snap.docs.map((d) => { const c = d.data(); return row([
       `<strong>${esc(c.title)}</strong><small> · ${n(c.questions)} preguntas${c.stage ? ` · ${esc(c.stage)}` : ''}${c.source ? ` · ${esc(c.source)}` : ''}</small>`, esc(c.course), esc(c.kind), vis(c), esc(when(c.updated))], d.id,

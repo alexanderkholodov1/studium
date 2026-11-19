@@ -47,7 +47,7 @@ export const TASKS = {
   material: { name: 'Procesar material', tier: 'mid', effort: 'medium', why: 'basta un modelo intermedio, pensando lo normal: lee apuntes y exámenes y los ordena' },
   schedule: { name: 'Leer tu horario', tier: 'mid', effort: 'low', why: 'basta un modelo intermedio que vea bien las imágenes, pensando poco: es copiar lo que ve' },
   identify: { name: 'Identificar un documento', tier: 'light', effort: 'low', why: 'basta un modelo ligero, pensando poco: solo reconoce qué es' },
-  ask: { name: 'Preguntarle al mapa', tier: 'light', effort: 'low', why: 'basta un modelo ligero y rápido, pensando poco: elige qué mostrarte' },
+  ask: { name: 'Preguntarle al grafo', tier: 'light', effort: 'low', why: 'basta un modelo ligero y rápido, pensando poco: elige qué mostrarte' },
 };
 // Where each kind of task runs, first to last. Nothing should cost the person anything: their subscription through
 // the bridge (no charge per use) and the free ways first; a key that charges per use only if it is all they have.

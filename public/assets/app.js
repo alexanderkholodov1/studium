@@ -114,7 +114,7 @@ document.addEventListener('click', (e) => {
 
 /* ---------- views ---------- */
 const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'horario', 'malla', 'student', 'catalog', 'map', 'library', 'profes', 'contribute', 'settings', 'about', 'sources', 'guide', 'admin'];
-const TABS = { home: 'home', horario: 'home', malla: 'home', catalog: 'catalog', map: 'map', library: 'library', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', admin: 'admin' };
+const TABS = { home: 'home', horario: 'home', malla: 'home', catalog: 'catalog', map: 'map', library: 'map', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', admin: 'admin' };
 const PUBLIC = ['landing', 'auth', 'about', 'denied', 'verify'];
 let current = 'boot';
 function show(view) {
@@ -348,7 +348,7 @@ function renderCatalog() {
   list.sort((a, b) => rank(a) - rank(b));
   $('#gallery').innerHTML = list.length ? list.map(guideCard).join('') : `<div class="empty glass">${state.catalog.length
     ? `<h2>Nada por aquí</h2><p>${filter === 'all' ? 'Prueba con otra materia, tema o profe.' : 'Cambia el filtro para ver más guías.'}</p>`
-    : '<h2>Studium está empezando</h2><p>Aporta tus exámenes, deberes o apuntes: con ellos se arma el mapa y se crean las guías.</p><a class="button primary" href="#/aportar">Aportar material</a>'}</div>`;
+    : '<h2>Studium está empezando</h2><p>Aporta tus exámenes, deberes o apuntes: con ellos se arma el grafo y se crean las guías.</p><a class="button primary" href="#/crear/grafo">Sumar material al grafo</a>'}</div>`;
   rise($('#gallery'));
 }
 $('#q').addEventListener('input', renderCatalog);
@@ -357,7 +357,7 @@ $('#g-filter').addEventListener('change', () => { sfx.tick(); renderCatalog(); }
 /* ---------- sources and credits ---------- */
 function renderSources() {
   const el = $('#sources');
-  if (!state.sources.length) { el.innerHTML = '<div class="empty glass"><h2>Todavía no hay fuentes registradas</h2><p>Cuando el mapa reciba material de una colección compartida, aparecerá aquí con su reconocimiento.</p></div>'; return; }
+  if (!state.sources.length) { el.innerHTML = '<div class="empty glass"><h2>Todavía no hay fuentes registradas</h2><p>Cuando el grafo reciba material de una colección compartida, aparecerá aquí con su reconocimiento.</p></div>'; return; }
   el.innerHTML = state.sources.map((src) => {
     const items = state.contributions.filter((c) => c.source === src.id);
     const courses = new Set(items.map((c) => keyOf(c.course)));
@@ -368,7 +368,7 @@ function renderSources() {
       <h2>${esc(src.name)}</h2>
       ${src.thanks ? `<div class="thanks">${paras(src.thanks)}</div>` : ''}
       ${paras(src.description)}
-      <p class="muted">${items.length ? `En Studium: ${items.length} ${items.length === 1 ? 'aporte' : 'aportes'} de ${courses.size} ${courses.size === 1 ? 'materia' : 'materias'}.` : 'Su material se está incorporando al mapa.'}</p>
+      <p class="muted">${items.length ? `En Studium: ${items.length} ${items.length === 1 ? 'aporte' : 'aportes'} de ${courses.size} ${courses.size === 1 ? 'materia' : 'materias'}.` : 'Su material se está incorporando al grafo.'}</p>
       ${src.url ? `<div class="actions"><a class="button primary" href="${esc(src.url)}" target="_blank" rel="noopener noreferrer">${esc(src.linkLabel ?? 'Ver la fuente original')}</a></div>` : ''}
     </article>`;
   }).join('');
@@ -457,6 +457,12 @@ async function route() {
   if (!role.admin && confirmEmail() && !user.emailVerified) { $('#verify-email').textContent = user.email; $('#verify-from').textContent = mailFrom; say('#verify-msg', verifyNote); show('verify'); return; }
   if (pending) { const to = pending; pending = ''; if (location.hash !== to) { location.hash = to; return; } }
   if (page === 'entrar' || (page === 'admin' && !role.admin)) { location.hash = '#/'; return; }
+  // The old names of 0.5: «Mapa» is «Grafo», and «Biblioteca» lives inside it as «Documentos». Shared links still work.
+  if (page === 'aportar') { history.replaceState(null, '', `${location.pathname}#/crear/${rest[0] === 'guia' ? rest.join('/') : 'grafo'}`); return route(); }
+  if (page === 'mapa' || page === 'biblioteca') {
+    history.replaceState(null, '', `${location.pathname}#/grafo${page === 'biblioteca' ? '/documentos' : rest.length ? `/${rest.join('/')}` : ''}`);
+    return route();
+  }
   // The link the local bridge prints: pair it, then show the settings.
   const bridgeLink = location.hash.match(/^#\/ajustes\?puente=([\w.-]+)$/);
   if (bridgeLink) { history.replaceState(null, '', `${location.pathname}#/ajustes`); pairBridge(bridgeLink[1]); return route(); }
@@ -469,7 +475,7 @@ async function route() {
       const known = state.catalog.find((g) => g.id === id);
       $('#guide-title').textContent = known ? `${known.course}: ${known.title}` : '';
       $('#guide-edit').hidden = !known?.mine;
-      $('#guide-map').href = `#/mapa/guide:${encodeURIComponent(id)}`;
+      $('#guide-map').href = `#/grafo/guide:${encodeURIComponent(id)}`;
       $('#guide-status').textContent = 'Abriendo la guía…'; $('#guide-status').hidden = false;
       remember(id);
       if (!prefs.get().progress[id]) prefs.set({ progress: { ...prefs.get().progress, [id]: 'reading' } });
@@ -493,11 +499,10 @@ async function route() {
       return;
     }
     const views = {
-      biblioteca: ['library', 'Biblioteca', renderLibrary],
       horario: ['horario', 'Mi horario', renderSchedule],
       malla: ['malla', 'Mi malla', renderMalla],
       'guia-estudiante': ['student', 'Guía del estudiante', () => renderStudentGuide(arg[0])],
-      mapa: ['map', 'Mapa', () => openMap(arg.join('/'))],
+      grafo: arg[0] === 'documentos' ? ['library', 'Documentos', renderLibrary] : ['map', 'Grafo', () => openMap(arg.join('/'))],
       fuentes: ['sources', 'Fuentes', renderSources],
       profes: ['profes', 'Profes', renderProfes],
       ajustes: ['settings', 'Ajustes', renderSettings],
@@ -508,14 +513,20 @@ async function route() {
       admin: ['admin', 'Admin', () => renderAdmin(arg[0])],
       '': ['home', 'Inicio', renderHome],
     };
-    if (page === 'aportar' || page === 'mis-aportes') {
-      document.title = `${t('Aportar')} · Studium`;
+    // «Crea tu guía» (0.5 called it «Aportar»): your notes become a guide, or class material joins the graph.
+    // «Mis aportes» is reached from the account menu, on its own.
+    if (page === 'crear' || page === 'mis-aportes') {
+      const mine = page === 'mis-aportes';
+      document.title = `${t(mine ? 'Mis aportes' : 'Crea tu guía')} · Studium`;
+      $('#c-title').textContent = t(mine ? 'Mis aportes' : 'Crea tu guía');
+      $('#c-have').hidden = mine;
+      $('#c-anon').hidden = mine;
       show('contribute');
       await load();
       if (ticket !== routing) return;
       mountContribute(context);
-      const pane = page === 'mis-aportes' ? 'mine' : arg[0] === 'guia' ? 'guide' : 'material';
-      renderPane(pane, arg[1] ? { course: arg[1] } : undefined);
+      const pane = mine ? 'mine' : arg[0] === 'grafo' ? 'material' : 'guide';
+      renderPane(pane, arg[0] === 'guia' && arg[1] ? { course: arg[1] } : undefined);
       return;
     }
     const [view, title, render] = views[page] ?? views[''];
@@ -530,7 +541,7 @@ async function route() {
   } catch (error) {
     if (ticket !== routing) return;
     console.error(error);
-    const where = page === 'guia' ? '#guide-status' : page === 'mapa' ? '#map-empty' : page === 'aportar' ? '#pane-material' : page === 'guias' ? '#gallery' : page === 'profes' ? '#profs' : '#dash';
+    const where = page === 'guia' ? '#guide-status' : page === 'grafo' ? '#map-empty' : page === 'crear' ? (arg[0] === 'grafo' ? '#pane-material' : '#pane-guide') : page === 'guias' ? '#gallery' : page === 'profes' ? '#profs' : '#dash';
     $(where).hidden = false;
     $(where).textContent = explain(error);
   }
@@ -547,7 +558,7 @@ $('#guide-show').addEventListener('click', () => bareReader(false));
 try { bareReader(localStorage.getItem('studium-reader-bare') === '1'); } catch { /* the bar stays */ }
 
 document.querySelectorAll('[data-pane]').forEach((b) => b.addEventListener('click', () => {
-  location.hash = { material: '#/aportar', guide: '#/aportar/guia', mine: '#/mis-aportes' }[b.dataset.pane];
+  location.hash = { material: '#/crear/grafo', guide: '#/crear', mine: '#/mis-aportes' }[b.dataset.pane];
 }));
 /* ---------- the links of the account e-mails ---------- */
 // They open Studium itself (?mode=…&oobCode=…), on the site students already use: confirming the address happens

@@ -189,6 +189,19 @@ service cloud.firestore {
       allow create, update: if member() && request.auth.uid == uid && schedule(request.resource.data);
     }
 
+    // The drafts of «Crea tu guía»: the fields the person filled in (never the notes or the material), read and
+    // written only by its owner, so a draft is not lost on another device.
+    function drafts(d) {
+      return d.keys().hasOnly(['material', 'guide', 'updated']) && d.keys().hasAll(['updated'])
+        && (!('material' in d) || (d.material is map && d.material.size() <= 30))
+        && (!('guide' in d) || (d.guide is map && d.guide.size() <= 30))
+        && d.updated == request.time;
+    }
+    match /drafts/{uid} {
+      allow get, delete: if member() && request.auth.uid == uid;
+      allow create, update: if member() && request.auth.uid == uid && drafts(request.resource.data);
+    }
+
     // A list without repeated values, all of them from the allowed ones.
     function picked(value, allowed, max) {
       return value is list && value.size() > 0 && value.size() <= max && value.toSet().size() == value.size() && value.hasOnly(allowed);

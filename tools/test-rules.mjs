@@ -314,6 +314,11 @@ try {
   expect('more than 150 passed classes is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ passed: Array.from({ length: 151 }, (_, i) => `MAT ${1000 + i}`) }))]), 403);
   expect('student saves its courses, interests and known concepts', await commit(s.token, [put(`profiles/${s.uid}`, profile({ courses: ['redes-de-computadores'], interests: ['area:redes'], known: ['subred', 'vlan'] }))]), 200);
   expect('a profile whose known concepts are not a list is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ known: 'subred' }))]), 403);
+  expect('student keeps its drafts of «Crea tu guía»', await commit(s.token, [put(`drafts/${s.uid}`, { material: { course: 'Redes' }, guide: { course: 'Cálculo II', level: 'standard' } })]), 200);
+  expect('student reads its drafts', await status(s.token, 'GET', `/drafts/${s.uid}`), 200);
+  expect('classmate cannot read the drafts of another account', await status(c.token, 'GET', `/drafts/${s.uid}`), 403);
+  expect('classmate cannot write the drafts of another account', await commit(c.token, [put(`drafts/${s.uid}`, { guide: {} })]), 403);
+  expect('drafts with other fields are refused', await commit(s.token, [put(`drafts/${s.uid}`, { notes: 'x' })]), 403);
   expect('otherDomain cannot save a profile', await commit(accounts.otherDomain.token, [put(`profiles/${accounts.otherDomain.uid}`, profile())]), 403);
 
   // Thanks: only fixed, positive kinds

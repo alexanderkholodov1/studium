@@ -1,11 +1,11 @@
-// "Aportar": instructions for the person's own AI, the review of what it returns (contributions and guides), and the
+// «Crea tu guía» (0.5's «Aportar»): instructions for the person's own AI, the review of what it returns (contributions and guides), and the
 // account's own items. Nothing of the original material reaches Studium: only what the AI extracted, after review.
 import { THEMES, keyOf, themeStyle, guessTheme, validTheme } from './themes.js';
 import {
   KINDS, KIND_HINTS, LEVELS, contributionInstructions, curriculumInstructions, guideInstructions, parseContribution, parseGuide,
   contextPack, findPersonal, redact,
 } from './prompts.js';
-import { publishContribution, publishGuide, setVisibility, remove, LIMIT } from './data.js';
+import { publishContribution, publishGuide, setVisibility, remove, LIMIT, loadDrafts, saveDrafts } from './data.js';
 import { prepareGroup, groupFiles, fingerprint, partsSize, partFiles, zipFiles } from './files.js';
 import { createQueue, indexedStore, memoryStore } from './queue.js';
 import { looseKey, stageOf, stageLabel } from './standard.js';
@@ -18,8 +18,28 @@ const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const store = {
   get: (k) => { try { return JSON.parse(localStorage.getItem(k) ?? 'null'); } catch { return null; } },
-  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* the draft is just not remembered */ } },
+  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* the draft is just not remembered */ } if (DRAFTS[k]) keepDraft(); },
 };
+// What is filled in is a draft: on the device at once, and in the account a moment later (drafts/{uid}), so it is
+// there on another device too. Only the form's fields travel, never the notes or the material.
+const DRAFTS = { 'studium-draft-material': 'material', 'studium-draft-guide': 'guide' };
+let draftTimer = 0;
+function keepDraft() {
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(() => {
+    if (!ctx?.user) return;
+    const out = {};
+    for (const [k, name] of Object.entries(DRAFTS)) { const v = store.get(k); if (v) out[name] = v; }
+    saveDrafts(ctx.user.uid, out).catch(() => { /* it stays on this device */ });
+  }, 1500);
+}
+async function restoreDrafts() {
+  if (!ctx?.user || Object.keys(DRAFTS).some((k) => store.get(k))) return false;
+  const saved = await loadDrafts(ctx.user.uid).catch(() => null);
+  if (!saved) return false;
+  for (const [k, name] of Object.entries(DRAFTS)) if (saved[name]) try { localStorage.setItem(k, JSON.stringify(saved[name])); } catch { /* not remembered */ }
+  return true;
+}
 const uniq = (xs) => [...new Set(xs.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
 const kb = (n) => (n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1000))} KB`);
 
@@ -76,16 +96,6 @@ const dropzone = (id) => `<div class="dropzone" data-drop="${id}">
   <div class="reviews" data-reviews="${id}"></div>`;
 
 /* ---------- your AI, inside Studium ---------- */
-const PROMPT_URL = 'https://github.com/alexanderkholodov1/studium/blob/main/public/assets/prompts.js';
-const promise = () => `<aside class="anon glass">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
-    <div><h2>Todo se anonimiza. Siempre.</h2>
-      <p>Tus archivos van solo a tu IA. Ella saca las notas, nombres, códigos, correos y comentarios personales, y a
-        Studium llega solo lo que se estudia: conceptos, preguntas y ejemplos. Antes de publicar, Studium vuelve a buscar
-        datos personales y te muestra lo que encuentre.</p>
-      <p class="fine">El único propósito es armar el conocimiento más amplio posible para otros estudiantes como tú.
-        <a href="${PROMPT_URL}" target="_blank" rel="noopener noreferrer">Puedes leer las instrucciones exactas que recibe tu IA</a>.</p></div>
-  </aside>`;
 function aiStep(zone) {
   const ready = ai.ready();
   return `<li class="step glass ai-step ${ready ? '' : 'off'}"><h2>${ready ? 'Con tu IA, sin copiar ni pegar' : 'Suelta todo tu material'}</h2>
@@ -200,7 +210,7 @@ function jobState(job, st) {
   if (job.state === 'running') return st.progress || 'Leyendo…';
   if (job.state === 'waiting') return job.retryAt > Date.now() ? `Sigue a las ${clock(job.retryAt)}` : 'En espera';
   if (job.state === 'error') return job.error || 'Algo falló';
-  if (job.state === 'off') return job.inMap ? 'Ya está en el mapa: márcalo para procesarlo otra vez' : 'Sin elegir';
+  if (job.state === 'off') return job.inMap ? 'Ya está en el grafo: márcalo para procesarlo otra vez' : 'Sin elegir';
   if (job.state === 'done' && job.result?.truncated) return 'Listo, pero quedó cortado: revisa abajo';
   return STATES[job.state] ?? job.state;
 }
@@ -369,15 +379,16 @@ async function droppedFiles(dataTransfer) {
 
 /* ---------- material ---------- */
 function materialPane() {
-  const d = store.get('studium-draft-material') ?? { kind: 'exam' };
+  const d = { kind: '', ...(store.get('studium-draft-material') ?? {}) };
+  const told = Object.entries(d).some(([k, v]) => k !== 'kind' && v) || d.kind;
   return `${datalists()}
-  ${promise()}
   <ol class="flow">
     <li class="step glass">
-      <h2>Cuéntale a tu IA qué es</h2>
-      <p>Lo que completes va en las instrucciones; lo que dejes vacío, tu IA lo saca del material.</p>
+      <h2>Tu IA reconoce el material sola</h2>
+      <p>Qué es, de qué materia, de qué profe y de qué evaluación: lo saca del material. No tienes que llenar nada.</p>
+      <details class="more" ${told ? 'open' : ''}><summary>Si quieres, dile tú algún dato</summary>
       <form class="grid" id="m-form">
-        ${segmented('kind', KINDS, d.kind, 'Qué material es')}
+        ${segmented('kind', { '': 'Que lo reconozca', ...KINDS }, d.kind, 'Qué material es')}
         <p class="hint wide kind-hint" id="m-kind-hint">${esc(KIND_HINTS[d.kind] ?? '')}</p>
         ${input('course', 'Materia, competencia o carrera', d.course, 'list="dl-courses" autocomplete="off"')}
         ${input('code', 'Código', d.code, 'autocomplete="off"')}
@@ -389,6 +400,7 @@ function materialPane() {
       </form>
       <datalist id="dl-stages">${['Examen 1', 'Examen 2', 'Examen 3', 'Examen 4', 'Final', 'Quiz 1', 'Quiz 2', 'Deber 1', 'Proyecto'].map((x) => `<option value="${x}">`).join('')}</datalist>
       <p class="fine">Si subes varios archivos de evaluaciones distintas, deja «Evaluación» vacío: Studium la lee del nombre de cada archivo (por ejemplo, «Parcial 2.pdf»), y tu IA del material.</p>
+      </details>
       <details class="prompt"><summary>Ver las instrucciones que recibe tu IA</summary><pre id="m-prompt"></pre></details>
     </li>
     ${aiStep('material')}
@@ -503,10 +515,10 @@ function guidePane(preset = {}) {
         <label class="button ghost">Elegir archivos<input type="file" multiple hidden data-notes accept="${NOTE_TYPES}"></label>
       </div>
       <ul class="notes-list" id="g-notes"></ul>
-      <label class="toggle"><input type="checkbox" name="graph" ${d.graph ? 'checked' : ''}><span class="knob"></span>Sumar lo que la comunidad ya sabe de esta materia (el mapa de conocimiento)</label>
+      <label class="toggle"><input type="checkbox" name="graph" ${d.graph ? 'checked' : ''}><span class="knob"></span>Sumar lo que la comunidad ya sabe de esta materia (el grafo de conocimiento)</label>
       <div class="from-map" id="g-from-map" hidden></div>
       <div class="scope" id="g-scope-wrap" hidden>
-        <div class="scope-head"><h3>Conceptos del mapa que entran</h3><button type="button" class="link" data-scope="all">Todos</button><button type="button" class="link" data-scope="none">Ninguno</button></div>
+        <div class="scope-head"><h3>Conceptos del grafo que entran</h3><button type="button" class="link" data-scope="all">Todos</button><button type="button" class="link" data-scope="none">Ninguno</button></div>
         <div class="chips" id="g-scope"></div>
       </div>
       <p class="note" id="g-summary"></p>
@@ -535,6 +547,7 @@ function guidePane(preset = {}) {
     </li>
     <li class="step glass">
       <h2>Créala</h2>
+      <p>Elige una de las tres: las tres dan la misma guía. Van de la más cómoda, donde Studium hace todo, a la más a mano.</p>
       <div class="ways">
         <section class="way ${ai.ready() ? 'ready' : ''}">
           <h3>Con tu IA conectada</h3>
@@ -609,13 +622,13 @@ function renderScope() {
     banner.hidden = !fromMap || !v.graph;
     if (fromMap) {
       const qs = concepts.reduce((s, n) => s + n.questions.length, 0);
-      banner.innerHTML = `<p><strong>Desde el mapa${fromMap.label ? `: la ruta ${esc(fromMap.label)}` : ''}</strong> · ${concepts.length} conceptos y ${qs} preguntas, con lo que necesitas antes. Puedes crear la guía solo con esto, o sumar tus apuntes.</p><button type="button" class="link" data-from-map-clear>Usar toda la materia</button>`;
+      banner.innerHTML = `<p><strong>Desde el grafo${fromMap.label ? `: la ruta ${esc(fromMap.label)}` : ''}</strong> · ${concepts.length} conceptos y ${qs} preguntas, con lo que necesitas antes. Puedes crear la guía solo con esto, o sumar tus apuntes.</p><button type="button" class="link" data-from-map-clear>Usar toda la materia</button>`;
     }
   }
   if (!v.graph || (!course && !fromMap)) {
     wrap.hidden = true;
-    const known = course ? ` En el mapa hay ${course.contributions.length} ${course.contributions.length === 1 ? 'aporte' : 'aportes'} de ${course.name}: actívalo si quieres sumarlos.` : '';
-    summary.textContent = v.graph && v.course && !course ? `${mine} Todavía no hay aportes de «${v.course}» en el mapa: la guía saldrá de tus apuntes.` : `${mine}${known}`;
+    const known = course ? ` En el grafo hay ${course.contributions.length} ${course.contributions.length === 1 ? 'aporte' : 'aportes'} de ${course.name}: actívalo si quieres sumarlos.` : '';
+    summary.textContent = v.graph && v.course && !course ? `${mine} Todavía no hay aportes de «${v.course}» en el grafo: la guía saldrá de tus apuntes.` : `${mine}${known}`;
   } else {
     const scopeKey = fromMap ? `map:${[...fromMap.keys].join(',')}` : course.id;
     if (!scope || scope.key !== scopeKey) scope = { key: scopeKey, off: new Set() };
@@ -625,7 +638,7 @@ function renderScope() {
     const lessons = fromMap ? sourcesOf(concepts) : course.contributions;
     const qs = fromMap ? concepts.reduce((s, n) => s + n.questions.length, 0) : lessons.reduce((s, c) => s + (c.data.questions?.length ?? 0), 0);
     const prof = v.professor ? lessons.filter((c) => keyOf(c.professor) === keyOf(v.professor)).length : 0;
-    summary.textContent = `${mine} Del mapa suma ${concepts.length} conceptos y ${qs} preguntas${course && !fromMap ? ` de ${course.name}` : ''}${v.professor ? `; ${prof} de esos aportes son de ${v.professor}` : ''}.`;
+    summary.textContent = `${mine} Del grafo suma ${concepts.length} conceptos y ${qs} preguntas${course && !fromMap ? ` de ${course.name}` : ''}${v.professor ? `; ${prof} de esos aportes son de ${v.professor}` : ''}.`;
   }
   $('#g-prompt').textContent = guidePrompt({ inline: true });
 }
@@ -796,10 +809,10 @@ function renderReview(item) {
   const inMap = new Set(ctx.state.graph.nodes.filter((n) => n.type === 'concept' && !n.ghost).map((n) => n.key));
   const fresh = conceptNames.filter((n) => !inMap.has(keyOf(n))).length;
   const summary = isGuide
-    ? `Explica ${conceptNames.length} conceptos (${fresh} nuevos en el mapa). ${kb(new TextEncoder().encode(item.text).length)}.`
+    ? `Explica ${conceptNames.length} conceptos (${fresh} nuevos en el grafo). ${kb(new TextEncoder().encode(item.text).length)}.`
     : curriculum
       ? `${parsed.data.curriculum.semesters.length} semestres, ${parsed.data.curriculum.semesters.reduce((s, x) => s + x.courses.length, 0)} materias.`
-      : `${conceptNames.length} conceptos (${fresh} nuevos en el mapa), ${parsed.data.questions.length} preguntas, ${parsed.data.examples.length} ejemplos.`;
+      : `${conceptNames.length} conceptos (${fresh} nuevos en el grafo), ${parsed.data.questions.length} preguntas, ${parsed.data.examples.length} ejemplos.`;
   const ready = m.course && m.title && !blocking.length && (!needsLook.length || item.confirmed) && (!isGuide || /^\d{4}-\d{2}-\d{2}$/.test(m.date || ''));
   item.ready = !!ready && !item.done;
   const twin = !isGuide && !curriculum ? lookalike(m, parsed.data, item.print) : null;
@@ -877,10 +890,10 @@ async function publish(item) {
         concepts: concepts.map((c) => c.name), anchors: concepts.map((c) => c.anchor), visibility: item.visibility,
         by: item.sign ? prefs.get().name : '', ai: item.ai?.provider ? item.ai : null,
       }, item.text, item.replace || undefined);
-      item.done = `Publicada${item.visibility === 'private' ? ' solo para ti' : ''}. <a href="#/guia/${encodeURIComponent(id)}">Abrir la guía</a> · <a href="#/mapa/guide:${encodeURIComponent(id)}">Verla en el mapa</a>`;
+      item.done = `Publicada${item.visibility === 'private' ? ' solo para ti' : ''}. <a href="#/guia/${encodeURIComponent(id)}">Abrir la guía</a> · <a href="#/grafo/guide:${encodeURIComponent(id)}">Verla en el grafo</a>`;
     } else {
       id = await publishContribution(ctx.user.uid, { ...m, theme: m.kind === 'curriculum' ? 'estrellas' : m.theme, visibility: item.visibility, print: item.print }, item.parsed.data);
-      item.done = `Publicado${item.visibility === 'private' ? ' solo para ti' : ''}. <a href="#/mapa">Verlo en el mapa</a>`;
+      item.done = `Publicado${item.visibility === 'private' ? ' solo para ti' : ''}. <a href="#/grafo">Verlo en el grafo</a>`;
     }
     item.ready = false;
     if (item.jobId) queue?.reviewed(item.jobId, 'published');
@@ -925,7 +938,7 @@ function syncBulk(zone) {
 // course.
 function lookalike(m, data, print) {
   const mine = ctx.state.contributions;
-  if (print && mine.some((c) => c.print === print)) return 'Este mismo archivo ya está en el mapa.';
+  if (print && mine.some((c) => c.print === print)) return 'Este mismo archivo ya está en el grafo.';
   const qkey = (q) => keyOf(q.text).slice(0, 70);
   const ours = new Set((data.questions ?? []).map(qkey).filter((k) => k.length > 20));
   if (ours.size < 3) return null;
@@ -948,7 +961,7 @@ function minePane() {
   const items = [...catalog, ...contributions].filter((x) => x.mine).sort((a, b) => b.updated - a.updated);
   if (!items.length) {
     return `<div class="empty glass"><h2>Todavía no aportaste nada</h2><p>Tus aportes y guías aparecen aquí: puedes cambiar quién los ve, reemplazarlos o borrarlos.</p>
-      <a class="button primary" href="#/aportar">Aportar material</a></div>`;
+      <a class="button primary" href="#/crear/grafo">Sumar material al grafo</a></div>`;
   }
   return `<ul class="mine">${items.map((x) => `<li class="glass" style="${themeStyle(x.theme)}" data-item="${esc(x.type)}:${esc(x.id)}">
       <div class="what"><span class="badge">${x.type === 'guide' ? 'Guía' : esc(KINDS[x.kind] ?? 'Aporte')}</span>
@@ -969,6 +982,7 @@ const findItem = (ref) => {
 export function mountContribute(context) {
   ctx = context;
   startQueue(context);
+  if (!drafted) { drafted = true; restoreDrafts().then((r) => { if (r && shown && shown !== 'mine') renderPane(shown); }); }
   const view = $('#view-contribute');
   if (view.dataset.ready) return;
   view.dataset.ready = '1';
@@ -1074,11 +1088,14 @@ export function mountContribute(context) {
   $('#preview-close').addEventListener('click', () => $('#preview').close());
 }
 
+let drafted = false;
+let shown = '';
 export function renderPane(pane, preset) {
+  shown = pane;
   const panes = { material: materialPane, guide: () => guidePane(preset), mine: minePane };
   for (const name of Object.keys(panes)) {
     $(`#pane-${name}`).hidden = name !== pane;
-    $(`[data-pane="${name}"]`).setAttribute('aria-selected', String(name === pane));
+    $(`[data-pane="${name}"]`)?.setAttribute('aria-selected', String(name === pane));
   }
   const el = $(`#pane-${pane}`);
   el.innerHTML = panes[pane]();

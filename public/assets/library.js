@@ -53,7 +53,7 @@ export function renderLibrary() {
   const list = docs.filter((d) => (!kindFilter || d.kind === kindFilter) && (!q || keyOf(`${d.title} ${d.course} ${d.code} ${d.professor} ${d.term}`).includes(q)))
     .sort((a, b) => a.course.localeCompare(b.course, 'es') || b.updated - a.updated);
   $('#docs').innerHTML = list.length ? list.map(card).join('')
-    : `<div class="empty glass"><h2>${docs.length ? 'Nada coincide' : 'La biblioteca está vacía'}</h2><p>${docs.length ? 'Prueba con otra materia, profe o tipo.' : '¿Tienes el sílabo de alguna materia? Compártelo: es lo primero que alguien busca antes de inscribirse.'}</p></div>`;
+    : `<div class="empty glass"><h2>${docs.length ? 'Nada coincide' : 'Todavía no hay documentos'}</h2><p>${docs.length ? 'Prueba con otra materia, profe o tipo.' : '¿Tienes el sílabo de alguna materia? Compártelo: es lo primero que alguien busca antes de inscribirse.'}</p></div>`;
   rise($('#docs'));
 }
 
@@ -176,7 +176,7 @@ export function mountLibrary(context) {
       await remove({ type: 'document', id: b.dataset.docRemove });
       ctx.state.library = ctx.state.library.filter((d) => d.id !== b.dataset.docRemove);
       renderLibrary();
-      ctx.toast('Quitado de la biblioteca.');
+      ctx.toast('Quitado de los documentos.');
     } catch (error) { ctx.toast(ctx.explain(error)); }
   });
 }

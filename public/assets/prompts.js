@@ -59,7 +59,7 @@ export function contributionInstructions(m = {}) {
   const part = m.part ? `\n\n## Esta es una parte de un archivo más grande\n${m.part}. Extrae solo lo que trae esta parte; las otras van en otros aportes.` : '';
   return `# Instrucciones de Studium: convertir material de estudio en un aporte
 
-Studium es un mapa de conocimiento que comparten estudiantes. Un aporte describe, de forma compacta y anónima, lo que
+Studium es un grafo de conocimiento que comparten estudiantes. Un aporte describe, de forma compacta y anónima, lo que
 enseña o evalúa un material: sus conceptos en el orden en que se enseñan, cómo se relacionan, las preguntas o problemas
 que trae y la forma de enseñar o evaluar de quien lo preparó. Con los aportes de muchas personas, Studium arma rutas de
 estudio (todo lo que hace falta para rendir, por ejemplo, el Examen 2 de una materia), bancos de preguntas por concepto
@@ -172,7 +172,7 @@ Reglas:
   partes completas y válidas (studium-aporte-1.json, studium-aporte-2.json…).
 ${known.length ? `
 ## Conceptos que Studium ya tiene de esta materia
-Cuando hables de uno de ellos, usa exactamente el mismo nombre, para que el mapa los una:
+Cuando hables de uno de ellos, usa exactamente el mismo nombre, para que el grafo los una:
 ${known.join('; ')}
 ` : ''}`;
 }
@@ -180,7 +180,7 @@ ${known.join('; ')}
 export function curriculumInstructions(m = {}) {
   return `# Instrucciones de Studium: convertir una malla curricular en un aporte
 
-Studium es un mapa de conocimiento que comparten estudiantes. La malla de una carrera le dice qué materias vienen en
+Studium es un grafo de conocimiento que comparten estudiantes. La malla de una carrera le dice qué materias vienen en
 cada semestre y cuáles se necesitan antes de otras, para que cada estudiante sepa qué le espera y llegue preparado.
 
 Te adjunto la malla. Léela completa antes de responder.
@@ -400,7 +400,7 @@ export function guideInstructions(o) {
   }
   if (o.api && !o.notes && !o.graph) sources.push('No hay apuntes: usa lo que sabes del tema, al nivel de un curso universitario.');
   else if (!o.api) sources.push('Si no adjunto nada, usa lo que sabes del tema, al nivel de un curso universitario.');
-  if (o.graph && o.until) sources.push(`La guía sigue la ruta ${o.until} del mapa: cubre sus conceptos en el orden del contexto (de lo que se necesita antes a lo último que entra), y nada de evaluaciones posteriores.`);
+  if (o.graph && o.until) sources.push(`La guía sigue la ruta ${o.until} del grafo: cubre sus conceptos en el orden del contexto (de lo que se necesita antes a lo último que entra), y nada de evaluaciones posteriores.`);
   if (o.focus) sources.push(`Quiero reforzar: ${o.focus}.`);
   if (o.goal) sources.push(`Mi objetivo: ${o.goal}.`);
   const sections = (o.sections ?? []).filter((k) => SECTION_TEXT[k]);

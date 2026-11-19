@@ -201,12 +201,12 @@ function setLens(id) {
   }
   if (lens === 'timeline') {
     const c = pickedCourse();
-    if (!c) { lens = 'normal'; ctx.toast('Elige primero una materia: tócala en el mapa o búscala.'); }
+    if (!c) { lens = 'normal'; ctx.toast('Elige primero una materia: tócala en el grafo o búscala.'); }
     else startTimeline(c);
   } else if (special?.kind === 'timeline') special = null;
   if (lens === 'career' && !F.career) {
     const career = graph().nodes.find((n) => n.type === 'career');
-    if (career) F.career = career.id; else { lens = 'normal'; ctx.toast('Todavía no hay una malla en el mapa: apórtala en «Aportar».'); }
+    if (career) F.career = career.id; else { lens = 'normal'; ctx.toast('Todavía no hay una malla en el grafo: súmala en «Crea tu guía».'); }
   }
   if (lens !== 'career' && F.career && LENSES[id] && id !== 'career') F.career = '';
   keep();
@@ -315,7 +315,7 @@ function renderRoute() {
     ${r.notes.map((x) => `<p class="note">${esc(x)}</p>`).join('')}
     <div class="actions"><button class="button primary" data-route-guide>Crear una guía con esta ruta</button></div>
     <div class="route-opts">
-      <label class="toggle small"><input type="checkbox" data-route-rest ${F.routeRest ? 'checked' : ''}><span class="knob"></span>Ver el resto del mapa, tenue</label>
+      <label class="toggle small"><input type="checkbox" data-route-rest ${F.routeRest ? 'checked' : ''}><span class="knob"></span>Ver el resto del grafo, tenue</label>
       <label class="toggle small"><input type="checkbox" data-route-missing ${F.routeMissing ? 'checked' : ''}><span class="knob"></span>Solo lo que todavía no sé</label>
     </div>
     <ol class="route-steps">${[...bands].map(([b, steps]) => `<li><h3>${esc(r.bandLabels[b] ?? '')} <small>${steps.length}</small></h3><ul>${steps.map((s) => `<li class="${k.has(s.node.key) ? 'known' : ''}">
@@ -331,7 +331,7 @@ function routeForm(c = pickedCourse()) {
   const g = graph();
   const courses = g.courses.filter((x) => !x.planned).sort((a, b) => a.name.localeCompare(b.name, 'es'));
   const course = c ?? courses[0];
-  if (!course) { ctx.toast('El mapa todavía no tiene materias.'); return; }
+  if (!course) { ctx.toast('El grafo todavía no tiene materias.'); return; }
   const stages = (course.stageList ?? []).filter((s) => s.order != null);
   const el = $('#map-panel');
   el.innerHTML = `${closeButton()}<p class="kicker">Ruta de estudio</p><h2>¿Qué vas a rendir?</h2>
@@ -356,9 +356,9 @@ async function ask(text, withAI) {
   let answer = null;
   if (withAI && ai.ready()) {
     const status = $('#map-said');
-    status.hidden = false; status.textContent = 'Tu IA está leyendo el mapa…';
+    status.hidden = false; status.textContent = 'Tu IA está leyendo el grafo…';
     try {
-      const res = await ai.run({ system: askInstructions(), text: `Índice del mapa de Studium:\n\n${mapIndex(g)}\n\nPregunta: ${text}`, maxTokens: 1500, use: ai.choice('ask') });
+      const res = await ai.run({ system: askInstructions(), text: `Índice del grafo de Studium:\n\n${mapIndex(g)}\n\nPregunta: ${text}`, maxTokens: 1500, use: ai.choice('ask') });
       answer = readAskAnswer(g, res.text);
     } catch (error) { ctx.toast(error.message || 'Tu IA no respondió; respondo yo.'); }
     status.hidden = true;
@@ -396,7 +396,7 @@ function renderPath() {
   const el = $('#map-panel');
   el.innerHTML = `${closeButton()}<p class="kicker">Camino</p><h2>${esc(special.label)}</h2>${say ? `<p class="said">${esc(say)}</p>` : ''}
     <ol class="path">${p.map((n) => `<li><button class="link" data-node="${esc(n.id)}">${esc(n.name)}</button> <small class="muted">${esc({ concept: 'concepto', course: 'materia', guide: 'guía' }[n.type] ?? '')}</small></li>`).join('')}</ol>
-    <div class="actions"><button class="button ghost" data-route-to-selection>Ruta hasta ${esc(p.at(-1).name)}</button><button class="link" data-clear-special>Volver al mapa</button></div>`;
+    <div class="actions"><button class="button ghost" data-route-to-selection>Ruta hasta ${esc(p.at(-1).name)}</button><button class="link" data-clear-special>Volver al grafo</button></div>`;
   el.removeAttribute('style');
   el.hidden = false;
 }
@@ -413,7 +413,7 @@ function search(text) {
   const out = [];
   const wordsIn = q.split('-').length;
   if (wordsIn >= 2) {
-    out.push({ kind: 'ask', label: `Preguntarle al mapa: «${text.trim()}»`, ai: false });
+    out.push({ kind: 'ask', label: `Preguntarle al grafo: «${text.trim()}»`, ai: false });
     if (ai.ready()) out.push({ kind: 'ask', label: `Preguntarle a tu IA (${ai.WAYS[ai.choice('ask').provider]?.name ?? 'IA'})`, ai: true });
   }
   for (const c of g.courses) if (has(c.name) || has(c.code)) out.push({ kind: 'node', node: c, label: c.name, tag: 'Materia' });
@@ -422,7 +422,7 @@ function search(text) {
   for (const n of g.nodes.filter((x) => x.type === 'guide' && has(x.name)).slice(0, 3)) out.push({ kind: 'node', node: n, label: n.name, tag: `Guía · ${n.course.name}` });
   const profs = [...new Set(g.courses.flatMap((c) => [...c.professors.keys()]))].filter(has);
   for (const p of profs.slice(0, 3)) out.push({ kind: 'prof', label: p, tag: 'Profesor: filtrar' });
-  if (!out.length) out.push({ kind: 'ask', label: `Preguntarle al mapa: «${text.trim()}»`, ai: false });
+  if (!out.length) out.push({ kind: 'ask', label: `Preguntarle al grafo: «${text.trim()}»`, ai: false });
   results = out.slice(0, 12);
   active = 0;
   list.innerHTML = results.map((r, i) => `<li role="option" id="mr-${i}" aria-selected="${i === active}" data-i="${i}" class="${r.kind}"><span>${esc(r.label)}</span>${r.tag ? `<small>${esc(r.tag)}</small>` : ''}</li>`).join('');
@@ -480,9 +480,9 @@ function renderDrawer() {
     <section><h3>De dónde viene</h3><div class="opts">${ctx.state.sources.map((s) => check('source', s.id, esc(s.name), F.sources.includes(s.id))).join('')}${check('source', 'community', 'Aportes de estudiantes', F.sources.includes('community'))}${check('source', 'mine', 'Lo que aporté yo', F.sources.includes('mine'))}</div></section>
     ${kinds.length ? `<section><h3>Tipo de material</h3><div class="opts">${kinds.map((k) => check('kind', k, esc(KINDS[k] ?? k), F.kinds.includes(k))).join('')}${check('kind', 'guide', 'Guías', F.kinds.includes('guide'))}</div></section>` : ''}
     <section><h3>Qué se ve</h3>
-      ${['guide', 'material', 'document', 'ghost', 'more'].map((k) => `<label class="toggle small"><input type="checkbox" data-f-show="${k}" ${F.show[k] ? 'checked' : ''}><span class="knob"></span>${{ guide: 'Guías', material: 'Materiales (exámenes, deberes, libros…)', document: 'Sílabos y documentos de la biblioteca', ghost: 'Conceptos mencionados que nadie explicó', more: 'Más nombres a la vez' }[k]}</label>`).join('')}
+      ${['guide', 'material', 'document', 'ghost', 'more'].map((k) => `<label class="toggle small"><input type="checkbox" data-f-show="${k}" ${F.show[k] ? 'checked' : ''}><span class="knob"></span>${{ guide: 'Guías', material: 'Materiales (exámenes, deberes, libros…)', document: 'Sílabos y otros documentos', ghost: 'Conceptos mencionados que nadie explicó', more: 'Más nombres a la vez' }[k]}</label>`).join('')}
       ${F.hidden.length ? `<p class="fine">${plural(F.hidden.length, 'elemento ocultado', 'elementos ocultados')} a mano. <button class="link" data-unhide>Mostrarlos</button></p>` : ''}</section>
-    <footer class="drawer-credits"><button class="link" data-map-info>¿Para qué sirve el mapa?</button><a class="link" href="#/fuentes">Créditos</a></footer>`;
+    <footer class="drawer-credits"><button class="link" data-map-info>¿Para qué sirve el grafo?</button><a class="link" href="#/fuentes">Créditos</a></footer>`;
 }
 function renderChips() {
   const el = $('#map-chips');
@@ -522,6 +522,9 @@ function renderCount() {
   const shown = view.active?.filter((n) => n.type === 'concept').length ?? 0;
   const all = graph().nodes.filter((n) => n.type === 'concept').length;
   el.textContent = shown === all ? plural(all, 'concepto', 'conceptos') : `${shown.toLocaleString('es')} de ${plural(all, 'concepto', 'conceptos')}`;
+  // The documents the community shared (syllabi, lab guides…) live inside the graph: their count on its button.
+  const docs = $('#map-docs-count'), n = ctx.state.library?.length ?? 0;
+  if (docs) { docs.hidden = !n; docs.textContent = n; }
 }
 function renderViews() {
   const el = $('#map-views');
@@ -599,12 +602,13 @@ function panel(n) {
     html = `<p class="kicker">${n.planned ? 'Materia de la malla' : 'Materia o competencia'}</p><h2>${esc(n.name)}</h2>
       <p class="muted">${esc([n.code, ...n.careers.map((c) => `${g.byId.get(c.career)?.name}, semestre ${c.semester}`)].filter(Boolean).join('. '))}</p>
       ${n.contributions.length ? `<p>${Object.entries(counts).map(([k, c]) => esc(countKind(k, c))).join(', ')}.${credit(n.sources)}</p>` : '<p class="muted">Nadie aportó material de esta materia todavía.</p>'}
+      ${n.documents?.length ? `<h3>Documentos <small>sílabos, guías de laboratorio…</small></h3><ul class="profs">${n.documents.map((d) => `<li><a class="link" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">${esc(d.title)}</a> <small class="muted">${esc(DOC_KINDS[d.kind] ?? 'Documento')}</small></li>`).join('')}</ul>` : ''}
       ${n.professors.size ? `<h3>Profesores</h3><ul class="profs">${[...n.professors].map(([p, terms]) => `<li><button class="link" data-prof="${esc(p)}">${esc(p)}</button>${terms.size ? ` <small class="muted">${esc([...terms].map(termLabel).join(', '))}</small>` : ''}</li>`).join('')}</ul>` : ''}
       ${stages.length ? `<h3>Evaluaciones <small>toca una para ver su ruta</small></h3><div class="stages">${stages.map((s) => `<button class="stage ${s.order == null ? 'loose' : ''}" data-stage="${esc(s.label)}" ${s.order == null ? 'disabled' : ''}><b>${esc(s.label)}</b><small>${plural(s.concepts.size, 'concepto', 'conceptos')}</small></button>`).join('')}</div>` : ''}
       <div class="actions">
         <button class="button primary" data-act="route">Trazar una ruta</button>
         <button class="button ghost" data-act="timeline">Línea de tiempo</button>
-        ${n.contributions.length || n.guides.length ? `<a class="button ghost" href="#/aportar/guia/${encodeURIComponent(n.id)}">Crear una guía</a>` : '<a class="button ghost" href="#/aportar">Aportar material</a>'}
+        ${n.contributions.length || n.guides.length ? `<a class="button ghost" href="#/crear/guia/${encodeURIComponent(n.id)}">Crear una guía</a>` : '<a class="button ghost" href="#/crear/grafo">Sumar material al grafo</a>'}
       </div>
       ${nodeActions(n)}
       ${before.length ? `<h3>Se necesita antes</h3><div class="chips small">${chipsOf(before)}</div>` : ''}
@@ -696,7 +700,7 @@ function guideFrom(concepts, r) {
     course: course?.name ?? '', code: course?.code ?? '', title: r?.stage?.label ?? '', professor: r?.professor ?? '', term: r?.term ?? '', graph: true,
     route: { keys: concepts.map((n) => n.key), label: r ? `${r.stage ? `hasta ${r.stage.label}` : 'completa'}` : '', bands: r ? Object.fromEntries(r.steps.map((s) => [s.node.key, r.bandLabels[s.band]])) : null },
   });
-  location.hash = '#/aportar/guia';
+  location.hash = '#/crear/guia';
 }
 
 /* ---------- mounting ---------- */

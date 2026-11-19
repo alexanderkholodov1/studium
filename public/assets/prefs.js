@@ -5,7 +5,7 @@ import { loadProfile, saveProfile } from './data.js';
 
 export const MODES = {
   examenes: { name: 'Para exámenes', text: 'Lo primero que ves es cuánto falta para tu próximo examen, con su guía a mano.' },
-  gusto: { name: 'Por gusto', text: 'Sin cuentas regresivas: el mapa y las guías para explorar a tu ritmo.' },
+  gusto: { name: 'Por gusto', text: 'Sin cuentas regresivas: el grafo y las guías para explorar a tu ritmo.' },
   intensivo: { name: 'Intensivo', text: 'Temporizador de enfoque al frente, y lo justo alrededor.' },
   metas: { name: 'Paso a paso', text: 'Metas pequeñas, tu progreso a la vista y un sonido cada vez que cumples una.' },
 };

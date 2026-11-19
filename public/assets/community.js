@@ -109,7 +109,7 @@ function profCard(p) {
   }).join('');
   return `<article class="prof glass" style="${themeStyle(theme)}">
     <header><span class="face" aria-hidden="true">${esc(initials(p.name))}</span><div><h3>${esc(p.name)}</h3>
-      <p class="muted">${esc([...p.courses].slice(0, 3).join(' · '))}${p.courses.size ? ' · ' : ''}${people ? `${people} ${people === 1 ? 'estudiante contó' : 'estudiantes contaron'} lo que sabe` : 'Nadie contó nada todavía'}${p.questions ? ` · ${p.questions} preguntas de sus exámenes en el mapa` : ''}</p></div></header>
+      <p class="muted">${esc([...p.courses].slice(0, 3).join(' · '))}${p.courses.size ? ' · ' : ''}${people ? `${people} ${people === 1 ? 'estudiante contó' : 'estudiantes contaron'} lo que sabe` : 'Nadie contó nada todavía'}${p.questions ? ` · ${p.questions} preguntas de sus exámenes en el grafo` : ''}</p></div></header>
     ${groups || '<p class="muted">¿Tomaste clases con este profe? Lo que sabes le sirve a quien se inscribe el próximo semestre.</p>'}
     <div class="actions"><button class="button ghost small" data-tip-for="${esc(p.name)}" data-tip-course="${esc([...p.courses][0] ?? '')}">${p.tips.some((t) => t.id.endsWith(`__${ctx.user.uid}`)) ? 'Cambiar lo que conté' : 'Contar lo que sé'}</button>
       ${p.questions ? `<button class="button ghost small" data-bank="${esc(p.key)}">Banco de preguntas (${p.questions})</button>` : ''}</div>

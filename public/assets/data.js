@@ -258,6 +258,17 @@ export async function saveProfile(uid, profile) {
   await setDoc(doc(db, 'profiles', uid), { ...profile, updated: serverTimestamp() });
 }
 
+/* ---------- drafts of «Crea tu guía»: what the person filled in, only its owner reads it ---------- */
+export async function loadDrafts(uid) {
+  const snap = await getDoc(doc(db, 'drafts', uid));
+  if (!snap.exists()) return null;
+  const { updated, ...data } = snap.data();
+  return data;
+}
+export async function saveDrafts(uid, drafts) {
+  await setDoc(doc(db, 'drafts', uid), { ...drafts, updated: serverTimestamp() });
+}
+
 /* ---------- the person's schedule (only its owner reads it; «share» opens with friends in 0.6.0) ---------- */
 export async function loadSchedule(uid) {
   const snap = await getDoc(doc(db, 'schedules', uid));

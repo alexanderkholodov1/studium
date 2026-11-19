@@ -273,7 +273,7 @@ export function readAsk(graph, text) {
   if (named.length && wantsRoute) return { action: 'route', to: named, say: `Todo lo que necesitas para ${named.map((n) => n.name).join(', ')}.` };
   if (named.length) return { action: 'concepts', concepts: named, say: named.length === 1 ? named[0].name : `${named.length} conceptos.` };
   if (course) return { action: 'course', course, say: course.name };
-  return { action: 'none', say: 'No encontré eso en el mapa. Prueba con el nombre de una materia, un concepto o «la ruta para el Examen 2 de…».' };
+  return { action: 'none', say: 'No encontré eso en el grafo. Prueba con el nombre de una materia, un concepto o «la ruta para el Examen 2 de…».' };
 }
 
 // What the person's AI reads to answer a question about the map: every course with its code, professors, terms and
@@ -291,7 +291,7 @@ export function mapIndex(graph, max = 24_000) {
   return lines.join('\n').slice(0, max);
 }
 export function askInstructions() {
-  return `Eres el buscador del mapa de conocimiento de Studium. Te doy el índice del mapa (materias, profesores, evaluaciones y conceptos) y una pregunta de un estudiante. Responde solo con un objeto JSON, sin texto antes ni después:
+  return `Eres el buscador del grafo de conocimiento de Studium. Te doy el índice del grafo (materias, profesores, evaluaciones y conceptos) y una pregunta de un estudiante. Responde solo con un objeto JSON, sin texto antes ni después:
 
 {"action": "route" | "concepts" | "path" | "course" | "none", "course": "", "stage": "", "professor": "", "term": "", "concepts": [], "from": "", "to": "", "say": ""}
 
@@ -299,7 +299,7 @@ export function askInstructions() {
 - "concepts": mostrar unos conceptos.
 - "path": el camino entre dos conceptos (from y to).
 - "course": mostrar una materia.
-- "none": si el mapa no tiene lo que pide; en "say" explica en una frase qué sí hay.
+- "none": si el grafo no tiene lo que pide; en "say" explica en una frase qué sí hay.
 - Escribe los nombres de materias y conceptos exactamente como aparecen en el índice. Si pide algo que el índice no nombra así, elige los conceptos del índice que lo cubren (hasta 20).
 - "say": una frase corta, en el idioma de la pregunta, que diga qué le muestras.`;
 }
@@ -319,5 +319,5 @@ export function readAskAnswer(graph, text) {
   if (obj.action === 'path' && concept(obj.from) && concept(obj.to)) return { action: 'path', from: concept(obj.from), to: concept(obj.to), say };
   if (obj.action === 'concepts' && named.length) return { action: 'concepts', concepts: named, say };
   if (obj.action === 'course' && course) return { action: 'course', course, say };
-  return { action: 'none', say: say || 'Tu IA no encontró eso en el mapa.' };
+  return { action: 'none', say: say || 'Tu IA no encontró eso en el grafo.' };
 }
