@@ -1658,7 +1658,7 @@ html.has-announce .page { padding-top: 170px; }
 @keyframes busy-spin { to { transform: rotate(360deg); } }
 
 /* «Mi horario» in the home page. */
-.home-schedule { margin: 0 0 22px; }
+.home-schedule { margin: 22px 0 0; }
 .home-schedule:empty { display: none; }
 .hs-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 10px; }
 .hs-head h2 { margin: 0; font: 800 24px var(--display); letter-spacing: -.02em; }
