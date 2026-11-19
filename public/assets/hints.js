@@ -28,14 +28,12 @@ const HINTS = [
   { id: 'h-eggs', where: ['', 'guias', 'bienvenida'], anchor: '.brand', text: 'Studium esconde algunos secretos. Toca las cosas pequeñas, o escribe alguna palabra mágica.' },
   { id: 'h-letters', where: ['bienvenida'], anchor: '#wordmark', text: 'Las letras de «studium» se pueden arrastrar.' },
   { id: 'h-ask', where: ['mapa'], anchor: '#map-q', text: '¿Sabías que puedes preguntarle al mapa en palabras? Por ejemplo: «la ruta para el Examen 2 de redes».' },
-  // Your schedule: advice for enrollment, each leading to its tip in the student guide.
-  { id: 'h-s-paste', where: ['horario'], anchor: '[data-paste]', more: 'oferta', text: '¿Sabías que puedes pegar toda la búsqueda de la Oferta de cursos? Eliges el paralelo sin escribir nada.' },
-  { id: 'h-s-group', where: ['horario'], anchor: '.sched-pick.partner, .sched-list .miss', more: 'grupo', text: 'La teoría y sus ejercicios o laboratorio van juntos, cada uno con su NRC: si te quedas en una parte, por lo general te quedas en la materia.' },
-  { id: 'h-s-period', where: ['horario'], anchor: '.sched-picker h3 small', more: 'periodo', text: '202610, 202620, 202630: el año y el periodo. ¿Sabes cuál es cuál?' },
-  { id: 'h-s-credits', where: ['horario'], anchor: '.sched-total', more: 'creditos', text: 'El semestre incluye 16 créditos y lo usual son 15: suele sobrar uno ya pagado, por si quieres aprovecharlo.' },
-  { id: 'h-s-drag', where: ['horario'], anchor: '.sched-options .sched-opt:nth-child(2):not(.add)', text: 'Arrastra una clase a la pestaña de otro borrador para pasarla allí, con sus ejercicios o laboratorio.' },
-  { id: 'h-s-mine', where: ['horario'], anchor: '[data-use-mine]', more: 'despues', text: 'Cuando te inscribas, el borrador que quedó puede ser tu horario del semestre: se queda en «Mi horario».' },
-  { id: 'h-s-how', where: ['horario'], anchor: '.sched-special', more: 'como', text: 'Una vez por semestre, aquí preparas tu inscripción con borradores. ¿Sabes cómo se asigna tu día y tu hora?' },
+  // Your schedule: plain advice, each leading to its tip in the student guide.
+  { id: 'h-s-paste', where: ['horario'], anchor: '[data-paste]', more: 'oferta', text: 'Un truco: en la Oferta de cursos, busca la materia, copia toda la lista que aparece y pégala aquí. Studium te muestra todos los horarios de esa materia y eliges con un clic.' },
+  { id: 'h-s-group', where: ['horario'], anchor: '.sched-pick.partner, .sched-list .miss', more: 'grupo', text: 'Cálculo «+ Ej» son dos clases que van juntas: la teoría y sus ejercicios. Necesitas las dos, y del mismo grupo.' },
+  { id: 'h-s-credits', where: ['horario', ''], anchor: '.sched-total, .hs-head .muted', more: 'creditos', text: 'Tu semestre ya incluye 16 créditos. Con 5 materias usas 15: te sobra uno que ya pagaste.' },
+  { id: 'h-s-drag', where: ['horario'], anchor: '.sched-options .sched-opt:nth-child(2):not(.add)', text: 'Puedes arrastrar una clase de un borrador a otro.' },
+  { id: 'h-s-how', where: ['horario', ''], anchor: '.sched-special', more: 'como', text: 'Cuando te toque inscribirte, aquí pruebas combinaciones de clases antes de elegir.' },
   { id: 'h-views', where: ['mapa'], anchor: '#map-view-open', text: 'El mapa se ve de muchas formas: lo más preguntado, la dificultad, lo que te falta, la línea de tiempo de una materia…' },
 ];
 
@@ -96,12 +94,18 @@ function show() {
   bubble.className = `hint-bubble glass${ambience() === 'sereno' ? ' still' : ''}`;
   bubble.dataset.hint = hint.id;
   bubble.setAttribute('role', 'status');
-  bubble.innerHTML = `<p></p><div class="actions">${hint.more ? `<a class="link" href="#/guia-estudiante/${hint.more}" data-hint-more>${t('Leer más')}</a>` : ''}<button class="link" data-hint-ok>${t('Entendido')}</button><button class="link" data-hint-off>${t('No más pistas')}</button></div>`;
+  bubble.innerHTML = `<p></p><div class="actions">${hint.more ? `<a class="button primary small" href="#/guia-estudiante/${hint.more}" data-hint-more>${t('Ver más')}</a>` : ''}<button class="button ghost small" data-hint-ok>${t('Entendido')}</button><button class="link quiet" data-hint-off>${t('Ocultar pistas')}</button></div>`;
   bubble.querySelector('p').textContent = t(hint.text);
   document.body.append(bubble);
   place(bubble, anchor);
   bubble.querySelector('[data-hint-ok]').addEventListener('click', () => close(true));
-  bubble.querySelector('[data-hint-off]').addEventListener('click', () => { setHints(false); close(true); });
+  // Turned off by mistake? The bubble says where to turn them on again before it leaves.
+  bubble.querySelector('[data-hint-off]').addEventListener('click', () => {
+    setHints(false); markSeen(hint.id);
+    bubble.querySelector('p').textContent = t('Listo, no más pistas. Si las quieres de vuelta: Ajustes → Pistas.');
+    bubble.querySelector('.actions').remove();
+    setTimeout(() => close(false), 4500);
+  });
   bubble.querySelector('[data-hint-more]')?.addEventListener('click', () => close(true));
   // Seen once it has been on screen; it leaves by itself.
   setTimeout(() => { if (bubble?.dataset.hint === hint.id) { markSeen(hint.id); close(false); } }, 16000);
@@ -109,10 +113,10 @@ function show() {
 // Wait until the person has been on a page for a while, and leave several minutes between hints.
 function schedule() {
   clearTimeout(timer);
-  // Where the hints are advice for something being done now (the schedule), they come sooner and closer together.
+  // Never on arrival: first the page, then, after a while, one hint.
   const soon = page() === 'horario';
-  const wait = ambience() === 'sereno' ? (soon ? 20000 : 70000) : (soon ? 7000 : 35000);
-  const gap = Math.max(0, lastShown + (soon ? 45000 : 240000) - Date.now());
+  const wait = ambience() === 'sereno' ? 70000 : (soon ? 25000 : 35000);
+  const gap = Math.max(0, lastShown + (soon ? 90000 : 240000) - Date.now());
   timer = setTimeout(show, Math.max(wait, gap));
 }
 export function mountHints() {

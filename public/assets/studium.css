@@ -1152,7 +1152,7 @@ kbd { font: 700 .85em var(--display); padding: 1px 7px; border-radius: 6px; back
 
 /* ---------- hints ---------- */
 /* A bubble next to its subject, with a little arrow that points at it; it rises in and sinks out. */
-.hint-bubble { position: absolute; z-index: 40; width: min(320px, calc(100vw - 24px)); padding: 14px 16px 8px; border-radius: 20px;
+.hint-bubble { position: absolute; z-index: 40; width: min(340px, calc(100vw - 24px)); padding: 14px 16px 8px; border-radius: 20px;
   display: grid; gap: 6px; font-size: 15px; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line), 0 22px 50px -20px rgba(0, 0, 0, .45);
   transform-origin: var(--arrow, 50%) top; animation: hint-in .7s cubic-bezier(.2, .9, .3, 1.15) both; }
 .hint-bubble.above { transform-origin: var(--arrow, 50%) bottom; }
@@ -1160,7 +1160,8 @@ kbd { font: 700 .85em var(--display); padding: 1px 7px; border-radius: 6px; back
   background: inherit; box-shadow: -1px -1px 0 var(--line); }
 .hint-bubble.above::before { top: auto; bottom: -7px; border-radius: 0 0 3px 0; box-shadow: 1px 1px 0 var(--line); }
 .hint-bubble p::before { content: "💡 "; }
-.hint-bubble .actions { gap: 14px; }
+.hint-bubble .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-bottom: 6px; }
+.hint-bubble .actions .quiet { margin-left: auto; font-size: 12.5px; color: var(--muted); }
 .hint-bubble .link { font-size: 13.5px; }
 .hint-bubble.out { animation: hint-out .45s ease-in forwards; }
 /* Serene: it fades in and out without moving. */
@@ -1431,7 +1432,6 @@ html.has-announce .page { padding-top: 170px; }
 .sg-source { display: block; margin-top: 8px; font-size: 12.5px; color: var(--muted); }
 @media (max-width: 900px) { .sg-essential { grid-template-columns: repeat(2, minmax(0, 1fr)); } .sg-grid { grid-template-columns: 1fr; } }
 @media (max-width: 480px) { .sg-big { min-height: 140px; padding: 16px; } .sg-big b { font-size: 18px; } }
-.hint-bubble .actions a.link { text-decoration: underline; }
 
 /* ---------- Tu horario ---------- */
 .sched { --rowh: 66px; }
@@ -1450,14 +1450,14 @@ html.has-announce .page { padding-top: 170px; }
 .sched-banner span { font-size: 14.5px; opacity: .92; }
 .sched-banner .button { background: rgba(255, 255, 255, .92); color: var(--ink); }
 /* The empty «Mi horario»: one thing to do. */
-.sched-empty { padding: 28px; border-radius: 28px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; max-width: 760px; margin: 0 auto; }
-.sched-empty h2 { margin: 0; font: 800 34px var(--display); letter-spacing: -.03em; }
-.sched-empty > p { margin: 0 0 12px; color: var(--ink-2); font-size: 17px; }
+.sched-empty { padding: 22px 24px; border-radius: 26px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
+.sched-empty h2 { margin: 0; font: 800 28px var(--display); letter-spacing: -.03em; }
+.sched-empty > p { margin: 0 0 10px; color: var(--ink-2); font-size: 16px; }
 .sched-transcribe { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
-.sched-drop { display: grid; justify-items: center; gap: 6px; padding: 26px 18px; border-radius: 22px; cursor: pointer; text-align: center;
+.sched-drop { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 14px; padding: 14px 18px; border-radius: 20px; cursor: pointer; text-align: left;
   border: 2px dashed color-mix(in oklab, var(--blue) 45%, transparent); background: color-mix(in oklab, var(--blue) 6%, var(--card)); transition: background .2s, border-color .2s, transform .4s var(--spring); }
-.sched-drop:hover, .sched-drop.over { background: color-mix(in oklab, var(--blue) 12%, var(--card)); border-color: var(--blue); transform: scale(1.01); }
-.sched-drop .sg-icon { --c: var(--blue); width: 52px; height: 52px; }
+.sched-drop:hover, .sched-drop.over { background: color-mix(in oklab, var(--blue) 12%, var(--card)); border-color: var(--blue); }
+.sched-drop .sg-icon { --c: var(--blue); width: 46px; height: 46px; grid-row: span 3; }
 .sched-drop b { font: 800 19px var(--display); color: var(--ink); }
 .sched-drop small { color: var(--muted); font-size: 14px; }
 .sched-drop .files { font: 650 14px var(--body); color: var(--blue); }
@@ -1637,3 +1637,33 @@ html.has-announce .page { padding-top: 170px; }
   .sched-form .grid.three { grid-template-columns: 1fr 1fr; }
   .sched-more .menu { position: fixed; z-index: 40; left: 16px; right: 16px; top: auto; bottom: 96px; min-width: 0; }
 }
+
+.sched-transcribe .msg[data-tone="warn"] { padding: 12px 14px; border-radius: 14px; color: var(--ink); background: color-mix(in oklab, var(--butter) 22%, var(--card)); box-shadow: inset 3px 0 0 var(--butter); }
+.button.busy { position: relative; color: transparent !important; pointer-events: none; }
+.button.busy::after { content: ""; position: absolute; inset: 0; margin: auto; width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(255, 255, 255, .45); border-top-color: #fff; animation: busy-spin .8s linear infinite; }
+@keyframes busy-spin { to { transform: rotate(360deg); } }
+
+/* «Mi horario» in the home page. */
+.home-schedule { margin: 0 0 22px; }
+.home-schedule:empty { display: none; }
+.hs-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 10px; }
+.hs-head h2 { margin: 0; font: 800 24px var(--display); letter-spacing: -.02em; }
+.hs-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; }
+.sched-special.small { padding: 8px 14px; font-size: 14px; }
+.hs-empty { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 18px 22px; border-radius: 24px; }
+.hs-empty h2 { margin: 0; font: 800 22px var(--display); }
+.hs-empty p { margin: 2px 0 0; color: var(--ink-2); }
+.hs-empty .hs-actions { margin: 0; flex-direction: column; align-items: stretch; }
+.hs-empty .sg-icon { --c: var(--blue); }
+.sched-sheet.compact { --rowh: 46px; padding-top: 8px; }
+.sched-sheet.compact .sched-hours small { display: none; }
+.sched-sheet.compact .sched-class small { display: none; }
+.sched-sheet.compact .sched-class { align-content: center; padding-block: 4px; }
+.sched-sheet.compact .sched-class b { display: block; white-space: nowrap; text-overflow: ellipsis; }
+@media (max-width: 700px) {
+  .hs-empty { grid-template-columns: auto minmax(0, 1fr); }
+  .hs-empty .hs-actions { grid-column: 1 / -1; }
+  .hs-actions { margin-left: 0; }
+}
+
+@media (max-width: 560px) { .sched-sheet.compact .sched-class b { display: none; } .hs-actions .sched-special.small { flex: 1; justify-content: center; } }

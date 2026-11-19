@@ -54,7 +54,6 @@
   <nav class="tabs member-only" aria-label="Secciones">
     <span class="drop" aria-hidden="true"></span>
     <a href="#/" data-tab="home">Inicio</a>
-    <a href="#/horario" data-tab="horario">Horario</a>
     <a href="#/guias" data-tab="catalog">Guías</a>
     <a href="#/mapa" data-tab="map">Mapa</a>
     <a href="#/biblioteca" data-tab="library">Biblioteca</a>
@@ -82,6 +81,7 @@
     <div class="menu glass" id="account-menu" role="menu" hidden>
       <p id="who-email"></p>
       <a role="menuitem" href="#/admin" class="admin-only">Panel de admin</a>
+      <a role="menuitem" href="#/horario">Mi horario</a>
       <a role="menuitem" href="#/guia-estudiante">Guía del estudiante</a>
       <a role="menuitem" href="#/ajustes">Ajustes</a>
       <a role="menuitem" href="#/mis-aportes">Mis aportes</a>
@@ -93,7 +93,6 @@
 
 <nav class="tabbar glass" id="tabbar" aria-label="Secciones" hidden>
   <a href="#/" data-tab="home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11 12 4l8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>Inicio</a>
-  <a href="#/horario" data-tab="horario"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 10h16M9 3v4M15 3v4M8 14h3M13 14h3M8 17h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Horario</a>
   <a href="#/guias" data-tab="catalog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4Zm0 12a4 4 0 0 1 4-4h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>Guías</a>
   <a href="#/mapa" data-tab="map"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="6" r="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="17" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 8.5l2.6 6M16.6 7.7l-3 6.6M8.4 6.8l7.6-.6" stroke="currentColor" stroke-width="2"/></svg>Mapa</a>
   <a href="#/biblioteca" data-tab="library"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4v16H5ZM10 4h4v16h-4ZM15.5 4.5l3.8-1 4 15.5-3.8 1Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>Biblioteca</a>
@@ -299,6 +298,7 @@
     <div class="home-tools"><div class="ambiences mini" data-ambience-picker="mini" aria-label="Ambiente"></div>
       <button class="button ghost small" id="home-edit" aria-pressed="false">Personalizar</button></div>
   </header>
+  <section class="home-schedule" id="home-schedule" aria-label="Mi horario"></section>
   <div class="dash" id="dash"></div>
 </main>
 
@@ -380,10 +380,9 @@
 <!-- Your schedule: options to compare, conflicts in sight, from anything you already have -->
 <main class="view page wide" id="view-horario" hidden>
   <div class="page-head">
-    <div><p class="kicker" data-community>Comunidad USFQ</p><h1>Tu horario</h1></div>
+    <div><a class="back" href="#/">← Inicio</a><h1>Mi horario</h1></div>
     <a class="button ghost small" href="#/guia-estudiante">Guía del estudiante</a>
   </div>
-  <p class="lede-small">Tu semana del semestre, por bloques de clase.</p>
   <div class="sched" id="horario"></div>
 </main>
 <dialog class="sheet-dialog sched-dialog" id="sched-dialog"></dialog>

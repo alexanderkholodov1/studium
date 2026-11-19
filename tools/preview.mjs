@@ -17,6 +17,8 @@ const FS = `http://127.0.0.1:${ports.firestore.port}`;
 const AUTH = `http://127.0.0.1:${ports.auth.port}`;
 const args = process.argv.slice(2);
 const guideFile = args.includes('--guide') ? args[args.indexOf('--guide') + 1] : null;
+// --port: another port, so the live project can be served on 5173 at the same time (the local bridge answers 5173).
+const port = Number(args.includes('--port') ? args[args.indexOf('--port') + 1] : 5173) || 5173;
 const children = [];
 const run = (cmd, list) => {
   const child = spawn(cmd, list, { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], shell: process.platform === 'win32' });
@@ -91,10 +93,10 @@ writes.push(put('presence/' + uid, { at: now, community: 'usfq', since: now }));
 await post(`${FS}/v1/${base}:commit`, { writes });
 
 console.log('Starting the page…');
-const dev = run('node', ['tools/dev.mjs', '--emulators']);
+const dev = run('node', ['tools/dev.mjs', '--emulators', '--port', String(port)]);
 dev.stdout.on('data', (d) => process.stdout.write(d));
 console.log(`
-Studium preview: http://localhost:5173/studium/
+Studium preview: http://localhost:${port}/studium/
   student   prueba@estud.usfq.edu.ec   / prueba123
   classmate otra@estud.usfq.edu.ec     / prueba123
   admin     studiumplatform@gmail.com  / prueba123

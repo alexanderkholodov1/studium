@@ -10,6 +10,7 @@ import { auth } from './data.js';
 import { communityLabel, communityOf, flag, settings } from './settings.js';
 import { seen, markSeen, hintsOn, setHints } from './hints.js';
 import { luckyHit, found, radioOn, openRadio } from './eggs.js';
+import { renderHomeSchedule } from './schedule.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -261,6 +262,7 @@ export function renderHome() {
   const tiles = list.map((t, i) => RENDER[tileId(t)]?.(spanOf(t)).replace(/^<section /, `<section data-i="${i}" `).replace(/(data-tile="[a-z]+"[^>]*>)/, `$1${tools(t, i, list.length)}`) ?? '').join('');
   const top = prefs.fresh && !sessionStorage.getItem('studium-onboarded') ? onboardTile() : !editing && !p.tiles.length && !seen('home-suggest') ? suggestTile() : '';
   $('#dash').innerHTML = top + tiles + (editing ? trayTile() : '');
+  renderHomeSchedule($('#home-schedule'));
   $('#dash').classList.toggle('editing', editing);
   $('#home-edit').textContent = editing ? 'Listo' : 'Personalizar';
   $('#home-edit').setAttribute('aria-pressed', String(editing));

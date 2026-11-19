@@ -112,7 +112,7 @@ document.addEventListener('click', (e) => {
 
 /* ---------- views ---------- */
 const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'horario', 'student', 'catalog', 'map', 'library', 'profes', 'contribute', 'settings', 'about', 'sources', 'guide', 'admin'];
-const TABS = { home: 'home', horario: 'horario', catalog: 'catalog', map: 'map', library: 'library', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', admin: 'admin' };
+const TABS = { home: 'home', horario: 'home', catalog: 'catalog', map: 'map', library: 'library', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', admin: 'admin' };
 const PUBLIC = ['landing', 'auth', 'about', 'denied', 'verify'];
 let current = 'boot';
 function show(view) {
@@ -492,7 +492,7 @@ async function route() {
     }
     const views = {
       biblioteca: ['library', 'Biblioteca', renderLibrary],
-      horario: ['horario', 'Tu horario', renderSchedule],
+      horario: ['horario', 'Mi horario', renderSchedule],
       'guia-estudiante': ['student', 'Guía del estudiante', () => renderStudentGuide(arg[0])],
       mapa: ['map', 'Mapa', () => openMap(arg.join('/'))],
       fuentes: ['sources', 'Fuentes', renderSources],

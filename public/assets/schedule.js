@@ -139,15 +139,45 @@ const view = () => (mode === 'mine' ? state.mine : state.options[state.active]);
 
 // Drawn once per account: the route may call this again while the rest of the app loads, and redrawing then would lose
 // a click in progress.
+let nextMode = null; // asked from the home: open straight into preparing enrollment
+let stale = false; // changed from the home since the page was drawn
 export async function renderSchedule() {
   root = $('#horario');
   const uid = auth.currentUser?.uid ?? null;
-  if (loadedFor === uid && root.childElementCount) return;
+  if (loadedFor === uid && root.childElementCount && !stale && !nextMode) return;
   if (!root.childElementCount) root.innerHTML = '<p class="status">Cargando tu horario…</p>';
-  await load();
-  loadedFor = uid;
-  mode = 'mine';
+  if (loadedFor !== uid) { await load(); loadedFor = uid; }
+  mode = nextMode ?? (loadedFor === uid && root.dataset.mode ? root.dataset.mode : 'mine');
+  nextMode = null; stale = false;
   paint();
+}
+// «Mi horario» in the home page: the week, or one card to put it. Editing happens in its page.
+let homeEl = null;
+export async function renderHomeSchedule(el) {
+  homeEl = el;
+  if (!el) return;
+  const uid = auth.currentUser?.uid ?? null;
+  if (loadedFor !== uid) { await load(); loadedFor = uid; }
+  paintHome();
+}
+function paintHome() {
+  if (!homeEl) return;
+  const o = state.mine;
+  homeEl.classList.add('sched');
+  homeEl.innerHTML = o.classes.length ? `
+    <div class="hs-head"><h2>Mi horario</h2><span class="muted">${credits(o.classes)} de ${INCLUDED} créditos${state.term ? ` · ${esc(termName(state.term))}` : ''}</span>
+      <div class="hs-actions"><a class="button ghost small" href="#/horario">Editar</a><button class="sched-special small" data-hs-prep>Preparar mi inscripción</button></div></div>
+    ${week(o, true)}`
+    : `<div class="hs-empty glass">
+      <span class="sg-icon c-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></span>
+      <div><h2>Pon tu horario</h2><p>Súbelo una vez (una captura de Banner, una foto o tu Excel) y lo verás aquí cada día.</p></div>
+      <div class="hs-actions"><button class="button primary" data-hs-upload>Subir mi horario</button><button class="link" data-hs-prep>o prepara tu inscripción</button></div>
+    </div>`;
+}
+// Whatever changed, both places show it.
+function refresh() {
+  if (root?.isConnected && !$('#view-horario').hidden) paint(); else stale = true;
+  paintHome();
 }
 function paintWhere() {
   const el = $('#sched-where', root);
@@ -164,13 +194,13 @@ function rowOf(t) {
   }
   return BLOCKS.length + Math.max(0, t - BLOCKS.at(-1).e - 10) / 90;
 }
-function week(o) {
+function week(o, compact = false) {
   const clash = conflicts(o.classes);
   const days = o.classes.some((c) => c.slots.some((s) => s.d === 5)) ? 6 : 5;
   const late = Math.max(0, ...o.classes.flatMap((c) => c.slots.map((s) => Math.ceil(rowOf(s.e)) - BLOCKS.length)));
   const rows = BLOCKS.length + late;
   const inClash = (c, d, s) => clash.some((x) => x.d === d && x.s < s.e && x.e > s.s && (x.a === c || x.b === c));
-  return `<div class="sched-sheet" style="--days:${days};--rows:${rows}">
+  return `<div class="sched-sheet${compact ? ' compact' : ''}" style="--days:${days};--rows:${rows}">
     <div class="sched-head"><span></span>${DAYS.slice(0, days).map((d, i) => `<b><span class="long">${d}</span><span class="short">${SHORT[i]}</span></b>`).join('')}</div>
     <div class="sched-grid">
       <div class="sched-hours">${Array.from({ length: rows }, (_, i) => { const b = BLOCKS[i]; return `<span style="--r:${i}">${b ? `<b>${hhmm(b.s)}</b><small>${hhmm(b.e)}</small>` : ''}</span>`; }).join('')}</div>
@@ -274,8 +304,10 @@ function askCard() {
 }
 
 function paint() {
+  if (!root) return;
   const o = view();
   const has = o.classes.length > 0;
+  root.dataset.mode = mode;
   root.innerHTML = mode === 'mine' ? `
   <div class="sched-top">
     <p class="muted">${has ? `Tu semana${state.term ? ` · ${esc(termName(state.term))}` : ''}` : ''}</p>
@@ -501,19 +533,28 @@ function mountTranscribe(box) {
       return;
     }
     if (e.target.closest('[data-read]')) {
+      // Always an answer: busy while it works, and a sentence when it cannot.
       const btn = e.target.closest('[data-read]');
-      const { parts, skipped, txt } = await gather();
-      if (!parts.length && !txt) { msg.textContent = 'Sube un archivo o pega el texto primero.'; return; }
-      // Text from the course offering needs no AI.
-      const offer = !parts.length && parseOffer(txt);
-      if (offer?.sections.length) { show({ options: [{ name: target === 'mine' ? 'Mi horario' : draftName(state.options.length + 1), classes: offer.sections }] }); return; }
-      if (!ai.ready()) { $('[data-chat]', box).hidden = false; msg.textContent = 'Sin una IA conectada: usa cualquier chat con los dos pasos de aquí abajo, o conecta tu IA en Ajustes.'; return; }
-      btn.disabled = true; msg.textContent = 'Tu IA está leyendo tu horario…';
+      const say = (t, tone = '') => { msg.textContent = t; msg.dataset.tone = tone; };
+      btn.disabled = true; btn.classList.add('busy'); say('Leyendo…');
       try {
+        const { parts, skipped, txt } = await gather();
+        if (!parts.length && !txt) { say(skipped.length ? `No pude abrir ${skipped.map((s) => `${s.name}: ${s.skipped}`).join('; ')}.` : 'Primero sube un archivo o pega el texto.', 'warn'); return; }
+        // Text from the course offering needs no AI.
+        const offer = parts.length ? null : parseOffer(txt);
+        if (offer && offer.sections.length) { say(''); show({ options: [{ name: target === 'mine' ? 'Mi horario' : draftName(state.options.length + 1), classes: offer.sections }] }); return; }
+        if (!ai.ready()) {
+          $('[data-chat]', box).hidden = false;
+          say('Para leer una captura o un archivo, Studium necesita tu IA, y todavía no tienes una conectada. Conéctala en Ajustes (con Gemini es gratis), o usa cualquier chat con los dos pasos de aquí abajo.', 'warn');
+          return;
+        }
+        say('Tu IA está leyendo tu horario. Puede tardar un minuto…');
         const res = await ai.run({ system: SYSTEM, text: txt ? `Mi horario:\n${txt}` : 'Mi horario está en lo adjunto.', files: parts, maxTokens: 6000, task: 'identify' });
+        say(skipped.length ? `No se leyó: ${skipped.map((s) => `${s.name} (${s.skipped})`).join(', ')}` : '');
         show(parseAnswer(res.text));
-        if (skipped.length) msg.textContent = `No se leyó: ${skipped.map((s) => `${s.name} (${s.skipped})`).join(', ')}`;
-      } catch (error) { msg.textContent = error instanceof ai.AIError ? error.message : 'No se pudo leer. Prueba con otra IA o con un chat.'; } finally { btn.disabled = false; }
+      } catch (error) {
+        say(error instanceof ai.AIError ? error.message : `No se pudo leer (${error?.message ?? 'error'}). Prueba de nuevo, con otra IA o con un chat.`, 'warn');
+      } finally { btn.disabled = false; btn.classList.remove('busy'); }
       return;
     }
     if (e.target.closest('[data-use-found]') && found) {
@@ -526,7 +567,7 @@ function mountTranscribe(box) {
       }
       found = null; save();
       if ($('#sched-dialog').open) $('#sched-dialog').close();
-      paint(); sfx.chime?.();
+      refresh(); sfx.chime?.();
     }
   });
 }
@@ -640,7 +681,7 @@ function confirmDialog(what) {
     if (what === 'remove') { state.options.splice(state.active, 1); state.active = Math.max(0, state.active - 1); }
     if (what === 'mine') useMine();
     if (what === 'clear') state.mine.classes = [];
-    save(); paint();
+    save(); refresh();
   });
   dlg.showModal();
 }
@@ -673,6 +714,13 @@ export function mountSchedule() {
     if (d.ask) return answer(d.ask);
     if (d.remove) { const o = view(); o.classes = o.classes.filter((c) => c.id !== d.remove); asks = asks.filter((x) => x.cls.id !== d.remove); save(); paint(); sfx.drop?.(); return; }
     if (d.edit) classDialog(d.edit);
+  });
+  // The home's «Mi horario»: upload, go prepare enrollment, or open the page to edit.
+  document.addEventListener('click', (e) => {
+    if (!homeEl || !homeEl.contains(e.target)) return;
+    if (e.target.closest('[data-hs-upload]')) { transcribeDialog('mine'); return; }
+    if (e.target.closest('[data-hs-prep]')) { nextMode = 'prep'; location.hash = '#/horario'; return; }
+    if (e.target.closest('.sched-class')) location.hash = '#/horario';
   });
   // Dragging a class onto another draft's tab passes it there, with its exercises or lab.
   let dragged = null;
