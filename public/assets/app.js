@@ -112,7 +112,7 @@ document.addEventListener('click', (e) => {
 
 /* ---------- views ---------- */
 const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'horario', 'student', 'catalog', 'map', 'library', 'profes', 'contribute', 'settings', 'about', 'sources', 'guide', 'admin'];
-const TABS = { home: 'home', horario: 'horario', student: 'horario', catalog: 'catalog', map: 'map', library: 'library', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', admin: 'admin' };
+const TABS = { home: 'home', horario: 'horario', catalog: 'catalog', map: 'map', library: 'library', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', admin: 'admin' };
 const PUBLIC = ['landing', 'auth', 'about', 'denied', 'verify'];
 let current = 'boot';
 function show(view) {

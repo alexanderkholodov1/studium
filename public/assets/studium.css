@@ -236,7 +236,7 @@ input[type="range"] { padding: 0; border: 0; background: none; accent-color: var
 .status { color: var(--muted); font: 600 16px var(--display); margin: 30px 0; text-align: center; }
 
 /* ---------- navigation ---------- */
-.nav { position: fixed; z-index: 30; top: max(12px, env(safe-area-inset-top)); left: 50%; translate: -50% 0; width: min(920px, calc(100% - 24px));
+.nav { position: fixed; z-index: 30; top: max(12px, env(safe-area-inset-top)); left: 50%; translate: -50% 0; width: max-content; min-width: min(920px, calc(100% - 24px)); max-width: calc(100% - 24px);
   display: flex; align-items: center; gap: 12px; padding: 7px 7px 7px 14px; border-radius: 999px; }
 .brand { display: flex; align-items: center; gap: 9px; text-decoration: none; font: 800 22px/1 var(--display); letter-spacing: -.045em; }
 .brand svg { width: 32px; height: 32px; transition: transform .7s var(--spring); }
@@ -245,6 +245,10 @@ input[type="range"] { padding: 0; border: 0; background: none; accent-color: var
 .tabs { position: relative; display: flex; margin: 0 auto; padding: 4px; border-radius: 999px; background: var(--well); }
 .tabs a { position: relative; z-index: 1; padding: 8px 16px; border-radius: 999px; text-decoration: none; color: var(--ink-2); font: 700 15px var(--display); transition: color .3s; }
 .tabs a[aria-current="true"] { color: var(--ink); }
+/* The bar grows with its tabs and never pushes the account buttons out; on narrower screens the tabs draw closer. */
+@media (max-width: 1180px) { .tabs a { padding: 8px 11px; font-size: 14.5px; } }
+@media (max-width: 1020px) { .tabs a { padding: 8px 8px; font-size: 14px; } .nav { gap: 8px; } }
+@media (max-width: 940px) { .tabs a { padding: 8px 6px; font-size: 13px; } .nav { gap: 6px; padding-left: 10px; } .nav .brand { font-size: 19px; } }
 .tabs .drop { position: absolute; left: 0; top: 4px; bottom: 4px; width: 0; border-radius: 999px; opacity: 0;
   background: linear-gradient(160deg, color-mix(in oklab, var(--blue) 40%, rgba(255, 255, 255, .25)), color-mix(in oklab, var(--blue) 14%, transparent));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55), 0 8px 20px -8px color-mix(in oklab, var(--blue) 60%, black);
@@ -1399,195 +1403,237 @@ html.has-announce .page { padding-top: 170px; }
 /* A looping animation off screen rests where it is (fx.js, restOffscreen). */
 .offscreen, .offscreen::before, .offscreen::after { animation-play-state: paused !important; }
 
-/* ---------- Tu horario: the week on a notebook sheet ---------- */
-.sched { --rowh: calc(var(--px, .9) * 30px); }
-.sched-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; margin: 18px 0; }
-.sched-options { display: flex; flex-wrap: wrap; gap: 8px; }
-.sched-opt { display: inline-flex; align-items: baseline; gap: 8px; padding: 10px 18px; border: 0; border-radius: 16px 16px 6px 16px; cursor: pointer;
-  font: 800 19px var(--display); color: var(--ink-2); background: var(--card); box-shadow: inset 0 0 0 1px var(--line), 0 10px 22px -16px rgba(0, 0, 0, .5);
-  transition: transform .45s var(--spring), background .2s, color .2s; }
-.sched-opt small { font: 650 12.5px var(--body); color: var(--muted); }
-.sched-opt[aria-selected="true"] { color: #fff; background: linear-gradient(160deg, var(--blue-2), var(--blue) 55%); box-shadow: 0 14px 26px -14px var(--blue), inset 0 1px 0 rgba(255, 255, 255, .35); transform: translateY(-2px); }
-.sched-opt[aria-selected="true"] small { color: rgba(255, 255, 255, .8); }
-.sched-opt.add { padding: 10px 16px; border: 1px dashed color-mix(in oklab, var(--ink) 30%, transparent); background: transparent; box-shadow: none; }
-.sched-opt:active { transform: scale(.95); }
-.sched-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-.sched-more { position: relative; }
-.sched-more summary { list-style: none; cursor: pointer; }
-.sched-more summary::-webkit-details-marker { display: none; }
-.sched-more .menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; display: grid; min-width: 220px; padding: 8px; border-radius: 18px; background: var(--card); box-shadow: 0 24px 50px -20px rgba(0, 0, 0, .55), inset 0 0 0 1px var(--line); }
-.sched-more .menu button { text-align: left; padding: 10px 12px; border: 0; border-radius: 12px; background: none; color: var(--ink); font: 650 15px var(--body); cursor: pointer; }
-.sched-more .menu button:hover { background: color-mix(in oklab, var(--blue) 12%, transparent); }
-.sched-more .menu .danger { color: var(--red); }
-.sched-body { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 22px; align-items: start; }
-/* The sheet: ruled every half hour, a red margin, and depth like a page lying on the desk. */
-.sched-sheet { position: relative; padding: 14px 14px 18px 0; border-radius: 22px; overflow: hidden;
-  background: linear-gradient(180deg, color-mix(in oklab, var(--card) 96%, #fff) 0%, var(--card) 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 30px 60px -36px rgba(20, 30, 70, .55), 0 2px 0 color-mix(in oklab, var(--ink) 6%, transparent), inset 0 0 0 1px var(--line); }
-.sched-sheet::before { content: ""; position: absolute; top: 0; bottom: 0; left: 62px; width: 2px; background: var(--margin); opacity: .8; }
-.sched-head, .sched-grid { display: grid; grid-template-columns: 70px repeat(var(--days), minmax(0, 1fr)); }
-.sched-head { position: relative; padding-bottom: 10px; }
-.sched-head b { font: 800 16px var(--display); padding-left: 10px; color: var(--ink); }
-.sched-head .short { display: none; }
-.sched-grid { position: relative; background-image: repeating-linear-gradient(180deg, var(--rule) 0 1px, transparent 1px var(--rowh)); }
-.sched-hours { position: relative; }
-.sched-hours span { position: absolute; right: 16px; translate: 0 -50%; font: 650 12.5px var(--body); color: var(--muted); }
-.sched-day { position: relative; border-left: 1px dashed color-mix(in oklab, var(--ink) 9%, transparent); }
-.sched-class { --c: var(--blue); --lane: 0; --of: 1; position: absolute; left: calc(5px + (100% - 10px) * var(--lane) / var(--of)); width: calc((100% - 10px) / var(--of) - 3px); display: grid; align-content: space-between; gap: 2px; padding: 8px 10px 7px 13px; border: 0; border-radius: 12px;
-  text-align: left; cursor: pointer; color: var(--ink); overflow: hidden;
-  background: linear-gradient(170deg, color-mix(in oklab, var(--c) 30%, var(--card)) 0%, color-mix(in oklab, var(--c) 18%, var(--card)) 100%);
-  box-shadow: inset 4px 0 0 var(--c), inset 0 1px 0 rgba(255, 255, 255, .45), 0 10px 18px -12px color-mix(in oklab, var(--c) 80%, #000);
-  transition: transform .4s var(--spring), box-shadow .25s; }
-.sched-class:hover { transform: translateY(-2px) rotate(-.4deg); z-index: 2;
-  box-shadow: inset 4px 0 0 var(--c), inset 0 1px 0 rgba(255, 255, 255, .45), 0 16px 26px -14px color-mix(in oklab, var(--c) 85%, #000); }
-.sched-class b { font: 750 14px/1.15 var(--display); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.sched-class small { font: 600 11.5px var(--body); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.c-blue { --c: var(--blue); } .c-red { --c: var(--red); } .c-teal { --c: var(--teal); } .c-butter { --c: var(--butter); } .c-sky { --c: var(--sky); } .c-peach { --c: var(--peach); }
-/* Where two classes meet: red hatching over both, with a word. */
-.sched-class { z-index: 1; }
-.sched-class.clashing { box-shadow: inset 4px 0 0 var(--c), 0 0 0 2px var(--red), 0 10px 18px -12px color-mix(in oklab, var(--red) 80%, #000); }
-.sched-clash { position: absolute; left: 2px; right: 2px; z-index: 0; pointer-events: none; border-radius: 10px;
-  background: repeating-linear-gradient(135deg, color-mix(in oklab, var(--red) 55%, transparent) 0 5px, transparent 5px 10px); box-shadow: inset 0 0 0 2px var(--red); }
-.sched-clash em { position: absolute; z-index: 4; right: 6px; bottom: -11px; padding: 1px 8px; border-radius: 99px; font: 700 11px var(--display); font-style: normal; color: #fff; background: var(--red); }
-.sched-side { position: sticky; top: 96px; display: grid; gap: 14px; }
-.sched-total { display: flex; align-items: baseline; gap: 10px; padding: 18px 20px; border-radius: 22px; color: #fff;
-  background: radial-gradient(120% 140% at 0% 0%, var(--blue-2), var(--blue) 55%, color-mix(in oklab, var(--blue) 70%, #000)); box-shadow: 0 20px 36px -20px var(--blue), inset 0 1px 0 rgba(255, 255, 255, .35); }
-.sched-total .big { font: 800 54px/0.9 var(--display); letter-spacing: -.04em; }
-.sched-total span:last-child { font: 700 17px var(--display); opacity: .9; }
-.sched-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.sched-list button { width: 100%; display: grid; grid-template-columns: 10px 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border: 0; border-radius: 14px;
-  background: var(--card); box-shadow: inset 0 0 0 1px var(--line); color: var(--ink); text-align: left; cursor: pointer; transition: transform .4s var(--spring); }
-.sched-list button:hover { transform: translateX(3px); }
-.sched-list i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 4px color-mix(in oklab, var(--c) 20%, transparent); }
-.sched-list b { display: block; font: 700 15px var(--display); }
-.sched-list small { color: var(--muted); font-size: 12.5px; }
-.sched-list strong { font: 800 16px var(--display); color: var(--ink-2); }
-.sched-list .miss { display: block; margin-top: 3px; font: 600 12.5px var(--body); font-style: normal; color: var(--red); }
-.sched .small { font-size: 13.5px; }
-/* The dialog of a class: days and USFQ's blocks as chips, times only if needed. */
-.sched-form .slots { display: grid; gap: 12px; }
-.sched-form .slot { display: grid; gap: 10px; padding: 14px; border-radius: 18px; background: color-mix(in oklab, var(--ink) 4%, transparent); }
-.sched-form .days, .sched-form .blocks { display: flex; flex-wrap: wrap; gap: 6px; }
-.sched-form .days, .sched-form .blocks { display: flex; flex-wrap: wrap; gap: 6px; }
-.sched-form .days label, .sched-form .blocks label { position: relative; padding: 0; border: 0; background: none; }
-.sched-form .days input, .sched-form .blocks input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-.sched-form .days span, .sched-form .blocks span { display: inline-block; padding: 7px 13px; border-radius: 999px; font: 700 14px var(--display); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; transition: background .2s, color .2s; }
-.sched-form .days input:checked + span, .sched-form .blocks input:checked + span { color: #fff; background: var(--blue); box-shadow: 0 6px 14px -8px var(--blue); }
-.sched-form .days input:focus-visible + span, .sched-form .blocks input:focus-visible + span { outline: 3px solid var(--blue); outline-offset: 2px; }
-.sched-form .times { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; font: 600 14px var(--body); color: var(--muted); }
-.sched-form .times input { margin-left: 6px; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; }
-.sched-form .grid.three { display: grid; grid-template-columns: 110px 1fr 120px; gap: 12px; }
-.sched-form .colors { display: flex; gap: 10px; }
-.sched-form .swatch { position: relative; }
-.sched-form .swatch input { position: absolute; opacity: 0; }
-.sched-form .swatch span { display: block; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, .7), var(--c) 62%); cursor: pointer; box-shadow: 0 6px 12px -6px var(--c); transition: transform .4s var(--spring); }
-.sched-form .swatch input:checked + span { transform: scale(1.18); box-shadow: 0 0 0 3px var(--card), 0 0 0 5px var(--c); }
-.sched-form .danger { color: var(--red); }
-.sched-form .drop { display: grid; gap: 8px; place-items: center; min-height: 110px; border-radius: 20px; border: 2px dashed color-mix(in oklab, var(--blue) 40%, transparent); background: color-mix(in oklab, var(--blue) 6%, transparent); cursor: pointer; font: 700 16px var(--display); color: var(--blue); text-align: center; padding: 14px; }
-.sched-form .drop input { width: 100%; font: 500 14px var(--body); color: var(--ink-2); }
-.sched-form textarea { width: 100%; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: 500 14.5px var(--body); resize: vertical; }
-.sched-form .preview { display: grid; gap: 10px; }
-.sched-form .preview > div { padding: 12px 14px; border-radius: 16px; background: color-mix(in oklab, var(--teal) 10%, var(--card)); box-shadow: inset 0 0 0 1px var(--line); }
-.sched-form .preview ul { margin: 6px 0 0; padding-left: 18px; }
-.sched-form .preview small { color: var(--muted); }
-.sched-form.small { max-width: 420px; }
-@media (max-width: 900px) {
-  .sched-body { grid-template-columns: 1fr; }
-  .sched-side { position: static; }
-}
-@media (max-width: 560px) {
-  .sched-head .long { display: none; }
-  .sched-head .short { display: inline; }
-  .sched-head, .sched-grid { grid-template-columns: 44px repeat(var(--days), minmax(0, 1fr)); }
-  .sched-sheet::before { left: 38px; }
-  .sched-hours span { right: 6px; font-size: 11px; }
-  .sched-class { left: calc(2px + (100% - 4px) * var(--lane) / var(--of)); width: calc((100% - 4px) / var(--of) - 2px); padding: 6px 5px 5px 8px; }
-  .sched-class b { font-size: 12px; }
-  .sched-class small { display: none; }
-  .sched-form .grid.three { grid-template-columns: 1fr 1fr; }
-}
+/* The student guide: the essentials big, then each tip as a card whose idea is read at a glance. */
+.sg-essential { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 22px 0 10px; }
+.sg-big { --c: var(--blue); position: relative; display: grid; align-content: space-between; gap: 18px; min-height: 170px; padding: 20px; border-radius: 26px; color: #fff; text-decoration: none; overflow: hidden;
+  background: radial-gradient(130% 120% at 0% 0%, color-mix(in oklab, var(--c) 55%, #fff) 0%, var(--c) 52%, color-mix(in oklab, var(--c) 70%, #000) 100%);
+  box-shadow: 0 24px 40px -26px var(--c), inset 0 1px 0 rgba(255, 255, 255, .4); transition: transform .45s var(--spring); }
+.sg-big:hover { transform: translateY(-4px) rotate(-.6deg); }
+.sg-big .sg-icon { width: 46px; height: 46px; background: rgba(255, 255, 255, .2); color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35); }
+.sg-big b { font: 800 22px/1.15 var(--display); letter-spacing: -.02em; }
+.sg-big small { font: 600 13px var(--body); opacity: .85; }
+.sg-topic { margin: 34px 0; }
+.sg-topic h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; font: 800 26px var(--display); letter-spacing: -.02em; }
+.sg-topic h2 i { width: 12px; height: 12px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 5px color-mix(in oklab, var(--c) 20%, transparent); }
+.sg-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.sg-card { --c: var(--blue); position: relative; display: grid; grid-template-columns: 48px 1fr; gap: 4px 14px; align-content: start; padding: 18px 20px; border-radius: 22px;
+  background: linear-gradient(170deg, color-mix(in oklab, var(--c) 7%, var(--card)), var(--card) 60%); box-shadow: inset 0 0 0 1px var(--line), 0 16px 30px -26px rgba(0, 0, 0, .55); scroll-margin-top: 110px; transition: box-shadow .4s; }
+.sg-card.focus { box-shadow: inset 0 0 0 2px var(--c), 0 18px 34px -22px var(--c); }
+.sg-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 16px; color: var(--c); background: color-mix(in oklab, var(--c) 14%, var(--card)); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c) 25%, transparent); }
+.sg-icon svg { width: 24px; height: 24px; }
+.sg-card .sg-icon { grid-row: span 2; }
+.sg-kicker { margin: 2px 0 0; font: 700 13px var(--display); color: var(--c); }
+.sg-card h3 { margin: 0; font: 800 20px/1.2 var(--display); letter-spacing: -.015em; }
+.sg-card details { grid-column: 1 / -1; margin-top: 8px; }
+.sg-card summary { cursor: pointer; width: max-content; font: 700 14px var(--display); color: var(--ink-2); }
+.sg-card details p { margin: 8px 0 0; line-height: 1.55; color: var(--ink-2); }
+.sg-card .button { margin-top: 10px; }
+.sg-source { display: block; margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+@media (max-width: 900px) { .sg-essential { grid-template-columns: repeat(2, minmax(0, 1fr)); } .sg-grid { grid-template-columns: 1fr; } }
+@media (max-width: 480px) { .sg-big { min-height: 140px; padding: 16px; } .sg-big b { font-size: 18px; } }
+.hint-bubble .actions a.link { text-decoration: underline; }
 
-/* Two places: the semester's schedule, and preparing enrollment with drafts. */
-.sched-modes { display: inline-flex; gap: 4px; padding: 5px; margin: 6px 0 18px; border-radius: 999px; background: color-mix(in oklab, var(--ink) 6%, transparent); box-shadow: inset 0 0 0 1px var(--line); }
-.sched-modes button { padding: 10px 20px; border: 0; border-radius: 999px; background: none; color: var(--ink-2); font: 750 16px var(--display); cursor: pointer; transition: background .25s, color .25s, transform .4s var(--spring); }
-.sched-modes button[aria-selected="true"] { color: var(--ink); background: var(--card); box-shadow: 0 8px 18px -12px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .5); }
+/* ---------- Tu horario ---------- */
+.sched { --rowh: 66px; }
+.sched .small { font-size: 13.5px; }
+.sched-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 16px; }
+.sched-top p { margin: 0; }
+/* Preparing enrollment is a special mode, entered from its own button. */
+.sched-special { display: inline-flex; align-items: center; gap: 9px; padding: 11px 18px; border: 0; border-radius: 999px; cursor: pointer; color: #fff;
+  font: 750 15px var(--display); background: linear-gradient(135deg, var(--red-2), var(--red) 55%, color-mix(in oklab, var(--red) 70%, #000));
+  box-shadow: 0 14px 26px -14px var(--red), inset 0 1px 0 rgba(255, 255, 255, .35); transition: transform .45s var(--spring); }
+.sched-special:hover { transform: translateY(-2px) rotate(-1deg); }
+.sched-special svg { width: 20px; height: 20px; }
+.sched-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; margin: 4px 0 14px; border-radius: 22px; color: #fff;
+  background: linear-gradient(135deg, color-mix(in oklab, var(--red) 85%, #fff), var(--red) 60%, color-mix(in oklab, var(--red) 70%, #000)); box-shadow: 0 20px 36px -24px var(--red); }
+.sched-banner b { display: block; font: 800 19px var(--display); }
+.sched-banner span { font-size: 14.5px; opacity: .92; }
+.sched-banner .button { background: rgba(255, 255, 255, .92); color: var(--ink); }
+/* The empty «Mi horario»: one thing to do. */
+.sched-empty { padding: 28px; border-radius: 28px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; max-width: 760px; margin: 0 auto; }
+.sched-empty h2 { margin: 0; font: 800 34px var(--display); letter-spacing: -.03em; }
+.sched-empty > p { margin: 0 0 12px; color: var(--ink-2); font-size: 17px; }
+.sched-transcribe { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.sched-drop { display: grid; justify-items: center; gap: 6px; padding: 26px 18px; border-radius: 22px; cursor: pointer; text-align: center;
+  border: 2px dashed color-mix(in oklab, var(--blue) 45%, transparent); background: color-mix(in oklab, var(--blue) 6%, var(--card)); transition: background .2s, border-color .2s, transform .4s var(--spring); }
+.sched-drop:hover, .sched-drop.over { background: color-mix(in oklab, var(--blue) 12%, var(--card)); border-color: var(--blue); transform: scale(1.01); }
+.sched-drop .sg-icon { --c: var(--blue); width: 52px; height: 52px; }
+.sched-drop b { font: 800 19px var(--display); color: var(--ink); }
+.sched-drop small { color: var(--muted); font-size: 14px; }
+.sched-drop .files { font: 650 14px var(--body); color: var(--blue); }
+.sched-drop .files:empty { display: none; }
+.sched-transcribe textarea, .sched-paste textarea, .sched-chat textarea { width: 100%; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: 500 15px var(--body); resize: vertical; }
+.sched-transcribe .actions { display: flex; gap: 10px; }
+.sched-ai-note { margin: 0; font-size: 14px; color: var(--muted); }
+.sched-chat { padding: 14px; border-radius: 16px; background: color-mix(in oklab, var(--ink) 4%, transparent); }
+.sched-chat ol { margin: 0 0 8px; padding-left: 20px; display: grid; gap: 4px; font-size: 14.5px; }
+.sched-transcribe .msg { margin: 0; color: var(--ink-2); }
+.sched-transcribe .msg:empty { display: none; }
+.sched-transcribe .sched-found { display: grid; gap: 10px; }
+.sched-transcribe .sched-found > div:not(.actions) { padding: 12px 14px; border-radius: 16px; background: color-mix(in oklab, var(--teal) 10%, var(--card)); box-shadow: inset 0 0 0 1px var(--line); }
+.sched-transcribe .sched-found ul { margin: 6px 0 0; padding-left: 18px; }
+.sched-transcribe .sched-found small { color: var(--muted); }
 /* Paste what you copied from the course offering. */
-.sched-paste { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 12px; align-items: stretch; padding: 14px; border-radius: 22px; margin-bottom: 14px; }
+.sched-paste { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 12px; padding: 14px; border-radius: 22px; margin-bottom: 14px; }
+.sched-paste textarea { min-height: 56px; border: 1.5px dashed color-mix(in oklab, var(--blue) 45%, transparent); background: color-mix(in oklab, var(--blue) 5%, var(--card)); }
+.sched-paste textarea:focus { outline: none; border-style: solid; border-color: var(--blue); }
 .sched-paste > .button { align-self: stretch; padding-inline: 26px; }
 .sched-ways { grid-column: 1 / -1; margin: 0; padding-left: 4px; font-size: 14px; color: var(--muted); }
 .sched-ways .link { font-size: 14px; }
-.sched-paste textarea { width: 100%; min-height: 54px; padding: 14px 16px; border-radius: 16px; border: 1.5px dashed color-mix(in oklab, var(--blue) 45%, transparent); background: color-mix(in oklab, var(--blue) 5%, var(--card)); color: var(--ink); font: 500 15px var(--body); resize: vertical; transition: border-color .2s, background .2s; }
-.sched-paste textarea:focus { outline: none; border-style: solid; border-color: var(--blue); background: var(--card); }
-.sched-paste .msg { grid-column: 1 / -1; margin: 0; min-height: 0; color: var(--ink-2); }
-.sched-paste .msg:empty { display: none; }
-.sched-more .menu a { padding: 10px 12px; border-radius: 12px; color: var(--ink); font: 650 15px var(--body); text-decoration: none; }
-.sched-more .menu a:hover { background: color-mix(in oklab, var(--blue) 12%, transparent); }
-.sched-more .menu button[disabled] { opacity: .45; cursor: default; }
+.sched-note { grid-column: 1 / -1; margin: 0; padding: 9px 12px; border-radius: 12px; font-size: 14px; color: var(--ink-2); background: color-mix(in oklab, var(--ink) 5%, transparent); }
 /* Choosing a section from a whole search. */
 .sched-picker { padding: 18px; border-radius: 22px; margin-bottom: 14px; display: grid; gap: 10px; }
 .sched-picker-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 .sched-picker h3 { margin: 0; font: 800 20px var(--display); }
 .sched-picker h3 small { font: 600 14px var(--body); color: var(--muted); margin-left: 6px; }
-.sched-picker-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-.sched-picker h4 { margin: 0 0 8px; font: 750 14px var(--display); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-.sched-picker ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 340px; overflow: auto; }
+.sched-picker p { margin: 0; }
+.sched-picker-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 16px; }
+.sched-picker h4 { margin: 0 0 8px; font: 750 13px var(--display); color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.sched-picker ol { list-style: none; margin: 0; padding: 0 4px 0 0; display: grid; gap: 6px; max-height: 320px; overflow: auto; }
 .sched-pick { position: relative; width: 100%; display: grid; gap: 2px; padding: 10px 12px; border: 0; border-radius: 14px; text-align: left; cursor: pointer; color: var(--ink);
   background: var(--card); box-shadow: inset 0 0 0 1px var(--line); transition: transform .35s var(--spring), box-shadow .2s; }
 .sched-pick:hover { transform: translateX(3px); box-shadow: inset 0 0 0 1.5px var(--blue); }
-.sched-pick b { font: 750 15px var(--display); } .sched-pick b small { font: 600 12px var(--body); color: var(--muted); margin-left: 6px; }
+.sched-pick b { font: 750 15px var(--display); padding-right: 96px; }
+.sched-pick b small { font: 600 12px var(--body); color: var(--muted); margin-left: 6px; }
 .sched-pick span { font: 600 13.5px var(--body); color: var(--ink-2); }
 .sched-pick > small { font-size: 12.5px; color: var(--muted); }
 .sched-pick.partner { box-shadow: inset 0 0 0 2px var(--teal); background: color-mix(in oklab, var(--teal) 10%, var(--card)); }
-.sched-pick.on { opacity: .5; cursor: default; }
+.sched-pick.on { opacity: .6; cursor: default; transform: none; }
 .sched-pick .tag { position: absolute; right: 10px; top: 10px; padding: 1px 9px; border-radius: 99px; font: 700 11.5px var(--display); font-style: normal; color: #fff; background: var(--teal); }
 .sched-pick .tag.red { background: var(--red); }
-/* A class that clashed: leave it, or build a new draft around it. */
-.sched-ask { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-radius: 20px; margin-bottom: 14px; box-shadow: inset 4px 0 0 var(--red); animation: pop .5s var(--spring); }
-.sched-ask p { margin: 0; font-size: 15.5px; }
-.sched-ask .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-/* Conflicts: a chip that opens, never a box hanging there. */
+.sched-pick .tag.amber { top: auto; bottom: 10px; background: var(--butter); color: #3b2a00; }
+/* What adding a class asks: it must be seen. */
+.sched-ask { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px 14px; padding: 16px 18px; border-radius: 20px; margin-bottom: 14px; animation: pop .5s var(--spring);
+  background: color-mix(in oklab, var(--tone) 14%, var(--card)); box-shadow: inset 0 0 0 2px var(--tone), 0 18px 34px -22px var(--tone); }
+.sched-ask.red { --tone: var(--red); } .sched-ask.amber { --tone: var(--butter); }
+.sched-ask-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: #fff; background: var(--tone); font: 800 19px var(--display); animation: nudge 1.6s ease-in-out 2; }
+.sched-ask.amber .sched-ask-icon { color: #3b2a00; }
+.sched-ask p { margin: 0; font-size: 15.5px; color: var(--ink); }
+.sched-ask .actions { grid-column: 2; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+@keyframes nudge { 50% { transform: scale(1.18); } }
+/* Drafts and their actions. */
+.sched-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 14px; }
+.sched-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.sched-opt { display: inline-flex; align-items: baseline; gap: 8px; padding: 10px 18px; border: 0; border-radius: 16px 16px 6px 16px; cursor: pointer;
+  font: 800 17px var(--display); color: var(--ink-2); background: var(--card); box-shadow: inset 0 0 0 1px var(--line), 0 10px 22px -16px rgba(0, 0, 0, .5); transition: transform .45s var(--spring), background .2s, color .2s; }
+.sched-opt small { font: 650 12.5px var(--body); color: var(--muted); }
+.sched-opt[aria-selected="true"] { color: #fff; background: linear-gradient(160deg, var(--blue-2), var(--blue) 55%); box-shadow: 0 14px 26px -14px var(--blue), inset 0 1px 0 rgba(255, 255, 255, .35); }
+.sched-opt[aria-selected="true"] small { color: rgba(255, 255, 255, .85); }
+.sched-opt.add { padding: 10px 16px; border: 1px dashed color-mix(in oklab, var(--ink) 30%, transparent); background: transparent; box-shadow: none; }
+.sched-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
+.sched-more { position: relative; }
+.sched-more summary { list-style: none; cursor: pointer; }
+.sched-more summary::-webkit-details-marker { display: none; }
+.sched-more .menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; display: grid; min-width: 230px; padding: 8px; border-radius: 18px; background: var(--card); box-shadow: 0 24px 50px -20px rgba(0, 0, 0, .55), inset 0 0 0 1px var(--line); }
+.sched-more .menu button { text-align: left; padding: 10px 12px; border: 0; border-radius: 12px; background: none; color: var(--ink); font: 650 15px var(--body); cursor: pointer; }
+.sched-more .menu button:hover { background: color-mix(in oklab, var(--blue) 12%, transparent); }
+.sched-more .menu .danger { color: var(--red); }
+.sched.dragging .sched-opt:not([aria-selected="true"]):not(.add) { outline: 2px dashed color-mix(in oklab, var(--blue) 50%, transparent); outline-offset: 3px; }
+.sched .drop-on { outline: 3px solid var(--blue) !important; transform: translateY(-3px) scale(1.04); }
+/* The week by class blocks, on a notebook sheet. */
+.sched-body { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
+.sched-col { display: grid; gap: 12px; }
+.sched-col > .sched-actions { justify-content: flex-end; }
+.sched-sheet { position: relative; padding: 12px 12px 14px 0; border-radius: 22px; overflow: hidden;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--card) 96%, #fff) 0%, var(--card) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 30px 60px -36px rgba(20, 30, 70, .55), inset 0 0 0 1px var(--line); }
+.sched-sheet::before { content: ""; position: absolute; top: 0; bottom: 0; left: 70px; width: 2px; background: var(--margin); opacity: .8; }
+.sched-head, .sched-grid { display: grid; grid-template-columns: 76px repeat(var(--days), minmax(0, 1fr)); }
+.sched-head { padding-bottom: 8px; }
+.sched-head b { font: 800 15px var(--display); padding-left: 10px; color: var(--ink); }
+.sched-head .short { display: none; }
+.sched-grid { position: relative; height: calc(var(--rows) * var(--rowh)); background-image: repeating-linear-gradient(180deg, var(--rule) 0 1px, transparent 1px var(--rowh)); }
+.sched-hours { position: relative; }
+.sched-hours span { position: absolute; top: calc(var(--r) * var(--rowh)); right: 14px; height: var(--rowh); display: grid; align-content: center; justify-items: end; line-height: 1.1; }
+.sched-hours b { font: 800 14px var(--display); color: var(--ink); }
+.sched-hours small { font: 600 11.5px var(--body); color: var(--muted); }
+.sched-day { position: relative; border-left: 1px dashed color-mix(in oklab, var(--ink) 9%, transparent); }
+.sched-class { --c: var(--blue); --lane: 0; --of: 1; position: absolute; z-index: 1;
+  top: calc(var(--top) * var(--rowh) + 3px); height: calc((var(--bottom) - var(--top)) * var(--rowh) - 6px);
+  left: calc(5px + (100% - 10px) * var(--lane) / var(--of)); width: calc((100% - 10px) / var(--of) - 3px);
+  display: grid; align-content: space-between; gap: 2px; padding: 7px 9px 6px 12px; border: 0; border-radius: 12px; text-align: left; cursor: pointer; color: var(--ink); overflow: hidden;
+  background: linear-gradient(170deg, color-mix(in oklab, var(--c) 30%, var(--card)) 0%, color-mix(in oklab, var(--c) 18%, var(--card)) 100%);
+  box-shadow: inset 4px 0 0 var(--c), inset 0 1px 0 rgba(255, 255, 255, .45), 0 10px 18px -12px color-mix(in oklab, var(--c) 80%, #000);
+  transition: transform .4s var(--spring), box-shadow .25s; }
+.sched-class:hover { transform: translateY(-2px); z-index: 2; }
+.sched-class.clashing { box-shadow: inset 4px 0 0 var(--c), 0 0 0 2px var(--red), 0 10px 18px -12px color-mix(in oklab, var(--red) 80%, #000); }
+.sched-class b { font: 750 13.5px/1.15 var(--display); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sched-class small { font: 600 11.5px var(--body); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sched-class .code { display: none; font: 750 11px/1.15 var(--display); font-style: normal; overflow-wrap: anywhere; }
+.sched-class.narrow b { font-size: 12px; }
+.sched-class.narrow small { display: none; }
+.c-blue { --c: var(--blue); } .c-red { --c: var(--red); } .c-teal { --c: var(--teal); } .c-butter { --c: var(--butter); } .c-sky { --c: var(--sky); } .c-peach { --c: var(--peach); }
+/* Beside the week: the credits of the 16, overlaps, and each class with a way to take it out. */
+.sched-side { position: sticky; top: 96px; display: grid; gap: 12px; }
+.sched-total { display: grid; grid-template-columns: auto 1fr; align-items: baseline; gap: 4px 10px; padding: 16px 18px; border-radius: 22px; color: #fff;
+  background: radial-gradient(120% 140% at 0% 0%, var(--blue-2), var(--blue) 55%, color-mix(in oklab, var(--blue) 70%, #000)); box-shadow: 0 20px 36px -20px var(--blue), inset 0 1px 0 rgba(255, 255, 255, .35); }
+.sched-total .big { font: 800 48px/0.9 var(--display); letter-spacing: -.04em; }
+.sched-total .of { font: 700 16px var(--display); opacity: .92; }
+.sched-total .bar { grid-column: 1 / -1; height: 8px; border-radius: 99px; background: rgba(255, 255, 255, .22); overflow: hidden; }
+.sched-total .bar i { display: block; height: 100%; border-radius: inherit; background: #fff; transition: width .6s var(--spring); }
 .sched-clash-chip { padding: 7px 14px; border: 0; border-radius: 999px; cursor: pointer; font: 700 14px var(--display); color: var(--red); background: color-mix(in oklab, var(--red) 12%, var(--card)); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--red) 35%, transparent); }
 .sched-clash-chip::after { content: " ›"; display: inline-block; transition: rotate .25s; }
 .sched-clashes.open .sched-clash-chip::after { rotate: 90deg; }
 .sched-clashes ul { margin: 8px 0 0; padding: 0 0 0 4px; list-style: none; display: grid; gap: 4px; font-size: 14px; color: var(--ink-2); }
 .sched-clashes ul span { color: var(--red); font-weight: 800; } .sched-clashes ul small { color: var(--muted); }
-.sched-hint { margin-left: auto; align-self: center; padding: 5px 11px; border: 0; border-radius: 99px; cursor: pointer; font: 650 12.5px var(--body); color: #fff; background: rgba(255, 255, 255, .18); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35); }
-.sched-hint:hover { background: rgba(255, 255, 255, .28); }
-.sched-total { flex-wrap: wrap; }
-/* Dragging a class to another draft. */
-.sched.dragging .sched-opt:not([aria-selected="true"]), .sched.dragging [data-drop="mine"] { outline: 2px dashed color-mix(in oklab, var(--blue) 50%, transparent); outline-offset: 3px; }
-.sched .drop-on { outline: 3px solid var(--blue) !important; transform: translateY(-3px) scale(1.04); }
-.sched-class[draggable="true"], .sched-list [draggable="true"] { cursor: grab; }
-.sched-empty { padding: 28px; border-radius: 26px; display: grid; gap: 10px; max-width: 640px; }
-.sched-empty h3 { margin: 0; font: 800 24px var(--display); }
-.sched-empty p { margin: 0; color: var(--ink-2); }
-.sched-tips { display: grid; gap: 8px; }
-.sched-tips details { padding: 12px 16px; border-radius: 16px; background: color-mix(in oklab, var(--ink) 4%, transparent); }
-.sched-tips summary { cursor: pointer; font: 750 16px var(--display); }
-.sched-tips p { margin: 8px 0 0; line-height: 1.5; color: var(--ink-2); }
-@media (max-width: 700px) { .sched-paste { grid-template-columns: 1fr; } }
-
-.sched-form.quick { max-width: 560px; }
-.sched-form.quick .field > span { font: 700 14px var(--display); color: var(--muted); }
-.sched-form .more { display: grid; gap: 12px; padding-top: 12px; }
+.sched-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.sched-list li { position: relative; }
+.sched-list .item { width: 100%; display: grid; grid-template-columns: 10px 1fr auto; gap: 12px; align-items: center; padding: 10px 40px 10px 12px; border: 0; border-radius: 14px;
+  background: var(--card); box-shadow: inset 0 0 0 1px var(--line); color: var(--ink); text-align: left; cursor: pointer; }
+.sched-list .item:hover { box-shadow: inset 0 0 0 1.5px var(--c); }
+.sched-list i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 4px color-mix(in oklab, var(--c) 20%, transparent); }
+.sched-list b { display: block; font: 700 14.5px var(--display); }
+.sched-list small { color: var(--muted); font-size: 12.5px; }
+.sched-list strong { font: 800 16px var(--display); color: var(--ink-2); }
+.sched-list .miss { display: block; margin-top: 3px; font: 600 12.5px var(--body); font-style: normal; color: var(--red); }
+.sched-list .remove { position: absolute; right: 8px; top: 50%; translate: 0 -50%; width: 26px; height: 26px; border: 0; border-radius: 50%; cursor: pointer;
+  font: 700 17px/1 var(--display); color: var(--muted); background: color-mix(in oklab, var(--ink) 6%, transparent); }
+.sched-list .remove:hover { color: #fff; background: var(--red); }
+/* Dialogs: a class in three choices, a new draft, a schedule to transcribe. */
+#sched-dialog { width: min(600px, 96vw); }
+#sched-dialog:has(.sched-form.wide) { width: min(680px, 96vw); }
+.sched-form .field > span { font: 700 14px var(--display); color: var(--muted); }
+.sched-form .days, .sched-form .blocks { display: flex; flex-wrap: wrap; gap: 6px; }
+.sched-form .days label, .sched-form .blocks label { position: relative; }
+.sched-form .days input, .sched-form .blocks input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.sched-form .days span, .sched-form .blocks span { display: inline-block; padding: 8px 14px; border-radius: 999px; font: 700 14px var(--display); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; transition: background .2s, color .2s; }
+.sched-form .days input:checked + span, .sched-form .blocks input:checked + span { color: #fff; background: var(--blue); box-shadow: 0 6px 14px -8px var(--blue); }
+.sched-form .days input:focus-visible + span, .sched-form .blocks input:focus-visible + span { outline: 3px solid var(--blue); outline-offset: 2px; }
 .sched-form details summary { cursor: pointer; font: 700 15px var(--display); color: var(--ink-2); }
-/* The student guide */
-.sg-topic { margin: 26px 0; }
-.sg-topic h2 { margin: 0 0 12px; font: 800 26px var(--display); letter-spacing: -.02em; }
-.sg-tips { display: grid; gap: 12px; }
-.sg-tip { padding: 18px 20px; border-radius: 20px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line), 0 14px 30px -24px rgba(0, 0, 0, .5); scroll-margin-top: 110px; transition: box-shadow .4s; }
-.sg-tip.focus { box-shadow: inset 0 0 0 2px var(--blue), 0 18px 34px -22px var(--blue); }
-.sg-tip h3 { margin: 0 0 6px; font: 750 18px var(--display); }
-.sg-tip p { margin: 0; line-height: 1.55; color: var(--ink-2); }
-.sg-tip .button { margin-top: 10px; }
-.sg-source { display: block; margin-top: 8px; font-size: 12.5px; color: var(--muted); }
-.hint-bubble .actions a.link { text-decoration: underline; }
-
-.sched-class .code { display: none; font: 750 11px/1.15 var(--display); font-style: normal; overflow-wrap: anywhere; }
-.sched-class.narrow b { -webkit-line-clamp: 2; font-size: 12.5px; }
-.sched-class.narrow small { display: none; }
+.sched-form .more { display: grid; gap: 12px; padding-top: 12px; }
+.sched-form .grid.three { display: grid; grid-template-columns: 110px 1fr 120px; gap: 12px; }
+.sched-form .times { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font: 600 14px var(--body); color: var(--muted); }
+.sched-form .times input { margin-left: 6px; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; }
+.sched-form .danger { color: var(--red); }
+.sched-form .quick { font-size: 14px; color: var(--muted); }
+.pick-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; max-height: 260px; overflow: auto; }
+.pick-list input { width: auto; margin: 0; flex: none; }
+.pick-list label { display: flex; align-items: center; gap: 10px; padding: 8px 10px; text-align: left; border-radius: 12px; cursor: pointer; background: color-mix(in oklab, var(--ink) 4%, transparent); font-size: 14.5px; }
+.pick-list em { margin-left: auto; font: 700 11.5px var(--display); font-style: normal; color: var(--red); }
+@media (max-width: 960px) {
+  .sched-body { grid-template-columns: 1fr; }
+  .sched-side { position: static; }
+}
 @media (max-width: 560px) {
-  .sched-class b { display: none; }
+  .sched { --rowh: 56px; }
+  .sched-top { flex-wrap: wrap; }
+  .sched-special { width: 100%; justify-content: center; }
+  .sched-head .long { display: none; }
+  .sched-head .short { display: inline; }
+  .sched-head, .sched-grid { grid-template-columns: 46px repeat(var(--days), minmax(0, 1fr)); }
+  .sched-head b { padding-left: 4px; font-size: 13px; }
+  .sched-sheet::before { left: 42px; }
+  .sched-hours span { right: 6px; }
+  .sched-hours b { font-size: 12px; } .sched-hours small { font-size: 10px; }
+  .sched-class { left: calc(2px + (100% - 4px) * var(--lane) / var(--of)); width: calc((100% - 4px) / var(--of) - 2px); padding: 5px 4px 4px 7px; }
+  .sched-class b, .sched-class small { display: none; }
   .sched-class .code { display: block; }
   .sched-class.narrow .code { display: none; }
+  .sched-paste { grid-template-columns: 1fr; }
+  .sched-empty { padding: 20px; }
+  .sched-empty h2 { font-size: 28px; }
+  .sched-ask { grid-template-columns: 1fr; }
+  .sched-ask .actions { grid-column: 1; }
+  .sched-form .grid.three { grid-template-columns: 1fr 1fr; }
+  .sched-more .menu { position: fixed; z-index: 40; left: 16px; right: 16px; top: auto; bottom: 96px; min-width: 0; }
 }

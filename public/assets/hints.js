@@ -35,7 +35,7 @@ const HINTS = [
   { id: 'h-s-credits', where: ['horario'], anchor: '.sched-total', more: 'creditos', text: 'El semestre incluye 16 créditos y lo usual son 15: suele sobrar uno ya pagado, por si quieres aprovecharlo.' },
   { id: 'h-s-drag', where: ['horario'], anchor: '.sched-options .sched-opt:nth-child(2):not(.add)', text: 'Arrastra una clase a la pestaña de otro borrador para pasarla allí, con sus ejercicios o laboratorio.' },
   { id: 'h-s-mine', where: ['horario'], anchor: '[data-use-mine]', more: 'despues', text: 'Cuando te inscribas, el borrador que quedó puede ser tu horario del semestre: se queda en «Mi horario».' },
-  { id: 'h-s-how', where: ['horario'], anchor: '.sched-modes', more: 'como', text: '¿Sabes cómo se asigna tu día y tu hora de inscripción?' },
+  { id: 'h-s-how', where: ['horario'], anchor: '.sched-special', more: 'como', text: 'Una vez por semestre, aquí preparas tu inscripción con borradores. ¿Sabes cómo se asigna tu día y tu hora?' },
   { id: 'h-views', where: ['mapa'], anchor: '#map-view-open', text: 'El mapa se ve de muchas formas: lo más preguntado, la dificultad, lo que te falta, la línea de tiempo de una materia…' },
 ];
 

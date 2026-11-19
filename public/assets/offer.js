@@ -43,7 +43,11 @@ export function parseOffer(text) {
     const prof = block.map((l) => l.match(/^\d{2}\/\d{2}\/\d{4}[\t ]{1,}(\S.*)$/)).find((m) => m && !m[1].includes('|'))?.[1].trim() ?? '';
     const credits = Number(block.map((l) => l.match(/^(\d{1,2})[\t ]+\S/)).find(Boolean)?.[1] ?? 0);
     const section = body.match(/Paralelo:\s*(\d+)/)?.[1] ?? '';
-    return { code: st.code, nrc: st.nrc, name, kind: kind ? titleCase(kind) : '', group, section, slots, building: building.replace(/\s*\([A-Z]{1,3}\)\s*/, '').trim(), room, prof, credits };
+    // «CLASES EXCLUIDOS: Primer Año, Semestre 1 …»: the students this section is not open to.
+    const ex = block.findIndex((l) => /CLASES EXCLUIDOS/i.test(l));
+    const excluded = [];
+    for (let i = ex + 1; ex >= 0 && i < block.length; i += 1) { const l = block[i].trim(); if (!l || /^Ver Modalidad|^CAMPUS|^[A-Z]{3,4}-\d/.test(l)) break; excluded.push(l); }
+    return { code: st.code, nrc: st.nrc, name, kind: kind ? titleCase(kind) : '', group, section, slots, building: building.replace(/\s*\([A-Z]{1,3}\)\s*/, '').trim(), room, prof, credits, excluded };
   });
   // The same NRC copied twice (a page and the next one overlap) counts once.
   const seen = new Set();
