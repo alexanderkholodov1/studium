@@ -979,7 +979,9 @@ mark:not(.hl) { background: color-mix(in oklab, var(--danger) 30%, transparent);
 .fb-copy h2 { font-size: clamp(36px, 4.6vw, 64px); font-weight: 800; letter-spacing: -.045em; line-height: .98; }
 .fb-copy h2 em { font-style: normal; color: var(--red); text-transform: uppercase; }
 .fb-copy > p:not(.kicker):not(.aside):not(.fine) { font-size: 19px; color: var(--ink-2); }
-.fb .aside { font: 600 clamp(23px, 2.2vw, 28px)/1.15 var(--hand); color: var(--red); rotate: -1.4deg; }
+.fb .aside { justify-self: start; max-width: 34ch; padding: 14px 18px 16px; border-radius: 4px 4px 18px 4px; font: 600 clamp(25px, 2.3vw, 30px)/1.15 var(--hand);
+  color: #1b2440; background: linear-gradient(170deg, #fff6c9, #ffe58a 80%, #f5d76a); rotate: -1.6deg;
+  box-shadow: 0 18px 30px -16px rgba(0, 0, 0, .55), 0 1px 0 rgba(255, 255, 255, .7) inset; }
 .fb .chips .chip[aria-pressed="true"] { color: var(--ink); background: color-mix(in oklab, var(--blue) 24%, transparent); border-color: var(--blue); }
 .fb-stage { position: relative; height: clamp(360px, 46vw, 520px); border-radius: 30px; }
 .fb-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border-radius: inherit; }
@@ -990,19 +992,27 @@ mark:not(.hl) { background: color-mix(in oklab, var(--danger) 30%, transparent);
   background-size: 200px 200px; }
 .fb-ai .fb-copy > p:not(.kicker):not(.aside):not(.fine), .fb-ai .fine { color: #c6cee2; }
 .fb-ai .kicker { color: #9db6ff; }
-.fb-ai .aside { color: #ff8e75; }
+.fb-ai .aside { color: #1b2440; }
 .fb-ai .chip { color: #c6cee2; border-color: rgba(255, 255, 255, .18); }
-.fb-ai .chip[aria-pressed="true"] { color: #fff; }
+.fb-ai .chips .chip[aria-pressed="true"] { color: #fff; background: color-mix(in oklab, var(--blue) 55%, transparent); }
 .fb-ai .fb-stage { cursor: crosshair; }
 .fb-ai .ring { position: absolute; left: 50%; top: 50%; width: 220px; height: 220px; translate: -50% -50%; border-radius: 50%; pointer-events: none; opacity: 0;
   box-shadow: 0 0 0 2px rgba(255, 82, 65, .9), 0 0 40px rgba(255, 82, 65, .6), inset 0 0 40px rgba(255, 82, 65, .35); }
 .fb-ai.shield .ring { animation: shield .9s ease-out; }
 @keyframes shield { 0% { opacity: 1; transform: scale(.7); } 100% { opacity: 0; transform: scale(1.35); } }
-.ak-chip { position: absolute; right: 8%; bottom: 10%; width: 56px; height: 56px; border-radius: 18px; border: 0; cursor: grab; touch-action: none; color: #fff;
-  font: 800 19px var(--display); background: linear-gradient(135deg, #4f7dff 0 50%, #ff5241 50% 100%); box-shadow: 0 14px 30px -10px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .5); }
-.ak-chip:active { cursor: grabbing; }
-.ak-note { position: absolute; right: 6%; bottom: calc(10% + 66px); font: 700 26px var(--hand); color: #ff8e75; opacity: 0; rotate: -6deg; pointer-events: none; }
-.ak-note.show { animation: note-pop 2.2s var(--spring); }
+.file-chip { position: absolute; right: 7%; bottom: 9%; display: grid; justify-items: center; gap: 4px; width: 92px; padding: 14px 8px 10px;
+  border: 0; border-radius: 6px 18px 6px 6px; cursor: grab; touch-action: none; color: #2453e6; font: 700 12px var(--display);
+  background: repeating-linear-gradient(180deg, transparent 0 13px, rgba(79, 125, 255, .22) 13px 14px), linear-gradient(160deg, #ffffff, #e8edf8);
+  box-shadow: 0 22px 34px -14px rgba(0, 0, 0, .75), 0 2px 0 rgba(255, 255, 255, .7) inset, -6px 0 0 -3px #ff5241 inset;
+  rotate: -7deg; transition: scale .6s cubic-bezier(.5, 0, .7, .4), opacity .6s, rotate .3s; }
+.file-chip svg { width: 30px; height: 30px; }
+.file-chip:hover { rotate: -3deg; }
+.file-chip:active { cursor: grabbing; }
+.file-chip.in { scale: .05; opacity: 0; rotate: 200deg; pointer-events: none; }
+.ai-made { position: absolute; left: 50%; top: calc(50% + 70px); translate: -50% 0; padding: 8px 16px; border-radius: 12px; white-space: nowrap;
+  font: 700 26px var(--hand); color: #1b2440; background: linear-gradient(170deg, #fff6c9, #ffe58a); box-shadow: 0 16px 30px -12px rgba(0, 0, 0, .7);
+  opacity: 0; rotate: -4deg; pointer-events: none; }
+.ai-made.show { animation: note-pop 2.4s var(--spring); }
 @keyframes note-pop { 0% { opacity: 0; transform: translateY(10px) scale(.8); } 15% { opacity: 1; transform: none; } 80% { opacity: 1; } 100% { opacity: 0; } }
 /* 2: graph paper with a red margin */
 .fb-graph .fb-in { background: linear-gradient(90deg, transparent 54px, var(--margin) 54px 56px, transparent 56px),
@@ -1384,7 +1394,8 @@ html.has-announce .page { padding-top: 170px; }
 /* ---------- the first section, in the operator's words ---------- */
 .hero-motto { display: grid; gap: 2px; justify-items: start; margin: 8px 0 4px; }
 .hero-motto p:first-child { font: 750 clamp(22px, 2.3vw, 30px)/1.2 var(--display); letter-spacing: -.02em; color: var(--ink); }
-.hero-motto .motto-hand { font: 600 clamp(24px, 2.4vw, 32px)/1 var(--hand); color: var(--red); rotate: -2.5deg; margin-left: .6em; }
+.hero-motto .motto-hand { justify-self: start; font: 700 clamp(32px, 3.3vw, 44px)/1.05 var(--hand); color: var(--red); rotate: -2.5deg; margin: 4px 0 0 .4em;
+  padding: 0 .25em; background: linear-gradient(100deg, transparent 2%, color-mix(in oklab, #ffe58a 85%, transparent) 4% 94%, transparent 97%) 0 62% / 100% 52% no-repeat; }
 .hero2 .lede.hero-what { max-width: 44ch; font-size: clamp(16px, 1.35vw, 19px); line-height: 1.5; }
 /* The note card is paper in day and night: its chips keep the paper's colors. */
 .note-card .chip { color: #1b2233; background: #e7edff; border-color: #c4d2ff; font: 700 12.5px var(--display); }

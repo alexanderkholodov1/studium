@@ -1,5 +1,5 @@
 // The three scenes of the landing page that show what is inside, each with its own background and its own play:
-// your AI (particles orbiting a core that only you can reach), the knowledge graph (a note is anonymized and becomes
+// your AI (particles orbiting a core; your notes go into it and a guide comes out), the knowledge graph (a note is anonymized and becomes
 // nodes you can drag), and your guides (one guide changing style, and one section rewritten by the AI as you watch).
 // Each scene runs only while it is on screen, and stays still when the person prefers reduced motion or focus.
 import { sfx } from './sfx.js';
@@ -31,11 +31,11 @@ function fitCanvas(canvas) {
   return { ctx, w: r.width, h: r.height };
 }
 
-/* ---------- 1. your AI: a core, its particles, and a creator who cannot get in ---------- */
+/* ---------- 1. your AI: a core, its particles, and your notes going into it ---------- */
 function aiScene(el) {
   const canvas = el.querySelector('canvas');
-  const me = el.querySelector('.ak-chip');
-  const note = el.querySelector('.ak-note');
+  const me = el.querySelector('.file-chip');
+  const note = el.querySelector('.ai-made');
   let size = fitCanvas(canvas);
   let palette = ['--blue', '--sky', '--teal'];
   let parts = [];
@@ -96,26 +96,34 @@ function aiScene(el) {
     for (const p of parts) p.r *= rand(0.7, 1.3);
     sfx.tick();
   }));
-  // The creator's chip: drag it into the core and the shield throws it back.
-  let hold = null; let pos = { x: 0, y: 0 }; let spring = 0;
+  // Your notes: drag them into the core and your AI takes them in, swirls, and a guide comes out. Let go anywhere
+  // else and they slide back to their place.
+  let hold = null; let pos = { x: 0, y: 0 }; let spring = 0; let busy = false;
   const place = () => { me.style.translate = `${pos.x}px ${pos.y}px`; };
-  me.addEventListener('pointerdown', (e) => { me.setPointerCapture(e.pointerId); hold = { x: e.clientX - pos.x, y: e.clientY - pos.y }; sfx.pick(); });
+  const home = () => { cancelAnimationFrame(spring); const back = () => { pos.x *= 0.82; pos.y *= 0.82; place(); if (Math.abs(pos.x) + Math.abs(pos.y) > 0.5) spring = requestAnimationFrame(back); else { pos = { x: 0, y: 0 }; place(); } }; back(); };
+  me.addEventListener('pointerdown', (e) => { if (busy) return; me.setPointerCapture(e.pointerId); cancelAnimationFrame(spring); hold = { x: e.clientX - pos.x, y: e.clientY - pos.y }; sfx.pick(); });
   me.addEventListener('pointermove', (e) => {
     if (!hold) return;
     pos = { x: e.clientX - hold.x, y: e.clientY - hold.y }; place();
     const r = canvas.getBoundingClientRect(); const m = me.getBoundingClientRect();
-    if (Math.hypot(m.left + m.width / 2 - (r.left + r.width / 2), m.top + m.height / 2 - (r.top + r.height / 2)) < 110) {
-      hold = null;
+    const dx = r.left + r.width / 2 - (m.left + m.width / 2); const dy = r.top + r.height / 2 - (m.top + m.height / 2);
+    if (Math.hypot(dx, dy) < 90) {
+      hold = null; busy = true;
+      // Into the core: the chip shrinks into the light, the particles spin faster for a moment, the guide is made.
+      pos = { x: pos.x + dx, y: pos.y + dy }; place();
+      me.classList.add('in');
+      for (const p of parts) p.s *= 3;
       el.classList.remove('shield'); void el.offsetWidth; el.classList.add('shield');
-      note.classList.remove('show'); void note.offsetWidth; note.classList.add('show');
       sfx.release(900, 60);
-      sfx.impact(160, 1200);
-      cancelAnimationFrame(spring);
-      const back = () => { pos.x *= 0.82; pos.y *= 0.82; place(); if (Math.abs(pos.x) + Math.abs(pos.y) > 0.5) spring = requestAnimationFrame(back); else { pos = { x: 0, y: 0 }; place(); } };
-      back();
+      setTimeout(() => {
+        for (const p of parts) p.s /= 3;
+        note.classList.remove('show'); void note.offsetWidth; note.classList.add('show');
+        sfx.impact(160, 1200);
+      }, 700);
+      setTimeout(() => { me.classList.remove('in'); pos = { x: 0, y: 0 }; place(); busy = false; }, 2200);
     }
   });
-  const drop = () => { if (hold) sfx.release(0, 60); hold = null; };
+  const drop = () => { if (hold) { sfx.release(0, 60); hold = null; home(); } };
   me.addEventListener('pointerup', drop); me.addEventListener('pointercancel', drop);
 }
 
