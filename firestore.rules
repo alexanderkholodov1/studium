@@ -202,6 +202,38 @@ service cloud.firestore {
       allow create, update: if member() && request.auth.uid == uid && drafts(request.resource.data);
     }
 
+    // Feedback: a member writes; only its sender and the admins read it; only the admins answer. A few per day per
+    // account: each one counts in feedbackDay/{uid} in the same write, and the count of a day stops at 10.
+    function today() { return math.floor(request.time.toMillis() / 86400000); }
+    function dayCount(uid) {
+      return getAfter(at('feedbackDay', uid)).data.day == today()
+        && getAfter(at('feedbackDay', uid)).data.n == (exists(at('feedbackDay', uid)) && get(at('feedbackDay', uid)).data.day == today() ? get(at('feedbackDay', uid)).data.n + 1 : 1);
+    }
+    function feedback(d) {
+      return d.keys().hasOnly(['uid', 'from', 'kind', 'text', 'page', 'version', 'agent', 'log', 'errors', 'shot', 'created', 'status'])
+        && d.keys().hasAll(['uid', 'kind', 'text', 'page', 'created', 'status'])
+        && d.uid == request.auth.uid && d.created == request.time && d.status == 'nuevo'
+        && d.kind in ['error', 'ia', 'urgente', 'sugerencia', 'funcion', 'gracias', 'comentario']
+        && text(d.text, 5000) && optional(d, 'from', 120) && optional(d, 'page', 300) && optional(d, 'version', 40) && optional(d, 'agent', 300)
+        && optional(d, 'log', 150000) && optional(d, 'errors', 30000)
+        && (!('shot' in d) || (d.shot is string && d.shot.size() <= 450000 && d.shot.matches('data:image/(jpeg|webp|png);base64,[A-Za-z0-9+/=]+')));
+    }
+    match /feedback/{id} {
+      allow create: if member() && feedback(request.resource.data) && dayCount(request.auth.uid);
+      allow get, list: if admin() || (member() && resource.data.uid == request.auth.uid);
+      allow update: if admin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'answer', 'answered'])
+        && request.resource.data.status in ['nuevo', 'visto', 'resuelto', 'descartado']
+        && optional(request.resource.data, 'answer', 5000);
+      allow delete: if admin() || (member() && resource.data.uid == request.auth.uid);
+    }
+    match /feedbackDay/{uid} {
+      allow get: if member() && request.auth.uid == uid;
+      allow create, update: if member() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['day', 'n']) && request.resource.data.day == today()
+        && request.resource.data.n is int && request.resource.data.n <= 10
+        && request.resource.data.n == (resource != null && resource.data.day == today() ? resource.data.n + 1 : 1);
+    }
+
     // A list without repeated values, all of them from the allowed ones.
     function picked(value, allowed, max) {
       return value is list && value.size() > 0 && value.size() <= max && value.toSet().size() == value.size() && value.hasOnly(allowed);

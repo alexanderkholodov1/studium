@@ -14,13 +14,15 @@ import { firebaseConfig, mailFrom } from './config.js';
 import { settings, normalize, domainOf } from './settings.js';
 import { EGGS } from './eggs.js';
 import { rise } from './fx.js';
+import * as ai from './ai.js';
+import { KINDS as FB_KINDS } from './feedback.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const n = (v) => (v == null ? '—' : Number(v).toLocaleString('es'));
 const PROJECT = firebaseConfig.projectId;
 const SECTIONS = {
-  resumen: 'Resumen', acceso: 'Acceso y comunidades', pagina: 'La página', cuentas: 'Cuentas', contenido: 'Contenido',
+  resumen: 'Resumen', feedback: 'Feedback', acceso: 'Acceso y comunidades', pagina: 'La página', cuentas: 'Cuentas', contenido: 'Contenido',
   uso: 'Uso de Firebase', eggs: 'Easter eggs', correo: 'Correo', registro: 'Registro',
 };
 // Firestore's free daily quota (Spark plan) and storage.
@@ -368,13 +370,77 @@ async function mailSection() {
       <p>Microsoft 365 (el correo de la USFQ) retiene los correos con enlaces a <code>${esc(PROJECT)}.firebaseapp.com</code>, y Firebase no deja cambiar el texto ni el destino de esos enlaces en este proyecto. Studium ya abre los enlaces de confirmar el correo y de cambiar la contraseña por sí mismo; falta que el correo los lleve, con un envío propio.</p></section>`;
 }
 
+/* ---------- feedback: what members wrote, urgent first; answered here; analysed by the admin's own AI on demand ---------- */
+let fbKind = '';
+let fbList = [];
+const FB_STATUS = { nuevo: 'Nuevo', visto: 'Visto', resuelto: 'Resuelto', descartado: 'Descartado' };
+const FB_SYSTEM = `Eres el asistente del administrador de Studium, una web de estudio para universitarios (sitio estático con Firebase; módulos en public/assets: app.js, ai.js, estudia.js, contribute.js, queue.js, bridge.mjs, space.js, feedback.js…).
+Recibes mensajes de feedback de los miembros (sin datos personales): su tipo, su texto, la página, la versión, y a veces el registro de su IA y los errores de la página.
+Responde en español, en Markdown breve:
+1. Lo urgente primero (alertas, posibles cobros, datos expuestos), cada uno con por qué es urgente.
+2. Errores agrupados: los que parecen la misma causa juntos, cuántos mensajes, la causa más probable según los registros, y un arreglo concreto (qué módulo o función revisar y qué cambiar).
+3. Sugerencias y funcionalidades pedidas, agrupadas, con cuántas personas las piden.
+4. Agradecimientos, en una línea.
+No inventes: si el registro no basta para saber la causa, dilo y di qué dato faltaría.`;
+const fbText = (list) => list.map((x, i) => `### Mensaje ${i + 1} · ${FB_KINDS[x.kind] ?? x.kind} · ${x.status} · ${x.page ?? ''} · v${x.version ?? ''}
+${x.text}${x.errors ? `\nErrores de la página:\n${x.errors.slice(0, 3000)}` : ''}${x.log ? `\nRegistro de su IA:\n${x.log.slice(0, 6000)}` : ''}`).join('\n\n');
+async function feedbackSection() {
+  const snap = await getDocs(query(collection(db, 'feedback'), orderBy('created', 'desc'), limit(300)));
+  fbList = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const open = fbList.filter((x) => x.status === 'nuevo' || x.status === 'visto');
+  const urgentNew = (x) => (x.kind === 'urgente' && x.status === 'nuevo' ? 1 : 0);
+  const shown = fbList.filter((x) => !fbKind || x.kind === fbKind).sort((a, b) => urgentNew(b) - urgentNew(a));
+  const count = (k) => fbList.filter((x) => x.kind === k).length;
+  return `<div class="stats">${stat('Sin resolver', n(open.length))}${stat('Urgentes nuevas', n(fbList.filter(urgentNew).length))}${stat('Errores', n(count('error') + count('ia')))}${stat('Ideas y funcionalidades', n(count('sugerencia') + count('funcion')))}${stat('Gracias', n(count('gracias')))}</div>
+    <section class="set glass"><h2>Analizar con tu IA <small>Solo cuando lo pides; lee los mensajes sin resolver, sin nombres ni correos</small></h2>
+      ${ai.connected().length ? `${ai.pickerHTML('feedback')}${ai.promptHTML(FB_SYSTEM, '', `más los ${open.length} mensajes sin resolver: tipo, texto, página, versión, errores y registro de la IA`)}
+      <div class="actions"><button type="button" class="button small" data-fb-analyze ${open.length ? '' : 'disabled'}>Analizar ${open.length} sin resolver</button></div><div data-fb-analysis></div>` : '<p class="muted">Conecta tu IA en Ajustes.</p>'}</section>
+    <section class="set glass"><h2>Mensajes</h2>
+      <div class="actions fb-filter"><label class="field"><span>Tipo</span><select name="fb-kind"><option value="">Todos (${fbList.length})</option>${Object.entries(FB_KINDS).map(([k, v]) => `<option value="${k}" ${k === fbKind ? 'selected' : ''}>${esc(v)} (${count(k)})</option>`).join('')}</select></label></div>
+      ${shown.length ? shown.map((x) => `<article class="fb-item ${esc(x.kind)}" data-fb-id="${esc(x.id)}">
+        <p class="fine"><b>${esc(FB_KINDS[x.kind] ?? x.kind)}</b> · ${esc(x.from ?? '')} · ${esc(x.created?.toDate?.().toLocaleString('es') ?? '')} · ${esc(x.page ?? '')} · v${esc(x.version ?? '')}</p>
+        <p>${esc(x.text)}</p>
+        ${x.errors ? `<details class="prompt"><summary>Errores de la página</summary><pre>${esc(x.errors)}</pre></details>` : ''}
+        ${x.log ? `<details class="prompt"><summary>Registro de su IA</summary><pre>${esc(x.log)}</pre></details>` : ''}
+        ${x.shot ? `<details class="prompt"><summary>Imagen</summary><img src="${esc(x.shot)}" alt="Captura adjunta" style="max-width:100%"></details>` : ''}
+        ${x.agent ? `<p class="fine muted">${esc(x.agent)}</p>` : ''}
+        <label class="field"><span>Respuesta (la ve quien lo envió)</span><textarea rows="2" maxlength="5000" data-fb-answer>${esc(x.answer ?? '')}</textarea></label>
+        <div class="actions"><select data-fb-status aria-label="Estado">${Object.entries(FB_STATUS).map(([k, v]) => `<option value="${k}" ${k === x.status ? 'selected' : ''}>${v}</option>`).join('')}</select>
+          <button type="button" class="button small" data-fb-save>Guardar</button><button type="button" class="button ghost small" data-fb-delete>Borrar</button></div>
+      </article>`).join('') : '<p class="muted">Nada por aquí todavía.</p>'}</section>`;
+}
+async function fbSave(card) {
+  const batch = writeBatch(db);
+  batch.update(doc(db, 'feedback', card.dataset.fbId), { status: $('[data-fb-status]', card).value, answer: $('[data-fb-answer]', card).value.trim(), answered: serverTimestamp() });
+  await batch.commit();
+  await audit('Feedback respondido', card.dataset.fbId);
+  ctx.toast('Guardado.');
+}
+async function fbDelete(card) {
+  const batch = writeBatch(db);
+  batch.delete(doc(db, 'feedback', card.dataset.fbId));
+  await batch.commit();
+  await audit('Feedback borrado', card.dataset.fbId);
+  card.remove();
+}
+async function fbAnalyze(btn) {
+  const box = $('[data-fb-analysis]');
+  const open = fbList.filter((x) => x.status === 'nuevo' || x.status === 'visto');
+  btn.disabled = true; btn.textContent = 'Tu IA está leyendo…';
+  try {
+    const res = await ai.run({ system: FB_SYSTEM, text: fbText(open), maxTokens: 6000, task: 'feedback', use: ai.picked('feedback', $('#view-admin')), label: 'Analizar el feedback' });
+    box.innerHTML = `<p class="fine">Con ${esc(res.model)}.</p><pre class="fb-analysis">${esc(res.text)}</pre>`;
+  } catch (e) { box.innerHTML = `<p class="msg">${esc(e.message)}</p>`; }
+  finally { btn.disabled = false; btn.textContent = `Analizar ${open.length} sin resolver`; }
+}
+
 async function logSection() {
   const snap = await getDocs(query(collection(db, 'audit'), orderBy('at', 'desc'), limit(150)));
   return `<section class="set glass"><h2>Registro <small>Cada cambio hecho desde este panel</small></h2>
     ${snap.empty ? '<p class="muted">Todavía no hay cambios.</p>' : `<ol class="audit">${snap.docs.map((d) => { const x = d.data(); return `<li><time>${esc(when(x.at))}</time><div><strong>${esc(x.action)}</strong>${x.detail ? `<p>${esc(x.detail)}</p>` : ''}<small>${esc(x.by)}</small></div></li>`; }).join('')}</ol>`}</section>`;
 }
 
-const RENDER = { resumen: summary, acceso: accessSection, pagina: pageSection, cuentas: accountsSection, contenido: contentSection, uso: usageSection, eggs: eggsSection, correo: mailSection, registro: logSection };
+const RENDER = { resumen: summary, feedback: feedbackSection, acceso: accessSection, pagina: pageSection, cuentas: accountsSection, contenido: contentSection, uso: usageSection, eggs: eggsSection, correo: mailSection, registro: logSection };
 
 export async function renderAdmin(which = section) {
   section = SECTIONS[which] ? which : 'resumen';
@@ -458,6 +524,10 @@ export function mountAdmin(context) {
       if (t.dataset.admDisconnect !== undefined) { globalThis.google?.accounts?.oauth2?.revoke?.(google.token); google.token = ''; accounts = null; renderAdmin(); }
       if (t.dataset.admClientid !== undefined) { draft = structuredClone(settings.get()); draft.googleClientId = ''; await settings.save(draft, email(), 'Ajustes', 'ID de cliente de Google quitado'); draft = null; renderAdmin(); }
       if (t.dataset.admSave !== undefined) await saveSettings();
+      const fb = t.closest('[data-fb-id]');
+      if (fb && t.dataset.fbSave !== undefined) await fbSave(fb);
+      if (fb && t.dataset.fbDelete !== undefined && armed(t, '¿Borrar? Pulsa otra vez')) await fbDelete(fb);
+      if (t.dataset.fbAnalyze !== undefined) await fbAnalyze(t);
       if (t.dataset.admDiscard !== undefined) { draft = null; renderAdmin(); }
       if (t.dataset.cNew !== undefined) { draft.communities.push({ id: `comunidad-${draft.communities.length + 1}`, name: 'Nueva', full: '', domains: [], active: false }); renderAdmin(); }
       const card = t.closest('.community');
@@ -498,6 +568,7 @@ export function mountAdmin(context) {
   view.addEventListener('change', (e) => {
     const t = e.target;
     if (t.name === 'adm-kind') { contentKind = t.value; renderAdmin('contenido'); return; }
+    if (t.name === 'fb-kind') { fbKind = t.value; renderAdmin('feedback'); return; }
     if (!draft) return;
     if (t.dataset.admConfirm !== undefined) draft.confirmEmail = t.checked;
     if (t.dataset.flag) draft.flags[t.dataset.flag] = t.checked;

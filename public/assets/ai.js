@@ -49,6 +49,7 @@ export const TASKS = {
   schedule: { name: 'Leer tu horario', tier: 'mid', effort: 'low', why: 'basta un modelo intermedio que vea bien las imágenes, pensando poco: es copiar lo que ve' },
   identify: { name: 'Identificar un documento', tier: 'light', effort: 'low', why: 'basta un modelo ligero, pensando poco: solo reconoce qué es' },
   ask: { name: 'Preguntarle al grafo', tier: 'light', effort: 'low', why: 'basta un modelo ligero y rápido, pensando poco: elige qué mostrarte' },
+  feedback: { name: 'Analizar el feedback', tier: 'mid', effort: 'medium', why: 'basta un modelo intermedio, pensando lo normal: agrupa lo que llegó y propone arreglos' },
 };
 // Where each kind of task runs, first to last. Nothing should cost the person anything: their subscription through
 // the bridge (no charge per use) and the free ways first; a key that charges per use only if it is all they have.
@@ -304,7 +305,7 @@ export function pickerHTML(task, { open = false } = {}) {
         <small>Pensar más da mejores respuestas, pero tarda más${c.provider === 'gemini' ? ' y gasta más de tu límite gratis' : ''}.</small></label>` : ''}
       ${isRec ? '' : `<button type="button" class="button ghost small" data-ai-suggest="${esc(task)}">Volver a lo recomendado</button>`}
     </div>
-  </details>`;
+  </details><p class="fb-wrong-line"><button type="button" class="link fb-wrong" data-feedback="ia">¿Algo salió mal con la IA? Cuéntamelo</button></p>`;
 }
 // What the picker of a task says right now (and remember it).
 // What an AI receives, shown before it runs (his rule for the whole page: every use of an AI lets the person choose

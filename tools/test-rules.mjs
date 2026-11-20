@@ -319,6 +319,32 @@ try {
   expect('classmate cannot read the drafts of another account', await status(c.token, 'GET', `/drafts/${s.uid}`), 403);
   expect('classmate cannot write the drafts of another account', await commit(c.token, [put(`drafts/${s.uid}`, { guide: {} })]), 403);
   expect('drafts with other fields are refused', await commit(s.token, [put(`drafts/${s.uid}`, { notes: 'x' })]), 403);
+  // Feedback: written by its sender with its day's count, read by the sender and the admins, at most 10 a day.
+  {
+    const day = Math.floor(Date.now() / 86400000);
+    const fb = (extra = {}) => ({ uid: s.uid, kind: 'error', text: 'Algo falló', page: '#/estudia', status: 'nuevo', ...extra });
+    const send = (token, id, data, n, opts = {}) => commit(token, [put(`feedback/${id}`, data, { stamp: 'created', create: true }), put(`feedbackDay/${opts.uid ?? s.uid}`, { day, n }, { stamp: false })]);
+    await call(admin, 'POST', `${firestore}:commit`, { writes: [remove(`feedbackDay/${s.uid}`)] });
+    const f1 = `${tag}-fb1`;
+    expect('student sends feedback, counted for the day', await send(s.token, f1, fb(), 1), 200);
+    expect('student reads its feedback', await status(s.token, 'GET', `/feedback/${f1}`), 200);
+    expect('classmate cannot read the feedback of another account', await status(c.token, 'GET', `/feedback/${f1}`), 403);
+    expect('admin reads the feedback', await status(accounts.admin.token, 'GET', `/feedback/${f1}`), 200);
+    expect('feedback without its count is refused', await commit(s.token, [put(`feedback/${tag}-fb2`, fb(), { stamp: 'created', create: true })]), 403);
+    expect('a count that jumps is refused', await send(s.token, `${tag}-fb3`, fb(), 5), 403);
+    expect('feedback in the name of another account is refused', await send(s.token, `${tag}-fb4`, fb({ uid: c.uid }), 2), 403);
+    expect('feedback of an unknown kind is refused', await send(s.token, `${tag}-fb5`, fb({ kind: 'spam' }), 2), 403);
+    expect('feedback with an answer already is refused', await send(s.token, `${tag}-fb6`, fb({ answer: 'x' }), 2), 403);
+    expect('feedback with a picture that is not an image is refused', await send(s.token, `${tag}-fb7`, fb({ shot: 'javascript:alert(1)' }), 2), 403);
+    expect('feedback with its log and a picture', await send(s.token, `${tag}-fb8`, fb({ kind: 'ia', log: '[{"model":"x"}]', shot: 'data:image/jpeg;base64,AAAA' }), 2), 200);
+    expect('the sender cannot answer its own feedback', await commit(s.token, [put(`feedback/${f1}`, { status: 'resuelto' }, { stamp: false, mask: ['status'] })]), 403);
+    expect('admin answers the feedback', await commit(accounts.admin.token, [put(`feedback/${f1}`, { status: 'resuelto', answer: 'Gracias, arreglado' }, { stamp: 'answered', mask: ['status', 'answer'] })]), 200);
+    expect('admin cannot change what was sent', await commit(accounts.admin.token, [put(`feedback/${f1}`, { text: 'otra cosa' }, { stamp: false, mask: ['text'] })]), 403);
+    await call(admin, 'POST', `${firestore}:commit`, { writes: [put(`feedbackDay/${s.uid}`, { day, n: 10 }, { stamp: false })] });
+    expect('the eleventh of the day is refused', await send(s.token, `${tag}-fb9`, fb(), 11), 403);
+    expect('otherDomain cannot send feedback', await send(accounts.otherDomain.token, `${tag}-fb10`, fb({ uid: accounts.otherDomain.uid }), 1, { uid: accounts.otherDomain.uid }), 403);
+    expect('student deletes its feedback', await commit(s.token, [remove(`feedback/${f1}`)]), 200);
+  }
   expect('otherDomain cannot save a profile', await commit(accounts.otherDomain.token, [put(`profiles/${accounts.otherDomain.uid}`, profile())]), 403);
 
   // Thanks: only fixed, positive kinds

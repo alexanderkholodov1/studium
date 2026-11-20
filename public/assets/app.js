@@ -32,6 +32,7 @@ import { setLang, t } from './i18n.js';
 import { mountHints } from './hints.js';
 import { mountEggs } from './eggs.js';
 import { mountAdmin, renderAdmin } from './admin.js';
+import { mountFeedback } from './feedback.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -308,6 +309,7 @@ mountMap(context);
 mountSpace(context);
 mountEggs({ toast });
 mountAdmin(context);
+mountFeedback();
 mountCommunity(context);
 mountLibrary(context);
 mountEditor();
@@ -620,6 +622,7 @@ onAuthStateChanged(auth, async (user) => {
     if (confirmEmail() && user.emailVerified && !claims.email_verified) await user.getIdToken(true);
   }
   document.documentElement.classList.toggle('is-admin', role.admin);
+  document.documentElement.classList.toggle('is-member', isMember(user));
   // A member's queue of material resumes wherever they land: it lives in this browser.
   if (isMember(user)) { await prefs.attach(user.uid); seen(); startQueue(context); } else prefs.detach();
   await route();

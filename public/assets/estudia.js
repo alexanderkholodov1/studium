@@ -710,6 +710,7 @@ function drawLog(w, label) {
       <details class="prompt"><summary>Instrucciones exactas</summary><pre>${esc(`${e.system ?? ''}\n\n${(e.text ?? '').slice(0, 20000)}`)}</pre></details>
       ${e.response ? `<details class="prompt"><summary>Respuesta exacta</summary><pre>${esc(e.response.slice(0, 20000))}</pre></details>` : ''}
       ${e.error ? `<p class="msg bad">${esc(e.error)}</p>` : ''}
+      <p class="fb-wrong-line"><button type="button" class="link fb-wrong" data-feedback="ia" data-entry="${esc(e.id)}">¿Algo salió mal en este pedido? Cuéntamelo (con su registro)</button></p>
     </section>`).join('') : '<p class="muted">Todavía no se envió ningún pedido a tu IA.</p>';
 }
 const WAYS_NAME = { gemini: 'Gemini', anthropic: 'Claude', openai: 'ChatGPT', openrouter: 'OpenRouter', puter: 'Puter' };

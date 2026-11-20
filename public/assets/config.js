@@ -33,3 +33,6 @@ export const domainsOf = (s) => [...new Set(s.communities.filter((c) => c.active
 
 // The address the account e-mails come from, as the confirmation screen names it (tools/set-smtp.mjs sets the sender).
 export const mailFrom = 'studiumplatform@gmail.com';
+
+// The version of the page, said in feedback and errors.
+export const VERSION = '0.6.0';
