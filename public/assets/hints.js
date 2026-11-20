@@ -14,6 +14,10 @@ export function markSeen(key) {
   const s = read(); s.add(key);
   try { localStorage.setItem(SEEN, JSON.stringify([...s].slice(-200))); } catch { /* not remembered */ }
 }
+export function unmarkSeen(key) {
+  const s = read(); s.delete(key);
+  try { localStorage.setItem(SEEN, JSON.stringify([...s])); } catch { /* not remembered */ }
+}
 export const hintsOn = () => { try { return localStorage.getItem(OFF) !== 'off'; } catch { return true; } };
 export function setHints(on) { try { localStorage.setItem(OFF, on ? 'on' : 'off'); } catch { /* not remembered */ } }
 

@@ -12,8 +12,8 @@ import { themeStyle, keyOf } from './themes.js';
 import { rise } from './fx.js';
 import { auth } from './data.js';
 import { communityLabel, communityOf, flag, settings } from './settings.js';
-import { seen, markSeen, hintsOn, setHints } from './hints.js';
-import { luckyHit, found, radioOn, openRadio, radioDocked, placeRadio, rescueRadio, critCount, eggCount, cakeSVG, poke } from './eggs.js';
+import { seen, markSeen, unmarkSeen, hintsOn, setHints } from './hints.js';
+import { luckyHit, found, radioOn, openRadio, radioDocked, placeRadio, rescueRadio, critCount, eggCount, cakeSVG, gramophoneSVG, poke, backdrop, EGGS, openStations } from './eggs.js';
 import { renderHomeSchedule } from './schedule.js';
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -99,7 +99,13 @@ const BY_MODE = {
 };
 let editing = false;
 // «Tus hallazgos» joins the home page by itself once a secret is found (and can be removed like any tile).
-const chosen = () => { const p = prefs.get(); return p.tiles.length ? p.tiles : [...BY_MODE[p.mode], ...(found().size ? ['shelf'] : [])]; };
+// It shows for everyone who found one, whatever tiles they chose, until they remove it themselves.
+const chosen = () => {
+  const p = prefs.get();
+  const list = p.tiles.length ? p.tiles : BY_MODE[p.mode];
+  const shelf = found().size && !seen('shelf-removed') && !list.some((x) => x.split(':')[0] === 'shelf');
+  return shelf ? [...list, 'shelf'] : list;
+};
 const tileId = (t) => t.split(':')[0];
 const spanOf = (t) => { const [id, size] = t.split(':'); return size === 's' ? 4 : size === 'l' ? 12 : TILE_SPAN[id] ?? 6; };
 const rid = () => Math.random().toString(36).slice(2, 10);
@@ -266,6 +272,8 @@ function shelfTile(span) {
     f.has('medic') ? `<button type="button" class="trinket ecg" data-trinket="medic" aria-label="El monitor: tómate el pulso" title="Tómate el pulso"><svg viewBox="0 0 160 70" aria-hidden="true"><rect x="2" y="2" width="156" height="66" rx="10"/><path class="trace" d="M6 40h40l8-4 6 4h10l6-26 9 46 7-30 5 10h20l8-6 8 6h21"/></svg><small>♥ 72 · +25</small></button>` : '',
     f.has('portal') ? '<button type="button" class="trinket portals" data-trinket="portal" aria-label="Los portales: suelta una canica" title="Suelta una canica"><span class="ring blue"></span><span class="ring red"></span><span class="marble"></span><small>Portales</small></button>' : '',
     f.has('crit') ? `<button type="button" class="trinket trophy" data-trinket="crit" aria-label="Golpes críticos: ${crits}" title="Golpes críticos"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 8h28v14c0 10-6 17-14 17S18 32 18 22Z" fill="#ffd23f"/><path d="M18 12H8c0 10 5 15 11 15M46 12h10c0 10-5 15-11 15" fill="none" stroke="#ffd23f" stroke-width="4"/><rect x="28" y="38" width="8" height="10" fill="#e0b21f"/><rect x="18" y="48" width="28" height="8" rx="3" fill="#7a4a2b"/></svg><small>× ${crits} crítico${crits === 1 ? '' : 's'}</small></button>` : '',
+    f.has('cafe') ? `<button type="button" class="trinket cafe" data-trinket="cafe" aria-pressed="${backdrop() === 'cafe'}" title="Enciende o apaga la «Noche de estudio»"><svg viewBox="0 0 100 100" aria-hidden="true"><path class="steam" d="M40 30c-5-6 5-10 0-16M54 30c-5-6 5-10 0-16"/><path d="M22 38h50l-5 38a7 7 0 0 1-7 6H34a7 7 0 0 1-7-6Z" fill="#f2e6d6"/><path d="M71 44c12 0 12 18 0 18" stroke="#f2e6d6" stroke-width="6" fill="none"/><ellipse cx="47" cy="38" rx="25" ry="5" fill="#5b3a22"/></svg><small>Noche de estudio</small></button>` : '',
+    f.has('starve') ? `<button type="button" class="trinket gramophone" data-trinket="starve" title="Pon el fonógrafo">${gramophoneSVG}<small>El fonógrafo</small></button>` : '',
     f.has('radio') ? (radioDocked() ? '<div class="radio-stand" data-radio-stand></div>' : `<div class="trinket radio-slot">${radioOn() ? '<small>La radio va contigo. Con «Dejarla en Inicio» se queda aquí.</small>' : '<button type="button" class="button ghost small" data-radio-add>Encender la radio</button>'}</div>`) : '',
   ].filter(Boolean);
   const hidden = eggCount() - f.size;
@@ -421,6 +429,17 @@ async function fillCareer() {
   const list = await careers();
   if (list.length) box.innerHTML = careerPicker(list, prefs.get().malla, 'Carrera');
 }
+// The secrets in Ajustes: which ones were found and what each left, where to find them, and a «?» for the rest
+// (how to find a hidden one is not told: that is the game).
+function secretsSection() {
+  const f = found();
+  if (!f.size) return '';
+  const stations = openStations();
+  return `<section class="set glass" id="set-secrets"><h2>Tus secretos <small>${f.size} de ${EGGS.length}</small></h2>
+    <p>Lo que desbloqueaste vive en tu Inicio, en «Tus hallazgos»: ahí se presiona cada cosa. La radio tiene ${stations.length} ${stations.length === 1 ? 'estación abierta' : 'estaciones abiertas'}; se cambia con su perilla del medio.</p>
+    <ul class="secrets">${EGGS.map((e) => (f.has(e.id) ? `<li><strong>${esc(e.name)}</strong><span>${esc(e.what)}</span></li>` : '<li class="locked"><strong>?</strong><span>Un secreto por encontrar.</span></li>')).join('')}</ul>
+    <div class="actions"><button class="button primary" data-shelf-show>Ver «Tus hallazgos» en Inicio</button>${f.has('radio') && !radioOn() ? '<button class="button ghost" data-radio-add>Encender la radio</button>' : ''}</div></section>`;
+}
 export function renderSettings() {
   const p = prefs.get();
   $('#settings').innerHTML = `
@@ -444,6 +463,7 @@ export function renderSettings() {
     <section class="set glass"><h2>Sonidos</h2>
       <label class="toggle"><input type="checkbox" data-pref="sound" ${p.sound ? 'checked' : ''}><span class="knob"></span>Sonidos al lanzar cosas, al cumplir una meta y al terminar un bloque de enfoque</label>
       <div class="actions"><button class="button ghost" data-sound-test>Probar</button></div></section>
+    ${secretsSection()}
     <section class="set glass"><h2>Pistas</h2>
       <label class="toggle"><input type="checkbox" data-hints-toggle ${hintsOn() ? 'checked' : ''}><span class="knob"></span>De vez en cuando, una burbuja con algo que quizá no sabías de Studium</label></section>
     <section class="set glass"><h2>Día o noche</h2>
@@ -802,7 +822,8 @@ export function mountSpace(context) {
       list[i] = next === 'm' ? id : `${id}:${next}`;
       setTiles(list);
     }
-    if (t.dataset.tileHide) { const list = [...chosen()]; list.splice(Number(t.dataset.tileHide), 1); setTiles(list); }
+    if (t.dataset.tileHide) { const list = [...chosen()]; const [gone] = list.splice(Number(t.dataset.tileHide), 1); if (gone?.startsWith('shelf')) markSeen('shelf-removed'); setTiles(list); }
+    if (t.dataset.shelfShow !== undefined) { unmarkSeen('shelf-removed'); const p = prefs.get(); if (p.tiles.length && !p.tiles.some((x) => x.startsWith('shelf'))) prefs.set({ tiles: [...p.tiles, 'shelf'] }); renderSettings(); location.hash = '#/inicio'; }
     if (t.dataset.tileReset !== undefined) setTiles([]);
     if (t.dataset.radioAdd !== undefined) { openRadio(); renderHome(); }
     if (t.dataset.trinket) poke(t.dataset.trinket, t);

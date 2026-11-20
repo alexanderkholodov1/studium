@@ -12,6 +12,7 @@ import { sfx } from './sfx.js';
 import { t } from './i18n.js';
 import { auth, countEgg } from './data.js';
 import { flag } from './settings.js';
+import { STATIONS, GENERATORS, stationOf, embedURL } from './stations.js';
 
 const FOUND = 'studium-eggs';
 const RADIO = 'studium-radio';
@@ -24,7 +25,9 @@ export const EGGS = [
     what: 'Un portal azul y uno rojo, y una canica de vidrio que entra por uno y sale por el otro. Los portales se quedan en Inicio.' },
   { id: 'cake', name: 'La torta', how: 'Escribir «torta» o «cake».', what: 'Cae una torta con su vela en la pantalla, y se queda en Inicio: se sopla y se vuelve a encender.' },
   { id: 'medic', name: '¡Médico!', how: 'Escribir «medico» o «medic».', what: 'Alguien salta en la pantalla y grita «¡Médico!», con el pulso. En Inicio queda un monitor de ritmo cardíaco.' },
-  { id: 'crit', name: 'Golpe crítico', how: 'Marcar una meta como cumplida: una de cada diez veces.', what: '«¡CRÍTICO!» en verde y una celebración doble; en Inicio, un trofeo los cuenta.' },
+  { id: 'crit', name: 'Golpe crítico', how: 'Marcar una meta como cumplida: una de cada diez veces.', what: '«¡CRÍTICO!» en verde y una celebración doble; en Inicio, un trofeo los cuenta. Abre la estación «8 bits».' },
+  { id: 'cafe', name: 'Noche de estudio', how: 'Escribir «café» o «cafe».', what: 'Un fondo de lámpara cálida con una taza humeante, que se enciende y se apaga desde Inicio. Abre la estación «Lluvia y lo-fi».' },
+  { id: 'starve', name: 'No te mueras de hambre', how: 'Escribir «hambre» o «starve».', what: 'Cae la noche sobre la página y se enciende una fogata. Deja un fonógrafo en Inicio y abre la estación «El fonógrafo».' },
 ];
 const ALL = EGGS.map((e) => e.id);
 let toast = () => {};
@@ -50,17 +53,18 @@ function discover(id, message) {
 const layer = (cls, html = '') => { const el = document.createElement('div'); el.className = cls; el.innerHTML = html; el.setAttribute('aria-hidden', 'true'); document.body.append(el); return el; };
 
 /* ---------- the drawings (original) ---------- */
-// A two-tier cake with one candle; lit or not.
+// A chocolate cake, the classic kind: dark sponge with shavings, a ring of white cream dollops, a cherry on each, and
+// one candle; lit or not. Drawn here, not taken from any game.
 export const cakeSVG = (lit = true) => `<svg class="cake-svg" viewBox="0 0 120 120" aria-hidden="true">
-  <ellipse cx="60" cy="108" rx="50" ry="7" fill="rgba(0,0,0,.18)"/>
-  <rect x="14" y="66" width="92" height="38" rx="9" fill="#7a4a2b"/><rect x="14" y="66" width="92" height="12" rx="6" fill="#f6efe6"/>
-  <path d="M14 76c8 8 14-2 22 4s14-4 22 2 14-4 22 2 14-4 26 0v-8H14Z" fill="#f6efe6"/>
-  <rect x="28" y="40" width="64" height="30" rx="8" fill="#8c5634"/><rect x="28" y="40" width="64" height="10" rx="5" fill="#ffd6e2"/>
-  <path d="M28 48c6 6 11-2 16 3s11-3 16 1 11-3 16 1 10-3 16-1v-6H28Z" fill="#ffd6e2"/>
-  ${[22, 40, 58, 76, 94].map((x) => `<circle cx="${x + 2}" cy="${x % 2 ? 90 : 94}" r="2.4" fill="#ff4f6d"/>`).join('')}
-  <circle cx="60" cy="40" r="5" fill="#d7263d"/><path d="M60 35c2-6 6-8 9-8" stroke="#3a7d44" stroke-width="2" fill="none"/>
-  <rect x="57" y="16" width="6" height="20" rx="2" fill="#7cc4ff"/><path d="M57 21l6-3M57 27l6-3M57 33l6-3" stroke="#fff" stroke-width="1.6"/>
-  <g class="flame" ${lit ? '' : 'opacity="0"'}><ellipse cx="60" cy="10" rx="4.5" ry="7.5" fill="#ffb627"/><ellipse cx="60" cy="11.5" rx="2.2" ry="4" fill="#fff4c2"/></g>
+  <ellipse cx="60" cy="110" rx="52" ry="7" fill="rgba(0,0,0,.2)"/><ellipse cx="60" cy="104" rx="50" ry="8" fill="#e9e4dc"/>
+  <path d="M16 62v36c0 6 20 10 44 10s44-4 44-10V62Z" fill="#3b1f14"/>
+  <path d="M16 62v36c0 6 20 10 44 10V62Z" fill="#4a281a"/>
+  ${[24, 36, 48, 62, 76, 90].map((x, i) => `<path d="M${x} ${74 + (i % 2) * 10}l3 2-2 3" stroke="#6b3a24" stroke-width="2" fill="none"/>`).join('')}
+  <ellipse cx="60" cy="62" rx="44" ry="11" fill="#2f170f"/>
+  ${[[24, 60], [36, 55], [50, 53], [66, 53], [80, 55], [94, 60], [86, 68], [70, 71], [52, 71], [34, 68]].map(([x, y]) => `<g><ellipse cx="${x}" cy="${y}" rx="7" ry="5" fill="#fbf7f0"/><path d="M${x - 5} ${y}q5-8 10 0" fill="#fff"/><circle cx="${x}" cy="${y - 6}" r="3.6" fill="#c8102e"/><circle cx="${x - 1}" cy="${y - 7.2}" r="1" fill="#ff8a9a"/></g>`).join('')}
+  <rect x="57" y="22" width="6" height="34" rx="2" fill="#f4efe6"/><path d="M57 28l6-3M57 36l6-3M57 44l6-3M57 52l6-3" stroke="#c8102e" stroke-width="1.6"/>
+  <path d="M60 22v-3" stroke="#222" stroke-width="1.2"/>
+  <g class="flame" ${lit ? '' : 'opacity="0"'}><ellipse cx="60" cy="13" rx="4.5" ry="7.5" fill="#ffb627"/><ellipse cx="60" cy="14.5" rx="2.2" ry="4" fill="#fff4c2"/></g>
 </svg>`;
 // Someone in a white coat with a stethoscope and a green heart, arms up. Original, not any game's character.
 const medicSVG = `<svg viewBox="0 0 120 160" aria-hidden="true">
@@ -90,7 +94,42 @@ function onKey(e) {
   if (typed.endsWith('radio')) { typed = ''; openRadio(true); }
   else if (typed.endsWith('torta') || typed.endsWith('cake')) { typed = ''; cakeFalls(); discover('cake', 'La torta es una mentira. Esta no: es tuya.'); }
   else if (typed.endsWith('medico') || typed.endsWith('medic')) { typed = ''; medic(); discover('medic', '¡Médico! +25 de ánimo para seguir estudiando.'); }
+  else if (typed.endsWith('café') || typed.endsWith('cafe')) { typed = ''; setBackdrop('cafe'); discover('cafe', 'Noche de estudio: lámpara, café y la estación «Lluvia y lo-fi».'); }
+  else if (typed.endsWith('hambre') || typed.endsWith('starve')) { typed = ''; nightfall(); discover('starve', 'Se hizo de noche. Come algo, y sigue: hay un fonógrafo en tu Inicio.'); }
 }
+
+/* ---------- «Noche de estudio»: a background with a warm lamp and a cup of coffee ---------- */
+const BACKDROP = 'studium-backdrop';
+export const backdrop = () => String(read(BACKDROP, ''));
+export function setBackdrop(id) {
+  write(BACKDROP, id);
+  document.getElementById('egg-backdrop')?.remove();
+  if (id !== 'cafe') return;
+  const el = layer('egg-backdrop cafe', `<i class="lamp"></i><svg class="cup" viewBox="0 0 120 120" aria-hidden="true">
+    <path class="steam" d="M48 40c-6-8 6-12 0-20M62 40c-6-8 6-12 0-20M76 40c-6-8 6-12 0-20"/>
+    <ellipse cx="62" cy="100" rx="44" ry="8" fill="rgba(0,0,0,.25)"/><path d="M30 50h64l-6 44a8 8 0 0 1-8 7H44a8 8 0 0 1-8-7Z" fill="#f2e6d6"/>
+    <path d="M93 58c14 0 14 22 0 22" stroke="#f2e6d6" stroke-width="7" fill="none"/><ellipse cx="62" cy="50" rx="32" ry="6" fill="#5b3a22"/></svg>`);
+  el.id = 'egg-backdrop';
+}
+
+/* ---------- «No te mueras de hambre»: night falls, and a campfire is lit ---------- */
+function nightfall() {
+  if (still()) return;
+  sfx.portal();
+  const night = layer('egg-night');
+  const fire = layer('egg-fire', `<svg viewBox="0 0 120 120" aria-hidden="true"><ellipse cx="60" cy="108" rx="46" ry="8" fill="rgba(255,140,40,.25)"/>
+    <path d="M24 104l72-18M28 86l68 20" stroke="#5a3a24" stroke-width="10" stroke-linecap="round"/>
+    <path class="f1" d="M60 22c14 22 26 34 26 54a26 26 0 0 1-52 0c0-14 8-20 12-32 4 10 8 12 10 14 2-14 0-24 4-36Z" fill="#ff8a2a"/>
+    <path class="f2" d="M60 52c8 12 14 18 14 28a14 14 0 0 1-28 0c0-8 6-12 8-20 2 6 4 6 6 8 0-6 0-10 0-16Z" fill="#ffd25e"/></svg>`);
+  setTimeout(() => sfx.blow(), 900);
+  setTimeout(() => { night.classList.add('away'); fire.classList.add('away'); }, 4200);
+  setTimeout(() => { night.remove(); fire.remove(); }, 5200);
+}
+// A gramophone, for «Tus hallazgos» (an original drawing).
+export const gramophoneSVG = `<svg viewBox="0 0 100 100" aria-hidden="true">
+  <rect x="18" y="64" width="64" height="26" rx="4" fill="#7a4523"/><rect x="18" y="64" width="64" height="6" fill="#a8693b"/>
+  <ellipse cx="50" cy="64" rx="28" ry="5" fill="#222"/><path d="M50 62V44" stroke="#c9a14a" stroke-width="3"/>
+  <path class="horn" d="M50 46C52 30 66 14 90 8c4 14-4 30-22 38Z" fill="#d4a63c"/><path d="M50 46C52 30 66 14 90 8" stroke="#8a6420" stroke-width="2" fill="none"/></svg>`;
 
 /* ---------- the cake ---------- */
 function cakeFalls() {
@@ -208,59 +247,31 @@ export function poke(id, el) {
   } else if (id === 'portal') {
     sfx.portal();
     el.classList.remove('through'); void el.offsetWidth; el.classList.add('through');
+  } else if (id === 'cafe') {
+    setBackdrop(backdrop() === 'cafe' ? '' : 'cafe'); sfx.tick();
+    el.setAttribute('aria-pressed', String(backdrop() === 'cafe'));
+  } else if (id === 'starve') {
+    // The gramophone: the radio turns on and tunes to the phonograph.
+    openRadio(); tune(0, 'fono'); sfx.tick();
   } else if (id === 'crit') {
     sfx.crit();
     el.classList.remove('shine'); void el.offsetWidth; el.classList.add('shine');
   }
 }
 
-/* ---------- the radio ---------- */
-// Original bossa nova, generated as it plays: nylon-like plucked chords on a ii–V–I–VI, a soft bass on the root and
-// the fifth, a brushed shaker and a rim click, a vibraphone that improvises on the pentatonic, all through a small
-// radio speaker. Nothing is recorded or copied.
+/* ---------- the radio's sound ---------- */
+// A station of original music is generated as it plays (stations.js), through a small radio speaker; a station of an
+// official upload plays in YouTube's own player, shown on the radio (never hidden), with its credit.
 const BAR = 16;
-const CHORDS = [
-  { bass: [73.42, 110], notes: [174.61, 220, 261.63, 329.63] }, // Dm9
-  { bass: [98, 146.83], notes: [174.61, 246.94, 329.63, 440] }, // G13
-  { bass: [65.41, 98], notes: [164.81, 196, 246.94, 293.66] }, // Cmaj9
-  { bass: [110, 164.81], notes: [196, 277.18, 349.23, 392] }, // A7(b13)
-];
-const COMP = [0, 3, 6, 10, 12];
-const CLAVE = [0, 6, 12, 20, 26]; // a bossa clave over two bars of sixteenths
-const SCALE = [293.66, 349.23, 392, 440, 523.25, 587.33, 698.46, 783.99];
-const radio = { audio: null, out: null, playing: false, step: 0, next: 0, timer: 0, gain: 0.6 };
-
-function voice(a, freq, t, { type = 'triangle', gain = 0.05, decay = 0.6, cutoff = 2400, dest }) {
-  const o = a.createOscillator(); const f = a.createBiquadFilter(); const g = a.createGain();
-  o.type = type; o.frequency.value = freq;
-  f.type = 'lowpass'; f.frequency.setValueAtTime(cutoff, t); f.frequency.exponentialRampToValueAtTime(Math.max(200, cutoff / 4), t + decay * 0.6);
-  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
-  o.connect(f).connect(g).connect(dest); o.start(t); o.stop(t + decay + 0.05);
-}
-function hit(a, t, { freq, q, gain, decay, dest, noise }) {
-  const s = a.createBufferSource(); s.buffer = noise;
-  const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q;
-  const g = a.createGain(); g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
-  s.connect(f).connect(g).connect(dest); s.start(t, Math.random()); s.stop(t + decay + 0.02);
-}
+const radio = { audio: null, out: null, playing: false, step: 0, next: 0, timer: 0, gain: 0.6, stop: null, kit: null };
 function schedule() {
   const { ctx: a } = radio.audio;
-  const dur = 60 / 124 / 4;
+  const gen = GENERATORS[radio.station] ?? GENERATORS.bossa;
+  const dur = 60 / gen.bpm / 4;
   while (radio.next < a.currentTime + 0.15) {
-    const t0 = radio.next; const s = radio.step % BAR; const bar = Math.floor(radio.step / BAR) % CHORDS.length;
-    const chord = CHORDS[bar]; const dest = radio.out; const noise = radio.noise;
-    const swing = s % 2 ? dur * 0.12 : 0;
-    const t = t0 + swing;
-    if (s === 0 || s === 8) voice(a, chord.bass[s === 0 ? 0 : 1], t, { type: 'sine', gain: 0.16, decay: 0.7, cutoff: 600, dest });
-    if (s === 7 && Math.random() < 0.5) voice(a, chord.bass[1], t, { type: 'sine', gain: 0.1, decay: 0.3, cutoff: 600, dest });
-    if (COMP.includes(s)) chord.notes.forEach((f, i) => voice(a, f, t + i * 0.012, { gain: 0.032, decay: 0.55, cutoff: 2600, dest }));
-    hit(a, t, { freq: 7000, q: 0.8, gain: s % 4 === 2 ? 0.02 : 0.009, decay: 0.05, dest, noise });
-    if (CLAVE.includes(radio.step % (BAR * 2))) hit(a, t, { freq: 1900, q: 6, gain: 0.05, decay: 0.03, dest, noise });
-    if (s % 2 === 0 && Math.random() < 0.22) {
-      const f = SCALE[Math.floor(Math.random() * SCALE.length)];
-      for (const [r, g, d] of [[1, 0.03, 1.1], [3.98, 0.008, 0.4]]) voice(a, f * r, t, { type: 'sine', gain: g, decay: d, cutoff: 6000, dest });
-    }
-    if (Math.random() < 0.03) hit(a, t, { freq: 3000, q: 0.5, gain: 0.006, decay: 0.01, dest, noise });
+    const s = radio.step % BAR; const bar = Math.floor(radio.step / BAR);
+    const swing = radio.station === 'bossa' && s % 2 ? dur * 0.12 : 0;
+    gen.play(radio.kit, radio.next + swing, s, bar);
     radio.next += dur; radio.step += 1;
   }
 }
@@ -282,13 +293,15 @@ function startMusic() {
     const d = radio.noise.getChannelData(0);
     for (let i = 0; i < d.length; i += 1) d[i] = Math.random() * 2 - 1;
   }
+  radio.kit = { a, dest: radio.out, noise: radio.noise };
   radio.playing = true;
+  radio.step = 0;
   radio.next = a.currentTime + 0.08;
+  radio.stop = GENERATORS[radio.station]?.start?.(radio.kit) ?? null;
   radio.timer = setInterval(schedule, 30);
   return true;
 }
-function stopMusic() { radio.playing = false; clearInterval(radio.timer); }
-
+function stopMusic() { radio.playing = false; clearInterval(radio.timer); radio.stop?.(); radio.stop = null; }
 
 /* ---------- the radio, on screen: an old radio that is a box in 3D ---------- */
 // It goes with you to every tab (floating, wherever you drop it), or it stays on Inicio, in «Tus hallazgos». Either
@@ -304,21 +317,79 @@ export function radioOn() { return !!read(RADIO, {}).on; }
 export const radioDocked = () => radioOn() && !!read(RADIO, {}).dock;
 const knob = (v) => `rotate(${Math.round(v * 270 - 135)}deg)`;
 
+/* ---------- the stations: each opens with a secret ---------- */
+const BASE = ['radio', 'portal', 'cake', 'medic', 'crit'];
+export function stationOpen(s) { const f = found(); return s.opens === 'radio' || (s.opens === 'all' ? BASE.every((x) => f.has(x)) : f.has(s.opens)); }
+export const openStations = () => STATIONS.filter(stationOpen);
+const current = () => { const s = stationOf(read(RADIO, {}).station); return stationOpen(s) ? s : STATIONS[0]; };
+const needle = (s) => `${((s.freq - 88) / 20) * 100}%`;
+// An official upload plays in YouTube's own player, visible on the radio, with its credit and a link to the original.
+function tv(el, s) {
+  const box = el.querySelector('.radio-tv');
+  if (!s?.video) { box.hidden = true; box.innerHTML = ''; return; }
+  box.hidden = false;
+  box.innerHTML = `<iframe src="${embedURL(s)}" title="${t(s.name)}" allow="autoplay; encrypted-media" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+    <p class="credit">${t(s.credit)} <a href="https://www.youtube.com/watch?v=${s.video}" target="_blank" rel="noopener">${t('Ver en YouTube')}</a></p>`;
+  // Floating, the radio grows upward with its player and stays on screen.
+  if (!el.classList.contains('docked')) setTimeout(() => place(el, { x: el.offsetLeft, y: el.offsetTop - box.offsetHeight }), 0);
+}
+function tell(el, func, args = []) { el.querySelector('.radio-tv iframe')?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), 'https://www.youtube-nocookie.com'); }
+function play(el, on) {
+  const s = current();
+  radio.station = s.id;
+  stopMusic();
+  if (s.video) {
+    if (on && !el.querySelector('.radio-tv iframe')) tv(el, s);
+    else tell(el, on ? 'playVideo' : 'pauseVideo');
+    radio.playing = on;
+    if (on) setTimeout(() => tell(el, 'setVolume', [Math.round(radio.gain * 100)]), 1500);
+  } else {
+    tv(el, null);
+    if (on) startMusic();
+  }
+  el.classList.toggle('playing', radio.playing);
+  el.querySelector('[data-radio-play]').setAttribute('aria-label', t(radio.playing ? 'Pausar' : 'Reproducir'));
+}
+function syncStation(el) {
+  const s = current();
+  const open = openStations();
+  el.querySelector('.needle').style.left = needle(s);
+  el.querySelector('.name').textContent = `${s.freq.toFixed(1)} · ${t(s.name)}`;
+  el.querySelector('[data-radio-tune]').title = open.length > 1 ? `${t('Cambiar de estación')} (${open.length})` : t('Por ahora hay una estación: cada secreto abre otra');
+  el.querySelector('.marks').innerHTML = open.map((x) => `<i style="left:${needle(x)}"></i>`).join('');
+}
+// Turning the tuning knob: the next open station (or the one before, or one by its id); it plays if the radio played.
+export function tune(dir = 1, id = '') {
+  const list = openStations();
+  const at = Math.max(0, list.findIndex((x) => x.id === current().id));
+  const next = (id && list.find((x) => x.id === id)) || list[(at + dir + list.length) % list.length];
+  write(RADIO, { ...read(RADIO, {}), station: next.id });
+  const el = radioEl();
+  if (!el) return;
+  const was = radio.playing;
+  tv(el, null);
+  play(el, was);
+  syncStation(el);
+  sfx.tick();
+}
+
 function radioHTML() {
   return `<div class="rstage"><div class="box">
       <div class="face front">
         <span class="cloth" aria-hidden="true"></span>
         <div class="panel">
-          <div class="dial" aria-hidden="true"><span class="scale"><i>88</i><i>98</i><i>108</i></span><i class="needle"></i><i class="lamp"></i></div>
-          <span class="name">${t('Studium FM · bossa para estudiar')}</span>
+          <div class="dial" aria-hidden="true"><span class="scale"><i>88</i><i>98</i><i>108</i></span><span class="marks"></span><i class="needle"></i><i class="lamp"></i></div>
+          <span class="name"></span>
           <div class="knobs">
             <button class="knob rplay" type="button" data-radio-play aria-label="${t('Reproducir')}"><svg viewBox="0 0 24 24"><path class="p" d="M9 6v12l9-6Z" fill="currentColor"/><path class="s" d="M8 6h3v12H8zM13 6h3v12h-3z" fill="currentColor"/></svg></button>
+            <button class="knob tune" type="button" data-radio-tune aria-label="${t('Cambiar de estación')}"><i></i></button>
             <span class="knob vol" title="${t('Volumen')}"><i style="transform:${knob(radio.gain)}"></i><input type="range" min="0" max="1" step="0.05" value="${radio.gain}" data-radio-vol aria-label="${t('Volumen')}"></span>
           </div>
         </div>
       </div>
       <span class="face back"></span><span class="face right"></span><span class="face left"></span><span class="face top"><i class="handle"></i></span><span class="face bottom"></span>
     </div></div>
+    <div class="radio-tv" hidden></div>
     <div class="radio-bar"><button class="link" type="button" data-radio-dock></button><button class="link" type="button" data-radio-close>${t('Apagar')}</button></div>`;
 }
 function syncDock(el) {
@@ -357,16 +428,15 @@ export function openRadio(discovered = false) {
   el.setAttribute('aria-label', t('Radio'));
   el.innerHTML = radioHTML();
   document.body.append(el);
+  syncStation(el);
   placeRadio();
-  const play = el.querySelector('[data-radio-play]');
-  play.addEventListener('click', () => {
-    if (radio.playing) stopMusic(); else startMusic();
-    el.classList.toggle('playing', radio.playing);
-    play.setAttribute('aria-label', t(radio.playing ? 'Pausar' : 'Reproducir'));
-    sfx.tick();
-  });
+  el.querySelector('[data-radio-play]').addEventListener('click', () => { play(el, !radio.playing); sfx.tick(); });
+  const tuner = el.querySelector('[data-radio-tune]');
+  let turns = 0;
+  tuner.addEventListener('click', () => { turns += 1; tuner.querySelector('i').style.transform = `rotate(${turns * 51}deg)`; tune(1); });
+  tuner.addEventListener('wheel', (e) => { e.preventDefault(); tune(e.deltaY < 0 ? 1 : -1); }, { passive: false });
   const vol = el.querySelector('[data-radio-vol]');
-  const setVol = (v) => { radio.gain = Math.max(0, Math.min(1, v)); vol.value = radio.gain; if (radio.level) radio.level.gain.value = radio.gain; el.querySelector('.vol i').style.transform = knob(radio.gain); };
+  const setVol = (v) => { radio.gain = Math.max(0, Math.min(1, v)); vol.value = radio.gain; if (radio.level) radio.level.gain.value = radio.gain; el.querySelector('.vol i').style.transform = knob(radio.gain); tell(el, 'setVolume', [Math.round(radio.gain * 100)]); };
   vol.addEventListener('input', () => setVol(Number(vol.value)));
   el.querySelector('.vol').addEventListener('wheel', (e) => { e.preventDefault(); setVol(radio.gain + (e.deltaY < 0 ? 0.05 : -0.05)); }, { passive: false });
   el.querySelector('[data-radio-close]').addEventListener('click', () => closeRadio());
@@ -407,6 +477,7 @@ export function openRadio(discovered = false) {
 }
 export function closeRadio() {
   stopMusic();
+  radio.playing = false;
   radioEl()?.remove();
   write(RADIO, { ...read(RADIO, {}), on: false });
   onFound('radio-off', false);
@@ -428,4 +499,5 @@ export function mountEggs(options) {
   }, true);
   addEventListener('resize', () => { const el = radioEl(); if (el && !el.classList.contains('docked')) place(el, { x: el.offsetLeft, y: el.offsetTop }); });
   if (radioOn()) openRadio();
+  if (found().has('cafe') && backdrop() === 'cafe') setBackdrop('cafe');
 }

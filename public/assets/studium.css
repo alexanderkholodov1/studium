@@ -1222,7 +1222,7 @@ kbd { font: 700 .85em var(--display); padding: 1px 7px; border-radius: 6px; back
 @keyframes cake-land { 0% { scale: 1.12 .82; } 100% { scale: 1 1; } }
 @keyframes cake-away { to { transform: translateY(30vh) scale(.4); opacity: 0; } }
 .egg-confetti { position: fixed; z-index: 61; width: 9px; height: 14px; margin: -7px 0 0 -4px; border-radius: 2px; pointer-events: none; }
-.cake-svg .flame { transform-origin: 60px 16px; animation: flicker .18s ease-in-out infinite alternate; transition: opacity .25s; }
+.cake-svg .flame { transform-origin: 60px 19px; animation: flicker .18s ease-in-out infinite alternate; transition: opacity .25s; }
 @keyframes flicker { to { transform: scale(.9, 1.08) skewX(4deg); } }
 .egg-medic { position: fixed; z-index: 60; left: 18%; bottom: 0; width: 170px; pointer-events: none; animation: medic-jump 1.3s cubic-bezier(.3, .7, .4, 1) both; }
 .egg-medic svg { width: 100%; display: block; animation: medic-hop .5s 1.3s ease-in-out 2 alternate; }
@@ -1319,6 +1319,47 @@ kbd { font: 700 .85em var(--display); padding: 1px 7px; border-radius: 6px; back
 .trinket.locked:hover { transform: none; }
 .trinket.radio-slot { cursor: default; max-width: 220px; text-align: center; }
 .radio-stand { display: grid; place-items: center; }
+
+/* The radio's stations: marks on the dial, the tuning knob, and the official player when a station is an upload */
+.egg-radio .marks i { position: absolute; bottom: 4px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: #d7263d; opacity: .55; }
+.egg-radio .needle { transition: left .6s cubic-bezier(.3, .8, .3, 1); }
+.egg-radio .tune i { width: 14px; height: 14px; border-radius: 50%; border: 2px dashed rgba(244, 231, 198, .8); transition: transform .4s cubic-bezier(.3, 1.4, .5, 1); }
+.egg-radio .radio-tv { margin: 6px auto 0; width: 260px; padding: 8px; border-radius: 14px; background: #1c120b; box-shadow: inset 0 0 0 2px #3a2414, 0 10px 24px -12px rgba(0, 0, 0, .6); cursor: default; }
+.egg-radio .radio-tv iframe { display: block; width: 100%; height: 200px; border: 0; border-radius: 8px; background: #000; }
+.egg-radio .radio-tv .credit { margin: 6px 2px 0; font-size: 11px; line-height: 1.35; color: #e9dcc0; }
+.egg-radio .radio-tv .credit a { color: #ffd27a; }
+.egg-radio:not(.docked) { display: flex; flex-direction: column; }
+.egg-radio:not(.docked) .radio-tv { order: -1; margin: 0 auto 6px; }
+
+/* «Noche de estudio»: a warm lamp and a steaming cup behind the page */
+.egg-backdrop { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+.egg-backdrop.cafe { background: radial-gradient(60% 50% at 12% 8%, rgba(255, 196, 120, .28), transparent 70%), linear-gradient(180deg, rgba(60, 30, 10, .10), rgba(30, 14, 4, .22)); }
+.egg-backdrop .lamp { position: absolute; left: 7%; top: 0; width: 2px; height: 70px; background: #3a2414; }
+.egg-backdrop .lamp::before { content: ""; position: absolute; left: -54px; top: 66px; width: 110px; height: 56px; background: linear-gradient(#7a4523, #3a2414);
+  clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%); }
+.egg-backdrop .lamp::after { content: ""; position: absolute; left: -90px; top: 118px; width: 182px; height: 220px; background: radial-gradient(50% 40% at 50% 0, rgba(255, 200, 120, .45), transparent 80%); }
+.egg-backdrop .cup { position: absolute; left: 2%; bottom: 2%; width: 120px; opacity: .9; }
+.egg-backdrop .steam, .trinket.cafe .steam { fill: none; stroke: rgba(255, 255, 255, .7); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 6 8; animation: steam 2.4s linear infinite; }
+@keyframes steam { to { stroke-dashoffset: -28; } }
+
+/* «No te mueras de hambre»: night falls, and a campfire */
+.egg-night { position: fixed; inset: 0; z-index: 58; pointer-events: none; background: radial-gradient(40% 35% at 50% 82%, rgba(255, 150, 60, .18), rgba(4, 6, 14, .82) 70%);
+  animation: night-in 1.6s ease-out both; }
+.egg-fire { position: fixed; z-index: 59; left: 50%; bottom: 6%; width: 150px; margin-left: -75px; pointer-events: none; animation: night-in 1s .8s both; filter: drop-shadow(0 0 30px rgba(255, 140, 40, .6)); }
+.egg-fire .f1 { transform-origin: 60px 100px; animation: fire 0.35s ease-in-out infinite alternate; }
+.egg-fire .f2 { transform-origin: 60px 100px; animation: fire 0.25s ease-in-out infinite alternate-reverse; }
+.egg-night.away, .egg-fire.away { animation: fade-out 1s ease-in forwards; }
+@keyframes night-in { from { opacity: 0; } }
+@keyframes fire { to { transform: scale(.92, 1.08) skewX(3deg); } }
+
+/* New finds on the shelf, and the secrets in Ajustes */
+.trinket.cafe svg, .trinket.gramophone svg { width: 76px; height: 76px; }
+.trinket.cafe[aria-pressed="true"] { box-shadow: inset 0 0 0 2px #ffb15e, 0 0 24px -6px rgba(255, 177, 94, .7); }
+.trinket.gramophone:hover .horn { transform-origin: 50px 46px; animation: shine .7s ease-out; }
+.secrets { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 8px; }
+.secrets li { display: grid; gap: 2px; padding: 10px 14px; border-radius: 14px; background: var(--well); box-shadow: inset 0 0 0 1px var(--line); }
+.secrets li span { color: var(--ink-2); font-size: 14px; }
+.secrets li.locked { opacity: .6; }
 
 /* ---------- the account menu: opaque, so its text never mixes with what is behind ---------- */
 .menu.glass { background: var(--card); -webkit-backdrop-filter: none; backdrop-filter: none;
@@ -2401,3 +2442,9 @@ html.has-announce .page { padding-top: 170px; }
 .sg-calc-row select, .sg-calc-row input { width: 70px; padding: 4px 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; }
 .sg-calc-out { margin: 10px 0 0 !important; font-size: 14px; color: var(--ink) !important; } .sg-calc-out b { font: 800 26px var(--display); background: none; }
 @media (prefers-reduced-motion: reduce) { .sg-card details[open] .sg-body, .sg-card details[open] .sg-body li, .sg-scale span { animation: none; } }
+
+/* Credits, in «Acerca» */
+.credits { max-width: 860px; margin: 40px auto 0; padding: 0 4px; }
+.credits h2 { font: 800 28px/1.1 var(--display); letter-spacing: -.02em; margin-bottom: 10px; }
+.credits p, .credits li { color: var(--ink-2); line-height: 1.55; }
+.credits ul { margin: 10px 0; padding-left: 20px; display: grid; gap: 6px; }

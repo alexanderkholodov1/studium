@@ -450,7 +450,7 @@ service cloud.firestore {
     // How many people found each easter egg: a counter that only goes up by one.
     match /eggs/{id} {
       allow read: if admin();
-      allow create: if member() && id in ['radio', 'portal', 'cake', 'medic', 'crit']
+      allow create: if member() && id in ['radio', 'portal', 'cake', 'medic', 'crit', 'cafe', 'starve']
         && request.resource.data.keys().hasOnly(['count']) && request.resource.data.count == 1;
       allow update: if member() && request.resource.data.keys().hasOnly(['count']) && request.resource.data.count == resource.data.count + 1;
     }
