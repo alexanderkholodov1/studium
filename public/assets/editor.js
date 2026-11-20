@@ -3,7 +3,7 @@
 // read or rewrite the whole page. The result is previewed before it replaces the published guide.
 import * as ai from './ai.js';
 import { publishGuide } from './data.js';
-import { prepareGuide, showAnchor } from './viewer.js';
+import { showGuide } from './viewer.js';
 import { parseGuide } from './prompts.js';
 import { sfx } from './sfx.js';
 import { celebrate } from './play.js';
@@ -121,8 +121,7 @@ async function run() {
     job.next = next;
     const frame = $('#edit-preview');
     frame.hidden = false;
-    frame.addEventListener('load', () => showAnchor(frame, job.anchor), { once: true });
-    frame.srcdoc = prepareGuide(next);
+    showGuide(frame, next, job.anchor);
     out.textContent = 'Mira cómo quedó. Si te gusta, guárdalo en la guía.';
     $('#edit-save').hidden = false;
     sfx.tick();

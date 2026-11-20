@@ -12,7 +12,7 @@ import { keyOf, themeStyle, courseThemes } from './themes.js';
 import { LEVELS } from './prompts.js';
 import { buildGraph } from './graph.js';
 import { mountMap, openMap, refreshMap } from './mapui.js';
-import { prepareGuide, showAnchor } from './viewer.js';
+import { showGuide, showAnchor } from './viewer.js';
 import { startScene, tilt, glassLight, transition, rise, restOffscreen } from './fx.js';
 import { mountContribute, renderPane, presetGuide, startQueue } from './contribute.js';
 import { prefs } from './prefs.js';
@@ -420,8 +420,7 @@ $('#guide-edit').addEventListener('click', () => {
     onSaved: (html, anchor) => {
       guides.set(openGuide, { ...guide, html });
       const frame = $('#guide-frame');
-      frame.addEventListener('load', () => showAnchor(frame, anchor), { once: true });
-      frame.srcdoc = prepareGuide(html);
+      showGuide(frame, html, anchor);
       load(true).catch(() => {});
     },
   });
@@ -495,18 +494,16 @@ async function route() {
       load().then(() => { if (openGuide === id) renderKudos(id); }).catch(() => {});
       const guide = guides.get(id) ?? await loadGuide(id);
       if (ticket !== routing) return;
-      if (!guide) { $('#guide-status').textContent = 'Esa guía no existe o ya no está publicada.'; $('#guide-frame').removeAttribute('srcdoc'); return; }
+      if (!guide) { $('#guide-status').textContent = 'Esa guía no existe o ya no está publicada.'; $('#guide-frame').removeAttribute('src'); return; }
       guides.set(id, guide);
       if (!known) $('#guide-title').textContent = guide.title;
       if (known) $('#view-guide').setAttribute('style', themeStyle(state.themes.get(keyOf(known.course)) ?? known.theme));
       document.title = `${$('#guide-title').textContent} · Studium`;
       $('#guide-status').hidden = true;
       const frame = $('#guide-frame');
-      const html = prepareGuide(guide.html);
       if (frame.dataset.guide !== id) {
         frame.dataset.guide = id;
-        frame.addEventListener('load', () => showAnchor(frame, arg[1]), { once: true });
-        frame.srcdoc = html;
+        showGuide(frame, guide.html, arg[1]);
       } else showAnchor(frame, arg[1]);
       return;
     }

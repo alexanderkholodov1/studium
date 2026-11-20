@@ -9,7 +9,7 @@ import { publishContribution, publishGuide, setVisibility, remove, LIMIT, loadDr
 import { prepareGroup, groupFiles, fingerprint, partsSize, partFiles, zipFiles } from './files.js';
 import { createQueue, indexedStore, memoryStore } from './queue.js';
 import { looseKey, stageOf, stageLabel } from './standard.js';
-import { prepareGuide } from './viewer.js';
+import { showGuide } from './viewer.js';
 import { rise } from './fx.js';
 import * as ai from './ai.js';
 import { prefs } from './prefs.js';
@@ -1079,7 +1079,7 @@ function lookalike(m, data, print) {
 }
 function preview(item) {
   const dialog = $('#preview');
-  $('#preview-frame').srcdoc = prepareGuide(item.text);
+  showGuide($('#preview-frame'), item.text);
   dialog.showModal();
 }
 

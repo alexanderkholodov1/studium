@@ -43,6 +43,24 @@ export function prepareGuide(html) {
   return `<!doctype html><meta http-equiv="Content-Security-Policy" content="${POLICY}">${HELPER}${rest}`;
 }
 
+// A guide is shown in frame.html, a document of its own (a srcdoc frame would inherit the page's strict policy and
+// block the guide's code): the frame loads, says it is ready, and receives the guide once.
+const FRAME = new URL('../frame.html', import.meta.url).href;
+let shown = 0;
+export function showGuide(frame, html, anchor = '') {
+  const doc = prepareGuide(html);
+  if (frame._studiumReady) removeEventListener('message', frame._studiumReady);
+  const ready = (event) => {
+    if (event.source !== frame.contentWindow || event.data?.studiumFrame !== 'ready') return;
+    removeEventListener('message', ready);
+    frame._studiumReady = null;
+    frame.contentWindow.postMessage({ studiumGuide: doc, anchor }, '*');
+  };
+  frame._studiumReady = ready;
+  addEventListener('message', ready);
+  frame.src = `${FRAME}?v=${++shown}`;
+}
+
 export function showAnchor(frame, anchor) {
   if (!anchor) return;
   const send = () => frame.contentWindow?.postMessage({ studiumAnchor: anchor }, '*');

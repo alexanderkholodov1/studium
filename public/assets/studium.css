@@ -2156,3 +2156,4 @@ html.has-announce .page { padding-top: 170px; }
 .metric { width: 100%; border-collapse: collapse; font-size: 14px; } .metric td { padding: 5px 0; border-bottom: 1px solid var(--line); } .metric .num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
 .vault { margin-top: 14px; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--line); font-size: 14px; }
 .vault p { margin: 0 0 8px; } .vault-confirm { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; } .vault-confirm .field { flex: 1 1 220px; margin: 0; }
+.quiet .fb-fab { bottom: 76px; padding: 9px; opacity: .55; } .quiet .fb-fab-label { display: none; }

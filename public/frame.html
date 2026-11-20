@@ -1,0 +1,16 @@
+<!doctype html>
+<meta charset="utf-8">
+<!-- The frame of a guide: its own document, so the page's strict policy is not inherited (a srcdoc frame would
+     inherit it and block the guide's own code). It runs sandboxed, without the page's origin: no access to the
+     page, the account or the keys. It takes the guide from the page that embeds it, once, and becomes that guide. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; style-src 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://fonts.googleapis.com; font-src data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://fonts.gstatic.com; img-src data: blob: https:; media-src data: blob: https:; connect-src https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; worker-src blob:; frame-src https://www.youtube-nocookie.com https://www.youtube.com https://player.vimeo.com; form-action 'none'; base-uri 'none'">
+<title>Guía</title>
+<script>
+addEventListener("message", (event) => {
+  if (event.source !== parent || typeof event.data?.studiumGuide !== "string") return;
+  const { studiumGuide, anchor } = event.data;
+  document.open(); document.write(studiumGuide); document.close();
+  if (anchor) setTimeout(() => document.getElementById(anchor)?.scrollIntoView({ block: "start" }), 300);
+});
+parent.postMessage({ studiumFrame: "ready" }, "*");
+</script>

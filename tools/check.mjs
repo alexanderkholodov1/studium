@@ -28,7 +28,8 @@ for (const file of files) {
   const name = rel(file);
   // The mallas are the university's public data, read by tools/malla.mjs; nothing else ships beside the app.
   const malla = /^data\/mallas\/[0-9A-Z]+\.json$|^data\/mallas\/index\.json$/.test(name);
-  if (name !== 'index.html' && !name.startsWith('assets/') && !malla) errors.push(`${file}: only index.html, assets/ and data/mallas/ ship; guides go to the database`);
+  // frame.html is the empty frame a guide is drawn in (viewer.js), never a guide.
+  if (name !== 'index.html' && name !== 'frame.html' && !name.startsWith('assets/') && !malla) errors.push(`${file}: only index.html, assets/ and data/mallas/ ship; guides go to the database`);
   if (name.startsWith('assets/') && name.endsWith('.html')) errors.push(`${file}: no HTML pages in assets/; guides go to the database`);
 }
 
@@ -61,6 +62,23 @@ if (existsSync(CONFIG)) {
   if (!rules.includes('in settings().domains')) errors.push('firestore.rules does not take the accepted domains from settings/app');
   if (!rules.includes("settings().get('confirmEmail', false)")) errors.push('firestore.rules does not take the confirmation from settings/app');
 } else errors.push(`${CONFIG} is missing`);
+
+// The page's content policy: every inline script is allowed by its hash, and nothing else inline runs. The guide
+// frame (frame.html) has the same policy as the guides themselves (viewer.js POLICY).
+{
+  const { createHash } = await import('node:crypto');
+  const page = readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const csp = page.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/)?.[1] ?? '';
+  if (!csp) errors.push('index.html has no content policy');
+  if (/script-src[^;]*'unsafe-inline'/.test(csp)) errors.push('index.html: the policy allows inline scripts');
+  for (const [, code] of page.matchAll(/<script>([\s\S]*?)<\/script>/g)) {
+    const hash = `'sha256-${createHash('sha256').update(code, 'utf8').digest('base64')}'`;
+    if (!csp.includes(hash)) errors.push(`index.html: an inline script is not in the policy (${hash})`);
+  }
+  const { POLICY } = await import(pathToFileURL(path.resolve(ROOT, 'assets', 'viewer.js')).href);
+  const frame = readFileSync(path.join(ROOT, 'frame.html'), 'utf8');
+  if (!frame.includes(`content="${POLICY}"`)) errors.push('frame.html: its policy differs from the guides\' (viewer.js POLICY)');
+}
 
 if (errors.length) {
   console.error(errors.join('\n'));
