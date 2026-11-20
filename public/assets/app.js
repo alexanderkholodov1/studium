@@ -32,6 +32,8 @@ import { setLang, t } from './i18n.js';
 import { mountHints } from './hints.js';
 import { mountEggs } from './eggs.js';
 import { mountTour, offerTour } from './tour.js';
+import { renderNews, newsOnce } from './news.js';
+import { VERSION } from './config.js';
 import { mountAdmin, renderAdmin } from './admin.js';
 import { mountFeedback } from './feedback.js';
 import * as vault from './vault.js';
@@ -117,9 +119,9 @@ document.addEventListener('click', (e) => {
 });
 
 /* ---------- views ---------- */
-const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'horario', 'malla', 'student', 'catalog', 'map', 'library', 'profes', 'contribute', 'comunidad', 'settings', 'about', 'sources', 'guide', 'admin'];
-const TABS = { home: 'home', horario: 'home', malla: 'home', catalog: 'contribute', comunidad: 'comunidad', map: 'map', library: 'map', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', admin: 'admin' };
-const PUBLIC = ['landing', 'auth', 'about', 'denied', 'verify'];
+const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'horario', 'malla', 'student', 'catalog', 'map', 'library', 'profes', 'contribute', 'comunidad', 'settings', 'about', 'news', 'sources', 'guide', 'admin'];
+const TABS = { home: 'home', horario: 'home', malla: 'home', catalog: 'contribute', comunidad: 'comunidad', map: 'map', library: 'map', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', news: 'about', admin: 'admin' };
+const PUBLIC = ['landing', 'auth', 'about', 'news', 'denied', 'verify'];
 let current = 'boot';
 function show(view) {
   const swap = () => {
@@ -128,7 +130,7 @@ function show(view) {
     const nav = $('#nav');
     nav.dataset.mode = member ? 'member' : 'public';
     nav.hidden = view === 'boot' || view === 'guide';
-    $('#tabbar').hidden = !member || PUBLIC.includes(view) && view !== 'about' || view === 'guide' || view === 'boot';
+    $('#tabbar').hidden = !member || PUBLIC.includes(view) && !['about', 'news'].includes(view) || view === 'guide' || view === 'boot';
     $('#foot').hidden = ['guide', 'map', 'boot'].includes(view);
     const quiet = view === 'map' || view === 'guide';
     root.classList.toggle('quiet', quiet);
@@ -320,6 +322,7 @@ const context = { state, get user() { return { uid: auth.currentUser?.uid, email
 mountMap(context);
 mountSpace(context);
 mountTour();
+$('#foot-version').textContent = `v${VERSION} · Novedades`;
 mountEggs({ toast, onFound: (id, fresh) => { unlocked(fresh); if (current === 'home') renderHome(); } });
 mountAdmin(context);
 mountFeedback();
@@ -460,6 +463,7 @@ async function route() {
     document.title = 'Studium';
     if (page === 'entrar') { document.title = `${t('Entrar')} · Studium`; show('auth'); }
     else if (page === 'acerca') { document.title = `${t('Acerca')} · Studium`; show('about'); }
+    else if (page === 'novedades') { document.title = 'Novedades · Studium'; show('news'); renderNews($('#news')); }
     else if (!page || page === 'bienvenida') show('landing');
     // A link to something inside: sign in first, then go there.
     else { pending = location.hash; show('auth'); }
@@ -523,12 +527,13 @@ async function route() {
       profes: ['profes', 'Profes', renderProfes],
       ajustes: ['settings', 'Ajustes', renderSettings],
       acerca: ['about', 'Acerca', null],
+      novedades: ['news', 'Novedades', () => renderNews($('#news'))],
       guias: ['catalog', 'Guías', renderCatalog],
       comunidad: ['comunidad', 'Comunidad', renderComunidad],
       // The logo: the public page, also for members, who reach their own space from «Inicio».
       bienvenida: ['landing', 'Qué es', null],
       admin: ['admin', 'Admin', () => renderAdmin(arg[0])],
-      '': ['home', 'Inicio', () => { renderHome(); offerTour(); }],
+      '': ['home', 'Inicio', () => { renderHome(); offerTour(); newsOnce(); }],
     };
     // «Estudia»: drop anything, sorted in sight; the desk of each course; a guide or the graph from what was dropped.
     // «Mis aportes» (what was published, to change who sees it or delete it) is reached from «Estudia».

@@ -163,6 +163,8 @@ reads only what changed; removal records drop what stopped being public.
   active community, and the rules read the live ones.
 - `tools/test-queue.mjs`: tests the queue (a reload in the middle, rate and daily limits, an account without balance,
   retries, files without room, the chat, two tabs) and what each provider's errors mean, with a store in memory.
+- `tools/release-notes.mjs <version>`: the release notes of a version, from `public/data/changelog.json` (the same text
+  as «Novedades» on the page); the release workflow uses it and refuses a version the changelog does not have.
 - `tools/test-convert.mjs`: tests how «Convertir al formato actual» cuts a guide into parts, finds the texts its code
   keeps, and counts which words of the original are missing in the result (`public/assets/conversion.js`).
 - `tools/test-bridge.mjs`: tests the local bridge with fake CLIs (`.cmd` shims on Windows): origins, the pairing code,

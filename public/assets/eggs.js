@@ -280,7 +280,7 @@ function radioEl() { return document.getElementById('egg-radio'); }
 function place(el, pos) {
   const w = el.offsetWidth || 300; const h = el.offsetHeight || 210;
   // Never over the navigation bar at the top.
-  const top = (document.getElementById('nav')?.getBoundingClientRect().bottom ?? 0) + 8;
+  const top = Math.max(84, (document.getElementById('nav')?.getBoundingClientRect().bottom ?? 0) + 8);
   const x = Math.max(8, Math.min(innerWidth - w - 8, pos.x)); const y = Math.max(top, Math.min(innerHeight - h - 8, pos.y));
   el.style.left = `${x}px`; el.style.top = `${y}px`;
   return { x, y };
@@ -522,7 +522,9 @@ export function mountEggs(options) {
     sfx.tick();
     onDot(e);
   }, true);
-  addEventListener('resize', () => { const el = radioEl(); if (el && !el.classList.contains('docked')) place(el, { x: el.offsetLeft, y: el.offsetTop }); });
+  const keep = () => { const el = radioEl(); if (el && !el.classList.contains('docked')) place(el, { x: el.offsetLeft, y: el.offsetTop }); };
+  addEventListener('resize', keep);
+  addEventListener('hashchange', () => setTimeout(keep, 50));
   if (radioOn()) openRadio();
   if (found().has('cafe') && backdrop() === 'cafe') setBackdrop('cafe');
 }

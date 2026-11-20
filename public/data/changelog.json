@@ -1,0 +1,104 @@
+{
+  "about": "Lo que trae cada versión de Studium, en palabras simples. Las mejoras de seguridad se anuncian sin detalles.",
+  "versions": [
+    {
+      "version": "0.6.0",
+      "date": "",
+      "title": "Tu semestre, tu IA a la vista y una página que se siente tuya",
+      "new": [
+        "Mi horario: tu semana por bloques desde una captura, una foto o tu Excel, con la hora de ahora marcada; y un modo para preparar tu inscripción con borradores.",
+        "Mi malla: la malla de tu carrera tal como la publica la universidad, con lo que aprobaste, lo que puedes tomar ahora y lo que te falta para abrir cada materia.",
+        "Guía del estudiante: las reglas y trámites de la universidad en corto, con tu nota y tu GPA (con calculadora), cada consejo con su página del manual.",
+        "Estudiar: suelta todo tu material en un solo lugar y se ordena a la vista, por materia, en tu escritorio de trabajo.",
+        "Pendientes en Inicio, con día, hora y clase si quieres.",
+        "Pasar al formato actual cualquier guía que ya tenías (otra página, un PDF, Markdown), con tu propia IA, sin perder nada.",
+        "Feedback desde cualquier parte, también para cuando algo sale mal con la IA.",
+        "Specter, la mascota de Studium, en 3D, y recorridos guiados: uno general y uno para cada parte, con el botón «?».",
+        "Secretos nuevos que dejan algo en tu Inicio, y una radio antigua con estaciones."
+      ],
+      "improved": [
+        "Tu IA, clara: eliges cuál y qué modelo para cada cosa, ves las instrucciones exactas y el registro de cada pedido, y nunca se usa un modelo que pueda cobrarte sin avisarte.",
+        "Cada modelo gratis, verificado en la página oficial de su proveedor.",
+        "Tus claves de IA te siguen a tus dispositivos.",
+        "Lo tuyo tiene historial: antes de cambiar o borrar algo, se guarda cómo estaba, y puedes volver.",
+        "«Mapa» ahora es «Grafo», con «Documentos» dentro; «Estudiar» reúne las guías.",
+        "La portada, reescrita.",
+        "La página va más fluida.",
+        "Mejoras de seguridad."
+      ],
+      "fixed": [
+        "Las guías hechas en un formato antiguo se ven y funcionan.",
+        "Dos pestañas abiertas a la vez ya no se pisan lo que guardan.",
+        "Cuando una IA falla, Studium lo dice en palabras y prueba con otra gratis."
+      ]
+    },
+    {
+      "version": "0.5.3",
+      "date": "2026-11-14",
+      "title": "Tu IA de varias formas, y una cola para todo tu material",
+      "new": [
+        "Tu IA de varias formas: Gemini gratis, tu suscripción desde tu computadora (el puente), OpenRouter y Puter.",
+        "Una cola para cualquier cantidad de material: sigue aunque recargues la página y espera los límites de cada IA."
+      ],
+      "improved": [
+        "Los errores de cada IA, explicados en palabras."
+      ],
+      "fixed": [
+        "Varias pestañas abiertas se ponen de acuerdo sin perder partes."
+      ]
+    },
+    {
+      "version": "0.5.2",
+      "date": "2026-11-09",
+      "title": "Cada aporte con su dueño y su crédito",
+      "new": [],
+      "improved": [
+        "Lo que se sube a nombre de alguien conserva su dueño, su crédito y su huella, para no repetir el mismo archivo."
+      ],
+      "fixed": []
+    },
+    {
+      "version": "0.5.1",
+      "date": "2026-11-05",
+      "title": "Un grafo que crece con rutas, vistas y filtros",
+      "new": [
+        "Rutas, vistas, filtros y selección en el grafo.",
+        "Cualquier archivo se lee en tu navegador, y se pueden hacer guías desde el grafo."
+      ],
+      "improved": [
+        "Un mismo estándar para lo que aprende el grafo: evaluaciones, semestres, otros nombres de un concepto.",
+        "Las actualizaciones llegan a todos."
+      ],
+      "fixed": [
+        "El mismo archivo dos veces se procesa una sola vez."
+      ]
+    },
+    {
+      "version": "0.5.0",
+      "date": "2026-11-05",
+      "title": "Administración, sonido nuevo y una página sin retrasos",
+      "new": [
+        "Panel de administración y ajustes en vivo.",
+        "Tu IA con varios proveedores, y el modelo se elige al usarlo.",
+        "Burbujas de vidrio, solo para quien las quiere."
+      ],
+      "improved": [
+        "Sonidos rehechos: cada gesto con el suyo.",
+        "La página se desplaza sin retrasos.",
+        "Todo lo nuevo también en inglés."
+      ],
+      "fixed": []
+    },
+    {
+      "version": "0.4.5",
+      "date": "2026-11-05",
+      "title": "Entrar más simple",
+      "new": [],
+      "improved": [
+        "Ya no hace falta confirmar el correo para entrar."
+      ],
+      "fixed": []
+    }
+  ],
+  "earlier": "Antes de la 0.4.5 (del 3 al 4 de noviembre de 2026): el catálogo de guías, las cuentas, el grafo de conocimiento, las fuentes y tu espacio."
+}

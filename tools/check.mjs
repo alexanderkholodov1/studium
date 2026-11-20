@@ -27,7 +27,7 @@ if (!existsSync(path.join(ROOT, 'index.html'))) errors.push('public/index.html i
 for (const file of files) {
   const name = rel(file);
   // The mallas are the university's public data, read by tools/malla.mjs; nothing else ships beside the app.
-  const malla = /^data\/mallas\/[0-9A-Z]+\.json$|^data\/mallas\/index\.json$|^data\/models\.json$/.test(name);
+  const malla = /^data\/mallas\/[0-9A-Z]+\.json$|^data\/mallas\/index\.json$|^data\/models\.json$|^data\/changelog\.json$/.test(name);
   // frame.html is the empty frame a guide is drawn in (viewer.js), never a guide.
   if (name !== 'index.html' && name !== 'frame.html' && !name.startsWith('assets/') && !malla) errors.push(`${file}: only index.html, assets/ and data/mallas/ ship; guides go to the database`);
   if (name.startsWith('assets/') && name.endsWith('.html')) errors.push(`${file}: no HTML pages in assets/; guides go to the database`);
@@ -78,6 +78,23 @@ if (existsSync(CONFIG)) {
   const { POLICY } = await import(pathToFileURL(path.resolve(ROOT, 'assets', 'viewer.js')).href);
   const frame = readFileSync(path.join(ROOT, 'frame.html'), 'utf8');
   if (!frame.includes(`content="${POLICY}"`)) errors.push('frame.html: its policy differs from the guides\' (viewer.js POLICY)');
+}
+
+// The changelog is public: security work is announced only as «Mejoras de seguridad», never what was exploitable or
+// how it was fixed (his rule; the details live in the private project notes).
+{
+  const file = path.join(ROOT, 'data', 'changelog.json');
+  if (existsSync(file)) {
+    let log = null;
+    try { log = JSON.parse(readFileSync(file, 'utf8')); } catch { errors.push('data/changelog.json is not valid JSON'); }
+    const REVEALING = /vulnerab|exploit|inyecci|injection|bypass|xss|csrf|fuga|leak|parche de seguridad|security patch|agujero|hueco de seguridad|escalad|privilege|sin autenticar|unauthenticated|cve-/i;
+    for (const v of log?.versions ?? []) {
+      if (!/^\d+\.\d+\.\d+$/.test(v.version ?? '')) errors.push(`data/changelog.json: a version without a valid number (${v.version})`);
+      for (const line of [v.title, ...(v.new ?? []), ...(v.improved ?? []), ...(v.fixed ?? [])]) {
+        if (REVEALING.test(String(line))) errors.push(`data/changelog.json ${v.version}: security details are never public; say «Mejoras de seguridad» («${String(line).slice(0, 60)}…»)`);
+      }
+    }
+  }
 }
 
 if (errors.length) {
