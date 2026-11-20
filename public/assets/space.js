@@ -520,12 +520,33 @@ function aiSettings() {
     <p class="ai-lede">Studium usa una IA para leer tus archivos, tu horario y crear guías. Tú eliges cuál. <strong>Studium no cobra nada.</strong></p>
     <div class="ai-now ${now.length ? 'on' : ''}">${c ? `Ahora Studium usa <b>${esc(ai.WAYS[c.provider]?.name ?? c.provider)}</b>, con el modelo adecuado para cada tarea. Hoy: ${count(ai.usageToday(c.provider), 'pedido', 'pedidos')}.`
       : 'Todavía no conectaste ninguna. <b>Para empezar, Gemini es gratis y toma un minuto.</b> Si usas ChatGPT o Claude, también sirven.'}</div>
+    ${now.length ? `<div class="ai-status"><div class="ai-status-head"><div><h3>El estado de tus IA</h3><p class="fine">Qué está gratis, qué responde ahora, cuánto te queda y cuándo se reinicia, según cada proveedor.</p></div><button type="button" class="button ghost small" data-ai-status>Revisar el estado</button></div><div data-ai-status-out>${statusHTML(ai.lastStatus())}</div></div>` : ''}
     <p class="ai-ask">¿Qué IA usas?</p>
     <div class="ai-vendors" role="tablist">${Object.entries(VENDORS).map(([k, x]) => `<button role="tab" class="ai-vendor" aria-selected="${k === v}" data-ai-vendor="${k}">${esc(x.name)}<small>${esc(x.note)}</small>${now.some((w) => vendorOfWay(w) === k) ? '<i class="dot" title="conectada"></i>' : ''}</button>`).join('')}</div>
     <div class="ai-panel">${vendorPanel(v)}</div>
     ${ai.offered('bridge:claude') ? bridgeAdvanced() : ''}
     <p class="fine">Las claves y sesiones se guardan solo en este navegador: no llegan a la base de datos de Studium ni a su creador.</p>
   </section>`;
+}
+// What «Revisar el estado» found: per AI, the lines it checked, its models with their cost and whether they answered.
+function statusHTML(st) {
+  if (!st) return '<p class="muted">Todavía no lo revisaste.</p>';
+  const when = new Date(st.at).toLocaleString('es', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  // New models since the last check: a moment of their own, and their conditions before anything else.
+  const fresh = (st.fresh ?? []).map((m) => `<div class="ai-new"><span class="ai-new-burst" aria-hidden="true"></span>
+      <p class="ai-new-kicker">Nuevo en tu cuenta de ${esc(m.name)}</p><h4>${esc(m.id)}</h4>
+      <p>${m.cost === 'free' ? 'Gratis según la página de precios de Google.' : m.cost === 'nofree' ? 'Sin uso gratis: cobra a tu cuenta.' : m.cost === 'paid' ? 'De pago por uso: cada pedido se cobra en tu cuenta.' : 'Sin verificar si es gratis: podría cobrarte si tu clave tiene facturación. Studium no lo usará sin tu permiso para este modelo.'}</p>
+      <p class="fine">${m.way === 'gemini' ? '<a href="https://aistudio.google.com/docs/pricing" target="_blank" rel="noopener noreferrer">Sus condiciones en la página de precios de Google ↗</a>' : m.way === 'openrouter' ? '<a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer">Sus condiciones en OpenRouter ↗</a>' : ''}</p></div>`).join('');
+  return `${fresh}<p class="fine">Revisado el ${esc(when)}.</p>${st.ways.map((w) => `<div class="ai-status-way"><h4>${esc(w.name)}</h4>
+      ${w.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
+      ${w.models.length ? `<ul class="ai-status-models">${w.models.map((m) => `<li><span class="id">${esc(m.id)}</span> <span class="tag c-${esc(m.cost)}">${esc(ai.COST[m.cost] ?? m.cost)}</span> ${m.testing ? '<span class="muted">probando…</span>' : m.ok === true ? `<span class="ok">respondió en ${(m.ms / 1000).toFixed(1)} s</span>` : m.ok === false ? `<span class="bad">no respondió: ${esc(m.error)}</span>` : ''}</li>`).join('')}</ul>` : ''}
+      ${w.links.length ? `<p class="fine">${w.links.map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.label)} ↗</a>`).join(' · ')}</p>` : ''}</div>`).join('')}`;
+}
+async function runStatus(btn) {
+  const out = document.querySelector('[data-ai-status-out]');
+  btn.disabled = true; btn.textContent = 'Revisando…';
+  try { await ai.checkStatus((st) => { if (out) out.innerHTML = statusHTML(st); }); }
+  finally { btn.disabled = false; btn.textContent = 'Revisar el estado'; }
 }
 async function testAI(way) {
   const msg = document.querySelector(`[data-ai-msg="${way}"]`);
@@ -594,6 +615,7 @@ export function mountSpace(context) {
     if (t.dataset.aiVendor) { try { localStorage.setItem('studium-ai-vendor', t.dataset.aiVendor); } catch { /* shown now */ } renderSettings(); sfx.tick(); return; }
     if (t.dataset.aiDefault) { ai.setDefault(t.dataset.aiDefault); ctx?.toast(`Studium usará ${ai.WAYS[t.dataset.aiDefault]?.name ?? 'esta IA'}.`); renderSettings(); sfx.tick(); return; }
     if (t.dataset.aiTest) testAI(t.dataset.aiTest);
+    if (t.dataset.aiStatus !== undefined) runStatus(t);
     if (t.closest('#set-map')) {
       const p = prefs.get();
       if (t.dataset.myCourse) prefs.set({ courses: p.courses.includes(t.dataset.myCourse) ? p.courses.filter((x) => x !== t.dataset.myCourse) : [...p.courses, t.dataset.myCourse] });

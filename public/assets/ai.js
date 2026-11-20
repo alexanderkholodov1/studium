@@ -180,7 +180,7 @@ export function ranked(task, way) {
     const fallback = Object.values(PROVIDERS[way]?.tiers ?? {});
     list = (ids.length ? ids : [...new Set(fallback)]).map((id) => ({ id, tier: way === 'gemini' ? geminiTier(id) : tierOf(id) }));
   }
-  const key = (m) => [COST_RANK[costOf(way, m.id)] ?? 2, FIT[tier][m.tier] ?? 1, -(versionOf(m.id) - (unstable(m.id) ? 0.6 : 0)), m.id === named ? 0 : 1,
+  const key = (m) => [COST_RANK[costOf(way, m.id)] ?? 2, silent(way, m.id) ? 1 : 0, FIT[tier][m.tier] ?? 1, -(versionOf(m.id) - (unstable(m.id) ? 0.6 : 0)), m.id === named ? 0 : 1,
     // Through Puter, Claude first; then the shortest name, which is the model itself and not one of its variants.
     way === 'puter' && !/claude/i.test(m.id) ? 1 : 0, m.id.length];
   const cmp = (a, b) => { const x = key(a); const y = key(b); for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] - y[i]; return 0; };
@@ -277,7 +277,7 @@ export function pickerHTML(task, { open = false } = {}) {
       <input type="radio" name="ai-model-${esc(task)}" value="${esc(m.id)}" ${m.id === c.model ? 'checked' : ''}>
       <span class="id">${esc(m.id)}</span>
       ${m.id === rec ? '<span class="tag rec">Recomendado</span>' : ''}<span class="tag c-${esc(m.cost)}">${esc(COST[m.cost])}</span>
-      <small>${esc(noteOf(c.provider, m, i, task))}</small>
+      <small>${esc(noteOf(c.provider, m, i, task))}${(() => { const h = healthOf(c.provider, m.id); return h ? ` · ${h.ok ? `respondió en ${(h.ms / 1000).toFixed(1)} s` : 'no respondió'} en la revisión del ${new Date(h.at).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''; })()}</small>
     </label>`;
   const cost = costOf(c.provider, c.model);
   return `<details class="ai-pick" data-ai-pick="${esc(task)}" ${open ? 'open' : ''}>
@@ -598,6 +598,66 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
     logLine(rec, `Error: ${err.message}`);
     throw err;
   }
+}
+
+/* ---------- «Revisar el estado»: what each connected AI can do now, from its own provider ---------- */
+// Run only when the person asks, from Ajustes (never before each request). Each line says only what was checked:
+// a key that answers (listing models costs nothing), which models are free and the source, a minimal request to each
+// verified free model, the provider's own usage and limits where it gives them, and what it does not tell.
+export const healthOf = (way, id) => load().health?.[`${way}:${id}`] ?? null;
+const silent = (way, id) => { const h = healthOf(way, id); return !!h && !h.ok && Date.now() - h.at < 6 * 3600_000; };
+const markHealth = (way, id, rec) => patch((s) => { s.health = { ...(s.health ?? {}), [`${way}:${id}`]: rec }; });
+export const lastStatus = () => load().lastStatus ?? null;
+export async function checkStatus(onStep = () => {}) {
+  const out = { at: Date.now(), ways: [], fresh: [] };
+  for (const way of connected()) {
+    const w = { way, name: WAYS[way]?.name ?? way, lines: [], models: [], links: [] };
+    out.ways.push(w); onStep(out);
+    if (['gemini', 'anthropic', 'openai', 'openrouter'].includes(way)) {
+      try {
+        const ids = await models(way);
+        w.lines.push(`Tu clave funciona: ${ids.length} modelos en tu cuenta.`);
+        // A model that was not in the account at the last check is new: shown with its conditions.
+        const before = load().seen?.[way];
+        if (before) for (const id of ids.filter(WRITES)) if (!before.includes(id)) out.fresh.push({ way, name: WAYS[way]?.name ?? way, id, cost: costOf(way, id) });
+        patch((s) => { s.seen = { ...(s.seen ?? {}), [way]: ids }; });
+      }
+      catch (e) { w.lines.push(`Tu clave no respondió: ${e.message}`); onStep(out); continue; }
+    }
+    if (way === 'gemini') {
+      w.lines.push('Gratis según la página de precios de Google (leída el 20-11-2026): gemini-3.8-flash, gemini-3.6-flash, gemini-4-hydrogen, gemini-3.5-flash-lite. Cualquier otro puede cobrarte si tu clave tiene facturación.');
+      w.lines.push('Cuánto te queda: Google no lo informa a las apps; míralo en AI Studio. La cuota diaria se reinicia a medianoche, hora del Pacífico, y los límites son por proyecto, no por clave (documentación de límites de Google).');
+      w.links.push({ url: 'https://aistudio.google.com/rate-limit', label: 'Tu cuota en AI Studio' }, { url: 'https://aistudio.google.com/docs/pricing', label: 'Precios de Google' });
+      for (const id of cachedModels('gemini').filter(WRITES)) {
+        const cost = costOf('gemini', id);
+        if (cost !== 'free') { w.models.push({ id, cost }); continue; }
+        const row = { id, cost, testing: true }; w.models.push(row); onStep(out);
+        const r = await probe(id, { ms: 15_000 });
+        Object.assign(row, { testing: false, ok: r.status === 200, ms: r.ms, error: r.status === 200 ? '' : r.error || `HTTP ${r.status}` });
+        markHealth('gemini', id, { ok: row.ok, ms: r.ms, at: Date.now(), error: row.error });
+        onStep(out);
+      }
+    } else if (way === 'openrouter') {
+      try {
+        const b = await http(way, 'https://openrouter.ai/api/v1/key', { headers: { authorization: `Bearer ${keyOf(way)}` } });
+        const d = b.data ?? {};
+        const usd = (n) => (n == null ? 'sin límite' : `${Number(n).toFixed(2)} USD`);
+        w.lines.push(`Usado: ${usd(d.usage)} en total${d.usage_daily != null ? `, ${usd(d.usage_daily)} hoy` : ''}. Límite de tu clave: ${usd(d.limit)}; te queda ${usd(d.limit_remaining)}${d.limit_reset ? `; se reinicia: ${d.limit_reset}` : ''}.`);
+      } catch (e) { w.lines.push(`OpenRouter no dio tu uso: ${e.message}`); }
+      w.lines.push('Gratis: solo los modelos que terminan en «:free». Los demás cobran a tu cuenta de OpenRouter.');
+      w.links.push({ url: 'https://openrouter.ai/settings/keys', label: 'Tu clave en OpenRouter' }, { url: 'https://openrouter.ai/models', label: 'Precios por modelo' });
+    } else if (way === 'anthropic' || way === 'openai') {
+      w.lines.push('De pago por uso: cada pedido se cobra en tu cuenta, aparte de cualquier suscripción. Studium no hace pedidos de prueba que cobren; el saldo y los límites se ven en tu consola.');
+      w.links.push(way === 'anthropic' ? { url: 'https://console.anthropic.com/settings/usage', label: 'Tu uso en la consola de Anthropic' } : { url: 'https://platform.openai.com/usage', label: 'Tu uso en OpenAI' });
+    } else if (way.startsWith('bridge:')) {
+      w.lines.push('Por el puente, con tu suscripción en tu computadora: no cobra aparte. Sus límites son los de tu plan.');
+    } else if (way === 'puter') {
+      w.lines.push('Puter: gasta lo disponible en tu cuenta de Puter.');
+    }
+    onStep(out);
+  }
+  patch((s) => { s.lastStatus = { at: out.at, fresh: out.fresh, ways: out.ways.map((w) => ({ ...w, models: w.models.map(({ testing, ...m }) => m) })) }; });
+  return out;
 }
 
 // «Probar este modelo»: one minimal request (a few tokens) with its own time limit, reporting exactly what the
