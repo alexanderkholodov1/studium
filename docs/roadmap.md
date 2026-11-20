@@ -92,16 +92,16 @@ when its turn comes.
 ## His ideas of 2026-11-19 (Squire), after 0.6.0
 
 Each is settled with him when its turn comes. His words are in `caspian-kb/rules/sources/2026-11-19T*`.
-- **Spectre, Studium's mascot** (`191112Z`, `192655Z`): the ghost that lives in Maxwell, with a page of his own (who he
+- **Specter, Studium's mascot** (`191112Z`, `192655Z`): the ghost that lives in Maxwell, with a page of his own (who he
   is, his traits, his story, why study). It needs a redesign, after 0.6.
-- **The graduation** (`184643Z`): when a member has graduated, Spectre asks if they have a moment, or it waits in
+- **The graduation** (`184643Z`): when a member has graduated, Specter asks if they have a moment, or it waits in
   Settings, and closes the stage with a funny animated performance. A song of its own, in homage: singing the lyrics
   of *Still Alive* would copy a protected song.
 - **Achievements in the style of Xbox** (`190021Z`, "después de las 0.6"): they unlock wallpapers for the home, skins
-  and references, Spectre's looks, songs for the radio; the campus's own wallpaper (`192516Z`).
-- **The weather** (`192516Z`): Spectre and the home react to it ("no te olvides de ponerte bloqueador solar" when the UV
+  and references, Specter's looks, songs for the radio; the campus's own wallpaper (`192516Z`).
+- **The weather** (`192516Z`): Specter and the home react to it ("no te olvides de ponerte bloqueador solar" when the UV
   is high).
-- **Spectre Watchtogether** (`210806Z`, 0.7 or 0.8): a shared space to watch together, with safe URLs, without
+- **Specter Watchtogether** (`210806Z`, 0.7 or 0.8): a shared space to watch together, with safe URLs, without
   cookies or anything else leaking; each person's cursor visible, if turned on.
 - **Sponsors** (`210806Z`): a clearly marked space in «Comunidad» for companies and services, paid, with prices the
   admin sets, promotional codes and invitations, reports from the site's analytics (users, audience), and an honest

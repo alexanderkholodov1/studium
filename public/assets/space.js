@@ -15,6 +15,7 @@ import { communityLabel, communityOf, flag, settings } from './settings.js';
 import { seen, markSeen, unmarkSeen, hintsOn, setHints } from './hints.js';
 import { luckyHit, found, radioOn, openRadio, radioDocked, placeRadio, rescueRadio, critCount, eggCount, prop3d, poke, backdrop, EGGS, openStations } from './eggs.js';
 import { props } from './props3d.js';
+import { SKINS, skinOpen, specterSkin, setSpecterSkin } from './specter.js';
 import { renderHomeSchedule } from './schedule.js';
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -440,6 +441,7 @@ function secretsSection() {
   return `<section class="set glass" id="set-secrets"><h2>Tus secretos <small>${f.size} de ${EGGS.length}</small></h2>
     <p>Lo que desbloqueaste vive en tu Inicio, en «Tus hallazgos»: ahí se presiona cada cosa. La radio tiene ${stations.length} ${stations.length === 1 ? 'estación abierta' : 'estaciones abiertas'}; se cambia con su perilla del medio.</p>
     <ul class="secrets">${EGGS.map((e) => (f.has(e.id) ? `<li><strong>${esc(e.name)}</strong><span>${esc(e.what)}</span></li>` : '<li class="locked"><strong>?</strong><span>Un secreto por encontrar.</span></li>')).join('')}</ul>
+    ${skinOpen('doctor') ? `<fieldset class="seg"><legend>Cómo se viste Specter</legend>${Object.entries(SKINS).filter(([id]) => skinOpen(id)).map(([id, k]) => `<label><input type="radio" name="specter-skin" value="${id}" data-specter-skin ${specterSkin() === id ? 'checked' : ''}><span>${esc(k.name)}</span></label>`).join('')}</fieldset>` : ''}
     <div class="actions"><button class="button primary" data-shelf-show>Ver «Tus hallazgos» en Inicio</button>${f.has('radio') && !radioOn() ? '<button class="button ghost" data-radio-add>Encender la radio</button>' : ''}</div></section>`;
 }
 export function renderSettings() {
@@ -836,6 +838,7 @@ export function mountSpace(context) {
   });
   document.addEventListener('change', (e) => {
     const t = e.target;
+    if (t.dataset.specterSkin !== undefined) setSpecterSkin(t.value);
     if (t.dataset.goalCheck) {
       const goals = prefs.get().goals.map((g) => (g.id === t.dataset.goalCheck ? { ...g, done: t.checked } : g));
       prefs.set({ goals });

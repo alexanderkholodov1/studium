@@ -55,7 +55,7 @@ const layer = (cls, html = '') => { const el = document.createElement('div'); el
 
 /* ---------- the objects: real 3D (props3d.js), never flat drawings ---------- */
 // A canvas that props3d.js fills with a lit, shaded object; the object comes with the canvas.
-export const prop3d = (kind, cls = '') => `<canvas class="prop ${cls}" data-prop="${kind}" aria-hidden="true"></canvas>`;
+export const prop3d = (kind, cls = '', attrs = '') => `<canvas class="prop ${cls}" data-prop="${kind}" ${attrs} aria-hidden="true"></canvas>`;
 const show3d = (el) => { props(el); return el; };
 
 /* ---------- words and codes ---------- */
@@ -124,8 +124,8 @@ function confetti(x, y, n = 40) {
 }
 
 /* ---------- ¡Médico! ---------- */
-// A glossy heart jumps up from the bottom of the screen, beating, with the shout; a pulse line crosses the screen
-// with its beeps, and +25. (Specter in a doctor's coat joins this in step 9.)
+// Specter jumps up from the bottom of the screen in his doctor's look and shouts; a pulse line crosses the screen
+// with its beeps, and +25. Finding it also opens that look for him (specter.js).
 function shout(text) {
   // The browser's own voice, on this device: nothing is sent anywhere. Only with the page's sound on.
   try {
@@ -137,7 +137,7 @@ function shout(text) {
 }
 function medic() {
   if (still()) { heal(); return; }
-  const who = show3d(layer('egg-medic', `${prop3d('heart')}<b class="bubble">${t('¡MÉDICO!')}</b>`));
+  const who = show3d(layer('egg-medic', `${prop3d('specter', 'specter', 'data-skin="doctor" data-mood="glad" data-fixed')}<b class="bubble">${t('¡MÉDICO!')}</b>`));
   setTimeout(() => shout(t('¡Médico!')), 380);
   const line = layer('egg-pulse', '<svg viewBox="0 0 1200 160" preserveAspectRatio="none"><path d="M0 80H380l30-10 20 10h40l18-66 26 132 22-90 14 24h50l26-14 24 14H1200"/></svg>');
   [520, 1240, 1960].forEach((ms) => setTimeout(() => sfx.beep(), ms));

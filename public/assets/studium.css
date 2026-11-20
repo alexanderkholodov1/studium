@@ -113,15 +113,7 @@ mark.hl.teal { background-image: linear-gradient(100deg, transparent .2em, color
 html.can-grab, html.can-grab body { cursor: grab; }
 html.grabbing, html.grabbing * { cursor: grabbing !important; user-select: none; }
 .nodo { position: absolute; left: 0; top: 0; pointer-events: auto; cursor: grab; touch-action: none; will-change: transform; filter: drop-shadow(0 20px 22px rgba(10, 20, 60, .26)); }
-.nodo svg { width: 100%; height: 100%; overflow: visible; }
-.nodo .eye { transform-box: fill-box; transform-origin: center; transition: transform .08s; }
-.nodo.blink .eye { transform: scaleY(.1); }
-.nodo .pupil, .nodo .glint { transition: transform .12s ease-out; }
-.nodo .glad, .nodo .shut { display: none; }
-.nodo[data-mood="glad"] .open, .nodo[data-mood="sleep"] .open { display: none; }
-.nodo[data-mood="glad"] .glad, .nodo[data-mood="sleep"] .shut { display: inline; }
-.nodo[data-mood="glad"] .mouth { d: path("M45 62q5 6 10 0"); }
-.nodo .ball { animation: core 5s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.nodo canvas.specter { width: 100%; height: 100%; }
 @keyframes core { 50% { transform: scale(1.12); opacity: .75; } }
 .speech { position: absolute; left: 0; top: 0; padding: 7px 13px; border-radius: 16px 16px 16px 4px; background: var(--card); color: var(--ink); font: 700 22px/1 var(--hand);
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, .5), inset 0 0 0 1px var(--line); white-space: nowrap; animation: pop .45s var(--spring); }
@@ -2420,5 +2412,25 @@ html.has-announce .page { padding-top: 170px; }
 canvas.prop { display: block; }
 .trinket canvas.prop { width: 130px; height: 112px; }
 .egg-cake-drop canvas.prop, .egg-fire canvas.prop { width: 100%; height: 100%; }
-.egg-medic canvas.prop { width: 180px; height: 180px; }
+.egg-medic canvas.prop { width: 220px; height: 240px; }
 .egg-backdrop.cafe canvas.desk { position: absolute; left: 0; bottom: 0; width: min(400px, 30vw); height: min(330px, 42vh); opacity: .92; }
+
+/* The tours with Specter (tour.js): the page dims except what is explained; Specter speaks from a card beside it */
+.tour { position: fixed; inset: 0; z-index: 90; }
+.tour-hole { position: fixed; border-radius: 18px; box-shadow: 0 0 0 9999px rgba(5, 8, 20, .58), 0 0 0 3px var(--blue), 0 0 24px 4px rgba(61, 123, 255, .5);
+  transition: left .35s cubic-bezier(.3, .8, .3, 1), top .35s cubic-bezier(.3, .8, .3, 1), width .35s, height .35s; pointer-events: none; }
+.tour-card { position: fixed; display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: center; width: min(440px, calc(100vw - 24px)); padding: 14px 16px;
+  border-radius: 22px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line), 0 24px 60px -18px rgba(0, 0, 0, .55); transition: left .35s cubic-bezier(.3, .8, .3, 1), top .35s cubic-bezier(.3, .8, .3, 1); }
+.tour-specter { width: 96px; height: 108px; }
+.tour-text { margin: 0 0 10px; font-size: 15px; line-height: 1.45; color: var(--ink); }
+.tour-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tour-count { margin-right: auto; font: 650 12px var(--display); color: var(--muted); }
+.tour-close { margin-top: 6px; font-size: 12.5px; }
+.tour-help { position: fixed; z-index: 60; right: 138px; bottom: 16px; width: 40px; height: 40px; border: 0; border-radius: 50%; cursor: pointer;
+  font: 800 18px var(--display); color: var(--ink); background: var(--card); box-shadow: inset 0 0 0 1px var(--line), 0 10px 24px -10px rgba(0, 0, 0, .4); }
+.tour-help:hover { transform: translateY(-2px); }
+.tour-offer { position: fixed; z-index: 70; right: 24px; bottom: 74px; width: min(360px, calc(100vw - 32px)); display: grid; grid-template-columns: 96px 1fr; gap: 6px 12px; padding: 14px 16px; border-radius: 22px; }
+.tour-offer .tour-specter { grid-row: 1 / 4; }
+.tour-offer p { margin: 0; font-weight: 650; }
+.tour-offer small { color: var(--muted); }
+@media (max-width: 560px) { .tour-help { right: 16px; bottom: 70px; } .tour-card { grid-template-columns: 70px 1fr; } .tour-specter { width: 70px; height: 80px; } }

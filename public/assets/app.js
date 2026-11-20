@@ -31,6 +31,7 @@ import * as ai from './ai.js';
 import { setLang, t } from './i18n.js';
 import { mountHints } from './hints.js';
 import { mountEggs } from './eggs.js';
+import { mountTour, offerTour } from './tour.js';
 import { mountAdmin, renderAdmin } from './admin.js';
 import { mountFeedback } from './feedback.js';
 import * as vault from './vault.js';
@@ -318,6 +319,7 @@ await Promise.all([ai.initKeys(), ai.loadVerified()]);
 const context = { state, get user() { return { uid: auth.currentUser?.uid, email: auth.currentUser?.email ?? '' }; }, refresh, toast, explain, presetGuide };
 mountMap(context);
 mountSpace(context);
+mountTour();
 mountEggs({ toast, onFound: (id, fresh) => { unlocked(fresh); if (current === 'home') renderHome(); } });
 mountAdmin(context);
 mountFeedback();
@@ -526,7 +528,7 @@ async function route() {
       // The logo: the public page, also for members, who reach their own space from «Inicio».
       bienvenida: ['landing', 'Qué es', null],
       admin: ['admin', 'Admin', () => renderAdmin(arg[0])],
-      '': ['home', 'Inicio', renderHome],
+      '': ['home', 'Inicio', () => { renderHome(); offerTour(); }],
     };
     // «Estudia»: drop anything, sorted in sight; the desk of each course; a guide or the graph from what was dropped.
     // «Mis aportes» (what was published, to change who sees it or delete it) is reached from «Estudia».

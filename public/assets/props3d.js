@@ -327,6 +327,75 @@ const PROPS = {
     };
   },
 
+  // Specter, Studium's mascot: a small ghost of soft, glowing, half-translucent material, with a hem that ripples,
+  // eyes that blink and follow (canvas.dataset.look: -1 to 1), blushing cheeks and little arms. canvas.dataset.mood:
+  // '' | 'glad' (eyes smiling) | 'shut'; canvas.dataset.skin: '' | 'doctor' (an original doctor's look: a head
+  // mirror on a band, a stethoscope, a white collar and a pocket with a pen). Not any other work's character.
+  specter(canvas) {
+    const scene = new T.Scene(); stage(scene, { key: [2, 4, 5], ground: false, intensity: 1.6 });
+    const g = new T.Group(); scene.add(g);
+    const P = (x, y) => new T.Vector2(x, y);
+    const profile = [P(0, 1.55)];
+    for (let i = 1; i <= 14; i += 1) { const a = (i / 14) * (Math.PI / 2); profile.push(P(Math.sin(a) * 0.82, 0.75 + Math.cos(a) * 0.8)); }
+    profile.push(P(0.86, 0.3), P(0.9, 0), P(0.84, -0.04), P(0.6, 0.02), P(0, 0.06));
+    const geo = new T.LatheGeometry(profile, 96);
+    const base = geo.attributes.position.array.slice();
+    const body = mesh(geo, phys(0xeef3ff, { roughness: 0.32, transmission: 0.28, thickness: 1.2, sheen: 1, sheenColor: new T.Color(0xb9cbff), clearcoat: 0.6, emissive: 0x6f8cff, emissiveIntensity: 0.07 }), { cast: false });
+    g.add(body);
+    const glow = new T.Sprite(new T.SpriteMaterial({ map: soft(), color: 0x9fb6ff, transparent: true, opacity: 0.45, blending: T.AdditiveBlending, depthWrite: false }));
+    glow.scale.setScalar(3.4); glow.position.y = 0.8; glow.renderOrder = -1; g.add(glow);
+    const ink = phys(0x0b1020, { roughness: 0.15, clearcoat: 1 });
+    const eyes = [-0.27, 0.27].map((x) => {
+      const e = new T.Group(); e.position.set(x, 1.0, 0.72); g.add(e);
+      e.add(mesh(new T.SphereGeometry(0.11, 24, 18), ink, { s: [1, 1.45, 0.55], cast: false }));
+      e.add(mesh(new T.SphereGeometry(0.035, 12, 10), new T.MeshBasicMaterial({ color: 0xffffff }), { x: 0.035, y: 0.07, z: 0.06, cast: false }));
+      return e;
+    });
+    const blush = phys(0xff7a8a, { roughness: 0.6, transparent: true, opacity: 0.55 });
+    for (const x of [-0.45, 0.45]) g.add(mesh(new T.SphereGeometry(0.09, 16, 12), blush, { x, y: 0.82, z: 0.66, s: [1.3, 0.6, 0.4], cast: false }));
+    const mouth = mesh(new T.TorusGeometry(0.07, 0.022, 10, 24, Math.PI), ink, { y: 0.84, z: 0.79, rz: Math.PI, cast: false });
+    g.add(mouth);
+    const arms = [-1, 1].map((s) => { const a = mesh(new T.CapsuleGeometry(0.1, 0.22, 8, 16), body.material, { x: s * 0.86, y: 0.62, rz: s * 0.9, cast: false }); g.add(a); return a; });
+    // The doctor's look.
+    const doctor = new T.Group(); doctor.visible = false; g.add(doctor);
+    const steel = std(0xd9dde3, 0.15, 1);
+    doctor.add(mesh(new T.TorusGeometry(0.8, 0.035, 12, 64), std(0x2b2f3a, 0.5), { y: 1.28, rx: Math.PI / 2 - 0.25, s: [1, 1, 1] }));
+    doctor.add(mesh(new T.CylinderGeometry(0.2, 0.2, 0.03, 40), steel, { y: 1.5, z: 0.68, rx: Math.PI / 2 - 0.3 }));
+    doctor.add(mesh(new T.CylinderGeometry(0.06, 0.06, 0.035, 20), ink, { y: 1.5, z: 0.7, rx: Math.PI / 2 - 0.3 }));
+    const tube = new T.CatmullRomCurve3([new T.Vector3(-0.62, 0.55, 0.45), new T.Vector3(-0.35, 0.3, 0.78), new T.Vector3(0, 0.25, 0.86), new T.Vector3(0.3, 0.32, 0.8), new T.Vector3(0.45, 0.12, 0.8)]);
+    doctor.add(mesh(new T.TubeGeometry(tube, 40, 0.03, 10), phys(0x22252c, { roughness: 0.35, clearcoat: 0.6 })));
+    doctor.add(mesh(new T.CylinderGeometry(0.1, 0.1, 0.05, 28), steel, { x: 0.45, y: 0.08, z: 0.82, rx: Math.PI / 2 }));
+    const coat = phys(0xffffff, { roughness: 0.55, sheen: 0.4 });
+    for (const s of [-1, 1]) doctor.add(mesh(new T.BoxGeometry(0.32, 0.5, 0.05), coat, { x: s * 0.36, y: 0.42, z: 0.8, rz: s * -0.35, ry: s * 0.35 }));
+    doctor.add(mesh(new T.BoxGeometry(0.22, 0.18, 0.04), coat, { x: -0.42, y: 0.2, z: 0.84, ry: -0.3 }));
+    doctor.add(mesh(new T.CylinderGeometry(0.015, 0.015, 0.22, 10), std(0x3d7bff, 0.3, 0.4), { x: -0.38, y: 0.3, z: 0.88 }));
+    let blinkAt = 2;
+    return {
+      scene, camera: camera(30, [0, 0.9, 5.2], [0, 0.78, 0]),
+      update(t) {
+        const d = canvas?.dataset ?? {};
+        doctor.visible = d.skin === 'doctor';
+        g.position.y = Math.sin(t * 1.6) * 0.06;
+        g.rotation.y = Math.sin(t * 0.7) * 0.18 + (Number(d.look) || 0) * 0.35;
+        const pos = geo.attributes.position;
+        for (let i = 0; i < pos.count; i += 1) {
+          const y = base[i * 3 + 1];
+          if (y < 0.35) {
+            const x = base[i * 3]; const z = base[i * 3 + 2]; const a = Math.atan2(z, x);
+            pos.array[i * 3 + 1] = y + Math.sin(a * 6 + t * 3) * 0.07 * (1 - y / 0.35);
+          }
+        }
+        pos.needsUpdate = true; geo.computeVertexNormals();
+        if (t > blinkAt) blinkAt = t + 2.5 + Math.random() * 3;
+        const blinking = blinkAt - t > 2.38 || d.mood === 'shut';
+        const sy = blinking ? 0.12 : d.mood === 'glad' ? 0.45 : 1;
+        for (const e of eyes) e.scale.y = sy;
+        mouth.scale.setScalar(d.mood === 'glad' ? 1.6 : 1);
+        arms[0].rotation.z = -0.9 - Math.sin(t * 2.2) * 0.25; arms[1].rotation.z = 0.9 + Math.sin(t * 2.2 + 1) * 0.25;
+      },
+    };
+  },
+
   // The study desk of «Noche de estudio»: a wooden desk, a desk lamp whose warm light falls in a cone with soft shadows,
   // and a mug of coffee steaming in its light.
   desk() {
@@ -386,7 +455,7 @@ export async function prop(canvas, kind) {
   const r = canvas.getBoundingClientRect();
   canvas.width = Math.round(Math.min(MAX_W, r.width || canvas.clientWidth || 160) * DPR());
   canvas.height = Math.round(Math.min(MAX_H, r.height || canvas.clientHeight || 160) * DPR());
-  const p = { canvas, ctx: canvas.getContext('2d'), prop: PROPS[kind](), on: true, drawn: false };
+  const p = { canvas, ctx: canvas.getContext('2d'), prop: PROPS[kind](canvas), on: true, drawn: false };
   live.add(p); seen.observe(canvas);
   last = 0; schedule();
   return { poke: () => { const out = p.prop.poke?.(); schedule(); return out; } };

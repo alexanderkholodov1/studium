@@ -1,8 +1,10 @@
 // Things that float: glass tokens of every subject drifting in two depths behind the page, which the person can grab,
-// throw and knock into each other; and, in the playful ambience, Nodo (a small companion that lives on the bottom edge,
+// throw and knock into each other; and, in the playful ambience, Specter (the mascot, a small 3D ghost that lives on the bottom edge,
 // watches the pointer and hops) and bubbles to pop. Also the confetti of a met goal and the springy letters of the
 // wordmark. Everything is DOM moved with transforms; nothing runs when the person prefers reduced motion or focus.
 import { sfx } from './sfx.js';
+import { props } from './props3d.js';
+import { specterSkin } from './specter.js';
 
 const root = document.documentElement;
 const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -31,25 +33,8 @@ const TOKENS = [
   { i: 'globe', c: 'sky' }, { g: '√', c: 'blue' }, { g: 'Aa', c: 'red' },
 ];
 
-const NODO = `<svg viewBox="0 0 100 100" aria-hidden="true">
-  <defs>
-    <radialGradient id="nodo-glass" cx="36%" cy="28%" r="78%"><stop offset="0" stop-color="#f4f7ff" stop-opacity=".95"/><stop offset=".32" stop-color="#a9c0ff" stop-opacity=".62"/><stop offset=".78" stop-color="#4f7dff" stop-opacity=".72"/><stop offset="1" stop-color="#1b3aa6" stop-opacity=".95"/></radialGradient>
-    <radialGradient id="nodo-core" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ff8a6b" stop-opacity=".7"/><stop offset=".6" stop-color="#ff5241" stop-opacity=".16"/><stop offset="1" stop-color="#ff5241" stop-opacity="0"/></radialGradient>
-    <linearGradient id="nodo-rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".5" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity=".5"/></linearGradient>
-  </defs>
-  <circle cx="50" cy="50" r="45" fill="url(#nodo-glass)"/>
-  <circle class="ball" cx="50" cy="64" r="24" fill="url(#nodo-core)"/>
-  <ellipse cx="50" cy="87" rx="25" ry="5" fill="#fff" opacity=".22"/>
-  <circle cx="50" cy="50" r="44.3" fill="none" stroke="url(#nodo-rim)" stroke-width="1.5"/>
-  <ellipse cx="33" cy="25" rx="14" ry="6.5" fill="#fff" opacity=".6" transform="rotate(-30 33 25)"/>
-  <circle cx="63" cy="17" r="2.6" fill="#fff" opacity=".8"/>
-  <g class="open"><g class="eye"><g class="pupil"><rect x="34.5" y="42" width="9" height="15" rx="4.5" fill="#0b1020" opacity=".86"/><circle class="glint" cx="40.6" cy="46" r="1.7" fill="#fff"/></g></g>
-    <g class="eye"><g class="pupil"><rect x="56.5" y="42" width="9" height="15" rx="4.5" fill="#0b1020" opacity=".86"/><circle class="glint" cx="62.6" cy="46" r="1.7" fill="#fff"/></g></g></g>
-  <path class="glad" d="M34 51q5-6 10 0M56 51q5-6 10 0" fill="none" stroke="#0b1020" stroke-opacity=".86" stroke-width="3.2" stroke-linecap="round"/>
-  <path class="shut" d="M34 51h10M56 51h10" stroke="#0b1020" stroke-opacity=".86" stroke-width="3.2" stroke-linecap="round"/>
-  <ellipse cx="29" cy="61" rx="5" ry="2.8" fill="#ff5241" opacity=".35"/><ellipse cx="71" cy="61" rx="5" ry="2.8" fill="#ff5241" opacity=".35"/>
-  <path class="mouth" d="M46 63q4 3.5 8 0" fill="none" stroke="#0b1020" stroke-opacity=".8" stroke-width="2.6" stroke-linecap="round"/>
-</svg>`;
+// Specter, the mascot: a 3D ghost drawn by props3d.js (his look: canvas.dataset.skin, his face: canvas.dataset.mood).
+const SPECTER = '<canvas class="prop specter" data-prop="specter" aria-hidden="true"></canvas>';
 
 let back = null;
 let front = null;
@@ -118,21 +103,25 @@ function build() {
 function makeNodo() {
   const el = document.createElement('div');
   el.className = 'nodo';
-  el.innerHTML = NODO;
-  el.title = 'Nodo';
+  el.innerHTML = SPECTER;
+  el.title = 'Specter';
+  const face = el.querySelector('canvas');
+  face.dataset.skin = specterSkin();
   front.append(el);
-  const r = W < 720 ? 30 : 38;
+  const r = W < 720 ? 38 : 50;
   el.style.width = el.style.height = `${r * 2}px`;
   nodo = { el, x: Math.min(W - r - 20, Math.max(r + 20, W * 0.12)), y: H - r - 34, vx: 0, vy: 0, r, m: r * r * 1.4, a: 0, va: 0, tier: 0, phase: 0, sq: 0, sqa: 0, kind: 'nodo',
-    hop: performance.now() + rand(3000, 6000), blink: performance.now() + rand(1500, 4000), mood: '', moodUntil: 0, pupils: [...el.querySelectorAll('.pupil')] };
+    hop: performance.now() + rand(3000, 6000), blink: performance.now() + rand(1500, 4000), mood: '', moodUntil: 0, face };
   bodies.push(nodo);
   el.addEventListener('pointerdown', (e) => { e.preventDefault(); grab(nodo, e); });
-  setTimeout(() => say('Hola. Puedes moverme.'), 1600);
+  props(el);
+  setTimeout(() => say('Hola, soy Specter. Puedes moverme.'), 1600);
 }
 function mood(name, ms) {
   if (!nodo) return;
   nodo.mood = name; nodo.moodUntil = performance.now() + ms;
   nodo.el.dataset.mood = name;
+  nodo.face.dataset.mood = name === 'sleep' ? 'shut' : name ? 'glad' : '';
 }
 export function say(text, ms = 2600) {
   if (!nodo) return;
@@ -272,7 +261,7 @@ function onMove(e) {
   pointer.x = e.clientX; pointer.y = e.clientY;
   pointer.px = e.clientX / W - 0.5; pointer.py = e.clientY / H - 0.5;
   idleSince = now;
-  if (nodo?.mood === 'sleep') { mood('', 0); nodo.el.dataset.mood = ''; }
+  if (nodo?.mood === 'sleep') { mood('', 0); nodo.el.dataset.mood = ''; nodo.face.dataset.mood = ''; }
   if (!running() || e.pointerType !== 'mouse') return;
   if (!drag) {
     const air = !(e.target instanceof Element && e.target.closest(SOLID));
@@ -367,9 +356,8 @@ function step(h, now) {
       nodo.home = Math.max(nodo.r + 20, Math.min(W - nodo.r - 20, (nodo.home ?? nodo.x) + rand(-160, 160)));
       nodo.hop = now + rand(9000, 18000);
     }
-    if (now > nodo.blink) { nodo.el.classList.add('blink'); setTimeout(() => nodo?.el.classList.remove('blink'), 140); nodo.blink = now + rand(2200, 6000); }
-    if (nodo.mood && nodo.mood !== 'sleep' && now > nodo.moodUntil) { nodo.mood = ''; nodo.el.dataset.mood = ''; }
-    if (!drag && !nodo.mood && now - idleSince > 45000) { nodo.mood = 'sleep'; nodo.el.dataset.mood = 'sleep'; say('zzz…', 3000); }
+    if (nodo.mood && nodo.mood !== 'sleep' && now > nodo.moodUntil) { nodo.mood = ''; nodo.el.dataset.mood = ''; nodo.face.dataset.mood = ''; }
+    if (!drag && !nodo.mood && now - idleSince > 45000) { mood('sleep', 0); say('zzz…', 3000); }
   }
 }
 
@@ -388,7 +376,7 @@ function render() {
     const dx = pointer.x - nodo.x; const dy = pointer.y - nodo.y;
     const len = Math.hypot(dx, dy) || 1;
     const k = Math.min(1, len / 160) * 2.6;
-    for (const p of nodo.pupils) p.style.transform = `translate(${((dx / len) * k).toFixed(2)}px, ${((dy / len) * k).toFixed(2)}px)`;
+    nodo.face.dataset.look = ((dx / len) * (k / 2.6)).toFixed(2);
     if (nodo.speech) nodo.speech.style.transform = `translate3d(${(nodo.x).toFixed(1)}px, ${(nodo.y - nodo.r - 14).toFixed(1)}px, 0) translate(-50%, -100%)`;
   }
 }
