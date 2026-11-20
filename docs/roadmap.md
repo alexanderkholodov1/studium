@@ -115,3 +115,10 @@ His words: "Dejemos el rediseno para alguna version proxima". What he asked for 
 the text, soft shadows, gradients that carry light, motion; never a live 3D scene that lags or pixelates, never the
 background following the mouse; not a desk seen from above, not a backdrop painted flat. It starts from a new idea,
 settled in words with him, with a reference he chooses.
+
+## Your own clouds for «Estudia» (after 0.6.0, his answer of 2026-11-20)
+
+Originals stay on the device in 0.6.0. Next: connect any cloud the person wants, and more than one (several Google
+accounts, OneDrive, others), each with the narrowest permission (Google's `drive.file`: Studium sees only what it put
+there). Uses: keeping the originals across devices, the person's own textbooks, downloading the graph. Before building:
+what storage USFQ gives students, and what review Google and Microsoft require for those permissions.
