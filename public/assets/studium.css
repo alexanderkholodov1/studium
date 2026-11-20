@@ -1196,15 +1196,6 @@ kbd { font: 700 .85em var(--display); padding: 1px 7px; border-radius: 6px; back
   background: radial-gradient(circle, rgba(61, 220, 151, .32), transparent 66%); animation: heal 1.8s ease-out forwards; }
 .egg-heal span { font: 800 34px var(--display); color: #3ddc97; text-shadow: 0 0 16px rgba(61, 220, 151, .6); }
 @keyframes heal { 0% { opacity: 0; transform: scale(.6); } 25% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.4) translateY(-30px); } }
-.egg-portal { position: fixed; z-index: 55; width: 120px; height: 46px; margin: -23px 0 0 -60px; border-radius: 50%; pointer-events: none;
-  animation: portal-open .6s cubic-bezier(.2, .9, .3, 1.2) both; }
-.egg-portal.blue { background: radial-gradient(ellipse, rgba(10, 14, 26, .9) 40%, transparent 42%), radial-gradient(ellipse, #8fb6ff 44%, #2f5bff 58%, transparent 72%); box-shadow: 0 0 40px 6px rgba(79, 125, 255, .55); }
-.egg-portal.red { background: radial-gradient(ellipse, rgba(10, 14, 26, .9) 40%, transparent 42%), radial-gradient(ellipse, #ffb199 44%, #ff5241 58%, transparent 72%); box-shadow: 0 0 40px 6px rgba(255, 82, 65, .5); }
-.egg-portal.closing { animation: portal-close .6s ease-in forwards; }
-@keyframes portal-open { from { transform: scale(0, .1); opacity: 0; } }
-@keyframes portal-close { to { transform: scale(0, .1); opacity: 0; } }
-.egg-ball { position: fixed; z-index: 56; left: -18px; top: -18px; width: 36px; height: 36px; border-radius: 50%; pointer-events: none;
-  background: radial-gradient(120% 120% at 30% 22%, rgba(255, 255, 255, .9), rgba(160, 190, 255, .5) 40%, rgba(47, 91, 255, .7)); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5), 0 10px 20px -8px rgba(10, 20, 60, .5); }
 /* The cake that falls, its confetti, and the one who shouts «¡Médico!» */
 .egg-cake-drop { position: fixed; z-index: 60; left: 50%; top: 55%; width: 300px; height: 300px; margin: -150px 0 0 -150px; pointer-events: none;
   animation: cake-fall .9s cubic-bezier(.5, 0, .75, .3) both, cake-land .5s .9s cubic-bezier(.2, 1.6, .4, 1) both; filter: drop-shadow(0 18px 24px rgba(0, 0, 0, .3)); }
@@ -1304,7 +1295,7 @@ kbd { font: 700 .85em var(--display); padding: 1px 7px; border-radius: 6px; back
 
 /* «Noche de estudio»: a warm lamp and a steaming cup behind the page */
 .egg-backdrop { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
-.egg-backdrop.cafe { background: radial-gradient(60% 50% at 12% 8%, rgba(255, 196, 120, .28), transparent 70%), linear-gradient(180deg, rgba(60, 30, 10, .10), rgba(30, 14, 4, .22)); }
+.egg-backdrop.cafe { background: radial-gradient(60% 50% at 88% 8%, rgba(255, 196, 120, .28), transparent 70%), linear-gradient(180deg, rgba(60, 30, 10, .10), rgba(30, 14, 4, .22)); }
 
 /* «No te mueras de hambre»: night falls, and a campfire */
 .egg-night { position: fixed; inset: 0; z-index: 58; pointer-events: none; background: radial-gradient(40% 35% at 50% 82%, rgba(255, 150, 60, .18), rgba(4, 6, 14, .82) 70%);
@@ -2413,7 +2404,7 @@ canvas.prop { display: block; }
 .trinket canvas.prop { width: 130px; height: 112px; }
 .egg-cake-drop canvas.prop, .egg-fire canvas.prop { width: 100%; height: 100%; }
 .egg-medic canvas.prop { width: 220px; height: 240px; }
-.egg-backdrop.cafe canvas.desk { position: absolute; left: 0; bottom: 0; width: min(400px, 30vw); height: min(330px, 42vh); opacity: .92; }
+.egg-backdrop.cafe canvas.desk { position: absolute; right: 0; bottom: 0; width: min(400px, 30vw); height: min(330px, 42vh); opacity: .92; }
 
 /* The tours with Specter (tour.js): the page dims except what is explained; Specter speaks from a card beside it */
 .tour { position: fixed; inset: 0; z-index: 90; }
@@ -2426,14 +2417,15 @@ canvas.prop { display: block; }
 .tour-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .tour-count { margin-right: auto; font: 650 12px var(--display); color: var(--muted); }
 .tour-close { margin-top: 6px; font-size: 12.5px; }
-.tour-help { position: fixed; z-index: 60; right: 138px; bottom: 16px; width: 40px; height: 40px; border: 0; border-radius: 50%; cursor: pointer;
+.tour-help { position: fixed; z-index: 60; right: 138px; bottom: 16px; width: 40px; height: 40px; border: 0; border-radius: 50%; cursor: pointer; display: none;
   font: 800 18px var(--display); color: var(--ink); background: var(--card); box-shadow: inset 0 0 0 1px var(--line), 0 10px 24px -10px rgba(0, 0, 0, .4); }
+.is-member .tour-help { display: block; }
 .tour-help:hover { transform: translateY(-2px); }
 .tour-offer { position: fixed; z-index: 70; right: 24px; bottom: 74px; width: min(360px, calc(100vw - 32px)); display: grid; grid-template-columns: 96px 1fr; gap: 6px 12px; padding: 14px 16px; border-radius: 22px; }
 .tour-offer .tour-specter { grid-row: 1 / 4; }
 .tour-offer p { margin: 0; font-weight: 650; }
 .tour-offer small { color: var(--muted); }
-@media (max-width: 560px) { .tour-help { right: 16px; bottom: 70px; } .tour-card { grid-template-columns: 70px 1fr; } .tour-specter { width: 70px; height: 80px; } }
+@media (max-width: 640px) { .tour-help { right: 66px; bottom: 16px; width: 38px; height: 38px; } .tour-card { grid-template-columns: 70px 1fr; } .tour-specter { width: 70px; height: 80px; } }
 
 /* «Novedades» (news.js): the current version in full, the earlier ones folded */
 #news { max-width: 860px; display: grid; gap: 18px; }
@@ -2447,6 +2439,14 @@ canvas.prop { display: block; }
 .news-entry ul, .news-dialog ul { margin: 0; padding-left: 20px; display: grid; gap: 5px; line-height: 1.5; color: var(--ink-2); }
 .news-older summary { cursor: pointer; font: 750 16px var(--display); padding: 8px 2px; }
 .news-older .news-entry { padding: 16px 4px; border-bottom: 1px solid var(--line); }
-.news-dialog { max-width: 560px; }
+.news-dialog { max-width: 460px; padding: 24px 26px; }
+.news-dialog h2 { margin: 0 0 8px; font: 800 24px/1.15 var(--display); }
+.news-dialog p { margin: 0 0 16px; color: var(--ink-2); line-height: 1.5; }
 .about-news { max-width: 860px; margin: 30px auto 0; padding: 0 4px; }
 .foot a + a { margin-left: 14px; }
+
+/* A moment on screen waits, unseen and still, until its 3D object is drawn (eggs.js moment) */
+.egg-cake-drop.wait, .egg-fire.wait, .egg-medic.wait, .egg-portals.wait, .egg-medic.wait * { visibility: hidden; animation: none !important; }
+.egg-portals { position: fixed; z-index: 58; width: 420px; height: 300px; pointer-events: none; animation: night-in .5s ease-out both; }
+.egg-portals canvas.prop { width: 100%; height: 100%; }
+.egg-portals.away { animation: fade-out .7s ease-in forwards; }

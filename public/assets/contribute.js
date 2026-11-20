@@ -832,7 +832,11 @@ async function readFiles(zone, files) {
   const guides = zone === 'guide' || zone.startsWith('replace:');
   for (const file of files) {
     // A guide someone already had, in another format: a PDF or Markdown goes to be converted by their AI.
-    if (guides && (/\.pdf$/i.test(file.name) || file.type === 'application/pdf')) { addConvert(zone, { file: await ai.readFile(file) }, file.name); continue; }
+    if (guides && (/\.pdf$/i.test(file.name) || file.type === 'application/pdf')) {
+      const read = await ai.readFile(file);
+      if (read.skipped) { ctx.toast(`${file.name}: ${read.skipped}.`); continue; }
+      addConvert(zone, { file: read }, file.name); continue;
+    }
     if (file.size > 8_000_000) { ctx.toast(`${file.name} pesa más de 8 MB: no es un archivo de Studium.`); continue; }
     const text = await file.text();
     if (guides && /\.(md|markdown|txt)$/i.test(file.name) && !/^\s*[{[]/.test(text)) { addConvert(zone, { text }, file.name); continue; }
@@ -862,7 +866,7 @@ function renderConvert(job, status = '') {
   if (!el) return;
   const p = job.plan;
   el.innerHTML = `<header><span class="badge">Para convertir</span><strong>${esc(job.name)}</strong><button class="link" data-discard="${job.id}">Quitar</button></header>
-    ${job.done ? `<p class="done">${job.done}</p>` : `
+    ${job.done ? `<div class="done">${job.done}</div>` : `
     <p>Tu IA la rehace con el diseño actual de Studium, sin dejar nada fuera: cada explicación, pregunta, figura y animación.${p ? (p.mode === 'one' ? ' Va en un solo pedido.' : ` Es larga: va en ${p.parts.length + 1} pedidos, primero la página y después cada parte; si uno falla, se reintenta sin repetir los demás.`) : ''}${p?.extraParts ? ' También van los textos que la guía guardaba en su código (tarjetas, glosario, preguntas).' : ''} Tu archivo original no cambia.</p>
     ${ai.ready() ? ai.pickerHTML('edit') : '<p class="note">Conecta tu IA en <a href="#/ajustes">Ajustes</a> para convertirla.</p>'}
     ${p ? convert.promptsHTML(p, job.meta) : ''}
@@ -880,7 +884,8 @@ async function runConvertCard(job) {
     const done = await convert.run(job.plan, { meta: job.meta, use, state: job.state, onProgress: (text) => { const out = document.querySelector(`#${job.id} .ai-progress`); if (out) { out.hidden = false; out.textContent = text; } } });
     job.coverage = done.coverage;
     job.running = false;
-    job.done = `Lista. Revísala en la tarjeta nueva antes de publicarla.${done.coverage ? ` ${convert.coverageHTML(done.coverage)}` : ''}`;
+    if (!converting.has(job.id)) return; // removed while it was converting
+    job.done = `<p>Lista. Revísala en la tarjeta nueva antes de publicarla.</p>${convert.coverageHTML(done.coverage)}`;
     renderConvert(job);
     addReview(job.zone, done.html, `${job.name} · en el formato actual`, { provider: done.made?.provider, model: done.made?.model, effort: done.made?.effort }, { fallback: job.meta });
   } catch (error) {

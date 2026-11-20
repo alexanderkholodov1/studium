@@ -115,7 +115,7 @@ function makeNodo() {
   bodies.push(nodo);
   el.addEventListener('pointerdown', (e) => { e.preventDefault(); grab(nodo, e); });
   props(el);
-  setTimeout(() => say('Hola, soy Specter. Puedes moverme.'), 1600);
+  try { if (!localStorage.getItem('studium-specter-hello')) { localStorage.setItem('studium-specter-hello', '1'); setTimeout(() => say('Hola, soy Specter. Puedes moverme.'), 1600); } } catch { /* not remembered */ }
 }
 function mood(name, ms) {
   if (!nodo) return;

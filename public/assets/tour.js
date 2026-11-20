@@ -72,6 +72,7 @@ function close() {
   tour.root.remove();
   removeEventListener('keydown', onKey, true);
   removeEventListener('resize', place);
+  removeEventListener('scroll', place, true);
   tour = null;
 }
 function onKey(e) {
@@ -135,6 +136,7 @@ export function startTour(kind = 'section') {
   });
   addEventListener('keydown', onKey, true);
   addEventListener('resize', place);
+  addEventListener('scroll', place, { capture: true, passive: true });
   props(root);
   go(0);
   root.querySelector('[data-tour-next]').focus();
@@ -151,11 +153,13 @@ export function mountTour() {
   help.addEventListener('click', () => startTour('section'));
   document.body.append(help);
 }
-export function offerTour() {
-  if (seen('tour-offered') || tour) return;
-  markSeen('tour-offered');
+export function offerTour(tries = 0) {
+  if (seen('tour-offered') || tour || document.querySelector('.tour-offer')) return;
   setTimeout(() => {
-    if (currentView() !== 'view-home') return;
+    if (currentView() !== 'view-home' || seen('tour-offered')) return;
+    // One thing at a time: while another notice is open (the news of a version), the offer waits for it.
+    if (document.querySelector('dialog[open]')) { if (tries < 20) offerTour(tries + 1); return; }
+    markSeen('tour-offered');
     const card = document.createElement('div');
     card.className = 'tour-offer glass';
     card.innerHTML = `<canvas class="prop tour-specter" data-prop="specter" data-skin="${specterSkin()}" aria-hidden="true"></canvas>

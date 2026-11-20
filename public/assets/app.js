@@ -533,7 +533,7 @@ async function route() {
       // The logo: the public page, also for members, who reach their own space from «Inicio».
       bienvenida: ['landing', 'Qué es', null],
       admin: ['admin', 'Admin', () => renderAdmin(arg[0])],
-      '': ['home', 'Inicio', () => { renderHome(); offerTour(); newsOnce(); }],
+      '': ['home', 'Inicio', () => { renderHome(); newsOnce(!prefs.fresh); offerTour(); }],
     };
     // «Estudia»: drop anything, sorted in sight; the desk of each course; a guide or the graph from what was dropped.
     // «Mis aportes» (what was published, to change who sees it or delete it) is reached from «Estudia».

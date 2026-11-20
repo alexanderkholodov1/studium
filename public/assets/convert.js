@@ -53,6 +53,12 @@ function clean(doc, images) {
       const src = el.getAttribute('src') ?? '';
       if (src) { images.push(src); el.setAttribute('src', `studium-img:${images.length - 1}`); }
     }
+    if (el.tagName.toLowerCase() === 'image') {
+      for (const attr of ['href', 'xlink:href']) {
+        const src = el.getAttribute(attr) ?? '';
+        if (src.length > 200) { images.push(src); el.setAttribute(attr, `studium-img:${images.length - 1}`); }
+      }
+    }
   }
 }
 const controlsOf = (el) => [...new Set([...el.querySelectorAll('button, input[type="range"], select, [role="button"]')]
@@ -93,6 +99,7 @@ export function htmlParts(page) {
     }
     if (parts.length) parts[0].controls = all;
   }
+  if (!parts.some((p) => p.html.trim()) && doc.body.textContent.trim()) parts = [{ title: '', html: doc.body.innerHTML, controls: all }];
   return { parts: parts.filter((p) => p.html.trim()), images, text: doc.body.textContent.replace(/\s+/g, ' ') };
 }
 const textOfPage = (html) => {
@@ -148,6 +155,7 @@ export async function plan(source) {
     original = source.text;
   }
   const size = parts.reduce((n, p) => n + p.html.length, 0);
+  if (!original.trim() && !size) throw new Error('Esta guía no tiene texto que convertir.');
   if (size <= ONE_SHOT) return { mode: 'one', parts, images, original, extraParts, size };
   return { mode: 'parts', parts: pack(parts), images, original, extraParts, size };
 }
@@ -208,13 +216,14 @@ export async function run(p, { meta = {}, extra = '', use, onProgress = () => {}
   html = restore(html, p.images);
   const parsed = parseGuide(html, meta);
   if (parsed.error) throw new Error(parsed.error);
-  const cov = p.original ? coverage(p.original, textOfPage(html)) : null;
+  const cov = p.file ? null : coverage(p.original, textOfPage(html));
   return { html, made, coverage: cov, parsed };
 }
 
 // What the person reads about the result: how much of the original's words are there, and a few that are missing.
 export function coverageHTML(cov) {
   if (!cov) return '<p class="fine">Tu IA leyó el PDF directamente: compara tú mismo que esté todo.</p>';
+  if (!cov.total) return '';
   const pct = Math.floor(cov.share * 100);
   const sample = cov.missing.slice(0, 12).join(', ');
   return pct >= 97

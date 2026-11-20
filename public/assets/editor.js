@@ -97,8 +97,11 @@ async function runConvert(what, out) {
   const { plan, state } = job.convert ?? {};
   if (!plan) throw new Error('No se pudo leer la guía.');
   const use = ai.picked('edit', $('#edit-dialog'));
-  const done = await convert.run(plan, { meta: metaOf(job.entry), extra: what, use, state, onProgress: (t) => { out.textContent = t; } });
-  $('#edit-convert').insertAdjacentHTML('beforeend', convert.coverageHTML(done.coverage));
+  const mine = job;
+  const done = await convert.run(plan, { meta: metaOf(job.entry), extra: what, use, state, onProgress: (t) => { if (job === mine) out.textContent = t; } });
+  if (job !== mine) throw new Error('stale');
+  $('#edit-convert .cov')?.remove();
+  $('#edit-convert').insertAdjacentHTML('beforeend', `<div class="cov">${convert.coverageHTML(done.coverage)}</div>`);
   job.made = done.made;
   job.anchor = '';
   return done.html;
@@ -113,6 +116,7 @@ async function run() {
   const title = doc.title || job.entry?.title || 'Guía';
   const id = $('#edit-section').value;
   const button = $('#edit-run');
+  const started = job;
   button.disabled = true;
   out.hidden = false;
   out.textContent = 'Tu IA está trabajando…';
@@ -155,6 +159,8 @@ async function run() {
       job.anchor = imported[0].id;
       job.made = res;
     }
+    // The dialog moved on to another guide meanwhile: this result belongs to the one it started with, so it is dropped.
+    if (job !== started) return;
     job.next = next;
     const frame = $('#edit-preview');
     frame.hidden = false;
@@ -163,7 +169,7 @@ async function run() {
     $('#edit-save').hidden = false;
     sfx.tick();
   } catch (error) {
-    out.textContent = error.message || 'Algo falló.';
+    if (job === started && error.message !== 'stale') out.textContent = error.message || 'Algo falló.';
   } finally { button.disabled = false; }
 }
 

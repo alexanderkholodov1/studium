@@ -31,22 +31,25 @@ export async function renderNews(el) {
 }
 
 // Once per version, in this browser: a short card with what is new, and a link to the whole page.
-export async function newsOnce() {
+export async function newsOnce(returning = true) {
   let seen = '';
   try { seen = localStorage.getItem(SEEN) ?? ''; } catch { return; }
   if (seen === VERSION) return;
   try { localStorage.setItem(SEEN, VERSION); } catch { return; }
   // Someone new does not need «what changed»: only those who had used an earlier version.
-  if (!seen && !localStorage.getItem('studium-recent') && !localStorage.getItem('studium-seen')) return;
+  if (!seen && !returning) return;
   try {
     const { versions } = await load();
     const v = versions.find((x) => x.version === VERSION);
     if (!v?.new?.length) return;
     const d = document.createElement('dialog');
     d.className = 'sheet-dialog news-dialog';
-    d.innerHTML = `<h2>Novedades de la v${esc(v.version)}</h2>${v.title ? `<p class="lede-small">${esc(v.title)}</p>` : ''}
-      <ul>${v.new.slice(0, 6).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
-      <div class="actions"><a class="button ghost" href="#/novedades">Ver todo</a><button class="button primary" type="button" data-close>Listo</button></div>`;
+    // Read in two seconds: the names of what is new (the words before each «:»), and the whole list one tap away.
+    const names = v.new.map((x) => x.split(/[:,.]/)[0].trim()).filter((x) => x.length <= 40);
+    const shown = names.slice(0, 4);
+    d.innerHTML = `<h2>Novedades de la v${esc(v.version)}</h2>
+      <p>${esc(shown.join(', '))}${names.length > shown.length ? ` y ${names.length - shown.length} cosas más` : ''}.</p>
+      <div class="actions"><button class="button primary" type="button" data-close>Listo</button><a class="button ghost" href="#/novedades">Ver todo</a></div>`;
     document.body.append(d);
     d.addEventListener('click', (e) => { if (e.target.closest('[data-close], a') || e.target === d) d.close(); });
     d.addEventListener('close', () => d.remove());

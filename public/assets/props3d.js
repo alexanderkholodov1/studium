@@ -145,7 +145,7 @@ const PROPS = {
   },
 
   // A ceramic mug of coffee on its saucer, with steam that rises and fades.
-  cup(opts = {}) {
+  cup(_canvas, opts = {}) {
     const scene = new T.Scene(); stage(scene, { key: [-2, 4, 3], warm: true, ground: !opts.desk });
     const g = new T.Group(); scene.add(g);
     const ceramic = phys(opts.color ?? 0xefe4d2, { roughness: 0.22, clearcoat: 0.9, clearcoatRoughness: 0.08 });
@@ -401,7 +401,7 @@ const PROPS = {
   // The study desk of «Noche de estudio»: a wooden desk, a desk lamp whose warm light falls in a cone with soft shadows,
   // and a mug of coffee steaming in its light.
   desk() {
-    const cup = PROPS.cup({ desk: true, camera: camera(34, [2.4, 3.2, 4.6], [0.3, 0.8, 0]) });
+    const cup = PROPS.cup(null, { desk: true, camera: camera(34, [-2.4, 3.2, 4.6], [-0.3, 0.8, 0]) });
     const { scene } = cup;
     scene.add(mesh(new T.BoxGeometry(6, 0.2, 3.4), std(0xffffff, 0.5, 0, { map: wood() }), { y: -0.1 }));
     cup.group.position.set(0.6, 0, 0.6);
@@ -423,17 +423,33 @@ const PROPS = {
 /* ---------- drawing ---------- */
 let raf = 0;
 let last = 0;
-let t0 = performance.now();
-const seen = new IntersectionObserver((entries) => { for (const e of entries) for (const p of live) if (p.canvas === e.target) p.on = e.isIntersecting; });
+const t0 = performance.now();
+// What a removed object held (its geometries, materials and their own textures) is given back to the GPU.
+const shared = new Set();
+function dispose(scene) {
+  scene.traverse((o) => {
+    o.geometry?.dispose?.();
+    for (const m of [o.material].flat().filter(Boolean)) {
+      for (const k of ['map', 'emissiveMap']) if (m[k] && !shared.has(m[k])) m[k].dispose();
+      m.dispose?.();
+    }
+  });
+}
+const seen = new IntersectionObserver((entries) => {
+  for (const e of entries) for (const p of live) if (p.canvas === e.target) p.on = e.isIntersecting;
+  schedule();
+});
 function frame(now) {
   raf = 0;
   if (!gl || !live.size) return;
   const dt = Math.min(0.1, (now - (last || now)) / 1000); last = now;
   const t = (now - t0) / 1000;
   const { renderer } = gl;
+  let moving = false;
   for (const p of [...live]) {
-    if (!p.canvas.isConnected) { live.delete(p); seen.unobserve(p.canvas); continue; }
+    if (!p.canvas.isConnected) { live.delete(p); seen.unobserve(p.canvas); dispose(p.prop.scene); continue; }
     if (!p.on && p.drawn) continue;
+    moving = moving || p.on;
     const w = Math.min(gl.w, p.canvas.width); const h = Math.min(gl.h, p.canvas.height);
     p.prop.update?.(still() ? 2 : t, still() ? 0 : dt);
     p.prop.camera.aspect = w / h; p.prop.camera.updateProjectionMatrix();
@@ -442,31 +458,37 @@ function frame(now) {
     renderer.render(p.prop.scene, p.prop.camera);
     p.ctx.clearRect(0, 0, p.canvas.width, p.canvas.height);
     p.ctx.drawImage(renderer.domElement, 0, gl.h - h, w, h, 0, 0, p.canvas.width, p.canvas.height);
-    p.drawn = true;
+    if (!p.drawn) { p.drawn = true; p.ready?.(); }
   }
-  if (!still() && !document.hidden) schedule();
+  // Nothing on screen: the loop rests until something comes into view (the observer wakes it).
+  if (moving && !still() && !document.hidden) schedule();
 }
 // About 30 frames a second is plenty for these objects.
 function schedule() { if (!raf) raf = requestAnimationFrame((now) => { if (now - last < 30) { raf = 0; setTimeout(schedule, 30 - (now - last)); return; } frame(now); }); }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) schedule(); });
 
-// Puts a 3D object in a canvas (its CSS size decides the resolution). Returns a handle with poke(); the object goes
-// away with its canvas.
+// Puts a 3D object in a canvas (its CSS size decides the resolution). Returns a handle with poke() and drawn (a
+// promise kept when the object is first on the canvas); the object goes away with its canvas.
 export async function prop(canvas, kind) {
   await boot();
+  shared.add(woodTex); shared.add(softTex);
   const r = canvas.getBoundingClientRect();
   canvas.width = Math.round(Math.min(MAX_W, r.width || canvas.clientWidth || 160) * DPR());
   canvas.height = Math.round(Math.min(MAX_H, r.height || canvas.clientHeight || 160) * DPR());
   const p = { canvas, ctx: canvas.getContext('2d'), prop: PROPS[kind](canvas), on: true, drawn: false };
+  const drawn = new Promise((resolve) => { p.ready = resolve; });
   live.add(p); seen.observe(canvas);
   last = 0; schedule();
-  return { poke: () => { const out = p.prop.poke?.(); schedule(); return out; } };
+  return { poke: () => { const out = p.prop.poke?.(); schedule(); return out; }, drawn };
 }
-// Every canvas with data-prop="kind" inside root gets its object (once).
+// Every canvas with data-prop="kind" inside root gets its object (once). Returns a promise kept when all of them are
+// drawn (or failed: the page never waits on a 3D object that cannot be drawn).
 export function props(root = document) {
+  const waits = [];
   for (const c of root.querySelectorAll('canvas[data-prop]:not([data-on])')) {
     c.dataset.on = '1';
-    prop(c, c.dataset.prop).then((h) => { c._prop = h; }).catch(() => { c.replaceWith(Object.assign(document.createElement('span'), { className: 'prop-off', textContent: '' })); });
+    waits.push(prop(c, c.dataset.prop).then((h) => { c._prop = h; return h.drawn; }).catch(() => { c.replaceWith(Object.assign(document.createElement('span'), { className: 'prop-off', textContent: '' })); }));
   }
+  return Promise.all(waits);
 }
 export const pokeProp = (canvas) => canvas?._prop?.poke();

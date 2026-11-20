@@ -276,7 +276,7 @@ function shelfTile(span) {
     f.has('crit') ? `<button type="button" class="trinket" data-trinket="crit" aria-label="Golpes críticos: ${crits}" title="Golpes críticos">${prop3d('trophy')}<small>× ${crits} crítico${crits === 1 ? '' : 's'}</small></button>` : '',
     f.has('cafe') ? `<button type="button" class="trinket" data-trinket="cafe" aria-pressed="${backdrop() === 'cafe'}" title="Enciende o apaga la «Noche de estudio»">${prop3d('cup')}<small>Noche de estudio</small></button>` : '',
     f.has('starve') ? `<button type="button" class="trinket" data-trinket="starve" title="Pon el fonógrafo">${prop3d('gramophone')}<small>El fonógrafo</small></button>` : '',
-    f.has('radio') ? (radioDocked() ? '<div class="radio-stand" data-radio-stand></div>' : `<div class="trinket radio-slot">${radioOn() ? '<small>La radio va contigo. Con «Dejarla en Inicio» se queda aquí.</small>' : '<button type="button" class="button ghost small" data-radio-add>Encender la radio</button>'}</div>`) : '',
+    f.has('radio') ? (radioDocked() ? '<div class="radio-stand" data-radio-stand></div>' : `<div class="trinket radio-slot">${radioOn() ? '<small>La radio va contigo</small>' : '<button type="button" class="button ghost small" data-radio-add>Encender la radio</button>'}</div>`) : '',
   ].filter(Boolean);
   const hidden = eggCount() - f.size;
   return tile('shelf', span, `<h2>Tus hallazgos <small>${f.size} de ${eggCount()} secretos</small></h2>
@@ -312,7 +312,7 @@ const eggTray = () => (found().has('radio') && !radioOn() ? '<button class="chip
 // A secret found: if the person chose their own tiles, «Tus hallazgos» joins them once, so the find is on Inicio.
 export function unlocked(fresh) {
   const p = prefs.get();
-  if (fresh && p.tiles.length && !p.tiles.some((x) => tileId(x) === 'shelf') && p.tiles.length < 16) prefs.set({ tiles: [...p.tiles, 'shelf'] });
+  if (fresh && !seen('shelf-removed') && p.tiles.length && !p.tiles.some((x) => tileId(x) === 'shelf') && p.tiles.length < 16) prefs.set({ tiles: [...p.tiles, 'shelf'] });
 }
 
 export function renderHome() {

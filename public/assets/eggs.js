@@ -2,11 +2,13 @@
 // characters and the music); the winks are to games students love. Each secret does something on screen and leaves
 // something on Inicio, in «Tus hallazgos» (space.js draws it with what this file exports). Found secrets are
 // remembered in this browser.
-//   · type «radio» (or the old cheat code ↑ ↑ ↓ ↓ ← → ← → B A): an old radio that plays bossa for studying; it can stay
-//     on Inicio or go with you to every tab;
-//   · press the red dot of «studium» three times: two portals, which then stay on Inicio;
+//   · type «radio» (or the old cheat code ↑ ↑ ↓ ↓ ← → ← → B A): an old 3D radio with stations (stations.js); it can
+//     stay on Inicio or go with you to every tab;
+//   · press the red dot of «studium» three times: two portals and a glass marble, which then stay on Inicio;
 //   · type «torta» or «cake»: a cake falls on the screen, and stays on Inicio with its candle;
-//   · type «medico» or «medic»: someone jumps on screen and shouts, with the pulse; a heart monitor stays on Inicio;
+//   · type «medico» or «medic»: Specter jumps up in his doctor's look and shouts, with the pulse; a heart monitor stays
+//     on Inicio, and the look opens for him;
+//   · type «café» or «hambre»: a study desk behind the page, or night with a campfire, each with its station;
 //   · now and then, a goal checked off is a lucky hit; Inicio counts them with a trophy.
 import { sfx } from './sfx.js';
 import { t } from './i18n.js';
@@ -21,11 +23,11 @@ const CRITS = 'studium-crits';
 // Every easter egg, as the admin panel lists them. The ids are the ones the rules accept for the counters (eggs/{id}).
 export const EGGS = [
   { id: 'radio', name: 'La radio', how: 'Escribir «radio» en cualquier página, fuera de un campo de texto, o el código ↑ ↑ ↓ ↓ ← → ← → B A.',
-    what: 'Una radio antigua, en 3D, con bossa generada en vivo. Se puede dejar en Inicio o llevar a todas las pestañas.' },
+    what: 'Una radio antigua en 3D, con estaciones que abren otros secretos. Se puede dejar en Inicio o llevar a todas las pestañas.' },
   { id: 'portal', name: 'Portales', how: 'Pulsar tres veces seguidas el punto rojo de «studium» en la portada.',
-    what: 'Un portal azul y uno rojo, y una canica de vidrio que entra por uno y sale por el otro. Los portales se quedan en Inicio.' },
+    what: 'Un portal azul y uno naranja, y una canica de vidrio que entra por uno y sale por el otro. Los portales se quedan en Inicio.' },
   { id: 'cake', name: 'La torta', how: 'Escribir «torta» o «cake».', what: 'Cae una torta con su vela en la pantalla, y se queda en Inicio: se sopla y se vuelve a encender.' },
-  { id: 'medic', name: '¡Médico!', how: 'Escribir «medico» o «medic».', what: 'Alguien salta en la pantalla y grita «¡Médico!», con el pulso. En Inicio queda un monitor de ritmo cardíaco.' },
+  { id: 'medic', name: '¡Médico!', how: 'Escribir «medico» o «medic».', what: 'Specter salta vestido de doctor y grita «¡Médico!», con el pulso. En Inicio queda un monitor de ritmo cardíaco, y Specter puede vestirse de doctor.' },
   { id: 'crit', name: 'Golpe crítico', how: 'Marcar una meta como cumplida: una de cada diez veces.', what: '«¡CRÍTICO!» en verde y una celebración doble; en Inicio, un trofeo los cuenta. Abre la estación «8 bits».' },
   { id: 'cafe', name: 'Noche de estudio', how: 'Escribir «café» o «cafe».', what: 'Un fondo de lámpara cálida con una taza humeante, que se enciende y se apaga desde Inicio. Abre la estación «Lluvia y lo-fi».' },
   { id: 'starve', name: 'No te mueras de hambre', how: 'Escribir «hambre» o «starve».', what: 'Cae la noche sobre la página y se enciende una fogata. Deja un fonógrafo en Inicio y abre la estación «El fonógrafo».' },
@@ -48,7 +50,7 @@ function discover(id, message) {
     // Counted once per browser, anonymously, for the admin panel.
     if (auth.currentUser) countEgg(id).catch(() => {});
   }
-  toast(fresh ? `${t(message)} · ${t('Secreto')} ${s.size}/${ALL.length} · ${t('Ahora está en tu Inicio')}` : t(message));
+  toast(fresh ? `${t(message)} ${t('Secreto')} ${s.size} de ${ALL.length}, en tu Inicio.` : t(message));
   onFound(id, fresh);
 }
 const layer = (cls, html = '') => { const el = document.createElement('div'); el.className = cls; el.innerHTML = html; el.setAttribute('aria-hidden', 'true'); document.body.append(el); return el; };
@@ -57,6 +59,13 @@ const layer = (cls, html = '') => { const el = document.createElement('div'); el
 // A canvas that props3d.js fills with a lit, shaded object; the object comes with the canvas.
 export const prop3d = (kind, cls = '', attrs = '') => `<canvas class="prop ${cls}" data-prop="${kind}" ${attrs} aria-hidden="true"></canvas>`;
 const show3d = (el) => { props(el); return el; };
+// A moment on screen: hidden until its 3D object is drawn, then shown for «ms» and gone. Returns when it shows.
+function moment(cls, html, ms) {
+  const el = layer(`${cls} wait`, html);
+  const shown = props(el).then(() => { el.classList.remove('wait'); setTimeout(() => el.classList.add('away'), ms); setTimeout(() => el.remove(), ms + 900); });
+  setTimeout(() => el.remove(), 15000); // never stuck if it cannot be drawn
+  return shown;
+}
 
 /* ---------- words and codes ---------- */
 const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
@@ -96,21 +105,21 @@ export function setBackdrop(id) {
 function nightfall() {
   if (still()) return;
   sfx.portal();
-  const night = layer('egg-night');
-  const fire = show3d(layer('egg-fire', prop3d('fire')));
-  setTimeout(() => sfx.blow(), 900);
-  setTimeout(() => { night.classList.add('away'); fire.classList.add('away'); }, 4600);
-  setTimeout(() => { night.remove(); fire.remove(); }, 5600);
+  moment('egg-fire', prop3d('fire'), 4600).then(() => {
+    const night = layer('egg-night');
+    setTimeout(() => sfx.blow(), 600);
+    setTimeout(() => night.classList.add('away'), 4600);
+    setTimeout(() => night.remove(), 5600);
+  });
 }
 
 /* ---------- the cake ---------- */
 function cakeFalls() {
   if (still()) return;
-  const el = show3d(layer('egg-cake-drop', prop3d('cake')));
-  sfx.pop();
-  setTimeout(() => { sfx.impact(80, 500); confetti(innerWidth / 2, innerHeight * 0.55); }, 820);
-  setTimeout(() => el.classList.add('away'), 2600);
-  setTimeout(() => el.remove(), 3300);
+  moment('egg-cake-drop', prop3d('cake'), 2600).then(() => {
+    sfx.pop();
+    setTimeout(() => { sfx.impact(80, 500); confetti(innerWidth / 2, innerHeight * 0.55); }, 820);
+  });
 }
 function confetti(x, y, n = 40) {
   const colors = ['#ff4f6d', '#ffd23f', '#2ee59d', '#3d7bff', '#ff8a3d', '#c77dff'];
@@ -137,13 +146,14 @@ function shout(text) {
 }
 function medic() {
   if (still()) { heal(); return; }
-  const who = show3d(layer('egg-medic', `${prop3d('specter', 'specter', 'data-skin="doctor" data-mood="glad" data-fixed')}<b class="bubble">${t('¡MÉDICO!')}</b>`));
-  setTimeout(() => shout(t('¡Médico!')), 380);
-  const line = layer('egg-pulse', '<svg viewBox="0 0 1200 160" preserveAspectRatio="none"><path d="M0 80H380l30-10 20 10h40l18-66 26 132 22-90 14 24h50l26-14 24 14H1200"/></svg>');
-  [520, 1240, 1960].forEach((ms) => setTimeout(() => sfx.beep(), ms));
-  setTimeout(() => { sfx.heartbeat(); heal(); }, 900);
-  setTimeout(() => { who.classList.add('away'); line.classList.add('away'); }, 2600);
-  setTimeout(() => { who.remove(); line.remove(); }, 3200);
+  moment('egg-medic', `${prop3d('specter', 'specter', 'data-skin="doctor" data-mood="glad" data-fixed')}<b class="bubble">${t('¡MÉDICO!')}</b>`, 2600).then(() => {
+    setTimeout(() => shout(t('¡Médico!')), 380);
+    const line = layer('egg-pulse', '<svg viewBox="0 0 1200 160" preserveAspectRatio="none"><path d="M0 80H380l30-10 20 10h40l18-66 26 132 22-90 14 24h50l26-14 24 14H1200"/></svg>');
+    [520, 1240, 1960].forEach((ms) => setTimeout(() => sfx.beep(), ms));
+    setTimeout(() => { sfx.heartbeat(); heal(); }, 900);
+    setTimeout(() => line.classList.add('away'), 2600);
+    setTimeout(() => line.remove(), 3200);
+  });
 }
 function heal() {
   if (still()) return;
@@ -177,31 +187,20 @@ function onDot(e) {
   const r = e.target.getBoundingClientRect();
   portals(r.left + r.width / 2, r.top + r.height / 2);
 }
-function ring(x, y, kind) {
-  const el = layer(`egg-portal ${kind}`);
-  el.style.left = `${x}px`; el.style.top = `${y}px`;
-  return el;
-}
 function portals(x, y) {
   discover('portal', 'Ahora piensas con portales.');
   if (still()) return;
-  sfx.portal();
-  const ox = innerWidth - Math.max(120, Math.min(innerWidth - 120, x)); const oy = Math.min(innerHeight - 140, y + 220);
-  const a = ring(x, y + 60, 'blue');
-  const b = ring(ox, oy, 'red');
-  // A glass marble falls into the blue one and comes out of the red one.
-  const ball = layer('egg-ball');
-  const fall = ball.animate([{ transform: `translate(${x}px, ${y - 40}px) scale(1)` }, { transform: `translate(${x}px, ${y + 60}px) scale(.3)`, opacity: 0.2 }], { duration: 700, delay: 500, easing: 'cubic-bezier(.5,0,.8,.4)', fill: 'both' });
-  fall.onfinish = () => {
-    const out = ball.animate([
-      { transform: `translate(${ox}px, ${oy}px) scale(.3)`, opacity: 0.2 },
-      { transform: `translate(${ox + (ox > innerWidth / 2 ? -140 : 140)}px, ${oy - 120}px) scale(1)`, opacity: 1, offset: 0.45 },
-      { transform: `translate(${ox + (ox > innerWidth / 2 ? -260 : 260)}px, ${innerHeight + 60}px) scale(1)`, opacity: 1 },
-    ], { duration: 1500, easing: 'cubic-bezier(.3,.6,.5,1)', fill: 'both' });
-    out.onfinish = () => ball.remove();
-  };
-  setTimeout(() => { a.classList.add('closing'); b.classList.add('closing'); }, 2400);
-  setTimeout(() => { a.remove(); b.remove(); }, 3100);
+  const left = Math.max(12, Math.min(innerWidth - 432, x - 210)); const top = Math.max(84, Math.min(innerHeight - 312, y + 30));
+  const el = layer('egg-portals wait', prop3d('portals'));
+  el.style.left = `${left}px`; el.style.top = `${top}px`;
+  props(el).then(() => {
+    el.classList.remove('wait');
+    sfx.portal();
+    setTimeout(() => pokeProp(el.querySelector('canvas')), 400);
+    setTimeout(() => el.classList.add('away'), 2800);
+    setTimeout(() => el.remove(), 3600);
+  });
+  setTimeout(() => el.remove(), 15000);
 }
 
 /* ---------- what each find does on Inicio («Tus hallazgos», drawn by space.js) ---------- */
@@ -238,6 +237,7 @@ function schedule() {
   const { ctx: a } = radio.audio;
   const gen = GENERATORS[radio.station] ?? GENERATORS.bossa;
   const dur = 60 / gen.bpm / 4;
+  if (radio.next < a.currentTime - 0.05) radio.next = a.currentTime + 0.02;
   while (radio.next < a.currentTime + 0.15) {
     const s = radio.step % BAR; const bar = Math.floor(radio.step / BAR);
     const swing = radio.station === 'bossa' && s % 2 ? dur * 0.12 : 0;
