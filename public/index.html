@@ -493,9 +493,11 @@
       <label><input type="radio" name="emode" value="change" checked><span>Cambiar una sección</span></label>
       <label><input type="radio" name="emode" value="add"><span>Agregar una sección</span></label>
       <label><input type="radio" name="emode" value="all"><span>Rehacer toda la guía</span></label>
+      <label><input type="radio" name="emode" value="convert"><span>Pasarla al formato actual</span></label>
     </fieldset>
+    <div id="edit-convert" hidden></div>
     <label class="field" id="edit-section-wrap"><span id="edit-section-label">Sección</span><select id="edit-section"></select></label>
-    <label class="field"><span>Qué le pides a tu IA</span><textarea id="edit-what" rows="3" style="font:16px/1.4 var(--body)"></textarea></label>
+    <label class="field"><span id="edit-what-label">Qué le pides a tu IA</span><textarea id="edit-what" rows="3" style="font:16px/1.4 var(--body)"></textarea></label>
     <p class="ai-progress" id="edit-progress" role="status" hidden></p>
     <iframe id="edit-preview" title="Vista previa del cambio" sandbox="allow-scripts allow-modals" hidden></iframe>
     <div class="actions"><button class="button primary" id="edit-run" type="button">Pedírselo a mi IA</button><button class="button primary red" id="edit-save" type="button" hidden>Guardar en la guía</button><button class="button ghost" value="cancel" formnovalidate>Cerrar</button></div>

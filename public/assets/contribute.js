@@ -12,6 +12,7 @@ import { looseKey, stageOf, stageLabel } from './standard.js';
 import { showGuide } from './viewer.js';
 import { rise } from './fx.js';
 import * as ai from './ai.js';
+import * as convert from './convert.js';
 import { prefs } from './prefs.js';
 import { renderEstudia, renderDesk } from './estudia.js';
 
@@ -87,8 +88,8 @@ const themePicker = (name, value) => `<fieldset class="themes" aria-label="Estil
   Object.entries(THEMES).map(([k, t]) => `<label class="swatch" style="${themeStyle(k)}" title="${esc(t.hint)}"><input type="radio" name="${name}" value="${k}" ${k === value ? 'checked' : ''}><span>${esc(t.name)}</span></label>`).join('')}</fieldset>`;
 const dropzone = (id) => `<div class="dropzone" data-drop="${id}">
     <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 31V11m0 0-8 8m8-8 8 8M10 30v5a4 4 0 0 0 4 4h20a4 4 0 0 0 4-4v-5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <p><strong>Suelta aquí los archivos</strong> que te devolvió tu IA (.json o .html), o</p>
-    <label class="button ghost">Elegir archivos<input type="file" accept=".json,.html,.htm,.txt,.md,application/json,text/html" multiple hidden data-files="${id}"></label>
+    <p><strong>Suelta aquí los archivos</strong> que te devolvió tu IA (.json o .html)${id === 'guide' ? '; o una guía que ya tenías (otra página HTML, un PDF, Markdown), para pasarla al formato actual con tu IA' : ''}, o</p>
+    <label class="button ghost">Elegir archivos<input type="file" accept=".json,.html,.htm,.txt,.md,application/json,text/html${id === 'guide' ? ',.pdf,application/pdf' : ''}" multiple hidden data-files="${id}"></label>
   </div>
   <details class="paste"><summary>O pega aquí la respuesta de tu IA</summary>
     <textarea rows="7" data-paste="${id}" placeholder="Pega el bloque de código JSON, o la página HTML completa"></textarea>
@@ -828,9 +829,63 @@ const reviews = new Map(); // review id -> item
 let serial = 0;
 
 async function readFiles(zone, files) {
+  const guides = zone === 'guide' || zone.startsWith('replace:');
   for (const file of files) {
+    // A guide someone already had, in another format: a PDF or Markdown goes to be converted by their AI.
+    if (guides && (/\.pdf$/i.test(file.name) || file.type === 'application/pdf')) { addConvert(zone, { file: await ai.readFile(file) }, file.name); continue; }
     if (file.size > 8_000_000) { ctx.toast(`${file.name} pesa más de 8 MB: no es un archivo de Studium.`); continue; }
-    addReview(zone, await file.text(), file.name);
+    const text = await file.text();
+    if (guides && /\.(md|markdown|txt)$/i.test(file.name) && !/^\s*[{[]/.test(text)) { addConvert(zone, { text }, file.name); continue; }
+    addReview(zone, text, file.name);
+  }
+}
+
+/* ---------- a guide someone already had, to the current format with their own AI (convert.js) ---------- */
+const converting = new Map(); // card id -> { id, zone, source, name, meta, plan, state, running, done }
+const legacy = (text) => !/<script[^>]*\bid=["']?studium\b/i.test(text);
+function guideFallback() {
+  const p = guideValues();
+  return p ? { course: p.course?.name ?? p.v.course, code: p.v.code || p.course?.code || '', professor: p.v.professor ?? '', term: p.v.term ?? '', title: p.v.title, date: p.v.date, theme: p.course?.theme ?? guessTheme(p.v.course) } : {};
+}
+async function addConvert(zone, source, name, meta = null) {
+  const id = `c${serial += 1}`;
+  const job = { id, zone, source, name, meta: meta ?? (zone === 'guide' ? guideFallback() : {}), plan: null, state: {} };
+  converting.set(id, job);
+  const list = $(`[data-reviews="${zone.startsWith('replace:') ? 'mine' : zone}"]`);
+  list.insertAdjacentHTML('afterbegin', `<article class="review glass" id="${id}"></article>`);
+  renderConvert(job, 'Leyendo la guía tal como se ve…');
+  rise(list, ':scope > :first-child');
+  try { job.plan = await convert.plan(source); renderConvert(job); } catch (error) { renderConvert(job, error.message || 'No se pudo leer la guía.'); }
+}
+function renderConvert(job, status = '') {
+  const el = document.getElementById(job.id);
+  if (!el) return;
+  const p = job.plan;
+  el.innerHTML = `<header><span class="badge">Para convertir</span><strong>${esc(job.name)}</strong><button class="link" data-discard="${job.id}">Quitar</button></header>
+    ${job.done ? `<p class="done">${job.done}</p>` : `
+    <p>Tu IA la rehace con el diseño actual de Studium, sin dejar nada fuera: cada explicación, pregunta, figura y animación.${p ? (p.mode === 'one' ? ' Va en un solo pedido.' : ` Es larga: va en ${p.parts.length + 1} pedidos, primero la página y después cada parte; si uno falla, se reintenta sin repetir los demás.`) : ''}${p?.extraParts ? ' También van los textos que la guía guardaba en su código (tarjetas, glosario, preguntas).' : ''} Tu archivo original no cambia.</p>
+    ${ai.ready() ? ai.pickerHTML('edit') : '<p class="note">Conecta tu IA en <a href="#/ajustes">Ajustes</a> para convertirla.</p>'}
+    ${p ? convert.promptsHTML(p, job.meta) : ''}
+    <p class="ai-progress" role="status" ${status ? '' : 'hidden'}>${esc(status)}</p>
+    ${job.coverage !== undefined ? convert.coverageHTML(job.coverage) : ''}
+    <div class="actions"><button class="button primary" data-convert-run="${job.id}" ${p && ai.ready() && !job.running ? '' : 'disabled'}>${Object.keys(job.state.done ?? {}).length || job.state.shell ? 'Seguir donde quedó' : 'Convertir con mi IA'}</button></div>`}`;
+}
+async function runConvertCard(job) {
+  if (!job?.plan || job.running) return;
+  job.running = true;
+  const card = document.getElementById(job.id);
+  const use = ai.picked('edit', card ?? document);
+  renderConvert(job, 'Tu IA está trabajando…');
+  try {
+    const done = await convert.run(job.plan, { meta: job.meta, use, state: job.state, onProgress: (text) => { const out = document.querySelector(`#${job.id} .ai-progress`); if (out) { out.hidden = false; out.textContent = text; } } });
+    job.coverage = done.coverage;
+    job.running = false;
+    job.done = `Lista. Revísala en la tarjeta nueva antes de publicarla.${done.coverage ? ` ${convert.coverageHTML(done.coverage)}` : ''}`;
+    renderConvert(job);
+    addReview(job.zone, done.html, `${job.name} · en el formato actual`, { provider: done.made?.provider, model: done.made?.model, effort: done.made?.effort }, { fallback: job.meta });
+  } catch (error) {
+    job.running = false;
+    renderConvert(job, error.message || 'Algo falló. Vuelve a intentarlo: lo hecho se conserva.');
   }
 }
 // extra: what Studium knows of the original file (its fingerprint, its stage, its source).
@@ -932,6 +987,7 @@ function renderReview(item) {
     ${conceptNames.length ? `<div class="chips small">${conceptNames.slice(0, 40).map((n) => `<span class="chip ${inMap.has(keyOf(n)) ? '' : 'new'}">${esc(n)}</span>`).join('')}${conceptNames.length > 40 ? `<span class="chip">y ${conceptNames.length - 40} más</span>` : ''}</div>` : ''}
     <div class="actions">
       ${isGuide ? `<button class="button ghost" data-preview="${item.id}">Vista previa</button>` : ''}
+      ${isGuide && legacy(item.text) ? `<button class="button ghost" data-convert-from="${item.id}" title="Tu IA la rehace con el diseño actual, sin dejar nada fuera; esta queda como está">Pasarla al formato actual</button>` : ''}
       <button class="button primary" data-publish="${item.id}" ${ready ? '' : 'disabled'}>${item.replace ? 'Reemplazar' : 'Publicar'}</button>
       ${!ready && !blocking.length && isGuide && !/^\d{4}-\d{2}-\d{2}$/.test(m.date || '') ? '<span class="hint">Falta la fecha de la evaluación.</span>' : ''}
     </div>`}`;
@@ -1247,7 +1303,10 @@ export function mountContribute(context) {
       if (area.value.trim()) { addReview(t.dataset.reviewPaste, area.value, 'Respuesta pegada'); area.value = ''; }
     }
     if (t.matches('[data-q-retry-all], [data-q-clear], [data-q-auto], [data-q-retry], [data-q-chat], [data-q-copy], [data-q-download], [data-q-answer]')) queueAction(t);
+    if (t.dataset.convertRun) runConvertCard(converting.get(t.dataset.convertRun));
+    if (t.dataset.convertFrom) { const item = reviews.get(t.dataset.convertFrom); readMeta(item); addConvert(item.zone, { html: item.text }, item.name, { ...item.parsed.meta }); }
     if (t.dataset.discard) {
+      converting.delete(t.dataset.discard);
       const gone = reviews.get(t.dataset.discard);
       if (gone?.jobId) queue?.reviewed(gone.jobId, 'discarded');
       reviews.delete(t.dataset.discard); document.getElementById(t.dataset.discard)?.remove();

@@ -28,6 +28,8 @@ jobs:
         run: node tools/test-fingerprint.mjs
       - name: Check that what the database holds is cleaned on reading
         run: node tools/test-clean.mjs
+      - name: Check how a guide is cut and compared when it is converted to the current format
+        run: node tools/test-convert.mjs
       - name: Check the reading of Google's pricing page
         run: node tools/test-models.mjs
       - name: Warn when Google's Gemini pricing changed since data/models.json

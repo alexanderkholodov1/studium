@@ -7,10 +7,11 @@ import { showGuide } from './viewer.js';
 import { parseGuide } from './prompts.js';
 import { sfx } from './sfx.js';
 import { celebrate } from './play.js';
+import * as convert from './convert.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-let job = null; // { id, entry, html, uid, onSaved, toast, next, anchor }
+let job = null; // { id, entry, html, uid, onSaved, toast, next, anchor, convert: { plan, state } }
 
 const parse = (html) => new DOMParser().parseFromString(html, 'text/html');
 const serialize = (doc) => `<!doctype html>\n${doc.documentElement.outerHTML}`;
@@ -41,7 +42,8 @@ function fragment(text) {
 const SYS_ALL = 'Editas guías de estudio de Studium: páginas HTML autocontenidas. Mantienes el bloque <script type="application/json" id="studium">, las secciones con id y todo lo que funciona; cambias solo lo que el estudiante pide. Respondes solo con el HTML completo, desde <!doctype html> hasta </html>.';
 const SYS_PART = 'Editas una guía de estudio HTML de Studium por partes. Respondes solo con el HTML de la sección pedida, sin texto antes ni después: los mismos tipos de elementos, clases y estilos que ya usa la guía, y el JavaScript que haga falta dentro de la sección.';
 export function openEditor(options) {
-  job = { ...options, next: null };
+  job = { ...options, next: null, convert: null };
+  $('#edit-convert').hidden = true;
   const doc = parse(job.html);
   const list = parts(doc);
   $('#edit-who').innerHTML = ai.ready() ? `${ai.pickerHTML('edit')}${ai.promptHTML(`Para rehacer toda la guía:\n${SYS_ALL}\n\nPara cambiar o agregar una sección:\n${SYS_PART}`, '', 'más tu pedido y la guía o la sección que se cambia')}<p class="fine">Solo tú puedes editar esta guía.</p>` : '';
@@ -61,19 +63,52 @@ export function openEditor(options) {
 function syncMode() {
   const mode = document.querySelector('#edit-form input[name="emode"]:checked')?.value ?? 'change';
   $('#edit-section-label').textContent = mode === 'add' ? 'Va después de' : 'Sección';
-  $('#edit-section-wrap').hidden = mode === 'all';
+  $('#edit-section-wrap').hidden = mode === 'all' || mode === 'convert';
+  $('#edit-what-label').textContent = mode === 'convert' ? 'Algo más que quieras (si quieres)' : 'Qué le pides a tu IA';
   $('#edit-what').placeholder = {
     change: 'Ej.: explícalo con un ejemplo de la vida real; agrega un ejercicio; la fórmula de la máscara está mal.',
     add: 'Ej.: una sección de VLSM con dos ejercicios resueltos paso a paso.',
     all: 'Ej.: hazla más corta, para repasar en una hora; o cambia el estilo a nocturno.',
+    convert: 'Ej.: con estilo nocturno; o agrega tarjetas de repaso al final.',
   }[mode];
+  $('#edit-convert').hidden = mode !== 'convert';
+  if (mode === 'convert') prepareConvert();
+}
+
+// The guide as it is today, read once: what will go to the AI and its exact instructions, before anything runs.
+const metaOf = (e = {}) => ({ course: e.course, code: e.code, professor: e.professor, term: e.term, title: e.title, date: e.date, theme: e.theme });
+async function prepareConvert() {
+  const box = $('#edit-convert');
+  if (job.convert) return;
+  job.convert = { plan: null, state: {} };
+  box.innerHTML = '<p class="fine">Leyendo la guía tal como se ve…</p>';
+  try {
+    const plan = await convert.plan({ html: job.html });
+    if (!job?.convert) return;
+    job.convert.plan = plan;
+    box.innerHTML = `<p class="fine">Tu IA rehace la guía con el diseño actual de Studium, sin dejar nada fuera: cada explicación, pregunta, figura y animación. ${plan.mode === 'one' ? 'Va en un solo pedido.' : `Es larga: va en ${plan.parts.length + 1} pedidos, primero la página y después cada parte; si uno falla, se reintenta sin repetir los demás.`}${plan.extraParts ? ' También van los textos que la guía guardaba en su código (tarjetas, glosario, preguntas).' : ''} La versión de ahora queda en el historial de la guía y puedes volver a ella.</p>${convert.promptsHTML(plan, metaOf(job.entry), '')}`;
+  } catch (error) {
+    job.convert = null;
+    box.innerHTML = `<p class="note">${esc(error.message || 'No se pudo leer la guía.')}</p>`;
+  }
+}
+async function runConvert(what, out) {
+  if (!job.convert?.plan) await prepareConvert();
+  const { plan, state } = job.convert ?? {};
+  if (!plan) throw new Error('No se pudo leer la guía.');
+  const use = ai.picked('edit', $('#edit-dialog'));
+  const done = await convert.run(plan, { meta: metaOf(job.entry), extra: what, use, state, onProgress: (t) => { out.textContent = t; } });
+  $('#edit-convert').insertAdjacentHTML('beforeend', convert.coverageHTML(done.coverage));
+  job.made = done.made;
+  job.anchor = '';
+  return done.html;
 }
 
 async function run() {
   const mode = document.querySelector('#edit-form input[name="emode"]:checked')?.value ?? 'change';
   const what = $('#edit-what').value.trim();
   const out = $('#edit-progress');
-  if (!what) { out.hidden = false; out.textContent = 'Escribe qué quieres que haga tu IA.'; return; }
+  if (!what && mode !== 'convert') { out.hidden = false; out.textContent = 'Escribe qué quieres que haga tu IA.'; return; }
   const doc = parse(job.html);
   const title = doc.title || job.entry?.title || 'Guía';
   const id = $('#edit-section').value;
@@ -85,7 +120,9 @@ async function run() {
   const onProgress = (n) => { out.textContent = n < 0 ? 'Tu IA está escribiendo…' : `Tu IA está escribiendo… ${n.toLocaleString('es')} caracteres`; };
   try {
     let next;
-    if (mode === 'all') {
+    if (mode === 'convert') {
+      next = await runConvert(what, out);
+    } else if (mode === 'all') {
       const res = await ai.run({
         system: SYS_ALL,
         text: `Pedido del estudiante: ${what}\n\nLa guía actual:\n\n${job.html}`,

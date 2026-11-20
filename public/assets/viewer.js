@@ -30,6 +30,11 @@ const HELPER = `<script>(() => {
     if (!link || link.target || (link.getAttribute('href') || '').startsWith('#')) return;
     link.target = '_blank'; link.rel = 'noopener';
   }, true);
+  // Converting a guide reads it as it is drawn, with what its own code built (convert.js): the page asks, once.
+  addEventListener('message', (event) => {
+    if (event.source !== parent || event.data?.studiumSnapshot !== true) return;
+    parent.postMessage({ studiumSnapshot: document.documentElement.outerHTML }, '*');
+  });
   addEventListener('message', (event) => {
     if (event.source !== parent || typeof event.data?.studiumAnchor !== 'string') return;
     const target = document.getElementById(event.data.studiumAnchor);

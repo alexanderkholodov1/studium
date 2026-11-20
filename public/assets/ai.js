@@ -369,9 +369,9 @@ export function pickerHTML(task, { open = false } = {}) {
 // What the picker of a task says right now (and remember it).
 // What an AI receives, shown before it runs (his rule for the whole page: every use of an AI lets the person choose
 // which and how, and read the exact prompt; choosing is never required).
-export function promptHTML(system, text = '', more = '') {
+export function promptHTML(system, text = '', more = '', label = 'Ver las instrucciones exactas que recibe tu IA') {
   const e = (s) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
-  return `<details class="prompt"><summary>Ver las instrucciones exactas que recibe tu IA</summary><pre>${e(guarded(system))}${text ? `\n\n${e(text)}` : ''}${more ? `\n\n[${e(more)}]` : ''}</pre></details>`;
+  return `<details class="prompt"><summary>${e(label)}</summary><pre>${e(guarded(system))}${text ? `\n\n${e(text)}` : ''}${more ? `\n\n[${e(more)}]` : ''}</pre></details>`;
 }
 export function picked(task, root = document) {
   const el = root.querySelector(`[data-ai-pick="${task}"]`);
