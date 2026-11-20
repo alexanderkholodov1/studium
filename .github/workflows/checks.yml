@@ -26,6 +26,8 @@ jobs:
         run: node tools/test-queue.mjs
       - name: Check that the tools fingerprint files as the app does
         run: node tools/test-fingerprint.mjs
+      - name: Check that what the database holds is cleaned on reading
+        run: node tools/test-clean.mjs
       - name: Pack a trial release
         run: bash tools/pack.sh 0.0.0-check "$GITHUB_SHA" /tmp/trial
 

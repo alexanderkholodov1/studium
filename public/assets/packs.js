@@ -3,6 +3,7 @@
 // tools/compile-packs.mjs after an upload); nothing compiles them on a timer. Contributions published after the last
 // pack are read one by one, and those deleted or made private after it leave a record in removed/, so the map is never
 // stale. Pure functions: the browser and the tools share them.
+import { cleanStored } from './prompts.js';
 
 // One part of a pack: a Firestore document holds at most 1 MiB, and this leaves room for its other fields.
 export const PART_BYTES = 850_000;
@@ -22,7 +23,8 @@ export function packJSON(build, items) {
 export function readPack(json) {
   const obj = JSON.parse(json);
   if (obj?.studium !== 'pack' || !Array.isArray(obj.items)) throw new Error('not-a-pack');
-  return obj.items.map((x) => ({ type: 'contribution', visibility: 'public', ...x }));
+  // A pack is compiled by an admin from contributions; its items are cleaned on reading all the same.
+  return obj.items.map((x) => ({ type: 'contribution', visibility: 'public', ...x, data: cleanStored(x.kind, x.data) }));
 }
 // Compressed bytes in parts of at most PART_BYTES, and back.
 export function slices(bytes, size = PART_BYTES) {

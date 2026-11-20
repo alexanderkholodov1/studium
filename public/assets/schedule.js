@@ -46,12 +46,13 @@ function cleanClass(c, i) {
     return { d, s, e: realEnd(s, e0) };
   }).filter(Boolean).slice(0, 12);
   return {
-    id: c.id || rid(), name: text(c.name, 80) || 'Clase', code: text(c.code, 20), nrc: text(c.nrc, 12), prof: text(c.prof, 80), room: text(c.room, 20),
+    // An id lands in attributes: only the page's own shape is kept (a schedule can come from what an AI read).
+    id: /^[a-z0-9]{1,24}$/i.test(String(c.id ?? '')) ? c.id : rid(), name: text(c.name, 80) || 'Clase', code: text(c.code, 20), nrc: text(c.nrc, 12), prof: text(c.prof, 80), room: text(c.room, 20),
     kind: text(c.kind, 20), group: text(c.group, 30), section: text(c.section, 6),
     credits: Math.max(0, Math.min(10, Number(c.credits) || 0)), color: COLORS.includes(c.color) ? c.color : COLORS[i % COLORS.length], slots,
   };
 }
-const cleanList = (o, i, fallback) => ({ id: o?.id || rid(), name: text(o?.name, 24) || (fallback ?? draftName(i + 1)), classes: (Array.isArray(o?.classes) ? o.classes : []).slice(0, MAX_CLASSES).map(cleanClass) });
+const cleanList = (o, i, fallback) => ({ id: /^[a-z0-9]{1,24}$/i.test(String(o?.id ?? '')) ? o.id : rid(), name: text(o?.name, 24) || (fallback ?? draftName(i + 1)), classes: (Array.isArray(o?.classes) ? o.classes : []).slice(0, MAX_CLASSES).map(cleanClass) });
 export function clean(raw) {
   const options = (Array.isArray(raw?.options) ? raw.options : []).slice(0, MAX_OPTIONS).map((o, i) => cleanList(o, i));
   return {

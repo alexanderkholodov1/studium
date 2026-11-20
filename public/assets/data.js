@@ -10,6 +10,7 @@ import { firebaseConfig } from './config.js';
 import { keyOf } from './themes.js';
 import { looseKey } from './standard.js';
 import { packJSON, readPack, slices, join, buildId, merge } from './packs.js';
+import { cleanStored } from './prompts.js';
 import { cache } from './cache.js';
 
 export const app = initializeApp(firebaseConfig);
@@ -46,7 +47,8 @@ async function contributionOf(snap) {
   const d = snap.data();
   let body = {};
   try { body = JSON.parse(await gunzip(d.body.toUint8Array())); } catch { /* an unreadable body adds nothing to the map */ }
-  return { id: snap.id, type: 'contribution', visibility: 'public', ...d, body: undefined, data: body, updated: millis(d.updated) };
+  // Cleaned on reading, never trusted as stored (prompts.js cleanStored).
+  return { id: snap.id, type: 'contribution', visibility: 'public', ...d, body: undefined, data: cleanStored(d.kind, body), updated: millis(d.updated) };
 }
 
 // The public contributions. With packs (see packs.js): the last pack, kept in this browser until a newer one exists,
