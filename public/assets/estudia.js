@@ -412,10 +412,47 @@ function next(table) {
         const n = batch.filter((x) => !x.off).length;
         const go = $('[data-es-go]', table); if (go) go.textContent = n === batch.length ? 'Listo' : `Listo (${n} de ${batch.length})`;
       }
-      if (e.target.closest('[data-es-cancel]')) { run += 1; batch = []; table.hidden = true; table.innerHTML = ''; delete table.dataset.wired; }
+      if (e.target.closest('[data-es-cancel]') || e.target.closest('[data-es-trash]')) trash(table);
+      if (e.target.closest('[data-es-keep]')) $('[data-es-confirm]', table)?.remove();
       if (e.target.closest('[data-es-go]')) go(table);
     });
   }
+}
+
+/* ---------- the bin: everything of this drop flies into it, and the table closes ---------- */
+async function trash(table) {
+  const ticket = ++run;
+  const sheets = $$('.es-sheet', table);
+  const bin = node('<div class="es-bin" aria-hidden="true"><div class="es-bin-lid"></div><div class="es-bin-can"></div></div>');
+  document.body.append(bin);
+  if (!calm()) {
+    bin.animate([{ transform: 'translate(-50%, 40px)', opacity: 0 }, { transform: 'translate(-50%, 0)', opacity: 1 }], { duration: 300, easing: 'cubic-bezier(.2,.9,.3,1.2)' });
+    await sleep(300);
+    bin.classList.add('open');
+    const target = bin.getBoundingClientRect();
+    const step = Math.max(8, 300 / Math.max(1, sheets.length));
+    sheets.forEach((el, i) => {
+      const r = el.getBoundingClientRect();
+      el.style.visibility = 'hidden';
+      if (r.bottom < 0 || r.top > innerHeight) return;
+      // A copy above everything flies, so no pile's edge cuts it.
+      const fly = el.cloneNode(true);
+      Object.assign(fly.style, { position: 'fixed', left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, margin: 0, zIndex: 71, visibility: 'visible', pointerEvents: 'none' });
+      document.body.append(fly);
+      const dx = target.left + target.width / 2 - (r.left + r.width / 2); const dy = target.top + 10 - (r.top + r.height / 2);
+      setTimeout(() => fly.remove(), 800 + i * step);
+      fly.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${dx * 0.5}px, ${dy - 120}px) rotate(${(Math.random() - 0.5) * 120}deg) scale(.7)`, opacity: 1, offset: 0.55 }, { transform: `translate(${dx}px, ${dy}px) rotate(${(Math.random() - 0.5) * 200}deg) scale(.15)`, opacity: 0 }],
+        { duration: 700, delay: i * step, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'forwards' });
+    });
+    await sleep(700 + sheets.length * step);
+    bin.classList.remove('open'); bin.classList.add('shake'); sfx.impact?.(120, 600);
+    await sleep(500);
+    await bin.animate([{ opacity: 1 }, { opacity: 0, transform: 'translate(-50%, 30px)' }], { duration: 260 }).finished.catch(() => {});
+  }
+  bin.remove();
+  if (ticket !== run) return;
+  batch = []; table.hidden = true; table.innerHTML = ''; delete table.dataset.wired;
+  api.ctx.toast('Descartado. Nada se guardó.');
 }
 
 /* ---------- 3. what to do with it ---------- */
@@ -426,8 +463,13 @@ async function go(table) {
   const toGraph = $('[data-es-graph]', table).checked;
   const toGuide = $('[data-es-guide]', table).checked;
   const chosen = batch.filter((x) => !x.off);
-  if (!chosen.length) { api.ctx.toast('Dejaste todo fuera: toca algo de los montones para que vuelva.'); return; }
-  if (!toDesk && !toGraph && !toGuide) { api.ctx.toast('Elige qué hacemos con esto: el escritorio, el grafo o una guía.'); return; }
+  // Nothing chosen, or nothing to do with it: say so, and offer the bin.
+  if (!chosen.length || (!toDesk && !toGraph && !toGuide)) {
+    const why = !chosen.length ? 'Dejaste todo fuera.' : 'No elegiste qué hacemos con esto: ni el escritorio, ni el grafo, ni una guía.';
+    $('[data-es-confirm]', table)?.remove();
+    $('.es-what .actions', table).insertAdjacentHTML('beforebegin', `<div class="es-confirm" data-es-confirm><p>${why} ¿Lo descartamos todo?</p><div class="actions"><button class="button danger" data-es-trash>Sí, a la basura</button><button class="button ghost" data-es-keep>No, sigo eligiendo</button></div></div>`);
+    return;
+  }
   for (const it of chosen) { it.course = course; if (!it.kind) it.kind = 'notes'; }
   const code = chosen.find((x) => x.code)?.code ?? '';
   // On the desk of the course, on this device, if the person wants it there. Links have no file to keep.
