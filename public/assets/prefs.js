@@ -90,6 +90,15 @@ function apply() {
   try { localStorage.setItem(LOCAL, JSON.stringify(state)); } catch { /* the browser does not keep it */ }
 }
 apply();
+// Another tab changed something (a note, a goal, the theme): this tab takes it, so its next save never writes back an
+// older copy of the profile over it.
+addEventListener('storage', (e) => {
+  if (e.key !== LOCAL || !e.newValue) return;
+  try { state = clean({ ...DEFAULTS, ...JSON.parse(e.newValue) }); } catch { return; }
+  root.dataset.ambience = state.ambience; root.lang = state.lang;
+  if (state.theme === 'auto') delete root.dataset.theme; else root.dataset.theme = state.theme;
+  for (const fn of listeners) fn(state, { loaded: true });
+});
 
 export const prefs = {
   get: () => state,

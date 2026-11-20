@@ -75,6 +75,15 @@ export async function init() {
     if (box?.data) secrets = await open(device, box);
   } catch { secrets = { keys: {}, bridge: '' }; }
 }
+// Another tab of this browser changed the keys: this tab takes them, so it never writes back an older copy.
+addEventListener('storage', async (e) => {
+  if (e.key !== LOCAL) return;
+  try {
+    device ??= await deviceKey();
+    secrets = e.newValue ? await open(device, JSON.parse(e.newValue)) : { keys: {}, bridge: secrets.bridge };
+    tell();
+  } catch { /* unreadable: keep this tab's */ }
+});
 async function saveLocal() {
   device ??= await deviceKey();
   try { localStorage.setItem(LOCAL, JSON.stringify(await seal(device, secrets))); } catch { /* not kept */ }
