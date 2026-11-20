@@ -361,9 +361,8 @@ export function parseContribution(text, fallback = {}) {
   };
 }
 
-// What the database holds is never trusted: anyone can write their own contribution's body straight to the database,
-// past this page's checks. Every body read goes through the same cleaning as an AI's answer: known fields only, text
-// clipped, numbers as numbers, kinds from the known lists. What does not survive is dropped.
+// Every body read goes through the same cleaning as an AI's answer: known fields only, text clipped, numbers as numbers,
+// kinds from the known lists. What does not survive is dropped.
 export function cleanStored(kind, body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return {};
   let r;

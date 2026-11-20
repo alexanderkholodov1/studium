@@ -1,5 +1,4 @@
-// What the database holds is never trusted (prompts.js cleanStored): a body written straight to the database, past the
-// page's checks, is cleaned on reading, from a single contribution and from a pack. Pure: no network, no page.
+// Contributions are cleaned on reading (prompts.js cleanStored), alone and from a pack. Pure: no network, no page.
 import { cleanStored } from '../public/assets/prompts.js';
 import { readPack } from '../public/assets/packs.js';
 
