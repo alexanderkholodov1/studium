@@ -201,9 +201,17 @@ function resetOf(text, now = new Date()) {
 }
 // What an error text of a CLI means. Only ever applied to an error, never to an answer: material about «límites» is
 // not a usage limit.
+// The Claude models a Pro, Max, Ultra or Team plan includes in Claude Code, by Anthropic's pricing page
+// (https://claude.com/pricing, read 2026-11-20: «Opus», «Sonnet», «Haiku» = «Yes»; «Fable» = «Usage credits» on Pro).
+// Claude Code's own default depends on each person's settings (it may be Fable, which in -p mode bills usage credits
+// without asking), so the bridge never runs without one of these named.
+const CLAUDE_INCLUDED = new Set(['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5']);
 function failureOf(engine, text) {
   const name = { claude: 'Claude Code', codex: 'Codex', antigravity: 'Antigravity' }[engine];
   const t = String(text ?? '');
+  if (/usage credits|pay-as-you-go|spend limit|extra usage/i.test(t)) {
+    return new Failure(402, 'paid', `${name} pidió créditos de uso, que se cobran aparte de tu plan. El puente se detuvo y no reintenta: elige un modelo incluido en tu plan.`);
+  }
   if (/not supported when using codex with a chatgpt account|not recognized as a known model|invalid model|model.{0,40}not (?:available|found|supported)/i.test(t)) {
     return new Failure(424, 'model', `${name} no acepta ese modelo con tu cuenta. Elige otro en Studium, o deja el que viene por defecto.`);
   }
@@ -241,9 +249,11 @@ const ENGINES = {
     // for a permission that a non-interactive run never grants (measured 2026-11-13: plain «Read» read a file in the
     // home folder). So material that tells the model to read other files gets nothing.
     async run(b, dir, body, names, timeoutMs) {
+      // Never the default model: only a model the plan includes, named explicitly.
+      if (!CLAUDE_INCLUDED.has(String(body.model ?? ''))) throw new Failure(400, 'paid', 'El puente solo usa modelos incluidos en tu plan de Claude (Opus 5.5, Sonnet 5.5 o Haiku 5.5), nombrados uno por uno. Elige uno en Studium.');
       const args = ['-p', prompt(names), '--output-format', 'json', '--allowedTools', 'Read(./**)',
-        '--disallowedTools', 'Bash', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'WebFetch', 'WebSearch', 'Task', 'Agent'];
-      if (body.model) args.push('--model', String(body.model));
+        '--disallowedTools', 'Bash', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'WebFetch', 'WebSearch', 'Task', 'Agent',
+        '--model', String(body.model)];
       if (body.effort) args.push('--effort', String(body.effort));
       const r = await runCli(b, args, { cwd: dir, timeoutMs });
       let result = null;
@@ -266,6 +276,7 @@ const ENGINES = {
       };
     },
     async run(b, dir, body, names, timeoutMs) {
+      throw new Failure(503, 'paid', 'Codex está en pausa en el puente hasta verificar, en la documentación de OpenAI, qué modelo usa y si está incluido en tu plan de ChatGPT sin cobrar aparte.');
       const args = ['exec', '--skip-git-repo-check', '--sandbox', 'read-only', '--json', '-C', dir];
       if (body.model && body.model !== 'default') args.push('-m', String(body.model));
       if (body.effort) args.push('-c', `model_reasoning_effort=${String(body.effort).replace(/[^a-z]/g, '')}`);
@@ -297,6 +308,7 @@ const ENGINES = {
       };
     },
     async run(b, dir, body, names, timeoutMs) {
+      throw new Failure(503, 'paid', 'Antigravity está en pausa en el puente hasta verificar, en la documentación de Google, qué modelos incluye tu plan sin cobrar aparte.');
       const args = ['-p', prompt(names), '--output-format', 'json', '--mode', 'plan', '--sandbox'];
       if (body.model) args.push('--model', String(body.model));
       const r = await runCli(b, args, { cwd: dir, timeoutMs });

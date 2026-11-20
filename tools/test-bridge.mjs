@@ -33,6 +33,7 @@ const scripts = {
 if (args[0] === 'auth') { out({ loggedIn: s.signedIn !== false, authMethod: 'claude.ai' }); process.exit(0); }
 record();
 if (s.sleep) { setTimeout(() => {}, s.sleep); } else {
+  if (s.error) { out({ type: 'result', subtype: 'success', is_error: true, result: s.error }); process.exit(1); }
   if (s.limit) { out({ type: 'result', subtype: 'success', is_error: true, result: 'Claude AI usage limit reached|1894614400' }); process.exit(1); }
   out({ type: 'result', subtype: 'success', is_error: false, result: s.answer ?? 'respuesta de claude' }); process.exit(0);
 }`,
@@ -166,51 +167,52 @@ await test('claude runs read-only in a folder with the material and the instruct
 });
 await test('an answer that talks about limits is an answer, not a usage limit', async () => {
   scenario({ claude: { answer: 'El límite de una función: usage limit reached en la nota del profe' } });
-  const r = await run({ engine: 'claude' });
+  const r = await run({ engine: 'claude', model: 'claude-sonnet-5-5' });
   check(r.status === 200, `status ${r.status}: ${JSON.stringify(r.data)}`);
 });
 await test('a usage limit of Claude is a 429 with its reset time', async () => {
   scenario({ claude: { limit: true } });
-  const r = await run({ engine: 'claude' });
+  const r = await run({ engine: 'claude', model: 'claude-sonnet-5-5' });
   check(r.status === 429 && r.data.error.code === 'limit', `status ${r.status}`);
   check(r.data.error.resetsAt === new Date(1894614400 * 1000).toISOString(), `resetsAt ${r.data.error.resetsAt}`);
   check(leftovers().length === 0, 'folder left behind');
 });
-await test('codex gets its prompt on stdin, pictures with -i, and its answer is read from the events', async () => {
-  scenario({ codex: { answer: 'respuesta' } });
-  const img = Buffer.from([0x89, 0x50, 0x4e, 0x47]).toString('base64');
-  const r = await run({ engine: 'codex', model: 'default', effort: 'medium', files: [{ name: 'hoja 1.png', type: 'image/png', data: img }] });
-  check(r.status === 200 && r.data.text === 'respuesta', JSON.stringify(r.data));
-  const [c] = calls();
-  check(c.input.includes('INSTRUCCIONES.md'), 'prompt not on stdin');
-  check(c.args.includes('-i') && c.args.some((a) => a.endsWith('hoja 1.png')), 'picture not attached');
-  check(!c.args.includes('-m'), 'the default model must not be forced');
-  check(c.args[c.args.length - 1].endsWith('hoja 1.png'), 'nothing may follow the pictures: --image would take it as one');
-  check(c.args.includes('read-only'), 'not read-only');
-});
-await test('a model the ChatGPT account refuses is a 424', async () => {
-  scenario({ codex: { refuse: true } });
-  const r = await run({ engine: 'codex', model: 'gpt-x' });
-  check(r.status === 424 && r.data.error.code === 'model', `status ${r.status}: ${JSON.stringify(r.data)}`);
-});
-await test('antigravity runs in plan mode, without --effort', async () => {
+await test('codex is paused until its cost is verified, and never called', async () => {
   scenario({});
-  const r = await run({ engine: 'antigravity', model: 'gemini-3.8-flash-low', effort: 'high' });
-  check(r.status === 200 && r.data.text === 'respuesta de antigravity', JSON.stringify(r.data));
-  const [c] = calls();
-  check(c.args.includes('plan') && !c.args.includes('--effort'), c.args.join(' '));
+  const r = await run({ engine: 'codex', model: 'default' });
+  check(r.status === 503 && r.data.error.code === 'paid', `status ${r.status}: ${JSON.stringify(r.data)}`);
+  check(!calls().length, 'a paused CLI must never be called');
 });
-await test('the quota of Antigravity is a 429 that resets in 68 hours', async () => {
-  scenario({ agy: { quota: true } });
-  const r = await run({ engine: 'antigravity' });
-  check(r.status === 429, `status ${r.status}`);
-  const hours = (Date.parse(r.data.error.resetsAt) - Date.now()) / 3600000;
-  check(hours > 68 && hours < 68.5, `resets in ${hours} h`);
+await test('codex with a named model is paused too', async () => {
+  scenario({});
+  const r = await run({ engine: 'codex', model: 'gpt-x' });
+  check(r.status === 503 && r.data.error.code === 'paid', `status ${r.status}: ${JSON.stringify(r.data)}`);
+  check(!calls().length, 'a paused CLI must never be called');
+});
+await test('antigravity is paused until its cost is verified, and never called', async () => {
+  scenario({});
+  const r = await run({ engine: 'antigravity', model: 'gemini-3.8-flash-low' });
+  check(r.status === 503 && r.data.error.code === 'paid', `status ${r.status}: ${JSON.stringify(r.data)}`);
+  check(!calls().length, 'a paused CLI must never be called');
+});
+await test('Claude without a model, or with Fable, is refused before any call', async () => {
+  scenario({});
+  for (const model of [undefined, '', 'default', 'fable', 'claude-fable-5-2', 'opus']) {
+    const r = await run({ engine: 'claude', ...(model === undefined ? {} : { model }) });
+    check(r.status === 400 && r.data.error.code === 'paid', `${model}: status ${r.status}`);
+  }
+  check(!calls().length, 'Claude Code must not be called without an included model');
+});
+await test('an answer that asks for usage credits stops, as «paid», without retrying', async () => {
+  scenario({ claude: { error: 'Fable 5.2 requires usage credits. Switch to another model, or manage usage credits at https://claude.ai/settings/usage' } });
+  const r = await run({ engine: 'claude', model: 'claude-opus-5-5' });
+  check(r.status === 402 && r.data.error.code === 'paid', `status ${r.status}: ${JSON.stringify(r.data)}`);
+  check(calls().length === 1, 'it must not retry');
 });
 await test('a hostile file name stays inside the folder', async () => {
   scenario({});
   const names = ['../../escape.txt', '..\\..\\escape2.txt', 'CON', 'a:b?.txt', '', 'INSTRUCCIONES.md'];
-  const r = await run({ engine: 'claude', files: names.map((name) => ({ name, type: 'text/plain', text: 'x' })) });
+  const r = await run({ engine: 'claude', model: 'claude-sonnet-5-5', files: names.map((name) => ({ name, type: 'text/plain', text: 'x' })) });
   check(r.status === 200, `status ${r.status}`);
   const [c] = calls();
   check(c.files.length === names.length + 1, `files ${c.files.join(' | ')}`);
@@ -220,24 +222,24 @@ await test('a hostile file name stays inside the folder', async () => {
 });
 await test('a timeout ends the CLI and answers 504', async () => {
   scenario({ claude: { sleep: 60000 } });
-  const r = await run({ engine: 'claude', timeoutMs: 5000 });
+  const r = await run({ engine: 'claude', model: 'claude-sonnet-5-5', timeoutMs: 5000 });
   check(r.status === 504 && r.data.error.code === 'timeout', `status ${r.status}`);
   check(leftovers().length === 0, 'folder left behind');
 });
 await test('two runs at once take turns', async () => {
   scenario({});
-  const [a, b] = await Promise.all([run({ engine: 'claude' }), run({ engine: 'claude' })]);
+  const [a, b] = await Promise.all([run({ engine: 'claude', model: 'claude-sonnet-5-5' }), run({ engine: 'claude', model: 'claude-sonnet-5-5' })]);
   check(a.status === 200 && b.status === 200, `${a.status} ${b.status}`);
   check(calls().length === 2, 'both ran');
 });
 await test('a body over 64 MB, a malformed body and an unknown CLI are refused', async () => {
-  const big = await call('POST', '/v1/run', { raw: `{"engine":"claude","text":"${'x'.repeat(65 * 1024 * 1024)}"}` }).catch((e) => ({ status: 413, error: e }));
+  const big = await call('POST', '/v1/run', { raw: `{"engine":"claude","model":"claude-sonnet-5-5","text":"${'x'.repeat(65 * 1024 * 1024)}"}` }).catch((e) => ({ status: 413, error: e }));
   check(big.status === 413, `big ${big.status}`);
   check((await call('POST', '/v1/run', { raw: '{nope' })).status === 400, 'malformed');
   check((await run({ engine: 'gemini-cli' })).status === 400, 'unknown CLI');
 });
 await test('a CLI that is not signed in is a 424 before any run', async () => {
-  scenario({ codex: { signedIn: false } });
+  scenario({ claude: { signedIn: false } });
   // The detection is kept for a minute: a new bridge reads it fresh.
   const fresh = spawn(process.execPath, [BRIDGE, '--port', String(PORT + 1)], { env, stdio: ['ignore', 'pipe', 'pipe'] });
   try {
@@ -247,7 +249,7 @@ await test('a CLI that is not signed in is a 424 before any run', async () => {
         let t = ''; res.on('data', (d) => { t += d; }); res.on('end', () => resolve({ status: res.statusCode, data: JSON.parse(t) }));
       });
       req.on('error', reject);
-      req.end(JSON.stringify({ engine: 'codex', text: 'x' }));
+      req.end(JSON.stringify({ engine: 'claude', model: 'claude-sonnet-5-5', text: 'x' }));
     });
     check(r.status === 424 && r.data.error.code === 'not-signed-in', `status ${r.status}`);
     check(calls().length === 0, 'it ran anyway');
