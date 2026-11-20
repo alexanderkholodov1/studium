@@ -262,6 +262,9 @@ async function take(el, files) {
 // to its pile.
 async function sort(table, items, ticket) {
   const mesa = $('[data-es-mesa]', table);
+  // The pace follows the amount: a few things take their time; hundreds are sorted in a few seconds.
+  const k = items.length <= 20 ? 1 : items.length <= 60 ? 0.6 : items.length <= 150 ? 0.35 : 0.2;
+  const wait = (ms) => sleep(calm() ? 0 : ms * k);
   const groups = new Map();
   for (const it of items) { const top = it.path.split('/')[0] || ''; groups.set(top, [...(groups.get(top) ?? []), it]); }
   for (const [name, list] of groups) {
@@ -269,34 +272,34 @@ async function sort(table, items, ticket) {
     const box = node(`<div class="es-box"><div class="es-box-lid"></div><div class="es-box-body"><svg viewBox="0 0 24 24" aria-hidden="true">${FOLDER}</svg><b>${esc(name || 'Sueltos')}</b><small>${list.length} ${list.length === 1 ? 'cosa' : 'cosas'}</small></div></div>`);
     mesa.innerHTML = ''; mesa.append(box);
     if (!calm()) box.animate([{ transform: 'translateY(-30px) scale(.8)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 380, easing: 'cubic-bezier(.2,.9,.3,1.2)' });
-    await sleep(calm() ? 0 : 380);
+    await wait(380);
     box.classList.add('open'); sfx.pick?.();
     const spread = node('<div class="es-spread"></div>'); mesa.append(spread);
     const from = box.getBoundingClientRect();
     const shown = list.slice(0, 40);
     for (const it of shown) {
       const el = node(sheet(it)); spread.append(el);
-      flip(el, from, { scale: 0.3, rotate: (Math.random() - 0.5) * 40, duration: 520 });
+      flip(el, from, { scale: 0.3, rotate: (Math.random() - 0.5) * 40, duration: 520 * Math.max(k, 0.5) });
       // A project shows its files for a moment, then they go back in and it closes.
-      if (it.project && !calm()) {
+      if (it.project && !calm() && k >= 0.35) {
         el.classList.add('spill');
         const peek = node(`<div class="es-peek">${it.files.slice(0, 5).map((f) => `<i>${esc(f.name)}</i>`).join('')}</div>`);
         el.append(peek);
         setTimeout(() => { peek.classList.add('back'); setTimeout(() => { peek.remove(); el.classList.remove('spill'); }, 500); }, 900);
       }
     }
-    await sleep(calm() ? 0 : (list.some((x) => x.project) ? 1500 : 650));
+    await wait(list.some((x) => x.project) && k >= 0.35 ? 1500 : 650);
     for (const [i, it] of list.entries()) {
       if (ticket !== run) return;
       const el = spread.querySelector(`[data-item="${it.id}"]`) ?? node(sheet(it));
       const first = el.isConnected ? el.getBoundingClientRect() : from;
       place(table, it, el);
-      flip(el, first, { rotate: (Math.random() - 0.5) * 18, duration: 560 });
-      if (i % 3 === 0) sfx.tick?.();
-      if (!calm()) await sleep(Math.max(25, 90 - list.length));
+      flip(el, first, { rotate: (Math.random() - 0.5) * 18, duration: 560 * Math.max(k, 0.5) });
+      if (i % Math.ceil(3 / k) === 0) sfx.tick?.();
+      await wait(Math.max(25, 90 - list.length));
     }
     box.classList.remove('open');
-    await sleep(calm() ? 0 : 260);
+    await wait(260);
     if (!calm()) await box.animate([{ opacity: 1 }, { opacity: 0, transform: 'scale(.85)' }], { duration: 220 }).finished.catch(() => {});
   }
   mesa.innerHTML = '';
@@ -382,9 +385,10 @@ function next(table) {
     </div>
     <div class="es-what glass">
       <h3>¿Qué hacemos con esto?</h3>
+      <label class="toggle"><input type="checkbox" checked disabled><span class="knob"></span>Agregar a tu escritorio de trabajo</label>
       <label class="toggle"><input type="checkbox" data-es-graph checked><span class="knob"></span>Sumar al grafo de conocimiento</label>
       <label class="toggle"><input type="checkbox" data-es-guide><span class="knob"></span>Generar una guía de estudio</label>
-      <p class="fine">Al grafo va solo el resumen anónimo que hace tu IA, después de que lo revises, con el orden de tus carpetas. Tus archivos se quedan en este dispositivo, en el escritorio de la materia.</p>
+      <p class="fine">Al grafo va solo el resumen anónimo que hace tu IA, después de que lo revises, con el orden de tus carpetas. Tu escritorio guarda tus carpetas de cada materia en este dispositivo.</p>
       <div class="actions"><button class="button primary" data-es-go>Listo</button><button class="button ghost" data-es-cancel>Descartar</button></div>
     </div>`;
   if (!table.dataset.wired) {
