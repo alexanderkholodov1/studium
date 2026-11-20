@@ -1,0 +1,309 @@
+{
+ "checkedAt": "2026-11-20T13:24:54.007Z",
+ "sources": {
+  "pricing": "https://aistudio.google.com/docs/pricing",
+  "models": "https://aistudio.google.com/docs/models"
+ },
+ "gemini": {
+  "models": {
+   "gemini-4-carbon": {
+    "state": "paid",
+    "section": "Gemini 4 Carbon",
+    "quote": "Input price — Free Tier: Not available",
+    "note": "Gemini 4 Carbon is not available on the Free tier. Every token the model processes is counted and billed, including thinking tokens and internal tool system instructions and function declarations when using grounding.",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-4-carbon"
+   },
+   "gemini-4-argon": {
+    "state": "paid",
+    "section": "Gemini 4 Argon",
+    "quote": "Input price — Free Tier: Not available",
+    "note": "Gemini 4 Argon is not available on the Free tier. Every token the model processes is counted and billed, including thinking tokens and internal tool system instructions and function declarations when using grounding.",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-4-argon"
+   },
+   "gemini-4-neon": {
+    "state": "paid",
+    "section": "Gemini 4 Neon",
+    "quote": "Input price — Free Tier: Not available",
+    "note": "Gemini 4 Neon is not available on the Free tier. Every token the model processes is counted and billed, including thinking tokens and internal tool system instructions and function declarations when using grounding.",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-4-neon"
+   },
+   "gemini-4-hydrogen": {
+    "state": "free",
+    "section": "Gemini 4 Hydrogen",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "Every token the model processes is counted and billed, including thinking tokens and internal tool system instructions and function declarations when using grounding.",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-4-hydrogen"
+   },
+   "gemini-3.8-flash": {
+    "state": "free",
+    "section": "Gemini 3.8 Flash",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-3.8-flash"
+   },
+   "gemini-3.6-flash": {
+    "state": "free",
+    "section": "Gemini 3.6 Flash",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-3.6-flash"
+   },
+   "gemini-3.5-transcribe-live": {
+    "state": "free",
+    "section": "Gemini 3.5 Transcribe Live",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-3.5-transcribe-live"
+   },
+   "gemini-3.5-transcribe": {
+    "state": "free",
+    "section": "Gemini 3.5 Transcribe",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-3.5-transcribe"
+   },
+   "gemini-3.5-flash-lite": {
+    "state": "free",
+    "section": "Gemini 3.5 Flash-Lite",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-3.5-flash-lite"
+   },
+   "genie-4": {
+    "state": "paid",
+    "section": "Genie 4",
+    "quote": "Input price — Free Tier: Not available",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#genie-4"
+   },
+   "gemini-omni-1.2-flash": {
+    "state": "paid",
+    "section": "Gemini Omni 1.2 Flash",
+    "quote": "Input price — Free Tier: Not available",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-omni-1.2-flash"
+   },
+   "gemini-omni-1.1-flash": {
+    "state": "paid",
+    "section": "Gemini Omni 1.1 Flash",
+    "quote": "Input price — Free Tier: Not available",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-omni-1.1-flash"
+   },
+   "gemini-3.8-live": {
+    "state": "free",
+    "section": "Gemini 3.8 Live, Gemini 3.8 Live Extended Thinking, and Gemini 3.1 Flash Live Preview",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-3.8-live"
+   },
+   "gemini-3.8-live-extended-thinking": {
+    "state": "free",
+    "section": "Gemini 3.8 Live, Gemini 3.8 Live Extended Thinking, and Gemini 3.1 Flash Live Preview",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-3.8-live"
+   },
+   "gemini-3.1-flash-live-preview": {
+    "state": "free",
+    "section": "Gemini 3.8 Live, Gemini 3.8 Live Extended Thinking, and Gemini 3.1 Flash Live Preview",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-3.8-live"
+   },
+   "gemini-3.5-live-translate-preview": {
+    "state": "free",
+    "section": "Gemini 3.5 Live Translate",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-3.5-live-translate-preview"
+   },
+   "gemini-3.1-flash-lite": {
+    "state": "free",
+    "section": "Gemini 3.1 Flash-Lite",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-3.1-flash-lite"
+   },
+   "gemini-3.1-pro-preview": {
+    "state": "paid",
+    "section": "Gemini 3.1 Pro Preview",
+    "quote": "Input price — Free Tier: Not available",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-3.1-pro-preview"
+   },
+   "gemini-3.1-pro-preview-customtools": {
+    "state": "paid",
+    "section": "Gemini 3.1 Pro Preview",
+    "quote": "Input price — Free Tier: Not available",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-3.1-pro-preview"
+   },
+   "gemini-nano-banana-2.1": {
+    "state": "paid",
+    "section": "Gemini Nano Banana 2.1 🍌",
+    "quote": "Input price — Free Tier: Not available",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-nano-banana-2.1"
+   },
+   "gemini-3.1-flash-image": {
+    "state": "paid",
+    "section": "Gemini 3.1 Flash Image (Nano Banana 2) 🍌",
+    "quote": "Input price — Free Tier: Not available",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-3.1-flash-image"
+   },
+   "gemini-3.1-flash-lite-image": {
+    "state": "paid",
+    "section": "Gemini 3.1 Flash Lite Image (Nano Banana 2 Lite) 🍌",
+    "quote": "Input price — Free Tier: Not available",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-3.1-flash-lite-image"
+   },
+   "gemini-3.8-flash-tts": {
+    "state": "free",
+    "section": "Gemini 3.8 Flash TTS",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-3.8-flash-tts"
+   },
+   "gemini-3.8-flash-lite-tts": {
+    "state": "free",
+    "section": "Gemini 3.8 Flash-Lite TTS",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-3.8-flash-lite-tts"
+   },
+   "gemini-3.1-flash-tts-preview": {
+    "state": "free",
+    "section": "Gemini 3.1 Flash TTS Preview",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-3.1-flash-tts-preview"
+   },
+   "gemini-3-flash-preview": {
+    "state": "free",
+    "section": "Gemini 3 Flash Preview",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-3-flash-preview"
+   },
+   "gemini-3-pro-image": {
+    "state": "paid",
+    "section": "Gemini 3 Pro Image (Nano Banana Pro) 🍌",
+    "quote": "Input price — Free Tier: Not available",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-3-pro-image"
+   },
+   "gemini-2.5-pro": {
+    "state": "deprecated",
+    "section": "Gemini 2.5 Pro",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "Gemini 2.5 Pro (gemini-2.5-pro) is deprecated and is no longer available to select in Google AI Studio. Effective December 1, 2026, all API requests to gemini-2.5-pro will automatically route to Gemini 3.8 Flash (gemini-3.8-flash) and be billed at Gemini 3.8 Flash rates.",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-2.5-pro"
+   },
+   "gemini-2.5-flash": {
+    "state": "deprecated",
+    "section": "Gemini 2.5 Flash",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "Gemini 2.5 Flash (gemini-2.5-flash) is deprecated and is no longer available to select in Google AI Studio. Effective December 1, 2026, all API requests to gemini-2.5-flash will automatically route to Gemini 3.5 Flash-Lite (gemini-3.5-flash-lite) and be billed at Gemini 3.5 Flash-Lite rates.",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-2.5-flash"
+   },
+   "gemini-2.5-flash-lite": {
+    "state": "free",
+    "section": "Gemini 2.5 Flash-Lite",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-2.5-flash-lite"
+   },
+   "gemini-2.5-flash-native-audio-preview-12-2025": {
+    "state": "free",
+    "section": "Gemini 2.5 Flash Native Audio (Live API)",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-2.5-flash-native-audio"
+   },
+   "gemini-2.5-flash-image": {
+    "state": "deprecated",
+    "section": "Gemini 2.5 Flash Image (Nano Banana) 🍌",
+    "quote": "Input price — Free Tier: Not available",
+    "note": "Warning: Gemini 2.5 Flash Image (gemini-2.5-flash-image) is deprecated and will be shut down on March 15, 2027; migrate to Gemini 3.1 Flash Lite Image to avoid service disruption.",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-2.5-flash-image"
+   },
+   "gemini-2.5-flash-preview-tts": {
+    "state": "free",
+    "section": "Gemini 2.5 Flash Preview TTS",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-2.5-flash-preview-tts"
+   },
+   "gemini-2.5-pro-preview-tts": {
+    "state": "paid",
+    "section": "Gemini 2.5 Pro Preview TTS",
+    "quote": "Input price — Free Tier: Not available",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-2.5-pro-preview-tts"
+   },
+   "lyria-3.5": {
+    "state": "unknown",
+    "section": "Lyria 3.5",
+    "quote": "",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#lyria-3-5"
+   },
+   "lyria-3-clip-preview": {
+    "state": "unknown",
+    "section": "Lyria 3",
+    "quote": "",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#lyria-3"
+   },
+   "lyria-3-pro-preview": {
+    "state": "unknown",
+    "section": "Lyria 3",
+    "quote": "",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#lyria-3"
+   },
+   "gemini-decision-1": {
+    "state": "free",
+    "section": "Gemini Decision 1",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-decision"
+   },
+   "gemini-embedding-2": {
+    "state": "unknown",
+    "section": "Gemini Embedding 2",
+    "quote": "",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-embedding-2"
+   },
+   "gemini-embedding-001": {
+    "state": "free",
+    "section": "Gemini Embedding",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-embedding"
+   },
+   "gemini-robotics-er-2-preview": {
+    "state": "free",
+    "section": "Gemini Robotics ER 2 Preview",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-robotics-er-2"
+   },
+   "gemini-robotics-er-2-streaming-preview": {
+    "state": "free",
+    "section": "Gemini Robotics ER 2 Streaming Preview",
+    "quote": "Input price — Free Tier: Free of charge",
+    "note": "",
+    "url": "https://aistudio.google.com/docs/pricing#gemini-robotics-er-2-streaming"
+   }
+  },
+  "aliases": {
+   "quote": "Points to the latest release for a specific model variation. This can be a stable, preview or experimental release. This alias will get hot-swapped with every new release of a specific model variation. A 2-week notice will be provided through email before the version behind latest is changed. For example: gemini-flash-latest.",
+   "url": "https://aistudio.google.com/docs/models#latest"
+  }
+ }
+}

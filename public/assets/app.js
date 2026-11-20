@@ -314,7 +314,7 @@ async function refresh() {
   if (current === 'profes') renderProfes();
   refreshMap();
 }
-await ai.initKeys();
+await Promise.all([ai.initKeys(), ai.loadVerified()]);
 const context = { state, get user() { return { uid: auth.currentUser?.uid, email: auth.currentUser?.email ?? '' }; }, refresh, toast, explain, presetGuide };
 mountMap(context);
 mountSpace(context);

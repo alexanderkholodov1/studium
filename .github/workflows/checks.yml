@@ -28,6 +28,10 @@ jobs:
         run: node tools/test-fingerprint.mjs
       - name: Check that what the database holds is cleaned on reading
         run: node tools/test-clean.mjs
+      - name: Check the reading of Google's pricing page
+        run: node tools/test-models.mjs
+      - name: Warn when Google's Gemini pricing changed since data/models.json
+        run: node tools/verify-models.mjs --check || echo "::warning::Could not read Google's pricing page"
       - name: Pack a trial release
         run: bash tools/pack.sh 0.0.0-check "$GITHUB_SHA" /tmp/trial
 

@@ -178,29 +178,54 @@ export function costOf(way, id) {
   if (way.startsWith('bridge:')) return 'sub';
   // Gemini: «Gratis» only for the models Google documents with a free tier; any other may charge a key with billing,
   // and is never assumed free (2026-11-20: Studium had labelled every non-«pro» model free, unverified).
-  if (way === 'gemini') return load().noFree?.[id] ? 'nofree' : GEMINI_FREE.test(id) ? 'free' : 'unverified';
+  if (way === 'gemini') return load().noFree?.[id] ? 'nofree' : geminiState(id);
   if (way === 'openrouter') return /:free$/.test(id) ? 'free' : 'paid';
   if (way === 'puter') return 'puter';
   return 'paid';
 }
-export const COST = { free: 'Gratis', sub: 'Tu suscripción', puter: 'Tu cuenta de Puter', nofree: 'Sin uso gratis', paid: 'De pago', unverified: 'Sin verificar: podría cobrarte' };
-const COST_RANK = { free: 0, sub: 0, puter: 1, nofree: 3, paid: 2, unverified: 2 };
-// The Gemini models whose free tier Google's pricing page states in its own words (read 2026-11-20 at
-// https://aistudio.google.com/docs/pricing, «Free of charge» in the Free Tier column). A model not here is «Sin
-// verificar» and may charge a key with billing; the page states gemini-4-carbon, -argon and -neon have no free tier.
-// Update this list only from that page.
-const GEMINI_FREE_IDS = new Set(['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-4-hydrogen', 'gemini-3.5-flash-lite']);
+export const COST = {
+  free: 'Gratis', sub: 'Tu suscripción', puter: 'Tu cuenta de Puter', nofree: 'Sin uso gratis', paid: 'De pago',
+  retiring: 'Se retira: no se usa', alias: 'Alias que puede cambiar: no se usa', unlisted: 'No está en la página de precios: no se usa',
+  unverified: 'Sin verificar: podría cobrarte',
+};
+const COST_RANK = { free: 0, sub: 0, puter: 1, paid: 2, unverified: 2, nofree: 3, retiring: 3, alias: 3, unlisted: 3 };
+// Every Gemini model, verified at Google's own pricing page without any AI (tools/verify-models.mjs writes
+// data/models.json from https://aistudio.google.com/docs/pricing.md; it ships with the page and the checks warn when
+// Google changes it). Each state has its source: the exact line, the note, the link to the model's section.
 const slug = (s) => String(s ?? '').toLowerCase().replace(/^models\//, '').trim().replace(/\s+/g, '-');
-const GEMINI_FREE = { test: (id) => {
-  const c = load().catalog?.providers?.gemini;
+let verified = null;
+export const verifiedModels = () => verified;
+export async function loadVerified() {
+  try { verified = await (await fetch(new URL('data/models.json', document.baseURI), { cache: 'no-cache' })).json(); } catch { verified = null; }
+  return verified;
+}
+function geminiState(id) {
   const k = slug(id);
-  if (c?.models?.length) { const m = c.models.find((x) => slug(x.id) === k); return m ? m.free === true : false; }
-  return GEMINI_FREE_IDS.has(k);
-} };
-// The source of «Gratis» for a Gemini model: the last full check's quote, or the list read on 2026-11-20.
-export const freeSource = (id) => load().catalog?.providers?.gemini?.models?.find((x) => slug(x.id) === slug(id)) ?? null;
+  if (!verified?.gemini?.models) return 'unverified';
+  const m = verified.gemini.models[k];
+  if (m) return m.state === 'free' ? 'free' : m.state === 'deprecated' ? 'retiring' : m.state === 'paid' ? 'nofree' : 'unverified';
+  // An alias points to whatever Google decides, and can change at any moment: never assumed free.
+  if (/-latest$/.test(k)) return 'alias';
+  return 'unlisted';
+}
+// Where a Gemini model's state comes from, to show next to it: { text, url, date }.
+export function costSource(way, id) {
+  if (way !== 'gemini' || !verified?.gemini) return null;
+  const k = slug(id);
+  const m = verified.gemini.models[k];
+  const date = verified.checkedAt;
+  if (m) return { text: [m.quote, m.note].filter(Boolean).join(' · '), url: m.url, date };
+  if (/-latest$/.test(k) && verified.gemini.aliases) return { text: verified.gemini.aliases.quote, url: verified.gemini.aliases.url, date };
+  return { text: `«${k}» no aparece en la página de precios de Google (revisada el ${new Date(date).toLocaleDateString('es')}).`, url: verified.sources.pricing, date };
+}
+// A small «fuente» link with the exact words in its tooltip.
+export function sourceLink(way, id) {
+  const src = costSource(way, id);
+  const e = (x) => String(x ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+  return src ? ` <a class="ai-src" href="${e(src.url)}" target="_blank" rel="noopener noreferrer" title="${e(src.text)}">fuente</a>` : '';
+}
 // A model that may cost is used only after the person said yes to it, for that model.
-export const mayCost = (way, id) => ['paid', 'unverified', 'nofree'].includes(costOf(way, id));
+export const mayCost = (way, id) => ['paid', 'unverified', 'nofree', 'retiring', 'alias', 'unlisted'].includes(costOf(way, id));
 export const costAccepted = (id) => !!load().acceptCost?.[id];
 export const acceptCost = (id, yes) => patch((s) => { s.acceptCost = { ...(s.acceptCost ?? {}) }; if (yes) s.acceptCost[id] = true; else delete s.acceptCost[id]; });
 const FIT = { strong: { strong: 0, mid: 1, light: 2 }, mid: { mid: 0, strong: 1, light: 2 }, light: { light: 0, mid: 1, strong: 2 } };
@@ -313,7 +338,7 @@ export function pickerHTML(task, { open = false } = {}) {
   const row = (m, i) => `<label class="ai-opt">
       <input type="radio" name="ai-model-${esc(task)}" value="${esc(m.id)}" ${m.id === c.model ? 'checked' : ''}>
       <span class="id">${esc(m.id)}</span>
-      ${m.id === rec ? '<span class="tag rec">Recomendado</span>' : ''}<span class="tag c-${esc(m.cost)}">${esc(COST[m.cost])}</span>
+      ${m.id === rec ? '<span class="tag rec">Recomendado</span>' : ''}<span class="tag c-${esc(m.cost)}">${esc(COST[m.cost])}</span>${sourceLink(c.provider, m.id)}
       <small>${esc(noteOf(c.provider, m, i, task))}${(() => { const h = healthOf(c.provider, m.id); return h ? ` · ${h.ok ? `respondió en ${(h.ms / 1000).toFixed(1)} s` : 'no respondió'} en la revisión del ${new Date(h.at).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''; })()}</small>
     </label>`;
   const cost = costOf(c.provider, c.model);

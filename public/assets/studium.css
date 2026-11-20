@@ -2172,3 +2172,5 @@ html.has-announce .page { padding-top: 170px; }
 .trust details[open] summary { margin-bottom: 8px; }
 .trust details p { margin: 0; font-size: 14.5px; line-height: 1.55; animation: rise .35s ease both; }
 @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.ai-src { font-size: 11px; margin-left: 4px; color: var(--blue); text-decoration: underline; text-underline-offset: 2px; }
+.tag.c-retiring, .tag.c-alias, .tag.c-unlisted { background: rgba(127,127,127,.18); color: var(--ink-2); }
