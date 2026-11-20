@@ -13,7 +13,7 @@ import { rise } from './fx.js';
 import { auth } from './data.js';
 import { communityLabel, communityOf, flag, settings } from './settings.js';
 import { seen, markSeen, hintsOn, setHints } from './hints.js';
-import { luckyHit, found, radioOn, openRadio } from './eggs.js';
+import { luckyHit, found, radioOn, openRadio, radioDocked, placeRadio, rescueRadio, critCount, eggCount, cakeSVG, poke } from './eggs.js';
 import { renderHomeSchedule } from './schedule.js';
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -85,10 +85,11 @@ export function remember(id) {
 /* ---------- the home page: tiles the person chooses ---------- */
 // Every tile is optional. With nothing chosen, the home page follows how the person studies; «Personalizar» lets them
 // add, remove, move and resize tiles. A tile is stored as its id, plus ":s" (compact) or ":l" (wide) when resized.
-const TILE_SPAN = { todos: 6, countdown: 7, deadlines: 6, week: 12, goals: 5, timer: 4, notes: 6, links: 6, recent: 8, news: 12, explore: 5 };
+const TILE_SPAN = { shelf: 12, todos: 6, countdown: 7, deadlines: 6, week: 12, goals: 5, timer: 4, notes: 6, links: 6, recent: 8, news: 12, explore: 5 };
 export const TILE_NAMES = {
   todos: 'Pendientes', countdown: 'Tu próximo examen', deadlines: 'Fechas y entregas', week: 'Tu semana', goals: 'Metas', timer: 'Enfoque',
   notes: 'Bloc de notas', links: 'Accesos rápidos', recent: 'Sigue donde quedaste', news: 'Lo nuevo en tu comunidad', explore: 'Un concepto al azar',
+  shelf: 'Tus hallazgos',
 };
 const BY_MODE = {
   examenes: ['todos', 'timer', 'recent', 'news', 'countdown', 'goals'],
@@ -97,7 +98,8 @@ const BY_MODE = {
   metas: ['todos', 'goals', 'recent', 'timer', 'news', 'countdown'],
 };
 let editing = false;
-const chosen = () => { const p = prefs.get(); return p.tiles.length ? p.tiles : BY_MODE[p.mode]; };
+// «Tus hallazgos» joins the home page by itself once a secret is found (and can be removed like any tile).
+const chosen = () => { const p = prefs.get(); return p.tiles.length ? p.tiles : [...BY_MODE[p.mode], ...(found().size ? ['shelf'] : [])]; };
 const tileId = (t) => t.split(':')[0];
 const spanOf = (t) => { const [id, size] = t.split(':'); return size === 's' ? 4 : size === 'l' ? 12 : TILE_SPAN[id] ?? 6; };
 const rid = () => Math.random().toString(36).slice(2, 10);
@@ -255,7 +257,22 @@ function exploreTile(span) {
     ${c ? `<h3 style="font-size:30px;letter-spacing:-.03em">${esc(c.name)}</h3><p class="muted">${esc(c.summaries[0].text)}</p><div class="actions"><a class="button primary" href="#/grafo/${encodeURIComponent(c.id)}">Verlo en el grafo</a><button class="button ghost" data-reroll>Otro</button></div>`
     : '<p class="muted">Cuando el grafo tenga conceptos, aquí aparece uno distinto cada vez.</p>'}`);
 }
-const RENDER = { todos: todosTile, countdown: countdownTile, deadlines: deadlinesTile, week: weekTile, goals: goalsTile, timer: timerTile, notes: notesTile, links: linksTile, recent: recentTile, news: newsTile, explore: exploreTile };
+// What the easter eggs left on the home page: each find, to press, and a «?» for each secret still hidden.
+function shelfTile(span) {
+  const f = found();
+  const crits = critCount();
+  const items = [
+    f.has('cake') ? `<button type="button" class="trinket cake" data-trinket="cake" aria-label="La torta: sopla la vela" title="Sopla la vela">${cakeSVG(true)}<small>La torta</small></button>` : '',
+    f.has('medic') ? `<button type="button" class="trinket ecg" data-trinket="medic" aria-label="El monitor: tómate el pulso" title="Tómate el pulso"><svg viewBox="0 0 160 70" aria-hidden="true"><rect x="2" y="2" width="156" height="66" rx="10"/><path class="trace" d="M6 40h40l8-4 6 4h10l6-26 9 46 7-30 5 10h20l8-6 8 6h21"/></svg><small>♥ 72 · +25</small></button>` : '',
+    f.has('portal') ? '<button type="button" class="trinket portals" data-trinket="portal" aria-label="Los portales: suelta una canica" title="Suelta una canica"><span class="ring blue"></span><span class="ring red"></span><span class="marble"></span><small>Portales</small></button>' : '',
+    f.has('crit') ? `<button type="button" class="trinket trophy" data-trinket="crit" aria-label="Golpes críticos: ${crits}" title="Golpes críticos"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 8h28v14c0 10-6 17-14 17S18 32 18 22Z" fill="#ffd23f"/><path d="M18 12H8c0 10 5 15 11 15M46 12h10c0 10-5 15-11 15" fill="none" stroke="#ffd23f" stroke-width="4"/><rect x="28" y="38" width="8" height="10" fill="#e0b21f"/><rect x="18" y="48" width="28" height="8" rx="3" fill="#7a4a2b"/></svg><small>× ${crits} crítico${crits === 1 ? '' : 's'}</small></button>` : '',
+    f.has('radio') ? (radioDocked() ? '<div class="radio-stand" data-radio-stand></div>' : `<div class="trinket radio-slot">${radioOn() ? '<small>La radio va contigo. Con «Dejarla en Inicio» se queda aquí.</small>' : '<button type="button" class="button ghost small" data-radio-add>Encender la radio</button>'}</div>`) : '',
+  ].filter(Boolean);
+  const hidden = eggCount() - f.size;
+  return tile('shelf', span, `<h2>Tus hallazgos <small>${f.size} de ${eggCount()} secretos</small></h2>
+    <div class="shelf">${items.join('')}${Array.from({ length: hidden }, () => '<span class="trinket locked" title="Un secreto por encontrar">?</span>').join('')}</div>`);
+}
+const RENDER = { shelf: shelfTile, todos: todosTile, countdown: countdownTile, deadlines: deadlinesTile, week: weekTile, goals: goalsTile, timer: timerTile, notes: notesTile, links: linksTile, recent: recentTile, news: newsTile, explore: exploreTile };
 
 function onboardTile() {
   const p = prefs.get();
@@ -275,13 +292,18 @@ function suggestTile() {
 }
 function trayTile() {
   const have = new Set(chosen().map(tileId));
-  const missing = Object.keys(TILE_NAMES).filter((id) => !have.has(id));
+  const missing = Object.keys(TILE_NAMES).filter((id) => !have.has(id) && (id !== 'shelf' || found().size));
   return `<section class="tile glass tray" style="--span:12"><h2>Personaliza tu inicio <small>Mueve, cambia el tamaño o quita cada cosa con sus botones</small></h2>
     ${missing.length ? `<div class="chips">${missing.map((id) => `<button class="chip new" data-tile-add="${id}">+ ${esc(TILE_NAMES[id])}</button>`).join('')}${eggTray()}</div>` : `<p class="muted">Ya tienes todo a la vista.</p>${eggTray() ? `<div class="chips">${eggTray()}</div>` : ''}`}
     <div class="actions"><button class="button ghost" data-tile-reset>Como venía</button><button class="button primary" data-home-edit>Listo</button></div></section>`;
 }
 // Things found in the easter eggs that can live on the screen.
 const eggTray = () => (found().has('radio') && !radioOn() ? '<button class="chip new" data-radio-add>+ Radio</button>' : '');
+// A secret found: if the person chose their own tiles, «Tus hallazgos» joins them once, so the find is on Inicio.
+export function unlocked(fresh) {
+  const p = prefs.get();
+  if (fresh && p.tiles.length && !p.tiles.some((x) => tileId(x) === 'shelf') && p.tiles.length < 16) prefs.set({ tiles: [...p.tiles, 'shelf'] });
+}
 
 export function renderHome() {
   const p = prefs.get();
@@ -291,7 +313,9 @@ export function renderHome() {
   const list = chosen();
   const tiles = list.map((t, i) => RENDER[tileId(t)]?.(spanOf(t)).replace(/^<section /, `<section data-i="${i}" `).replace(/(data-tile="[a-z]+"[^>]*>)/, `$1${tools(t, i, list.length)}`) ?? '').join('');
   const top = prefs.fresh && !sessionStorage.getItem('studium-onboarded') ? onboardTile() : !editing && !p.tiles.length && !seen('home-suggest') ? suggestTile() : '';
+  rescueRadio(); // the radio left on Inicio is taken out before Inicio is redrawn, so its music goes on
   $('#dash').innerHTML = top + tiles + (editing ? trayTile() : '');
+  placeRadio();
   renderHomeSchedule($('#home-schedule'));
   $('#dash').classList.toggle('editing', editing);
   $('#home-edit').textContent = editing ? 'Listo' : 'Personalizar';
@@ -781,6 +805,7 @@ export function mountSpace(context) {
     if (t.dataset.tileHide) { const list = [...chosen()]; list.splice(Number(t.dataset.tileHide), 1); setTiles(list); }
     if (t.dataset.tileReset !== undefined) setTiles([]);
     if (t.dataset.radioAdd !== undefined) { openRadio(); renderHome(); }
+    if (t.dataset.trinket) poke(t.dataset.trinket, t);
     if (t.dataset.deadlineRemove) { prefs.set({ deadlines: prefs.get().deadlines.filter((d) => d.id !== t.dataset.deadlineRemove) }); renderHome(); }
     if (t.dataset.deadlineClear !== undefined) { prefs.set({ deadlines: prefs.get().deadlines.filter((d) => daysTo(d.date) >= 0) }); renderHome(); }
     if (t.dataset.linkRemove) { prefs.set({ links: prefs.get().links.filter((l) => l.id !== t.dataset.linkRemove) }); renderHome(); }

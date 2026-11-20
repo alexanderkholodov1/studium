@@ -266,6 +266,16 @@ export const sfx = {
     body(note(12, 440), t, { gain: 0.05, decay: 0.7, bright: 0.8 });
     body(note(15, 440), t + 0.06, { gain: 0.05, decay: 1.1, bright: 0.8 });
   },
+  // A heart monitor's beep, and a heartbeat: two soft low thumps.
+  beep(freq = 980) { if (!audio()) return; sine(freq, now(), { gain: 0.025, attack: 0.004, decay: 0.12, room: 0.2 }); },
+  heartbeat() {
+    if (!audio()) return;
+    const t = now();
+    sine(62, t, { gain: 0.1, attack: 0.012, decay: 0.2, room: 0.2 });
+    sine(54, t + 0.22, { gain: 0.08, attack: 0.012, decay: 0.26, room: 0.2 });
+  },
+  // A candle blown out: a short breath of air.
+  blow() { if (!audio()) return; hiss(now(), { gain: 0.05, attack: 0.03, decay: 0.35, freq: 1400, q: 0.7, room: 0.3 }); },
   secret() {
     if (!audio()) return;
     const t = now();

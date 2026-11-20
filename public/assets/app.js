@@ -18,7 +18,7 @@ import { mountContribute, renderPane, presetGuide, startQueue } from './contribu
 import { prefs } from './prefs.js';
 import { sfx } from './sfx.js';
 import { play, springLetters, celebrate } from './play.js';
-import { mountSpace, renderHome, renderSettings, renderAmbiences, remember, soonLabel, daysTo, pairBridge } from './space.js';
+import { mountSpace, unlocked, renderHome, renderSettings, renderAmbiences, remember, soonLabel, daysTo, pairBridge } from './space.js';
 import { mountCommunity, loadCommunity, kudosRow, renderKudos, renderProfes } from './community.js';
 import { mountDemos } from './demos.js';
 import { mountScenes } from './scenes.js';
@@ -318,7 +318,7 @@ await Promise.all([ai.initKeys(), ai.loadVerified()]);
 const context = { state, get user() { return { uid: auth.currentUser?.uid, email: auth.currentUser?.email ?? '' }; }, refresh, toast, explain, presetGuide };
 mountMap(context);
 mountSpace(context);
-mountEggs({ toast });
+mountEggs({ toast, onFound: (id, fresh) => { unlocked(fresh); if (current === 'home') renderHome(); } });
 mountAdmin(context);
 mountFeedback();
 mountComunidad();
