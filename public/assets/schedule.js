@@ -153,6 +153,12 @@ export async function renderSchedule() {
   nextMode = null; stale = false;
   paint();
 }
+// The classes of «Mi horario», for a to-do to be linked to one: id, name, and its first day and hour.
+export async function myClasses() {
+  const uid = auth.currentUser?.uid ?? null;
+  if (loadedFor !== uid) { await load(); loadedFor = uid; }
+  return state.mine.classes.map((c) => ({ id: c.id, name: c.name, when: c.slots[0] ? `${DAYS[c.slots[0].d]?.slice(0, 3) ?? ''} ${hhmm(c.slots[0].s)}` : '' }));
+}
 // «Mi horario» in the home page: the week, or one card to put it. Editing happens in its page.
 let homeEl = null;
 export async function renderHomeSchedule(el) {

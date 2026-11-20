@@ -1,5 +1,6 @@
 // The person's own space: the home page (next exam, goals, focus timer, where they left off, what is new), the
 // ambience picker, and the settings. Everything the person chooses lives in prefs.js.
+import { myClasses } from './schedule.js';
 import * as vault from './vault.js';
 import { prefs, MODES, AMBIENCES, THEMES, AVATARS } from './prefs.js';
 import * as ai from './ai.js';
@@ -83,16 +84,16 @@ export function remember(id) {
 /* ---------- the home page: tiles the person chooses ---------- */
 // Every tile is optional. With nothing chosen, the home page follows how the person studies; «Personalizar» lets them
 // add, remove, move and resize tiles. A tile is stored as its id, plus ":s" (compact) or ":l" (wide) when resized.
-const TILE_SPAN = { countdown: 7, deadlines: 6, week: 12, goals: 5, timer: 4, notes: 6, links: 6, recent: 8, news: 12, explore: 5 };
+const TILE_SPAN = { todos: 6, countdown: 7, deadlines: 6, week: 12, goals: 5, timer: 4, notes: 6, links: 6, recent: 8, news: 12, explore: 5 };
 export const TILE_NAMES = {
-  countdown: 'Tu próximo examen', deadlines: 'Fechas y entregas', week: 'Tu semana', goals: 'Metas', timer: 'Enfoque',
+  todos: 'Pendientes', countdown: 'Tu próximo examen', deadlines: 'Fechas y entregas', week: 'Tu semana', goals: 'Metas', timer: 'Enfoque',
   notes: 'Bloc de notas', links: 'Accesos rápidos', recent: 'Sigue donde quedaste', news: 'Lo nuevo en tu comunidad', explore: 'Un concepto al azar',
 };
 const BY_MODE = {
-  examenes: ['countdown', 'goals', 'timer', 'recent', 'news'],
-  gusto: ['explore', 'recent', 'news', 'goals', 'timer'],
-  intensivo: ['timer', 'countdown', 'goals', 'recent', 'news'],
-  metas: ['goals', 'countdown', 'recent', 'timer', 'news'],
+  examenes: ['todos', 'timer', 'recent', 'news', 'countdown', 'goals'],
+  gusto: ['todos', 'explore', 'recent', 'news', 'timer', 'goals'],
+  intensivo: ['todos', 'timer', 'recent', 'news', 'countdown', 'goals'],
+  metas: ['todos', 'goals', 'recent', 'timer', 'news', 'countdown'],
 };
 let editing = false;
 const chosen = () => { const p = prefs.get(); return p.tiles.length ? p.tiles : BY_MODE[p.mode]; };
@@ -176,6 +177,32 @@ function linksTile(span) {
     ${links.length < 12 ? `<form class="ql-add" id="link-add"><input name="label" maxlength="40" placeholder="Nombre" aria-label="Nombre" required autocomplete="off"><input name="url" type="url" maxlength="300" placeholder="https://…" aria-label="Dirección" required><button class="button primary">Agregar</button></form>` : ''}`);
 }
 
+// «Pendientes»: a post-it of to-dos. Each can have a time (overdue ones stand out) and a class of «Mi horario».
+function dueText(due) {
+  if (!due) return '';
+  const d = new Date(due.length > 10 ? due : `${due}T23:59`);
+  const today = new Date(); const tomorrow = new Date(Date.now() + 864e5);
+  const day = d.toDateString() === today.toDateString() ? 'hoy' : d.toDateString() === tomorrow.toDateString() ? 'mañana' : d.toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' });
+  return due.length > 10 ? `${day} ${d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}` : day;
+}
+const overdue = (t) => !t.done && t.due && new Date(t.due.length > 10 ? t.due : `${t.due}T23:59`) < new Date();
+function todosTile(span) {
+  const { todos } = prefs.get();
+  // Not done first, the ones with a time by their time, then the rest as written; done ones last.
+  const order = [...todos].sort((a, b) => (a.done - b.done) || ((a.due ? 0 : 1) - (b.due ? 0 : 1)) || String(a.due ?? '').localeCompare(String(b.due ?? '')));
+  const left = todos.filter((t) => !t.done).length;
+  return tile('todos', span, `<div class="pi-paper"><h2>Pendientes <small>${left ? `${left} por hacer` : todos.length ? 'todo hecho' : ''}</small></h2>
+    ${order.length ? `<ul class="pi-list">${order.map((t) => `<li class="${t.done ? 'done' : ''} ${overdue(t) ? 'late' : ''}" data-todo="${esc(t.id)}">
+        <label><input type="checkbox" ${t.done ? 'checked' : ''} data-todo-check="${esc(t.id)}"><span class="pi-box" aria-hidden="true"></span><span class="pi-text">${esc(t.text)}</span></label>
+        ${t.due || t.label ? `<span class="pi-meta">${t.due ? `<span class="pi-due">${overdue(t) ? 'venció · ' : ''}${esc(dueText(t.due))}</span>` : ''}${t.label ? `<a class="pi-cls" href="#/horario">${esc(t.label)}</a>` : ''}</span>` : ''}
+        <button type="button" class="icon x" data-todo-remove="${esc(t.id)}" aria-label="Quitar este pendiente"><svg><use href="#i-x"/></svg></button></li>`).join('')}</ul>`
+    : '<p class="pi-empty">Lo que tienes que hacer, a mano: «Leer el capítulo 3», «Entregar el deber de Redes»…</p>'}
+    <form class="pi-add" data-todo-add><input name="text" maxlength="140" placeholder="Nuevo pendiente" aria-label="Nuevo pendiente" autocomplete="off" required>
+      <details class="pi-more"><summary>Fecha o clase</summary>
+        <label class="field"><span>Para cuándo</span><input type="datetime-local" name="due"></label>
+        <label class="field"><span>Con una clase de tu horario</span><select name="cls" data-todo-classes><option value="">Ninguna</option></select></label>
+      </details><button class="button primary small">Agregar</button></form></div>`, 'postit', 'id="todos-tile"');
+}
 function goalsTile(span) {
   const { goals } = prefs.get();
   const done = goals.filter((g) => g.done).length;
@@ -227,7 +254,7 @@ function exploreTile(span) {
     ${c ? `<h3 style="font-size:30px;letter-spacing:-.03em">${esc(c.name)}</h3><p class="muted">${esc(c.summaries[0].text)}</p><div class="actions"><a class="button primary" href="#/grafo/${encodeURIComponent(c.id)}">Verlo en el grafo</a><button class="button ghost" data-reroll>Otro</button></div>`
     : '<p class="muted">Cuando el grafo tenga conceptos, aquí aparece uno distinto cada vez.</p>'}`);
 }
-const RENDER = { countdown: countdownTile, deadlines: deadlinesTile, week: weekTile, goals: goalsTile, timer: timerTile, notes: notesTile, links: linksTile, recent: recentTile, news: newsTile, explore: exploreTile };
+const RENDER = { todos: todosTile, countdown: countdownTile, deadlines: deadlinesTile, week: weekTile, goals: goalsTile, timer: timerTile, notes: notesTile, links: linksTile, recent: recentTile, news: newsTile, explore: exploreTile };
 
 function onboardTile() {
   const p = prefs.get();
@@ -324,6 +351,44 @@ document.addEventListener('submit', async (e) => {
   try { await vault.confirm(form.password.value); form.closest('[data-vault]').innerHTML = vaultHTML(); }
   catch (err) { msg.textContent = err.message; btn.disabled = false; }
 });
+// «Pendientes»: add, check, remove; its class list is filled when «Fecha o clase» opens.
+document.addEventListener('submit', (e) => {
+  const form = e.target.closest?.('[data-todo-add]');
+  if (!form) return;
+  e.preventDefault();
+  const f = new FormData(form);
+  const text = String(f.get('text') ?? '').trim();
+  if (!text) return;
+  const due = String(f.get('due') ?? '');
+  const sel = form.querySelector('[data-todo-classes]');
+  const cls = String(f.get('cls') ?? '');
+  const label = cls ? sel.selectedOptions[0]?.textContent ?? '' : '';
+  prefs.set({ todos: [{ id: Math.random().toString(36).slice(2, 10), text, done: false, ...(due ? { due } : {}), ...(cls ? { cls, label } : {}) }, ...prefs.get().todos].slice(0, 80) });
+  sfx.tick();
+  renderHome();
+  document.querySelector('[data-todo-add] input[name="text"]')?.focus();
+});
+document.addEventListener('change', (e) => {
+  const box = e.target.closest?.('[data-todo-check]');
+  if (!box) return;
+  prefs.set({ todos: prefs.get().todos.map((t) => (t.id === box.dataset.todoCheck ? { ...t, done: box.checked } : t)) });
+  if (box.checked) sfx.tick();
+  renderHome();
+});
+document.addEventListener('click', (e) => {
+  const x = e.target.closest?.('[data-todo-remove]');
+  if (x) { prefs.set({ todos: prefs.get().todos.filter((t) => t.id !== x.dataset.todoRemove) }); renderHome(); }
+});
+document.addEventListener('toggle', async (e) => {
+  const more = e.target;
+  if (!more.classList?.contains('pi-more') || !more.open) return;
+  const sel = more.querySelector('[data-todo-classes]');
+  if (!sel || sel.options.length > 1) return;
+  try {
+    const list = await myClasses();
+    sel.insertAdjacentHTML('beforeend', list.length ? list.map((c) => `<option value="${esc(c.id)}">${esc(`${c.name}${c.when ? ` (${c.when})` : ''}`)}</option>`).join('') : '<option value="" disabled>Tu horario está vacío</option>');
+  } catch { /* without the schedule, no class */ }
+}, true);
 export function renderSettings() {
   const p = prefs.get();
   const careers = ctx.state.graph?.nodes.filter((n) => n.type === 'career').map((n) => n.name) ?? [];

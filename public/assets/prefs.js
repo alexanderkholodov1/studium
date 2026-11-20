@@ -4,7 +4,7 @@
 import { loadProfile, saveProfile } from './data.js';
 
 export const MODES = {
-  examenes: { name: 'Para exámenes', text: 'Lo primero que ves es cuánto falta para tu próximo examen, con su guía a mano.' },
+  examenes: { name: 'Para exámenes', text: 'Tus pendientes y el enfoque primero; cuánto falta para tu próximo examen, con su guía a mano.' },
   gusto: { name: 'Por gusto', text: 'Sin cuentas regresivas: el grafo y las guías para explorar a tu ritmo.' },
   intensivo: { name: 'Intensivo', text: 'Temporizador de enfoque al frente, y lo justo alrededor.' },
   metas: { name: 'Paso a paso', text: 'Metas pequeñas, tu progreso a la vista y un sonido cada vez que cumples una.' },
@@ -20,9 +20,9 @@ export const THEMES = { auto: 'Como tu sistema', light: 'Día', dark: 'Noche' };
 export const AVATARS = ['blue', 'red', 'teal', 'butter', 'sky', 'peach'];
 const LANG = /^en\b/i.test(globalThis.navigator?.language ?? '') ? 'en' : 'es';
 const DEFAULTS = { mode: 'examenes', ambience: 'vivo', sound: false, theme: 'auto', lang: LANG, avatar: 'blue', semester: 0, career: '', nickname: '', name: '', goals: [], progress: {},
-  deadlines: [], tiles: [], notes: '', links: [], focus: { study: 25, rest: 5 }, bubbles: false, courses: [], interests: [], known: [], malla: '', passed: [] };
+  deadlines: [], todos: [], tiles: [], notes: '', links: [], focus: { study: 25, rest: 5 }, bubbles: false, courses: [], interests: [], known: [], malla: '', passed: [] };
 // The tiles the home page can show (space.js draws them).
-const TILE_IDS = ['countdown', 'deadlines', 'week', 'goals', 'timer', 'notes', 'links', 'recent', 'news', 'explore'];
+const TILE_IDS = ['todos', 'countdown', 'deadlines', 'week', 'goals', 'timer', 'notes', 'links', 'recent', 'news', 'explore'];
 const rid = () => Math.random().toString(36).slice(2, 10);
 const range = (v, lo, hi, d) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d; };
 const KEYS = Object.keys(DEFAULTS);
@@ -49,6 +49,15 @@ const clean = (p) => {
   out.deadlines = (Array.isArray(out.deadlines) ? out.deadlines : []).slice(0, 60)
     .map((d) => ({ id: String(d.id ?? rid()).slice(0, 16), text: String(d.text ?? '').slice(0, 100), date: /^\d{4}-\d{2}-\d{2}$/.test(d.date) ? d.date : '', ...(d.course ? { course: String(d.course).slice(0, 80) } : {}) }))
     .filter((d) => d.text && d.date);
+  // «Pendientes»: a to-do, done or not, with an optional time (a day, or a day and an hour) and an optional class of
+  // «Mi horario» (its id and its name, as it was when linked).
+  out.todos = (Array.isArray(out.todos) ? out.todos : []).slice(0, 80)
+    .map((t) => ({
+      id: String(t.id ?? rid()).slice(0, 16), text: String(t.text ?? '').slice(0, 140), done: !!t.done,
+      ...(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/.test(t.due ?? '') ? { due: t.due } : {}),
+      ...(/^[a-z0-9]{1,24}$/i.test(t.cls ?? '') ? { cls: t.cls, label: String(t.label ?? '').slice(0, 80) } : {}),
+    }))
+    .filter((t) => t.text);
   const tiles = new Set();
   out.tiles = (Array.isArray(out.tiles) ? out.tiles : []).map(String).filter((t) => {
     const [id, size] = t.split(':');
