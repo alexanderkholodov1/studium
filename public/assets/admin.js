@@ -16,13 +16,14 @@ import { EGGS } from './eggs.js';
 import { rise } from './fx.js';
 import * as ai from './ai.js';
 import { KINDS as FB_KINDS } from './feedback.js';
+import { IDEAS } from './comunidad.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const n = (v) => (v == null ? '—' : Number(v).toLocaleString('es'));
 const PROJECT = firebaseConfig.projectId;
 const SECTIONS = {
-  resumen: 'Resumen', feedback: 'Feedback', acceso: 'Acceso y comunidades', pagina: 'La página', cuentas: 'Cuentas', contenido: 'Contenido',
+  resumen: 'Resumen', metricas: 'Métricas', feedback: 'Feedback', acceso: 'Acceso y comunidades', pagina: 'La página', cuentas: 'Cuentas', contenido: 'Contenido',
   uso: 'Uso de Firebase', eggs: 'Easter eggs', correo: 'Correo', registro: 'Registro',
 };
 // Firestore's free daily quota (Spark plan) and storage.
@@ -137,6 +138,13 @@ async function summary() {
   ]);
   const [gPub, gPriv, cPub, cPriv, docs, tips, kudos, sources, ...byCommunity] = rest;
   const v = (r) => r.data().count;
+  // What members wrote and what they wait for in Comunidad.
+  const fbCount = (...w) => getCount(query(collection(db, 'feedback'), ...w)).then((r) => r.data().count).catch(() => null);
+  const [fbNew, fbUrgent, fbAll, wants] = await Promise.all([
+    fbCount(where('status', '==', 'nuevo')), fbCount(where('status', '==', 'nuevo'), where('kind', '==', 'urgente')), fbCount(),
+    getDocs(collection(db, 'wants')).then((q) => q.docs.map((d) => [d.id, d.data().count ?? 0]).sort((a, b) => b[1] - a[1])).catch(() => []),
+  ]);
+  const IDEA_NAMES = Object.fromEntries(IDEAS.map((i) => [i.id, i.title]));
   const version = await fetch('version.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
   const latest = await fetch('https://api.github.com/repos/alexanderkholodov1/studium/releases/latest').then((r) => (r.ok ? r.json() : null)).catch(() => null);
   return `<div class="stats">
@@ -144,6 +152,10 @@ async function summary() {
       ${stat('Hoy', n(v(day)), 'últimas 24 h')}${stat('Esta semana', n(v(week)), '7 días')}${stat('Este mes', n(v(month)), '30 días')}
     </div>
     <section class="set glass"><h2>Por comunidad</h2><div class="stats">${s.communities.map((c, i) => stat(c.name, n(byCommunity[i]), c.active ? `${c.domains.length} ${c.domains.length === 1 ? 'dominio' : 'dominios'}` : 'apagada')).join('')}</div></section>
+    <section class="set glass"><h2>Feedback <small><a href="#/admin/feedback">Abrir</a></small></h2><div class="stats">
+      ${stat('Sin leer', n(fbNew))}${stat('Urgentes sin leer', fbUrgent ? `<span class="bad">${n(fbUrgent)}</span>` : n(fbUrgent))}${stat('En total', n(fbAll))}</div></section>
+    <section class="set glass"><h2>Lo que esperan en Comunidad <small>«Yo quiero»</small></h2><div class="stats">
+      ${wants.length ? wants.map(([id, c]) => stat(IDEA_NAMES[id] ?? id, n(c))).join('') : '<p class="muted">Nadie pulsó «Yo quiero» todavía.</p>'}</div></section>
     <section class="set glass"><h2>Contenido</h2><div class="stats">
       ${stat('Guías públicas', n(gPub))}${stat('Guías privadas', n(gPriv))}${stat('Aportes públicos', n(cPub))}${stat('Aportes privados', n(cPriv))}
       ${stat('Documentos', n(docs))}${stat('Datos de profes', n(tips))}${stat('Agradecimientos', n(kudos))}${stat('Fuentes', n(sources))}</div></section>
@@ -370,6 +382,37 @@ async function mailSection() {
       <p>Microsoft 365 (el correo de la USFQ) retiene los correos con enlaces a <code>${esc(PROJECT)}.firebaseapp.com</code>, y Firebase no deja cambiar el texto ni el destino de esos enlaces en este proyecto. Studium ya abre los enlaces de confirmar el correo y de cambiar la contraseña por sí mismo; falta que el correo los lleve, con un envío propio.</p></section>`;
 }
 
+/* ---------- metrics: what Studium holds, counted from what the page already loaded (no extra reads but presence) ---------- */
+const tally = (list, key) => Object.entries(list.reduce((m, x) => { const k = key(x); if (k) m[k] = (m[k] ?? 0) + 1; return m; }, {})).sort((a, b) => b[1] - a[1]);
+const table = (title, rows, note = '') => `<section class="set glass"><h2>${esc(title)}${note ? ` <small>${esc(note)}</small>` : ''}</h2>${rows.length ? `<table class="metric"><tbody>${rows.slice(0, 15).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${n(v)}</td></tr>`).join('')}</tbody></table>${rows.length > 15 ? `<p class="fine">y ${rows.length - 15} más</p>` : ''}` : '<p class="muted">Nada todavía.</p>'}</section>`;
+async function metricsSection() {
+  const st = ctx.state ?? {};
+  const guides = st.catalog ?? [];
+  const contribs = (st.contributions ?? []).filter((c) => c.kind !== 'curriculum');
+  const library = st.library ?? [];
+  const pres = collection(db, 'presence');
+  const now = Date.now();
+  // Last visit of each person, by day, the last 14 days (presence keeps one date per person: their last visit).
+  const days = await Promise.all(Array.from({ length: 14 }, (_, i) => {
+    const end = new Date(now - i * 86_400_000); const start = new Date(end.getTime() - 86_400_000);
+    return getCount(query(pres, where('at', '>=', start), where('at', '<', end))).then((r) => [start.toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' }), r.data().count]).catch(() => [start.toLocaleDateString('es'), null]);
+  }));
+  const month = (x) => { const d = x.updated?.toDate?.() ?? (x.date ? new Date(x.date) : null); return d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString('es', { month: 'long', year: 'numeric' }) : ''; };
+  const AI = { anthropic: 'Claude', openai: 'ChatGPT', gemini: 'Gemini', other: 'Otra IA' };
+  return `<div class="stats">${stat('Guías', n(guides.length), 'las que ve el panel')}${stat('Aportes', n(contribs.length))}${stat('Documentos', n(library.length))}${stat('Preguntas en aportes', n(contribs.reduce((a, c) => a + (c.questions ?? 0), 0)))}${stat('Conceptos en el grafo', n(st.graph?.nodes?.length ?? st.graph?.concepts?.length))}</div>
+    ${table('Última visita, por día', days.map(([d, c]) => [d, c]), 'cada persona cuenta en el día de su última visita')}
+    <div class="metric-grid">
+    ${table('Guías por materia', tally(guides, (g) => g.course))}
+    ${table('Guías por nivel', tally(guides, (g) => g.level))}
+    ${table('Guías por IA', tally(guides, (g) => (g.ai ? `${AI[g.ai.provider] ?? g.ai.provider}${g.ai.model ? ` · ${g.ai.model}` : ''}` : 'Sin decir')))}
+    ${table('Guías por mes', tally(guides, month))}
+    ${table('Aportes por tipo', tally(contribs, (c) => c.kind))}
+    ${table('Aportes por materia', tally(contribs, (c) => c.course))}
+    ${table('Aportes por profe', tally(contribs, (c) => c.professor))}
+    ${table('Documentos por tipo', tally(library, (d) => d.kind ?? d.type))}
+    </div>`;
+}
+
 /* ---------- feedback: what members wrote, urgent first; answered here; analysed by the admin's own AI on demand ---------- */
 let fbKind = '';
 let fbList = [];
@@ -440,7 +483,7 @@ async function logSection() {
     ${snap.empty ? '<p class="muted">Todavía no hay cambios.</p>' : `<ol class="audit">${snap.docs.map((d) => { const x = d.data(); return `<li><time>${esc(when(x.at))}</time><div><strong>${esc(x.action)}</strong>${x.detail ? `<p>${esc(x.detail)}</p>` : ''}<small>${esc(x.by)}</small></div></li>`; }).join('')}</ol>`}</section>`;
 }
 
-const RENDER = { resumen: summary, feedback: feedbackSection, acceso: accessSection, pagina: pageSection, cuentas: accountsSection, contenido: contentSection, uso: usageSection, eggs: eggsSection, correo: mailSection, registro: logSection };
+const RENDER = { resumen: summary, metricas: metricsSection, feedback: feedbackSection, acceso: accessSection, pagina: pageSection, cuentas: accountsSection, contenido: contentSection, uso: usageSection, eggs: eggsSection, correo: mailSection, registro: logSection };
 
 export async function renderAdmin(which = section) {
   section = SECTIONS[which] ? which : 'resumen';

@@ -2152,3 +2152,5 @@ html.has-announce .page { padding-top: 170px; }
 .cm-want[aria-pressed="true"] { background: var(--blue); color: #fff; }
 .cm-count { font-size: 13px; color: var(--muted); }
 .cm-more { margin-top: 20px; padding: 20px; border-radius: 22px; text-align: center; } .cm-more h3 { margin: 0 0 4px; }
+.metric-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.metric { width: 100%; border-collapse: collapse; font-size: 14px; } .metric td { padding: 5px 0; border-bottom: 1px solid var(--line); } .metric .num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
