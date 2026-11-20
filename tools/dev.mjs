@@ -18,13 +18,18 @@ createServer(async (req, res) => {
   if (url.pathname === '/' || url.pathname === '/studium') { res.writeHead(302, { location: '/studium/' }); res.end(); return; }
   if (!url.pathname.startsWith('/studium/')) { res.writeHead(404); res.end('Not found'); return; }
   const rel = decodeURIComponent(url.pathname.slice('/studium/'.length)) || 'index.html';
+  // The emulators' ports, as a script file of its own: the page's content policy allows no inline script.
+  if (rel === 'emulators.js' && emulators) {
+    res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-store' });
+    res.end(`globalThis.STUDIUM_EMULATORS = ${JSON.stringify({ auth: emulators.auth.port, firestore: emulators.firestore.port })};`);
+    return;
+  }
   const file = path.resolve(root, rel);
   if (!file.startsWith(root + path.sep) && file !== root) { res.writeHead(403); res.end(); return; }
   try {
     let body = await readFile(file);
     if (rel === 'index.html' && emulators) {
-      const flag = `<script>globalThis.STUDIUM_EMULATORS = ${JSON.stringify({ auth: emulators.auth.port, firestore: emulators.firestore.port })};</script>`;
-      body = Buffer.from(body.toString('utf8').replace('<head>', `<head>\n${flag}`));
+      body = Buffer.from(body.toString('utf8').replace('<script src="/studium/assets/boot.js"></script>', '<script src="/studium/emulators.js"></script>\n<script src="/studium/assets/boot.js"></script>'));
     }
     res.writeHead(200, { 'content-type': `${TYPES[path.extname(file)] ?? 'application/octet-stream'}; charset=utf-8`, 'cache-control': 'no-store' });
     res.end(body);

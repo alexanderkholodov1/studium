@@ -121,6 +121,60 @@ export async function loadGuide(id) {
 const DESCRIBED = ['course', 'code', 'university', 'term', 'professor', 'title', 'theme'];
 const described = (meta) => Object.fromEntries(DESCRIBED.filter((k) => meta[k]).map((k) => [k, meta[k]]));
 
+/* ---------- history: nothing of anyone's part of the graph is lost by a change ---------- */
+// Before an owner replaces or deletes a guide or a contribution, its current version is kept, in the same write
+// (versions/{id}__{collection}__{millis of its last change}); the rules refuse the change otherwise. Each item keeps its
+// last KEEP versions; its owner can restore any of them, or delete them for good.
+const KEEP = 10;
+async function keepVersion(batch, col, id, uid, action) {
+  const snap = await getDoc(doc(db, col, id));
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  const vid = `${id}__${col}__${data.updated?.toMillis?.() ?? 0}`;
+  batch.set(doc(db, 'versions', vid), { of: id, col, uid, action, at: serverTimestamp(), data });
+  return vid;
+}
+// After a change: the oldest versions of an item beyond KEEP go.
+async function trimVersions(uid, id) {
+  try {
+    const snap = await getDocs(query(collection(db, 'versions'), where('uid', '==', uid), where('of', '==', id)));
+    const byCol = new Map();
+    for (const d of snap.docs) { const col = d.data().col; byCol.set(col, [...(byCol.get(col) ?? []), d]); }
+    const old = [...byCol.values()].flatMap((list) => list.sort((a, b) => (b.data().at?.toMillis?.() ?? 0) - (a.data().at?.toMillis?.() ?? 0)).slice(KEEP));
+    if (old.length) { const batch = writeBatch(db); for (const d of old) batch.delete(d.ref); await batch.commit(); }
+  } catch { /* kept a little longer */ }
+}
+// The person's own kept versions, newest first: what they changed or deleted, to restore or to delete for good.
+export async function myVersions(uid) {
+  const snap = await getDocs(query(collection(db, 'versions'), where('uid', '==', uid)));
+  return snap.docs.map((d) => ({ vid: d.id, ...d.data() })).sort((a, b) => (b.at?.toMillis?.() ?? 0) - (a.at?.toMillis?.() ?? 0));
+}
+// The versions of one item (the admin, or its owner).
+export async function versionsOf(id) {
+  const snap = await getDocs(query(collection(db, 'versions'), where('of', '==', id)));
+  return snap.docs.map((d) => ({ vid: d.id, ...d.data() })).sort((a, b) => (b.at?.toMillis?.() ?? 0) - (a.at?.toMillis?.() ?? 0));
+}
+// Restore a kept version (a guide restores its page and its catalog entry together: the versions kept in one write).
+// By its owner: an ordinary change, which keeps the current version first. By an admin: exactly that version, named in
+// restores/{id}, which the rules check. A deleted item comes back under its own id, with its owner.
+export async function restoreVersion(v, { asAdmin = false } = {}) {
+  const uid = auth.currentUser?.uid;
+  const parts = v.col === 'contributions' ? [v] : (await versionsOf(v.of)).filter((x) => x.col !== v.col && x.at?.toMillis?.() === v.at?.toMillis?.()).concat(v);
+  const batch = writeBatch(db);
+  let existed = false;
+  for (const p of parts) {
+    const kept = await keepVersion(batch, p.col, v.of, p.uid, 'restored');
+    existed ||= !!kept;
+    const { updated, ...data } = p.data;
+    batch.set(doc(db, p.col, v.of), { ...data, updated: serverTimestamp() });
+  }
+  if (asAdmin) batch.set(doc(db, 'restores', v.of), Object.fromEntries(parts.map((p) => [p.col, p.vid])));
+  if (!existed && !asAdmin) batch.set(doc(db, 'owners', v.of), { uid });
+  await batch.commit();
+  if (uid) trimVersions(v.uid, v.of);
+}
+export async function deleteVersion(vid) { await deleteDoc(doc(db, 'versions', vid)); }
+
 // Publishes a contribution (meta: its description; data: the compact extract), or replaces one of the account's own.
 // meta.stage: the evaluation it belongs to; meta.source: the registered collection it comes from; meta.print: the
 // fingerprint of the original file, so the same file is never added twice.
@@ -129,6 +183,7 @@ export async function publishContribution(uid, meta, data, replaceId) {
   if (body.length > LIMIT) throw Object.assign(new Error('too-large'), { code: 'too-large', size: body.length });
   const ref = replaceId ? doc(db, 'contributions', replaceId) : doc(collection(db, 'contributions'));
   const batch = writeBatch(db);
+  if (replaceId) await keepVersion(batch, 'contributions', replaceId, uid, 'replaced');
   batch.set(ref, {
     ...described(meta), kind: meta.kind, visibility: meta.visibility,
     ...(meta.stage ? { stage: String(meta.stage).slice(0, 40) } : {}),
@@ -141,6 +196,7 @@ export async function publishContribution(uid, meta, data, replaceId) {
   });
   if (!replaceId) batch.set(doc(db, 'owners', ref.id), { uid });
   await batch.commit();
+  if (replaceId) trimVersions(uid, replaceId);
   return ref.id;
 }
 
@@ -150,6 +206,7 @@ export async function publishGuide(uid, meta, html, replaceId) {
   if (packed.length > LIMIT) throw Object.assign(new Error('too-large'), { code: 'too-large', size: packed.length });
   const id = replaceId ?? doc(collection(db, 'catalog')).id;
   const batch = writeBatch(db);
+  if (replaceId) { await keepVersion(batch, 'guides', id, uid, 'replaced'); await keepVersion(batch, 'catalog', id, uid, 'replaced'); }
   batch.set(doc(db, 'guides', id), {
     title: `${meta.course} · ${meta.title}`.slice(0, 220), html: Bytes.fromUint8Array(packed), encoding: 'gzip',
     size: new TextEncoder().encode(html).length, visibility: meta.visibility, updated: serverTimestamp(),
@@ -163,6 +220,7 @@ export async function publishGuide(uid, meta, html, replaceId) {
   });
   if (!replaceId) batch.set(doc(db, 'owners', id), { uid });
   await batch.commit();
+  if (replaceId) trimVersions(uid, id);
   return id;
 }
 
@@ -182,6 +240,10 @@ export async function setVisibility(item, visibility) {
 
 export async function remove(item) {
   const batch = writeBatch(db);
+  const uid = auth.currentUser?.uid;
+  // A guide or a contribution is kept before it goes: its owner can bring it back, or delete it for good.
+  if (item.type === 'guide') { await keepVersion(batch, 'guides', item.id, uid, 'deleted'); await keepVersion(batch, 'catalog', item.id, uid, 'deleted'); }
+  if (item.type === 'contribution') await keepVersion(batch, 'contributions', item.id, uid, 'deleted');
   if (item.type === 'guide') {
     batch.delete(doc(db, 'guides', item.id));
     batch.delete(doc(db, 'catalog', item.id));

@@ -45,6 +45,7 @@ service cloud.firestore {
     function mineAfter(id) { return getAfter(at('owners', id)).data.uid == request.auth.uid; }
     // Ids created from the app are Firestore's random 20-character ids.
     function appId(id) { return id.matches('[A-Za-z0-9]{20}'); }
+    function appIdOrSlug(id) { return id.matches('[A-Za-z0-9-]{3,100}'); }
 
     function shown(id) { return resource == null || resource.data.get('visibility', 'public') == 'public' || admin() || mine(id); }
     // An admin hiding or showing something: only its visibility (and its time) change.
@@ -53,6 +54,22 @@ service cloud.firestore {
         && visibility(request.resource.data) && request.resource.data.updated == request.time;
     }
     function visibility(d) { return d.visibility in ['public', 'private']; }
+
+    // History: before a person replaces or deletes a guide or a contribution of theirs, its current version is kept in
+    // versions/{id}__{collection}__{millis of its last change}. The rules demand it, so nothing of anyone's part of the
+    // graph is ever lost by a change; its owner and the admins can restore any version. Changing only who sees it
+    // needs no copy (it is undone by changing it back).
+    function stamp(d) { return 'updated' in d && d.updated is timestamp ? string(d.updated.toMillis()) : '0'; }
+    function versionId(col, id) { return id + '__' + col + '__' + stamp(resource.data); }
+    function kept(col, id) { return existsAfter(at('versions', versionId(col, id))); }
+    function onlyWho() { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['visibility', 'updated']); }
+    // An admin restores exactly one kept version of anyone's item: nothing else, and the current one is kept first.
+    function restoring(col, id) {
+      let v = getAfter(at('restores', id)).data.get(col, '');
+      let old = get(at('versions', v)).data;
+      return admin() && old.of == id && old.col == col && kept(col, id)
+        && request.resource.data.diff(old.data).affectedKeys().hasOnly(['updated']) && request.resource.data.updated == request.time;
+    }
 
     function text(value, max) { return value is string && value.size() > 0 && value.size() <= max; }
     function optional(data, key, max) { return !(key in data) || (data[key] is string && data[key].size() <= max); }
@@ -110,24 +127,27 @@ service cloud.firestore {
       allow get: if member() && shown(id);
       allow list: if member() && (resource.data.visibility == 'public' || admin());
       allow create: if student() && appId(id) && entry(request.resource.data) && mineAfter(id) && sameAs('guides', id);
-      allow update: if (student() && mine(id) && entry(request.resource.data) && sameAs('guides', id)) || (hiding() && sameAs('guides', id));
-      allow delete: if ((student() && mine(id)) || admin()) && !existsAfter(at('guides', id));
+      allow update: if (student() && mine(id) && entry(request.resource.data) && sameAs('guides', id) && (onlyWho() || kept('catalog', id)))
+        || (hiding() && sameAs('guides', id)) || (restoring('catalog', id) && sameAs('guides', id));
+      allow delete: if ((student() && mine(id) && kept('catalog', id)) || admin()) && !existsAfter(at('guides', id));
     }
 
     // One guide at a time: listing every guide would download all of them.
     match /guides/{id} {
       allow get: if member() && shown(id);
       allow create: if student() && appId(id) && guide(request.resource.data) && mineAfter(id) && sameAs('catalog', id);
-      allow update: if (student() && mine(id) && guide(request.resource.data) && sameAs('catalog', id)) || (hiding() && sameAs('catalog', id));
-      allow delete: if ((student() && mine(id)) || admin()) && !existsAfter(at('catalog', id));
+      allow update: if (student() && mine(id) && guide(request.resource.data) && sameAs('catalog', id) && (onlyWho() || kept('guides', id)))
+        || (hiding() && sameAs('catalog', id)) || (restoring('guides', id) && sameAs('catalog', id));
+      allow delete: if ((student() && mine(id) && kept('guides', id)) || admin()) && !existsAfter(at('catalog', id));
     }
 
     match /contributions/{id} {
       allow get: if member() && shown(id);
       allow list: if member() && (resource.data.visibility == 'public' || admin());
       allow create: if student() && appId(id) && contribution(request.resource.data) && mineAfter(id);
-      allow update: if (student() && mine(id) && contribution(request.resource.data)) || hiding();
-      allow delete: if (student() && mine(id)) || admin();
+      allow update: if (student() && mine(id) && contribution(request.resource.data) && (onlyWho() || kept('contributions', id)))
+        || hiding() || restoring('contributions', id);
+      allow delete: if (student() && mine(id) && kept('contributions', id)) || admin();
     }
 
     // An owner is recorded only together with the guide or contribution it creates, which must not exist yet.
@@ -289,6 +309,27 @@ service cloud.firestore {
       allow create: if student() && appId(id) && shared(id, request.resource.data) && mineAfter(id);
       allow update: if student() && mine(id) && shared(id, request.resource.data);
       allow delete: if (student() && mine(id)) || admin();
+    }
+
+    // A kept version: an exact copy of the item as it is now, made by its owner (or an admin), read only by them.
+    function version(vid, d) {
+      return d.keys().hasOnly(['of', 'col', 'uid', 'action', 'at', 'data']) && d.keys().hasAll(['of', 'col', 'uid', 'action', 'at', 'data'])
+        && d.col in ['contributions', 'guides', 'catalog'] && d.of is string && appIdOrSlug(d.of)
+        && vid == d.of + '__' + d.col + '__' + stamp(get(at(d.col, d.of)).data)
+        && d.data == get(at(d.col, d.of)).data && d.uid == get(at('owners', d.of)).data.uid
+        && (mine(d.of) || admin()) && d.action in ['replaced', 'deleted', 'restored'] && d.at == request.time;
+    }
+    match /versions/{vid} {
+      allow create, update: if member() && version(vid, request.resource.data);
+      allow get, list: if admin() || (member() && resource.data.uid == request.auth.uid);
+      allow delete: if admin() || (member() && resource.data.uid == request.auth.uid);
+    }
+    // What an admin restores: for each part of the item, the kept version it returns to.
+    function restoreOf(d, col, id) { return !(col in d) || (d[col] is string && get(at('versions', d[col])).data.of == id); }
+    match /restores/{id} {
+      allow create, update: if admin() && request.resource.data.keys().hasOnly(['contributions', 'guides', 'catalog'])
+        && request.resource.data.size() > 0 && restoreOf(request.resource.data, 'contributions', id)
+        && restoreOf(request.resource.data, 'guides', id) && restoreOf(request.resource.data, 'catalog', id);
     }
 
     match /owners/{id} {

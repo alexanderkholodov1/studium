@@ -9,7 +9,7 @@
 import {
   collection, query, where, orderBy, limit, getDocs, getCount, doc, writeBatch, serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-lite.js';
-import { db, auth, compilePacks, packInfo } from './data.js';
+import { db, auth, compilePacks, packInfo, versionsOf, restoreVersion } from './data.js';
 import { firebaseConfig, mailFrom } from './config.js';
 import { settings, normalize, domainOf } from './settings.js';
 import { EGGS } from './eggs.js';
@@ -290,7 +290,7 @@ async function contentSection() {
     const snap = await recent('catalog');
     body = `<thead><tr><th>Guía</th><th>Materia</th><th>Fecha</th><th>Visibilidad</th><th>Cambiada</th><th></th></tr></thead><tbody>${snap.docs.map((d) => { const g = d.data(); return row([
       `<a href="#/guia/${encodeURIComponent(d.id)}"><strong>${esc(g.title)}</strong></a>${g.by ? `<small> · ${esc(g.by)}</small>` : ''}`, esc(g.course), esc(g.date ?? ''), vis(g), esc(when(g.updated))], d.id,
-      `<button class="link" data-mod="${g.visibility === 'private' ? 'show' : 'hide'}" data-kind="guides">${g.visibility === 'private' ? 'Mostrar' : 'Ocultar'}</button><button class="link danger" data-mod="delete" data-kind="guides">Borrar</button>`); }).join('')}</tbody>`;
+      `<button class="link" data-mod="${g.visibility === 'private' ? 'show' : 'hide'}" data-kind="guides">${g.visibility === 'private' ? 'Mostrar' : 'Ocultar'}</button><button class="link" data-adm-history>Historial</button><button class="link danger" data-mod="delete" data-kind="guides">Borrar</button>`); }).join('')}</tbody>`;
   } else if (contentKind === 'contributions') {
     const [snap, pack] = await Promise.all([recent('contributions'), packInfo().catch(() => null)]);
     packCard = `<section class="set glass"><h2>Paquetes del grafo <small>${pack ? `compilados ${esc(when(pack.built))}` : 'todavía no hay'}</small></h2>
@@ -299,7 +299,7 @@ async function contentSection() {
       <div class="actions"><button class="button primary" data-compile>Compilar ahora</button></div></section>`;
     body = `<thead><tr><th>Aporte</th><th>Materia</th><th>Tipo</th><th>Visibilidad</th><th>Cambiado</th><th></th></tr></thead><tbody>${snap.docs.map((d) => { const c = d.data(); return row([
       `<strong>${esc(c.title)}</strong><small> · ${n(c.questions)} preguntas${c.stage ? ` · ${esc(c.stage)}` : ''}${c.source ? ` · ${esc(c.source)}` : ''}</small>`, esc(c.course), esc(c.kind), vis(c), esc(when(c.updated))], d.id,
-      `<button class="link" data-mod="${c.visibility === 'private' ? 'show' : 'hide'}" data-kind="contributions">${c.visibility === 'private' ? 'Mostrar' : 'Ocultar'}</button><button class="link danger" data-mod="delete" data-kind="contributions">Borrar</button>`); }).join('')}</tbody>`;
+      `<button class="link" data-mod="${c.visibility === 'private' ? 'show' : 'hide'}" data-kind="contributions">${c.visibility === 'private' ? 'Mostrar' : 'Ocultar'}</button><button class="link" data-adm-history>Historial</button><button class="link danger" data-mod="delete" data-kind="contributions">Borrar</button>`); }).join('')}</tbody>`;
   } else if (contentKind === 'library') {
     const snap = await recent('library');
     body = `<thead><tr><th>Documento</th><th>Materia</th><th>Tipo</th><th>Enlace</th><th>Cambiado</th><th></th></tr></thead><tbody>${snap.docs.map((d) => { const x = d.data(); return row([
@@ -477,6 +477,17 @@ async function fbAnalyze(btn) {
   finally { btn.disabled = false; btn.textContent = `Analizar ${open.length} sin resolver`; }
 }
 
+const admKept = new Map();
+async function showHistory(row) {
+  const next = row.nextElementSibling;
+  if (next?.classList.contains('adm-history')) { next.remove(); return; }
+  const list = await versionsOf(row.dataset.id);
+  for (const v of list) admKept.set(v.vid, v);
+  const ACTION = { replaced: 'antes de un reemplazo', deleted: 'antes de borrarlo', restored: 'antes de una restauración' };
+  const shown = list.filter((v) => v.col !== 'guides');
+  row.insertAdjacentHTML('afterend', `<tr class="adm-history"><td colspan="9">${shown.length ? `<ul>${shown.map((v) => `<li>${esc(v.data?.title ?? v.of)} · ${esc(ACTION[v.action] ?? v.action)} · ${esc(v.at?.toDate?.().toLocaleString('es') ?? '')} <button class="link" data-adm-restore="${esc(v.vid)}">Restaurar esta versión</button></li>`).join('')}</ul>` : '<p class="muted">Sin versiones guardadas: nunca se cambió desde que existe el historial.</p>'}</td></tr>`);
+}
+
 async function logSection() {
   const snap = await getDocs(query(collection(db, 'audit'), orderBy('at', 'desc'), limit(150)));
   return `<section class="set glass"><h2>Registro <small>Cada cambio hecho desde este panel</small></h2>
@@ -567,6 +578,16 @@ export function mountAdmin(context) {
       if (t.dataset.admDisconnect !== undefined) { globalThis.google?.accounts?.oauth2?.revoke?.(google.token); google.token = ''; accounts = null; renderAdmin(); }
       if (t.dataset.admClientid !== undefined) { draft = structuredClone(settings.get()); draft.googleClientId = ''; await settings.save(draft, email(), 'Ajustes', 'ID de cliente de Google quitado'); draft = null; renderAdmin(); }
       if (t.dataset.admSave !== undefined) await saveSettings();
+      // The history of anyone's item: its kept versions; an admin restores exactly one of them (the rules check it).
+      if (t.dataset.admHistory !== undefined && t.closest('tr')) await showHistory(t.closest('tr'));
+      if (t.dataset.admRestore && admKept.has(t.dataset.admRestore) && armed(t, '¿Restaurar esta versión? Pulsa otra vez')) {
+        t.disabled = true;
+        const v = admKept.get(t.dataset.admRestore);
+        await restoreVersion(v, { asAdmin: true });
+        await audit('Versión restaurada', `${v.col}: ${v.of} (${v.vid})`);
+        ctx.toast('Restaurada. La versión que había quedó guardada en su historial.');
+        renderAdmin('contenido');
+      }
       const fb = t.closest('[data-fb-id]');
       if (fb && t.dataset.fbSave !== undefined) await fbSave(fb);
       if (fb && t.dataset.fbDelete !== undefined && armed(t, '¿Borrar? Pulsa otra vez')) await fbDelete(fb);

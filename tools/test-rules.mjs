@@ -113,6 +113,18 @@ function put(path, data, { stamp = 'updated', create = false, mask = null } = {}
 }
 const remove = (path) => ({ delete: `${base}/${path}` });
 const commit = (token, writes) => status(token, 'POST', ':commit', { writes });
+// The kept copy of an item as it is now (the rules demand one before its owner changes or deletes it): read with the
+// administrator's token, written as versions/{id}__{collection}__{millis of its last change}.
+async function keep(col, docId, uid, action = 'replaced', over = {}) {
+  const current = await call(admin, 'GET', `${firestore}/${col}/${docId}`);
+  const ms = String(Date.parse(current.fields?.updated?.timestampValue ?? '') || 0);
+  const vid = `${docId}__${col}__${ms}`;
+  touched.add(`versions/${vid}`);
+  return { vid, write: {
+    update: { name: `${base}/versions/${vid}`, fields: { of: { stringValue: docId }, col: { stringValue: col }, uid: { stringValue: uid }, action: { stringValue: action }, data: { mapValue: { fields: { ...current.fields, ...over } } } } },
+    updateTransforms: [{ fieldPath: 'at', setToServerValue: 'REQUEST_TIME' }],
+  }, fields: current.fields };
+}
 // A list as the app asks for it (public documents only), or one that asks for everything.
 const where = (field, v) => ({ fieldFilter: { field: { fieldPath: field }, op: 'EQUAL', value: { stringValue: v } } });
 const list = (token, collection, filter) => status(token, 'POST', ':runQuery', { structuredQuery: { from: [{ collectionId: collection }], ...(filter ? { where: filter } : {}) } });
@@ -204,7 +216,31 @@ try {
   expect('student reads its own owner record', await status(s.token, 'GET', `/owners/${mine}`), 200);
   expect('student lists its own owner records', await list(s.token, 'owners', where('uid', s.uid)), 200);
   expect('student cannot list the owner records of another account', await list(s.token, 'owners', where('uid', c.uid)), 403);
-  expect('student changes its contribution', await commit(s.token, [put(`contributions/${mine}`, contribution({ title: 'cambiada' }))]), 200);
+  // History: a change or a deletion by the owner keeps the current version first; only its owner and the admins read it.
+  expect('changing a contribution without keeping its version is refused', await commit(s.token, [put(`contributions/${mine}`, contribution({ title: 'cambiada' }))]), 403);
+  const first = await keep('contributions', mine, s.uid);
+  expect('a kept version that is not an exact copy is refused', await commit(s.token, [(await keep('contributions', mine, s.uid, 'replaced', { title: { stringValue: 'falsa' } })).write, put(`contributions/${mine}`, contribution({ title: 'cambiada' }))]), 403);
+  expect('a kept version in the name of another owner is refused', await commit(s.token, [(await keep('contributions', mine, c.uid)).write, put(`contributions/${mine}`, contribution({ title: 'cambiada' }))]), 403);
+  expect('classmate cannot keep a version of it', await commit(c.token, [(await keep('contributions', mine, s.uid)).write]), 403);
+  expect('student changes its contribution, keeping its version', await commit(s.token, [first.write, put(`contributions/${mine}`, contribution({ title: 'cambiada' }))]), 200);
+  expect('student reads its kept version', await status(s.token, 'GET', `/versions/${first.vid}`), 200);
+  expect('student lists its kept versions', await list(s.token, 'versions', where('uid', s.uid)), 200);
+  expect('classmate cannot read the kept version', await status(c.token, 'GET', `/versions/${first.vid}`), 403);
+  expect('admin reads the kept version', await status(accounts.admin.token, 'GET', `/versions/${first.vid}`), 200);
+  expect('changing only who sees it needs no kept version', await commit(s.token, [put(`contributions/${mine}`, { visibility: 'private' }, { mask: ['visibility'] })]), 200);
+  expect('and back', await commit(s.token, [put(`contributions/${mine}`, { visibility: 'public' }, { mask: ['visibility'] })]), 200);
+  {
+    // The admin restores exactly the kept version, keeping the current one first.
+    const now = await keep('contributions', mine, s.uid, 'restored');
+    const { updated, ...old } = first.fields;
+    const restore = { update: { name: `${base}/contributions/${mine}`, fields: old }, updateTransforms: [{ fieldPath: 'updated', setToServerValue: 'REQUEST_TIME' }] };
+    touched.add(`restores/${mine}`);
+    expect('admin cannot restore without naming the version', await commit(accounts.admin.token, [now.write, restore]), 403);
+    const changed = { update: { name: `${base}/contributions/${mine}`, fields: { ...old, title: { stringValue: 'del admin' } } }, updateTransforms: [{ fieldPath: 'updated', setToServerValue: 'REQUEST_TIME' }] };
+    expect('admin cannot write anything else than the kept version', await commit(accounts.admin.token, [now.write, put(`restores/${mine}`, { contributions: first.vid }, { stamp: false }), changed]), 403);
+    expect('admin restores the kept version', await commit(accounts.admin.token, [now.write, put(`restores/${mine}`, { contributions: first.vid }, { stamp: false }), restore]), 200);
+    expect('classmate cannot restore anything', await commit(c.token, [put(`restores/${mine}`, { contributions: first.vid }, { stamp: false })]), 403);
+  }
   for (const [name, account] of [['otherDomain', accounts.otherDomain], ['lookalike', accounts.lookalike]]) {
     const theirs = appId();
     expect(`${name} cannot publish a contribution`, await commit(account.token, [
@@ -247,7 +283,7 @@ try {
     expect(`student publishes a contribution of kind ${kind}`, await commit(s.token, [
       put(`contributions/${other}`, contribution({ kind }), { create: true }), put(`owners/${other}`, owner(s.uid), { stamp: false, create: true })]), 200);
   }
-  expect('student makes its contribution private and leaves a removal record', await commit(s.token, [
+  expect('student makes its contribution private and leaves a removal record', await commit(s.token, [(await keep('contributions', full, s.uid)).write,
     put(`contributions/${full}`, contribution({ visibility: 'private', stage: 'Examen 2', source })), put(`removed/${full}`, {}, { stamp: 'at' })]), 200);
   expect('classmate cannot leave a removal record for it', await commit(c.token, [put(`removed/${full}`, {}, { stamp: 'at' })]), 403);
   expect('a removal record with other fields is refused', await commit(s.token, [put(`removed/${full}`, { why: 'x' }, { stamp: 'at' })]), 403);
@@ -286,7 +322,21 @@ try {
   expect('a guide without a catalog entry is refused', await commit(s.token, [
     put(`guides/${bare}`, guide(), { create: true }), put(`owners/${bare}`, owner(s.uid), { stamp: false, create: true })]), 403);
   expect('classmate cannot replace the guide', await commit(c.token, [put(`guides/${g}`, guide('<!doctype html><title>otra</title>'))]), 403);
-  expect('student replaces its guide', await commit(s.token, [put(`guides/${g}`, guide('<!doctype html><title>nueva</title>')), put(`catalog/${g}`, entry())]), 200);
+  expect('replacing a guide without keeping its version is refused', await commit(s.token, [put(`guides/${g}`, guide('<!doctype html><title>nueva</title>')), put(`catalog/${g}`, entry())]), 403);
+  const keptPage = await keep('guides', g, s.uid);
+  const keptEntry = await keep('catalog', g, s.uid);
+  expect('student replaces its guide, keeping both parts', await commit(s.token, [keptPage.write, keptEntry.write,
+    put(`guides/${g}`, guide('<!doctype html><title>nueva</title>')), put(`catalog/${g}`, entry())]), 200);
+  {
+    const back = (k, col) => { const { updated, ...old } = k.fields; return { update: { name: `${base}/${col}/${g}`, fields: old }, updateTransforms: [{ fieldPath: 'updated', setToServerValue: 'REQUEST_TIME' }] }; };
+    touched.add(`restores/${g}`);
+    expect('admin cannot write a page that is not a kept version', await commit(accounts.admin.token, [(await keep('guides', g, s.uid, 'restored')).write,
+      put(`restores/${g}`, { guides: keptEntry.vid }, { stamp: false }), back(keptPage, 'guides')]), 403);
+    expect('admin restores one part, exactly as kept', await commit(accounts.admin.token, [(await keep('guides', g, s.uid, 'restored')).write,
+      put(`restores/${g}`, { guides: keptPage.vid }, { stamp: false }), back(keptPage, 'guides')]), 200);
+    expect('admin restores both parts of a guide', await commit(accounts.admin.token, [(await keep('guides', g, s.uid, 'restored')).write, (await keep('catalog', g, s.uid, 'restored')).write,
+      put(`restores/${g}`, { guides: keptPage.vid, catalog: keptEntry.vid }, { stamp: false }), back(keptPage, 'guides'), back(keptEntry, 'catalog')]), 200);
+  }
   expect('student cannot keep the entry while deleting the guide', await commit(s.token, [remove(`guides/${g}`)]), 403);
   const signed2 = appId();
   expect('student publishes a guide signed with its name and the AI that made it', await commit(s.token, [
@@ -298,8 +348,13 @@ try {
     put(`guides/${oddAi}`, guide(), { create: true }),
     put(`catalog/${oddAi}`, entry('public', { ai: { provider: 'skynet', model: 'x' } }), { create: true }),
     put(`owners/${oddAi}`, owner(s.uid), { stamp: false, create: true })]), 403);
-  expect('student deletes its guide', await commit(s.token, [remove(`guides/${g}`), remove(`catalog/${g}`), remove(`owners/${g}`)]), 200);
-  expect('student deletes its contribution', await commit(s.token, [remove(`contributions/${mine}`), remove(`owners/${mine}`)]), 200);
+  expect('deleting a contribution without keeping it is refused', await commit(s.token, [remove(`contributions/${mine}`), remove(`owners/${mine}`)]), 403);
+  expect('student deletes its guide, keeping it', await commit(s.token, [(await keep('guides', g, s.uid, 'deleted')).write, (await keep('catalog', g, s.uid, 'deleted')).write,
+    remove(`guides/${g}`), remove(`catalog/${g}`), remove(`owners/${g}`)]), 200);
+  const gone = await keep('contributions', mine, s.uid, 'deleted');
+  expect('student deletes its contribution, keeping it', await commit(s.token, [gone.write, remove(`contributions/${mine}`), remove(`owners/${mine}`)]), 200);
+  expect('student still reads what it deleted', await status(s.token, 'GET', `/versions/${gone.vid}`), 200);
+  expect('student deletes its kept version for good', await commit(s.token, [remove(`versions/${gone.vid}`)]), 200);
   // The person's own space
   const profile = (extra = {}) => ({ mode: 'metas', ambience: 'jugueton', sound: true, theme: 'dark', semester: 7, career: 'Carrera de prueba',
     nickname: 'Prueba', goals: [{ id: 'a1', text: 'Terminar la guía', done: false }], progress: { [adminGuide]: 'done' }, ...extra });

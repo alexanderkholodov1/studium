@@ -5,7 +5,7 @@ import {
   KINDS, KIND_HINTS, LEVELS, contributionInstructions, curriculumInstructions, guideInstructions, parseContribution, parseGuide,
   contextPack, findPersonal, redact,
 } from './prompts.js';
-import { publishContribution, publishGuide, setVisibility, remove, LIMIT, loadDrafts, saveDrafts } from './data.js';
+import { publishContribution, publishGuide, setVisibility, remove, LIMIT, loadDrafts, saveDrafts, myVersions, restoreVersion, deleteVersion } from './data.js';
 import { prepareGroup, groupFiles, fingerprint, partsSize, partFiles, zipFiles } from './files.js';
 import { createQueue, indexedStore, memoryStore } from './queue.js';
 import { looseKey, stageOf, stageLabel } from './standard.js';
@@ -1089,7 +1089,7 @@ function minePane() {
   const items = [...catalog, ...contributions].filter((x) => x.mine).sort((a, b) => b.updated - a.updated);
   if (!items.length) {
     return `<div class="empty glass"><h2>Todavía no aportaste nada</h2><p>Tus aportes y guías aparecen aquí: puedes cambiar quién los ve, reemplazarlos o borrarlos.</p>
-      <a class="button primary" href="#/estudiar">Soltar material en Estudia</a></div>`;
+      <a class="button primary" href="#/estudiar">Soltar material en Estudiar</a></div>${HISTORY}`;
   }
   return `<ul class="mine">${items.map((x) => `<li class="glass" style="${themeStyle(x.theme)}" data-item="${esc(x.type)}:${esc(x.id)}">
       <div class="what"><span class="badge">${x.type === 'guide' ? 'Guía' : esc(KINDS[x.kind] ?? 'Aporte')}</span>
@@ -1099,7 +1099,41 @@ function minePane() {
         ${x.type === 'guide' ? `<a class="button ghost" href="#/guia/${encodeURIComponent(x.id)}">Abrir</a><label class="button ghost">Reemplazar<input type="file" accept=".html,.htm,text/html" hidden data-replace="${esc(x.id)}"></label>` : ''}
         <button class="button ghost danger" data-remove="${esc(x.type)}:${esc(x.id)}">Borrar</button>
       </div>
-    </li>`).join('')}</ul><div class="reviews" data-reviews="mine"></div>`;
+    </li>`).join('')}</ul><div class="reviews" data-reviews="mine"></div>${HISTORY}`;
+}
+// Your history: how each guide or contribution was before you changed or deleted it. Restore any of it, or delete it
+// for good. Kept by the database itself (data.js keepVersion; the rules demand it), the last 10 of each.
+const HISTORY = '<section class="history glass" data-history><h2>Tu historial</h2><p class="muted">Cargando…</p></section>';
+const ACTION = { replaced: 'Antes de reemplazarlo', deleted: 'Antes de borrarlo', restored: 'Antes de restaurar otra versión' };
+let kept = new Map();
+async function drawHistory() {
+  const box = $('[data-history]');
+  if (!box) return;
+  try {
+    const list = await myVersions(ctx.user.uid);
+    // A guide keeps its page and its entry in one write: one event, shown once.
+    const events = new Map();
+    for (const v of list) {
+      const key = `${v.of}@${v.at?.toMillis?.() ?? 0}`;
+      const e = events.get(key) ?? { parts: [] };
+      e.parts.push(v);
+      if (v.col !== 'guides') e.main = v;
+      events.set(key, e);
+    }
+    kept = new Map(list.map((v) => [v.vid, v]));
+    const exists = new Set([...ctx.state.catalog, ...ctx.state.contributions].filter((x) => x.mine).map((x) => x.id));
+    const rows = [...events.values()].map((e) => {
+      const v = e.main ?? e.parts[0];
+      const d = v.data ?? {};
+      const when = v.at?.toDate?.().toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) ?? '';
+      return `<li><div class="what"><span class="badge">${v.col === 'contributions' ? esc(KINDS[d.kind] ?? 'Aporte') : 'Guía'}</span>
+          <strong>${esc(d.title ?? '')}</strong><span class="muted">${esc(ACTION[v.action] ?? '')} · ${esc(when)}${exists.has(v.of) ? '' : ' · ya no existe'}</span></div>
+        <div class="actions"><button type="button" class="button ghost small" data-restore="${esc(v.vid)}">${exists.has(v.of) ? 'Volver a esta versión' : 'Recuperarlo'}</button>
+          <button type="button" class="button ghost small danger" data-forget="${esc(e.parts.map((p) => p.vid).join(' '))}">Borrar para siempre</button></div></li>`;
+    });
+    box.innerHTML = `<h2>Tu historial</h2><p class="muted">Cómo estaba cada guía o aporte tuyo antes de cambiarlo o borrarlo (los últimos 10 de cada uno). Solo lo ves tú, y quien administra Studium para poder ayudarte a recuperarlo.</p>
+      ${rows.length ? `<ul class="mine">${rows.join('')}</ul>` : '<p class="muted">Todavía no cambiaste ni borraste nada.</p>'}`;
+  } catch (e) { box.innerHTML = `<h2>Tu historial</h2><p class="msg">${esc(ctx.explain(e))}</p>`; }
 }
 const findItem = (ref) => {
   const [type, id] = ref.split(':');
@@ -1235,7 +1269,19 @@ export function mountContribute(context) {
     if (t.dataset.remove) {
       if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = '¿Borrar? Pulsa otra vez'; setTimeout(() => { if (t.isConnected) { t.dataset.armed = ''; t.textContent = 'Borrar'; } }, 4000); return; }
       t.disabled = true;
-      try { await remove(findItem(t.dataset.remove)); ctx.toast('Borrado.'); await ctx.refresh(); renderPane('mine'); }
+      try { await remove(findItem(t.dataset.remove)); ctx.toast('Borrado. Puedes recuperarlo desde «Tu historial».'); await ctx.refresh(); renderPane('mine'); }
+      catch (error) { t.disabled = false; ctx.toast(ctx.explain(error)); }
+    }
+    // Your history: back to a kept version (the current one is kept first), or a kept version deleted for good.
+    if (t.dataset.restore && kept.has(t.dataset.restore)) {
+      t.disabled = true;
+      try { await restoreVersion(kept.get(t.dataset.restore)); ctx.toast('Listo: volvió esa versión. La que había quedó en tu historial.'); await ctx.refresh(); renderPane('mine'); }
+      catch (error) { t.disabled = false; ctx.toast(ctx.explain(error)); }
+    }
+    if (t.dataset.forget) {
+      if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = '¿Seguro? No se puede deshacer'; setTimeout(() => { if (t.isConnected) { t.dataset.armed = ''; t.textContent = 'Borrar para siempre'; } }, 4000); return; }
+      t.disabled = true;
+      try { for (const vid of t.dataset.forget.split(' ')) await deleteVersion(vid); ctx.toast('Borrado para siempre.'); drawHistory(); }
       catch (error) { t.disabled = false; ctx.toast(ctx.explain(error)); }
     }
   });
@@ -1286,5 +1332,6 @@ export function renderPane(pane, preset) {
   }
   if (pane === 'material') { $('#m-prompt').textContent = materialPrompt(); renderQueue(); syncReviews(); }
   if (pane === 'guide' && $('#g-form')) { renderNotes(); renderScope(); }
+  if (pane === 'mine') drawHistory();
   rise(el, '.flow > li, .mine > li, .empty');
 }
