@@ -159,7 +159,7 @@ async function processJob(job, group, list) {
   const files = await unit.make();
   queue.setProgress(job.id, `Tu IA lo está leyendo… (${kb(partsSize(files))})`);
   const res = await ai.run({
-    system: instructionsOf(job, group), files, maxTokens: 32000, task: 'material', use: ai.choice('material'),
+    system: instructionsOf(job, group), files, maxTokens: 32000, task: 'material', use: ai.choice('material'), label: group.v?.oneFolder || job.label,
     text: 'Procesa el material adjunto siguiendo las instrucciones de Studium. Responde solo con el JSON, en un bloque de código.',
     onProgress: (n) => queue.setProgress(job.id, n < 0 ? 'Tu IA está escribiendo…' : `Tu IA está escribiendo… ${n.toLocaleString('es')} caracteres`),
   });
