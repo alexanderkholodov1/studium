@@ -45,7 +45,8 @@ export function prepareGuide(html) {
 
 // A guide is shown in frame.html, a document of its own (a srcdoc frame would inherit the page's strict policy and
 // block the guide's code): the frame loads, says it is ready, and receives the guide once.
-const FRAME = new URL('../frame.html', import.meta.url).href;
+// From the mount's root, not from this file: a release moves the assets into assets/<version>/ (tools/pack.sh).
+const FRAME = import.meta.url.replace(/\/assets\/.*$/, '/frame.html');
 let shown = 0;
 export function showGuide(frame, html, anchor = '') {
   const doc = prepareGuide(html);
