@@ -277,13 +277,33 @@ function stopMusic() { radio.playing = false; clearInterval(radio.timer); radio.
 // It goes with you to every tab (floating, wherever you drop it), or it stays on Inicio, in «Tus hallazgos». Either
 // way the music goes on while you move around the page.
 function radioEl() { return document.getElementById('egg-radio'); }
+const SCALE = 0.56; // floating, the radio is smaller (its CSS scales it from its top left corner)
+const size = (el) => ({ w: (el.offsetWidth || 300) * SCALE, h: (el.offsetHeight || 210) * SCALE });
+const topEdge = () => Math.max(84, (document.getElementById('nav')?.getBoundingClientRect().bottom ?? 0) + 8);
 function place(el, pos) {
-  const w = el.offsetWidth || 300; const h = el.offsetHeight || 210;
-  // Never over the navigation bar at the top.
-  const top = Math.max(84, (document.getElementById('nav')?.getBoundingClientRect().bottom ?? 0) + 8);
-  const x = Math.max(8, Math.min(innerWidth - w - 8, pos.x)); const y = Math.max(top, Math.min(innerHeight - h - 8, pos.y));
+  const { w, h } = size(el);
+  // Never over the navigation bar at the top, never off the screen.
+  const x = Math.max(8, Math.min(innerWidth - w - 8, pos.x)); const y = Math.max(topEdge(), Math.min(innerHeight - h - 8, pos.y));
   el.style.left = `${x}px`; el.style.top = `${y}px`;
   return { x, y };
+}
+// The four corners it can rest in; the bottom right one leaves room for «?» and Feedback.
+function corners(el) {
+  const { w, h } = size(el);
+  return {
+    'bottom-left': { x: 12, y: innerHeight - h - 12 },
+    'top-left': { x: 12, y: topEdge() },
+    'top-right': { x: innerWidth - w - 12, y: topEdge() },
+    'bottom-right': { x: innerWidth - w - 12, y: innerHeight - h - 66 },
+  };
+}
+function toCorner(el, name) {
+  const c = corners(el)[name] ?? corners(el)['bottom-left'];
+  return place(el, c);
+}
+function nearestCorner(el) {
+  const r = el.getBoundingClientRect(); const cx = r.left + r.width / 2; const cy = r.top + r.height / 2;
+  return Object.entries(corners(el)).map(([k, c]) => [k, Math.hypot(c.x + r.width / 2 - cx, c.y + r.height / 2 - cy)]).sort((a, b) => a[1] - b[1])[0][0];
 }
 export function radioOn() { return !!read(RADIO, {}).on; }
 export const radioDocked = () => radioOn() && !!read(RADIO, {}).dock;
@@ -334,7 +354,7 @@ function tv(el, s) {
   box.innerHTML = `<div class="yt"></div><p class="yt-status" role="status">${t('Abriendo el reproductor de YouTube…')}</p>
     <p class="credit">${t(s.credit)} <a href="https://www.youtube.com/watch?v=${s.video}" target="_blank" rel="noopener">${t('Ver en YouTube')}</a></p>`;
   // Floating, the radio grows upward with its player and stays on screen.
-  if (!el.classList.contains('docked')) setTimeout(() => place(el, { x: el.offsetLeft, y: el.offsetTop - box.offsetHeight }), 0);
+  if (!el.classList.contains('docked')) setTimeout(() => toCorner(el, read(RADIO, {}).corner ?? 'bottom-right'), 0);
   youtube().then((YT) => {
     if (current().id !== s.id || !el.isConnected) return;
     radio.yt = new YT.Player(box.querySelector('.yt'), {
@@ -434,7 +454,7 @@ export function placeRadio(stand = document.querySelector('[data-radio-stand]'))
     el.classList.remove('docked');
     // Left on Inicio, but Inicio is not on screen: it waits, hidden, still playing.
     el.classList.toggle('waiting', !!state.dock);
-    if (!state.dock) place(el, state.x != null ? state : { x: innerWidth - 400, y: innerHeight - 300 });
+    if (!state.dock) toCorner(el, state.corner ?? 'bottom-right');
   }
   syncDock(el);
 }
@@ -494,7 +514,14 @@ export function openRadio(discovered = false) {
     if (!still()) box.style.setProperty('--ry', `${-16 + Math.max(-30, Math.min(30, vx / 40))}deg`);
     place(el, { x: e.clientX - drag.dx, y: e.clientY - drag.dy });
   });
-  const drop = () => { if (!drag) return; drag = null; el.classList.remove('held'); box.style.removeProperty('--ry'); write(RADIO, { ...read(RADIO, {}), x: el.offsetLeft, y: el.offsetTop }); sfx.release(0, 160); };
+  const drop = () => {
+    if (!drag) return;
+    drag = null; el.classList.remove('held'); box.style.removeProperty('--ry');
+    const corner = nearestCorner(el);
+    write(RADIO, { ...read(RADIO, {}), corner });
+    el.classList.add('snapping'); toCorner(el, corner); setTimeout(() => el.classList.remove('snapping'), 400);
+    sfx.release(0, 160);
+  };
   el.addEventListener('pointerup', drop);
   el.addEventListener('pointercancel', drop);
 }
@@ -522,7 +549,7 @@ export function mountEggs(options) {
     sfx.tick();
     onDot(e);
   }, true);
-  const keep = () => { const el = radioEl(); if (el && !el.classList.contains('docked')) place(el, { x: el.offsetLeft, y: el.offsetTop }); };
+  const keep = () => { const el = radioEl(); if (el && !el.classList.contains('docked')) toCorner(el, read(RADIO, {}).corner ?? 'bottom-right'); };
   addEventListener('resize', keep);
   addEventListener('hashchange', () => setTimeout(keep, 50));
   if (radioOn()) openRadio();
