@@ -21,8 +21,8 @@ export function setHints(on) { try { localStorage.setItem(OFF, on ? 'on' : 'off'
 // obvious from the page itself.
 const HINTS = [
   { id: 'h-home', where: [''], anchor: '#home-edit', text: '¿Sabías que tu inicio se arma a tu gusto? Fechas de entrega, tu semana, un bloc de notas, accesos rápidos…' },
-  { id: 'h-sub', where: ['crear'], anchor: '[data-chat="claude"]', text: '¿Sabías que puedes crear la guía con tu suscripción de Claude, ChatGPT o Gemini, sin ninguna clave?' },
-  { id: 'h-folder', where: ['crear'], anchor: '[data-ai-drop], .dropzone', text: '¿Sabías que puedes soltar una carpeta entera de apuntes, no solo un archivo?' },
+  { id: 'h-sub', where: ['estudia'], anchor: '[data-chat="claude"]', text: '¿Sabías que puedes crear la guía con tu suscripción de Claude, ChatGPT o Gemini, sin ninguna clave?' },
+  { id: 'h-folder', where: ['estudia'], anchor: '[data-ai-drop], .dropzone', text: '¿Sabías que puedes soltar una carpeta entera de apuntes, no solo un archivo?' },
   { id: 'h-bar', where: ['guias'], anchor: '.gcard', text: 'Dentro de una guía, la flecha de la esquina esconde la barra de Studium para leer a pantalla completa.' },
   { id: 'h-keys', where: ['ajustes'], anchor: '#set-ai', text: '¿Sabías que puedes conectar varias IA a la vez y elegir el modelo cada vez que la usas?' },
   { id: 'h-eggs', where: ['', 'guias', 'bienvenida'], anchor: '.brand', text: 'Studium esconde algunos secretos. Toca las cosas pequeñas, o escribe alguna palabra mágica.' },

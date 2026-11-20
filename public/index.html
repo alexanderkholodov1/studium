@@ -57,7 +57,7 @@
     <a href="#/guias" data-tab="catalog">Guías</a>
     <a href="#/grafo" data-tab="map">Grafo</a>
     <a href="#/profes" data-tab="profes">Profes</a>
-    <a href="#/crear" data-tab="contribute">Crea tu guía</a>
+    <a href="#/estudia" data-tab="contribute">Estudia</a>
     <a href="#/admin" data-tab="admin" class="admin-only">Admin</a>
   </nav>
   <nav class="tabs public-only" aria-label="Secciones">
@@ -84,7 +84,6 @@
       <a role="menuitem" href="#/malla">Mi malla</a>
       <a role="menuitem" href="#/guia-estudiante">Guía del estudiante</a>
       <a role="menuitem" href="#/ajustes">Ajustes</a>
-      <a role="menuitem" href="#/mis-aportes">Mis aportes</a>
       <a role="menuitem" href="#/acerca">Acerca de Studium</a>
       <button role="menuitem" id="sign-out">Salir</button>
     </div>
@@ -96,7 +95,7 @@
   <a href="#/guias" data-tab="catalog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4Zm0 12a4 4 0 0 1 4-4h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>Guías</a>
   <a href="#/grafo" data-tab="map"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="6" r="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="17" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 8.5l2.6 6M16.6 7.7l-3 6.6M8.4 6.8l7.6-.6" stroke="currentColor" stroke-width="2"/></svg>Grafo</a>
   <a href="#/profes" data-tab="profes"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Profes</a>
-  <a href="#/crear" data-tab="contribute"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>Crea tu guía</a>
+  <a href="#/estudia" data-tab="contribute"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>Estudia</a>
   <a href="#/admin" data-tab="admin" class="admin-only"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 6v6c0 4.4 3.2 7.7 7.5 9 4.3-1.3 7.5-4.6 7.5-9V6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="11" r="2.4" fill="none" stroke="currentColor" stroke-width="2"/></svg>Admin</a>
 </nav>
 
@@ -314,7 +313,7 @@
 <main class="view page wide" id="view-catalog" hidden>
   <div class="page-head">
     <h1>Guías</h1>
-    <a class="button primary" href="#/crear/guia"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>Crear una guía</a>
+    <a class="button primary" href="#/estudia/guia"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>Crear una guía</a>
     <label class="search glass"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><input id="q" type="search" placeholder="Busca una materia, un tema o un profe" aria-label="Buscar guías"></label>
   </div>
   <fieldset class="seg filters" id="g-filter"><legend class="sr">Mostrar</legend>
@@ -359,7 +358,7 @@
   <div class="map-empty glass" id="map-empty" hidden>
     <h2>El grafo todavía está vacío</h2>
     <p>Cada material que aportas agrega sus conceptos aquí.</p>
-    <a class="button primary" href="#/crear/grafo">Sumar material al grafo</a>
+    <a class="button primary" href="#/estudia">Sumar material al grafo</a>
   </div>
 </main>
 
@@ -502,14 +501,8 @@
 </dialog>
 
 <main class="view page" id="view-contribute" hidden>
-  <div class="page-head"><h1 id="c-title">Crea tu guía</h1></div>
-  <div class="have" id="c-have" role="tablist" aria-label="¿Qué tienes?">
-    <p class="have-q">¿Qué tienes?</p>
-    <button class="have-card glass" role="tab" data-pane="guide" aria-selected="true">
-      <strong>Mis apuntes</strong><span>Tu IA te hace una guía para estudiar, a tu medida.</span></button>
-    <button class="have-card glass" role="tab" data-pane="material" aria-selected="false">
-      <strong>Un examen, deber o material de clase</strong><span>Lo sumas al grafo, anónimo, y ayuda a todos los que vienen.</span></button>
-  </div>
+  <div class="page-head"><h1 id="c-title">Estudia</h1></div>
+  <section id="pane-estudia"></section>
   <aside class="anon glass" id="c-anon">
     <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg>
     <div><h2>Todo se anonimiza. Siempre.</h2>

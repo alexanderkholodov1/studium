@@ -348,7 +348,7 @@ function renderCatalog() {
   list.sort((a, b) => rank(a) - rank(b));
   $('#gallery').innerHTML = list.length ? list.map(guideCard).join('') : `<div class="empty glass">${state.catalog.length
     ? `<h2>Nada por aquí</h2><p>${filter === 'all' ? 'Prueba con otra materia, tema o profe.' : 'Cambia el filtro para ver más guías.'}</p>`
-    : '<h2>Studium está empezando</h2><p>Aporta tus exámenes, deberes o apuntes: con ellos se arma el grafo y se crean las guías.</p><a class="button primary" href="#/crear/grafo">Sumar material al grafo</a>'}</div>`;
+    : '<h2>Studium está empezando</h2><p>Aporta tus exámenes, deberes o apuntes: con ellos se arma el grafo y se crean las guías.</p><a class="button primary" href="#/estudia">Soltar material en Estudia</a>'}</div>`;
   rise($('#gallery'));
 }
 $('#q').addEventListener('input', renderCatalog);
@@ -458,7 +458,8 @@ async function route() {
   if (pending) { const to = pending; pending = ''; if (location.hash !== to) { location.hash = to; return; } }
   if (page === 'entrar' || (page === 'admin' && !role.admin)) { location.hash = '#/'; return; }
   // The old names of 0.5: «Mapa» is «Grafo», and «Biblioteca» lives inside it as «Documentos». Shared links still work.
-  if (page === 'aportar') { history.replaceState(null, '', `${location.pathname}#/crear/${rest[0] === 'guia' ? rest.join('/') : 'grafo'}`); return route(); }
+  // «Aportar» (0.5) and «Crea tu guía» are «Estudia» now: the old links land on it.
+  if (page === 'aportar' || page === 'crear') { history.replaceState(null, '', `${location.pathname}#/estudia${rest[0] === 'guia' ? `/${rest.join('/')}` : rest[0] === 'grafo' ? '/grafo' : ''}`); return route(); }
   if (page === 'mapa' || page === 'biblioteca') {
     history.replaceState(null, '', `${location.pathname}#/grafo${page === 'biblioteca' ? '/documentos' : rest.length ? `/${rest.join('/')}` : ''}`);
     return route();
@@ -513,20 +514,20 @@ async function route() {
       admin: ['admin', 'Admin', () => renderAdmin(arg[0])],
       '': ['home', 'Inicio', renderHome],
     };
-    // «Crea tu guía» (0.5 called it «Aportar»): your notes become a guide, or class material joins the graph.
-    // «Mis aportes» is reached from the account menu, on its own.
-    if (page === 'crear' || page === 'mis-aportes') {
+    // «Estudia»: drop anything, sorted in sight; the desk of each course; a guide or the graph from what was dropped.
+    // «Mis aportes» (what was published, to change who sees it or delete it) is reached from «Estudia».
+    if (page === 'estudia' || page === 'mis-aportes') {
       const mine = page === 'mis-aportes';
-      document.title = `${t(mine ? 'Mis aportes' : 'Crea tu guía')} · Studium`;
-      $('#c-title').textContent = t(mine ? 'Mis aportes' : 'Crea tu guía');
-      $('#c-have').hidden = mine;
-      $('#c-anon').hidden = mine;
+      const pane = mine ? 'mine' : arg[0] === 'guia' ? 'guide' : arg[0] === 'grafo' ? 'material' : arg[0] === 'materia' ? 'desk' : 'estudia';
+      const title = mine ? 'Mis aportes' : pane === 'desk' ? arg[1] : 'Estudia';
+      document.title = `${mine ? t(title) : title === 'Estudia' ? t('Estudia') : title} · Studium`;
+      $('#c-title').textContent = mine ? t('Mis aportes') : t('Estudia');
+      $('#c-anon').hidden = pane !== 'estudia';
       show('contribute');
       await load();
       if (ticket !== routing) return;
       mountContribute(context);
-      const pane = mine ? 'mine' : arg[0] === 'grafo' ? 'material' : 'guide';
-      renderPane(pane, arg[0] === 'guia' && arg[1] ? { course: arg[1] } : undefined);
+      renderPane(pane, pane === 'desk' ? { course: arg[1] ?? '' } : pane === 'guide' && arg[1] ? { course: arg[1] } : undefined);
       return;
     }
     const [view, title, render] = views[page] ?? views[''];
@@ -541,7 +542,7 @@ async function route() {
   } catch (error) {
     if (ticket !== routing) return;
     console.error(error);
-    const where = page === 'guia' ? '#guide-status' : page === 'grafo' ? '#map-empty' : page === 'crear' ? (arg[0] === 'grafo' ? '#pane-material' : '#pane-guide') : page === 'guias' ? '#gallery' : page === 'profes' ? '#profs' : '#dash';
+    const where = page === 'guia' ? '#guide-status' : page === 'grafo' ? '#map-empty' : page === 'estudia' ? (arg[0] === 'grafo' ? '#pane-material' : arg[0] === 'guia' ? '#pane-guide' : '#pane-estudia') : page === 'guias' ? '#gallery' : page === 'profes' ? '#profs' : '#dash';
     $(where).hidden = false;
     $(where).textContent = explain(error);
   }
@@ -558,7 +559,7 @@ $('#guide-show').addEventListener('click', () => bareReader(false));
 try { bareReader(localStorage.getItem('studium-reader-bare') === '1'); } catch { /* the bar stays */ }
 
 document.querySelectorAll('[data-pane]').forEach((b) => b.addEventListener('click', () => {
-  location.hash = { material: '#/crear/grafo', guide: '#/crear', mine: '#/mis-aportes' }[b.dataset.pane];
+  location.hash = { material: '#/estudia/grafo', guide: '#/estudia/guia', mine: '#/mis-aportes' }[b.dataset.pane];
 }));
 /* ---------- the links of the account e-mails ---------- */
 // They open Studium itself (?mode=…&oobCode=…), on the site students already use: confirming the address happens

@@ -206,7 +206,7 @@ function setLens(id) {
   } else if (special?.kind === 'timeline') special = null;
   if (lens === 'career' && !F.career) {
     const career = graph().nodes.find((n) => n.type === 'career');
-    if (career) F.career = career.id; else { lens = 'normal'; ctx.toast('Todavía no hay una malla en el grafo: súmala en «Crea tu guía».'); }
+    if (career) F.career = career.id; else { lens = 'normal'; ctx.toast('Todavía no hay una malla en el grafo: súmala en «Estudia».'); }
   }
   if (lens !== 'career' && F.career && LENSES[id] && id !== 'career') F.career = '';
   keep();
@@ -608,7 +608,7 @@ function panel(n) {
       <div class="actions">
         <button class="button primary" data-act="route">Trazar una ruta</button>
         <button class="button ghost" data-act="timeline">Línea de tiempo</button>
-        ${n.contributions.length || n.guides.length ? `<a class="button ghost" href="#/crear/guia/${encodeURIComponent(n.id)}">Crear una guía</a>` : '<a class="button ghost" href="#/crear/grafo">Sumar material al grafo</a>'}
+        ${n.contributions.length || n.guides.length ? `<a class="button ghost" href="#/estudia/guia/${encodeURIComponent(n.id)}">Crear una guía</a>` : '<a class="button ghost" href="#/estudia">Soltar material en Estudia</a>'}
       </div>
       ${nodeActions(n)}
       ${before.length ? `<h3>Se necesita antes</h3><div class="chips small">${chipsOf(before)}</div>` : ''}
@@ -700,7 +700,7 @@ function guideFrom(concepts, r) {
     course: course?.name ?? '', code: course?.code ?? '', title: r?.stage?.label ?? '', professor: r?.professor ?? '', term: r?.term ?? '', graph: true,
     route: { keys: concepts.map((n) => n.key), label: r ? `${r.stage ? `hasta ${r.stage.label}` : 'completa'}` : '', bands: r ? Object.fromEntries(r.steps.map((s) => [s.node.key, r.bandLabels[s.band]])) : null },
   });
-  location.hash = '#/crear/guia';
+  location.hash = '#/estudia/guia';
 }
 
 /* ---------- mounting ---------- */

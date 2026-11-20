@@ -13,6 +13,7 @@ import { prepareGuide } from './viewer.js';
 import { rise } from './fx.js';
 import * as ai from './ai.js';
 import { prefs } from './prefs.js';
+import { renderEstudia, renderDesk } from './estudia.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -276,13 +277,13 @@ function syncReviews() {
     reviewOf.set(job.id, item.id);
   }
 }
-async function enqueue(zone, files) {
+async function enqueue(zone, files, given) {
   const q = await startQueue();
-  const v = materialValues();
+  const v = given ? valuesFor(given) : materialValues();
   const known = printed();
   const manual = !ai.ready();
   // What the picker shows now, a model just typed included, is what the queue uses.
-  if ($('[data-ai-pick="material"]')) ai.picked('material');
+  if (!given && $('[data-ai-pick="material"]')) ai.picked('material');
   queueNotes.length = 0;
   let added = 0;
   for (const group of groupFiles(files)) {
@@ -377,6 +378,19 @@ async function droppedFiles(dataTransfer) {
   return out;
 }
 
+/* ---------- what «Estudia» calls ---------- */
+// To the knowledge graph: the queue of the person's AI, with the kind and course «Estudia» found.
+export const shareToGraph = (files, values) => enqueue('material', files, values);
+// A guide from what was dropped: the files become its notes, and what «Estudia» saw prefills its exact questions.
+let found = null; // { piles, exams, links }
+export function startGuide(files, preset) {
+  if (files.length) { notes = files.slice(0, 20); }
+  found = { piles: preset.piles ?? [], exams: preset.exams ?? [], links: preset.links ?? [] };
+  pending = { course: preset.course, graph: true };
+  location.hash = '#/estudia/guia';
+}
+export { droppedFiles };
+
 /* ---------- material ---------- */
 function materialPane() {
   const d = { kind: '', ...(store.get('studium-draft-material') ?? {}) };
@@ -431,9 +445,12 @@ function materialPane() {
   </ol>`;
 }
 function materialValues() {
-  const f = new FormData($('#m-form'));
-  const v = Object.fromEntries(f.entries());
-  store.set('studium-draft-material', v);
+  const form = $('#m-form');
+  const v = form ? Object.fromEntries(new FormData(form).entries()) : {};
+  if (form) store.set('studium-draft-material', v);
+  return valuesFor(v);
+}
+function valuesFor(v) {
   const k = known();
   const course = v.course?.trim();
   // The concepts the map already has for this course, by the names the map shows (the course's node, so its guides
@@ -496,7 +513,7 @@ function guidePane(preset = {}) {
   return `${datalists()}
   <form id="g-form" autocomplete="off" novalidate><ol class="flow">
     <li class="step glass">
-      <h2>¿Qué vas a estudiar?</h2>
+      <h2>${d.course ? esc(d.course) : 'La materia'}</h2>
       <div class="grid">
         <label class="field wide"><span>Materia o tema</span><input name="course" value="${esc(d.course ?? '')}" list="dl-courses" maxlength="80" placeholder="Redes de Computadores, Cálculo II, la Revolución francesa…"></label>
         ${input('title', 'Para qué (opcional)', d.title ?? '', 'maxlength="80" placeholder="Examen 2, el final, entenderlo de una vez…"')}
@@ -507,21 +524,33 @@ function guidePane(preset = {}) {
       </div>
     </li>
     <li class="step glass">
-      <h2>¿De dónde sale?</h2>
-      <p>De tus apuntes: PDF, fotos del cuaderno, diapositivas o deberes. Van solo a tu IA; a Studium no llegan.</p>
+      <h2>${notes.length ? 'Tus archivos' : '¿De dónde sale?'}</h2>
+      <p>${notes.length ? 'Van solo a tu IA; a Studium no llegan. Puedes sumar o quitar.' : 'De tus apuntes: PDF, fotos del cuaderno, diapositivas o deberes. Van solo a tu IA; a Studium no llegan.'}</p>
       <div class="dropzone notes" data-notes-drop>
         <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M14 6h14l10 10v24a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M28 6v10h10M18 26h12M18 33h8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <p><strong>Suelta aquí tus apuntes</strong>, o</p>
         <label class="button ghost">Elegir archivos<input type="file" multiple hidden data-notes accept="${NOTE_TYPES}"></label>
       </div>
       <ul class="notes-list" id="g-notes"></ul>
-      <label class="toggle"><input type="checkbox" name="graph" ${d.graph ? 'checked' : ''}><span class="knob"></span>Sumar lo que la comunidad ya sabe de esta materia (el grafo de conocimiento)</label>
+      <label class="toggle"><input type="checkbox" name="graph" ${d.graph !== false ? 'checked' : ''}><span class="knob"></span>Sumar el grafo de conocimiento</label>
       <div class="from-map" id="g-from-map" hidden></div>
       <div class="scope" id="g-scope-wrap" hidden>
         <div class="scope-head"><h3>Conceptos del grafo que entran</h3><button type="button" class="link" data-scope="all">Todos</button><button type="button" class="link" data-scope="none">Ninguno</button></div>
         <div class="chips" id="g-scope"></div>
       </div>
       <p class="note" id="g-summary"></p>
+    </li>
+    <li class="step glass">
+      <h2>Este examen</h2>
+      <div class="grid">
+        ${segmented('scope', { all: 'Todo', range: 'Una parte' }, d.scope ?? 'all', '¿Qué temas entran?')}
+        <div class="wide g-range" ${d.scope === 'range' ? '' : 'hidden'}><div class="grid">${input('from', 'Desde', d.from ?? '', 'list="dl-stages-g" placeholder="Examen 2, capítulo 4…"')}${input('until', 'Hasta', d.until ?? '', 'list="dl-stages-g" placeholder="lo de la semana 10…"')}</div></div>
+        <datalist id="dl-stages-g">${['Examen 1', 'Examen 2', 'Examen 3', 'el inicio', 'lo último que vimos'].map((x) => `<option value="${x}">`).join('')}</datalist>
+        <fieldset class="tagpick wide"><legend>¿De dónde salen los temas?</legend><div>${Object.entries(SOURCES_OF).map(([k, label]) => `<label><input type="checkbox" name="sources" value="${k}" ${(d.sources ?? defaultSources()).includes(k) ? 'checked' : ''}><span>${esc(label)}</span></label>`).join('')}</div></fieldset>
+        <label class="toggle wide"><input type="checkbox" name="likeExams" ${(d.likeExams ?? !!(found?.exams ?? []).length) ? 'checked' : ''}><span class="knob"></span>Preguntas como las de mis exámenes anteriores</label>
+        ${(found?.exams ?? []).length ? `<p class="fine">Tomará como referencia: ${esc(found.exams.slice(0, 4).join(', '))}${found.exams.length > 4 ? '…' : ''}</p>` : ''}
+        ${input('style', 'Cómo serán las preguntas (opcional)', d.style ?? '', 'maxlength="160" placeholder="Opción múltiple, desarrollo, problemas largos…"')}
+      </div>
     </li>
     <li class="step glass">
       <details class="custom" id="g-custom" ${custom ? 'open' : ''}>
@@ -578,12 +607,16 @@ function guidePane(preset = {}) {
     </li>
   </ol>`;
 }
+const SOURCES_OF = { notes: 'Fotos y apuntes', prof: 'Diapositivas y material del profe', book: 'Capítulos del libro', homework: 'Deberes', exam: 'Exámenes anteriores', video: 'Videos', web: 'Páginas web' };
+const defaultSources = () => { const p = found?.piles ?? []; const out = Object.keys(SOURCES_OF).filter((k) => p.includes(k) || (k === 'web' && p.includes('code'))); return out.length ? out : ['notes']; };
 function guideValues() {
   const form = $('#g-form');
   if (!form) return null;
   const f = new FormData(form);
   const v = Object.fromEntries(f.entries());
   v.sections = f.getAll('sections');
+  v.sources = f.getAll('sources');
+  v.likeExams = f.has('likeExams');
   v.graph = f.has('graph');
   v.course = String(v.course ?? '').trim();
   store.set('studium-draft-guide', v);
@@ -662,6 +695,9 @@ function guidePrompt({ api = false, inline = false } = {}) {
     university: r.course?.contributions.find((c) => c.university)?.university ?? '', theme: r.theme, contest: r.contest,
     graph: r.graph, contextFile: inline ? '' : r.file, api, notes: notes.length, mode: prefs.get().mode,
     until: fromMap && r.graph ? fromMap.label : '',
+    scope: r.v.scope === 'range' ? { from: r.v.from, until: r.v.until } : null,
+    sources: (r.v.sources ?? []).map((k) => SOURCES_OF[k]).filter(Boolean),
+    likeExams: r.v.likeExams ? (found?.exams ?? []) : null, style: r.v.style, links: found?.links ?? [],
   });
 }
 function guideContext() {
@@ -961,7 +997,7 @@ function minePane() {
   const items = [...catalog, ...contributions].filter((x) => x.mine).sort((a, b) => b.updated - a.updated);
   if (!items.length) {
     return `<div class="empty glass"><h2>Todavía no aportaste nada</h2><p>Tus aportes y guías aparecen aquí: puedes cambiar quién los ve, reemplazarlos o borrarlos.</p>
-      <a class="button primary" href="#/crear/grafo">Sumar material al grafo</a></div>`;
+      <a class="button primary" href="#/estudia">Soltar material en Estudia</a></div>`;
   }
   return `<ul class="mine">${items.map((x) => `<li class="glass" style="${themeStyle(x.theme)}" data-item="${esc(x.type)}:${esc(x.id)}">
       <div class="what"><span class="badge">${x.type === 'guide' ? 'Guía' : esc(KINDS[x.kind] ?? 'Aporte')}</span>
@@ -1007,6 +1043,7 @@ export function mountContribute(context) {
     if (e.target.dataset.prepare !== undefined) { prepareForChat([...e.target.files]); e.target.value = ''; }
     // A part of a book (or a file already in the map) joins the queue when the person ticks it.
     if (e.target.dataset.unit) { const id = e.target.dataset.unit; const on = e.target.checked; startQueue().then((q) => q.choose(id, on, !ai.ready())); }
+    if (e.target.name === 'scope' && e.target.closest('#g-form')) { const r = $('.g-range'); if (r) r.hidden = e.target.value !== 'range'; }
     if (e.target.name === 'kind' && e.target.closest('#m-form')) { const hint = $('#m-kind-hint'); if (hint) hint.textContent = KIND_HINTS[e.target.value] ?? ''; }
     const sign = e.target.dataset.sign;
     if (sign) { const item = reviews.get(sign); item.sign = e.target.checked; }
@@ -1092,6 +1129,14 @@ let drafted = false;
 let shown = '';
 export function renderPane(pane, preset) {
   shown = pane;
+  const deps = { ctx, shareToGraph, startGuide, droppedFiles };
+  if (pane === 'estudia' || pane === 'desk') {
+    for (const name of ['material', 'guide', 'mine']) $(`#pane-${name}`).hidden = true;
+    const el = $('#pane-estudia'); el.hidden = false;
+    if (pane === 'desk') renderDesk(el, preset.course, deps); else renderEstudia(el, deps);
+    return;
+  }
+  $('#pane-estudia').hidden = true;
   const panes = { material: materialPane, guide: () => guidePane(preset), mine: minePane };
   for (const name of Object.keys(panes)) {
     $(`#pane-${name}`).hidden = name !== pane;

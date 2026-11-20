@@ -1890,3 +1890,49 @@ html.has-announce .page { padding-top: 170px; }
 @media (max-width: 900px) { .myspace { grid-template-columns: repeat(3, minmax(0, 1fr)); } .fb-semester .fb-in { grid-template-columns: 1fr; } }
 @media (max-width: 560px) { .myspace { grid-template-columns: 1fr 1fr; } }
 @media (prefers-reduced-motion: reduce) { .sem .c, .sem-tip, .sem-prof, .sem-career { opacity: 1 !important; transform: none !important; animation: none !important; } .sem-career .bar i { width: 62%; } .myspace * { animation: none !important; } }
+
+/* ---------- «Estudia»: one place to drop anything, sorted in sight into piles; a desk per course ---------- */
+.es-drop { display: grid; place-items: center; min-height: 300px; padding: 34px; border-radius: 32px; border: 2px dashed color-mix(in oklab, var(--blue) 35%, transparent);
+  transition: border-color .3s, transform .3s, background .3s; }
+.es-drop.over { border-color: var(--blue); transform: scale(1.01); background: color-mix(in oklab, var(--blue) 8%, var(--card)); }
+.es-drop-in { display: grid; justify-items: center; gap: 12px; text-align: center; }
+.es-drop-in > svg { width: 64px; height: 64px; color: var(--blue); }
+.es-drop-in h2 { font-size: clamp(28px, 3vw, 40px); letter-spacing: -.035em; }
+.es-drop-in p { color: var(--ink-2); }
+.es-link { display: flex; gap: 8px; width: min(520px, 100%); }
+.es-link input { flex: 1; min-width: 0; padding: 10px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; }
+.es-table { margin-top: 26px; display: grid; gap: 18px; }
+.es-incoming { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; min-height: 0; }
+.es-piles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.pile { position: relative; padding: 30px 12px 12px; min-height: 150px; border-radius: 6px 20px 20px 20px;
+  background: linear-gradient(170deg, color-mix(in oklab, var(--c) 22%, var(--card)), color-mix(in oklab, var(--c) 10%, var(--card)));
+  box-shadow: 0 20px 34px -24px rgba(30, 30, 60, .55), inset 0 1px 0 rgba(255, 255, 255, .5); transition: opacity .4s; }
+.pile[data-empty] { opacity: .35; }
+.pile-tab { position: absolute; left: 0; top: -14px; padding: 6px 14px; border-radius: 12px 12px 0 0; font: 800 13px var(--display); color: #fff;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--c) 85%, #fff), var(--c)); }
+.pile-tab b { margin-left: 6px; opacity: .85; }
+.pile-body { display: grid; gap: 6px; max-height: 230px; overflow: hidden auto; padding: 2px; scrollbar-width: thin; }
+.es-sheet { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 4px 10px 10px 10px; background: #fffdf7; color: #1b2440;
+  font: 700 12px/1.2 var(--display); box-shadow: 0 6px 12px -8px rgba(0, 0, 0, .45), inset 0 -1px 0 rgba(0, 0, 0, .05); rotate: var(--r, 0deg); cursor: default; }
+.es-sheet svg { flex: none; width: 18px; height: 18px; color: var(--blue); }
+.es-sheet span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.es-desk .es-sheet, [data-open] { cursor: pointer; }
+.es-unsure { padding: 16px; border-radius: 22px; border: 2px dashed color-mix(in oklab, var(--red) 40%, transparent); display: grid; gap: 10px; }
+.es-unsure h3 { font-size: 18px; } .es-unsure-list { display: grid; gap: 10px; }
+.es-ask { display: grid; grid-template-columns: minmax(0, 260px) 1fr; gap: 12px; align-items: center; }
+.es-next { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; align-items: start; }
+.es-next > .note { grid-column: 1 / -1; }
+.es-course, .es-what { padding: 20px; border-radius: 24px; display: grid; gap: 12px; }
+.es-what h3 { font-size: 22px; letter-spacing: -.02em; }
+.es-desks { margin-top: 30px; display: grid; gap: 14px; }
+.es-desk-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.es-desk { display: grid; gap: 6px; padding: 18px; border-radius: 22px; color: var(--ink); text-decoration: none; transition: transform .3s; }
+.es-desk:hover { transform: translateY(-3px); }
+.es-desk span { color: var(--ink-2); font-size: 14px; }
+.es-mini { display: flex; gap: 4px; } .es-mini i { width: 12px; height: 16px; border-radius: 2px 5px 5px 5px; background: var(--c); }
+.es-mine { margin-top: 18px; }
+.es-desk-title { font-size: clamp(30px, 3.4vw, 46px); letter-spacing: -.04em; margin: 6px 0 18px; }
+.es-piles.desk { margin-bottom: 18px; }
+.es-made { display: grid; gap: 6px; padding-left: 18px; }
+#pane-estudia h3 { margin: 26px 0 10px; }
+@media (max-width: 900px) { .es-piles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .es-next { grid-template-columns: 1fr; } .es-ask { grid-template-columns: 1fr; } }

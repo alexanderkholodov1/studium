@@ -403,6 +403,12 @@ export function guideInstructions(o) {
   if (o.graph && o.until) sources.push(`La guía sigue la ruta ${o.until} del grafo: cubre sus conceptos en el orden del contexto (de lo que se necesita antes a lo último que entra), y nada de evaluaciones posteriores.`);
   if (o.focus) sources.push(`Quiero reforzar: ${o.focus}.`);
   if (o.goal) sources.push(`Mi objetivo: ${o.goal}.`);
+  // The exact questions of this evaluation, asked by «Estudia» after the material was dropped.
+  if (o.scope && (o.scope.from || o.scope.until)) sources.push(`Entra solo una parte de la materia: ${o.scope.from ? `desde ${o.scope.from}` : 'desde el inicio'} ${o.scope.until ? `hasta ${o.scope.until}` : 'hasta lo último'}. Lo demás no lo cubras.`);
+  if (o.sources?.length) sources.push(`Los temas salen de: ${o.sources.join(', ')}. Identifica en lo que te adjunto cuál es cuál y usa cada uno para lo que sirve.`);
+  if (o.likeExams) sources.push(o.likeExams.length ? `Las preguntas de práctica deben parecerse a las de mis exámenes anteriores que te adjunto (${o.likeExams.slice(0, 6).join(', ')}): el mismo tipo, la misma dificultad y la misma forma de preguntar.` : 'Las preguntas de práctica deben parecerse a las de mis exámenes anteriores, si te adjunto alguno.');
+  if (o.style) sources.push(`Cómo serán las preguntas del examen: ${o.style}.`);
+  if (o.links?.length) sources.push(`También tengo estos enlaces de la materia; ábrelos si puedes: ${o.links.slice(0, 8).join(' , ')}.`);
   const sections = (o.sections ?? []).filter((k) => SECTION_TEXT[k]);
   const english = o.lang === 'en';
   return `# Una guía de estudio de ${what}
