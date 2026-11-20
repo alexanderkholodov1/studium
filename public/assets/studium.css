@@ -2207,3 +2207,13 @@ html.has-announce .page { padding-top: 170px; }
 .pi-more .field { margin: 6px 0 0; } .pi-more input, .pi-more select { width: 100%; box-sizing: border-box; }
 [data-theme="dark"] .pi-paper { background: linear-gradient(180deg, #e9d86a 0%, #d8c24a 100%); }
 @media (prefers-reduced-motion: reduce) { .pi-paper, .tile.postit:hover .pi-paper { transform: none; } .pi-list li { animation: none; } }
+
+/* ---------- «Ahora» in Mi horario ---------- */
+.sched-day.today { background: color-mix(in oklab, var(--blue) 5%, transparent); }
+.sched-head b.today { color: var(--blue); }
+.sched-now { position: absolute; z-index: 0; left: -4px; right: 0; top: calc(var(--top) * var(--rowh)); height: 2px; background: var(--red); pointer-events: none; }
+.sched-now::before { content: ''; position: absolute; left: -2px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 4px color-mix(in oklab, var(--red) 25%, transparent); animation: now-pulse 2s ease-in-out infinite; }
+.sched-now span { position: absolute; right: 4px; top: -18px; padding: 1px 6px; border-radius: 6px; background: var(--red); color: #fff; font: 700 11px var(--display, inherit); }
+.sched-class.now { box-shadow: 0 0 0 2px var(--red), 0 8px 20px -6px color-mix(in oklab, var(--red) 50%, transparent); }
+@keyframes now-pulse { 50% { box-shadow: 0 0 0 7px color-mix(in oklab, var(--red) 10%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .sched-now::before { animation: none; } }

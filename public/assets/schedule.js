@@ -202,18 +202,36 @@ function rowOf(t) {
   }
   return BLOCKS.length + Math.max(0, t - BLOCKS.at(-1).e - 10) / 90;
 }
+// «Ahora»: the column of today (Monday is 0), and the minute of the day.
+const today = () => { const d = new Date(); return { d: (d.getDay() + 6) % 7, m: d.getHours() * 60 + d.getMinutes() }; };
+const nowLine = (rows) => { const t = today(); const r = rowOf(t.m); return r <= 0 || r >= rows ? '' : `<div class="sched-now" style="--top:${r}" aria-hidden="true"><span>${hhmm(t.m)}</span></div>`; };
+// Every minute the line moves and the class in progress changes, without drawing the week again.
+setInterval(() => {
+  const t = today();
+  for (const sheet of document.querySelectorAll('.sched-sheet')) {
+    const rows = Number(getComputedStyle(sheet).getPropertyValue('--rows')) || BLOCKS.length;
+    for (const day of sheet.querySelectorAll('.sched-day')) {
+      const isToday = Number(day.dataset.day) === t.d;
+      day.classList.toggle('today', isToday);
+      day.querySelector('.sched-now')?.remove();
+      if (isToday) day.insertAdjacentHTML('afterbegin', nowLine(rows));
+      for (const b of day.querySelectorAll('.sched-class[data-span]')) { const [s, e] = b.dataset.span.split('-').map(Number); b.classList.toggle('now', isToday && s <= t.m && t.m < e); }
+    }
+  }
+}, 60_000);
 function week(o, compact = false) {
+  const t = today();
   const clash = conflicts(o.classes);
   const days = o.classes.some((c) => c.slots.some((s) => s.d === 5)) ? 6 : 5;
   const late = Math.max(0, ...o.classes.flatMap((c) => c.slots.map((s) => Math.ceil(rowOf(s.e)) - BLOCKS.length)));
   const rows = BLOCKS.length + late;
   const inClash = (c, d, s) => clash.some((x) => x.d === d && x.s < s.e && x.e > s.s && (x.a === c || x.b === c));
   return `<div class="sched-sheet${compact ? ' compact' : ''}" style="--days:${days};--rows:${rows}">
-    <div class="sched-head"><span></span>${DAYS.slice(0, days).map((d, i) => `<b><span class="long">${d}</span><span class="short">${SHORT[i]}</span></b>`).join('')}</div>
+    <div class="sched-head"><span></span>${DAYS.slice(0, days).map((d, i) => `<b class="${i === t.d ? 'today' : ''}"><span class="long">${d}</span><span class="short">${SHORT[i]}</span></b>`).join('')}</div>
     <div class="sched-grid">
       <div class="sched-hours">${Array.from({ length: rows }, (_, i) => { const b = BLOCKS[i]; return `<span style="--r:${i}">${b ? `<b>${hhmm(b.s)}</b><small>${hhmm(b.e)}</small>` : ''}</span>`; }).join('')}</div>
-      ${DAYS.slice(0, days).map((_, d) => `<div class="sched-day" data-day="${d}">
-        ${lanes(o.classes, d).map(({ c, s, lane, of }) => `<button class="sched-class c-${c.color}${inClash(c, d, s) ? ' clashing' : ''}${of > 1 ? ' narrow' : ''}" draggable="${mode === 'prep'}" data-drag="${c.id}" data-edit="${c.id}"
+      ${DAYS.slice(0, days).map((_, d) => `<div class="sched-day${d === t.d ? ' today' : ''}" data-day="${d}">${d === t.d ? nowLine(rows) : ''}
+        ${lanes(o.classes, d).map(({ c, s, lane, of }) => `<button class="sched-class c-${c.color}${inClash(c, d, s) ? ' clashing' : ''}${of > 1 ? ' narrow' : ''}${d === t.d && s.s <= t.m && t.m < s.e ? ' now' : ''}" data-span="${s.s}-${s.e}" draggable="${mode === 'prep'}" data-drag="${c.id}" data-edit="${c.id}"
           style="--top:${rowOf(s.s)};--bottom:${rowOf(s.e)};--lane:${lane};--of:${of}" title="${esc(which(c))}${c.nrc ? ` · NRC ${esc(c.nrc)}` : ''} · ${hhmm(s.s)}–${hhmm(s.e)}">
           <b>${esc(label(c))}</b><i class="code">${esc(shortLabel(c))}</i><small>${c.room ? esc(c.room) : `${hhmm(s.s)}–${hhmm(s.e)}`}</small></button>`).join('')}
       </div>`).join('')}
