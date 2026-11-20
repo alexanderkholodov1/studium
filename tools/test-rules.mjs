@@ -319,6 +319,24 @@ try {
   expect('classmate cannot read the drafts of another account', await status(c.token, 'GET', `/drafts/${s.uid}`), 403);
   expect('classmate cannot write the drafts of another account', await commit(c.token, [put(`drafts/${s.uid}`, { guide: {} })]), 403);
   expect('drafts with other fields are refused', await commit(s.token, [put(`drafts/${s.uid}`, { notes: 'x' })]), 403);
+  // «Yo quiero»: each person counts once, the counter and the mark change together.
+  {
+    await call(admin, 'POST', `${firestore}:commit`, { writes: [remove('wants/grupos'), remove(`wanted/grupos__${s.uid}`), remove(`wanted/grupos__${c.uid}`)] });
+    const want = (who, n) => commit(who.token, [put('wants/grupos', { count: n }, { stamp: false }), put(`wanted/grupos__${who.uid}`, { idea: 'grupos' }, { stamp: false, create: true })]);
+    const unwant = (who, n) => commit(who.token, [put('wants/grupos', { count: n }, { stamp: false }), remove(`wanted/grupos__${who.uid}`)]);
+    expect('student wants an idea', await want(s, 1), 200);
+    expect('student cannot want it twice', await want(s, 2), 403);
+    expect('classmate wants it too', await want(c, 2), 200);
+    expect('a count without its mark is refused', await commit(s.token, [put('wants/grupos', { count: 3 }, { stamp: false })]), 403);
+    expect('a mark in the name of another account is refused', await commit(s.token, [put('wants/grupos', { count: 3 }, { stamp: false }), put(`wanted/grupos__${accounts.admin.uid}`, { idea: 'grupos' }, { stamp: false, create: true })]), 403);
+    expect('an unknown idea is refused', await commit(s.token, [put('wants/spam', { count: 1 }, { stamp: false }), put(`wanted/spam__${s.uid}`, { idea: 'spam' }, { stamp: false, create: true })]), 403);
+    expect('student reads the count', await status(s.token, 'GET', '/wants/grupos'), 200);
+    expect('student reads its own mark', await status(s.token, 'GET', `/wanted/grupos__${s.uid}`), 200);
+    expect('student cannot read the mark of another', await status(s.token, 'GET', `/wanted/grupos__${c.uid}`), 403);
+    expect('student takes its «Yo quiero» back', await unwant(s, 1), 200);
+    expect('the count cannot drop without a mark', await unwant(s, 0), 403);
+    expect('otherDomain cannot want', await want(accounts.otherDomain, 2), 403);
+  }
   // Feedback: written by its sender with its day's count, read by the sender and the admins, at most 10 a day.
   {
     const day = Math.floor(Date.now() / 86400000);

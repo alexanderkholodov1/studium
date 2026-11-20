@@ -33,6 +33,7 @@ import { mountHints } from './hints.js';
 import { mountEggs } from './eggs.js';
 import { mountAdmin, renderAdmin } from './admin.js';
 import { mountFeedback } from './feedback.js';
+import { mountComunidad, renderComunidad } from './comunidad.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -114,8 +115,8 @@ document.addEventListener('click', (e) => {
 });
 
 /* ---------- views ---------- */
-const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'horario', 'malla', 'student', 'catalog', 'map', 'library', 'profes', 'contribute', 'settings', 'about', 'sources', 'guide', 'admin'];
-const TABS = { home: 'home', horario: 'home', malla: 'home', catalog: 'catalog', map: 'map', library: 'map', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', admin: 'admin' };
+const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'horario', 'malla', 'student', 'catalog', 'map', 'library', 'profes', 'contribute', 'comunidad', 'settings', 'about', 'sources', 'guide', 'admin'];
+const TABS = { home: 'home', horario: 'home', malla: 'home', catalog: 'contribute', comunidad: 'comunidad', map: 'map', library: 'map', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', admin: 'admin' };
 const PUBLIC = ['landing', 'auth', 'about', 'denied', 'verify'];
 let current = 'boot';
 function show(view) {
@@ -310,6 +311,7 @@ mountSpace(context);
 mountEggs({ toast });
 mountAdmin(context);
 mountFeedback();
+mountComunidad();
 mountCommunity(context);
 mountLibrary(context);
 mountEditor();
@@ -350,7 +352,7 @@ function renderCatalog() {
   list.sort((a, b) => rank(a) - rank(b));
   $('#gallery').innerHTML = list.length ? list.map(guideCard).join('') : `<div class="empty glass">${state.catalog.length
     ? `<h2>Nada por aquí</h2><p>${filter === 'all' ? 'Prueba con otra materia, tema o profe.' : 'Cambia el filtro para ver más guías.'}</p>`
-    : '<h2>Studium está empezando</h2><p>Aporta tus exámenes, deberes o apuntes: con ellos se arma el grafo y se crean las guías.</p><a class="button primary" href="#/estudia">Soltar material en Estudia</a>'}</div>`;
+    : '<h2>Studium está empezando</h2><p>Aporta tus exámenes, deberes o apuntes: con ellos se arma el grafo y se crean las guías.</p><a class="button primary" href="#/estudiar">Soltar material en Estudiar</a>'}</div>`;
   rise($('#gallery'));
 }
 $('#q').addEventListener('input', renderCatalog);
@@ -461,7 +463,9 @@ async function route() {
   if (page === 'entrar' || (page === 'admin' && !role.admin)) { location.hash = '#/'; return; }
   // The old names of 0.5: «Mapa» is «Grafo», and «Biblioteca» lives inside it as «Documentos». Shared links still work.
   // «Aportar» (0.5) and «Crea tu guía» are «Estudia» now: the old links land on it.
-  if (page === 'aportar' || page === 'crear') { history.replaceState(null, '', `${location.pathname}#/estudia${rest[0] === 'guia' ? `/${rest.join('/')}` : rest[0] === 'grafo' ? '/grafo' : ''}`); return route(); }
+  if (page === 'aportar' || page === 'crear') { history.replaceState(null, '', `${location.pathname}#/estudiar${rest[0] === 'guia' ? `/${rest.join('/')}` : rest[0] === 'grafo' ? '/grafo' : ''}`); return route(); }
+  if (page === 'estudia') { history.replaceState(null, '', `${location.pathname}#/estudiar${rest.length ? `/${rest.join('/')}` : ''}`); return route(); }
+  if (page === 'estudiar' && arg[0] === 'guias') { history.replaceState(null, '', `${location.pathname}#/guias`); return route(); }
   if (page === 'mapa' || page === 'biblioteca') {
     history.replaceState(null, '', `${location.pathname}#/grafo${page === 'biblioteca' ? '/documentos' : rest.length ? `/${rest.join('/')}` : ''}`);
     return route();
@@ -511,6 +515,7 @@ async function route() {
       ajustes: ['settings', 'Ajustes', renderSettings],
       acerca: ['about', 'Acerca', null],
       guias: ['catalog', 'Guías', renderCatalog],
+      comunidad: ['comunidad', 'Comunidad', renderComunidad],
       // The logo: the public page, also for members, who reach their own space from «Inicio».
       bienvenida: ['landing', 'Qué es', null],
       admin: ['admin', 'Admin', () => renderAdmin(arg[0])],
@@ -518,12 +523,13 @@ async function route() {
     };
     // «Estudia»: drop anything, sorted in sight; the desk of each course; a guide or the graph from what was dropped.
     // «Mis aportes» (what was published, to change who sees it or delete it) is reached from «Estudia».
-    if (page === 'estudia' || page === 'mis-aportes') {
+    if (page === 'estudiar' || page === 'mis-aportes') {
       const mine = page === 'mis-aportes';
       const pane = mine ? 'mine' : arg[0] === 'guia' ? 'guide' : arg[0] === 'grafo' ? 'material' : arg[0] === 'materia' ? 'desk' : 'estudia';
-      const title = mine ? 'Mis aportes' : pane === 'desk' ? arg[1] : 'Estudia';
-      document.title = `${mine ? t(title) : title === 'Estudia' ? t('Estudia') : title} · Studium`;
-      $('#c-title').textContent = mine ? t('Mis aportes') : t('Estudia');
+      const title = mine ? 'Mis aportes' : pane === 'desk' ? arg[1] : 'Estudiar';
+      document.title = `${mine ? t(title) : title === 'Estudiar' ? t('Estudiar') : title} · Studium`;
+      $('#c-title').textContent = mine ? t('Mis aportes') : t('Estudiar');
+      for (const a of document.querySelectorAll('#view-contribute .subtabs a')) a.setAttribute('aria-current', String(a.dataset.sub === ({ mine: 'mine', guide: 'guia' }[pane] ?? 'material')));
       $('#c-anon').hidden = pane !== 'estudia';
       show('contribute');
       await load();
@@ -544,7 +550,7 @@ async function route() {
   } catch (error) {
     if (ticket !== routing) return;
     console.error(error);
-    const where = page === 'guia' ? '#guide-status' : page === 'grafo' ? '#map-empty' : page === 'estudia' ? (arg[0] === 'grafo' ? '#pane-material' : arg[0] === 'guia' ? '#pane-guide' : '#pane-estudia') : page === 'guias' ? '#gallery' : page === 'profes' ? '#profs' : '#dash';
+    const where = page === 'guia' ? '#guide-status' : page === 'grafo' ? '#map-empty' : page === 'estudiar' ? (arg[0] === 'grafo' ? '#pane-material' : arg[0] === 'guia' ? '#pane-guide' : '#pane-estudia') : page === 'guias' ? '#gallery' : page === 'profes' ? '#profs' : '#dash';
     $(where).hidden = false;
     $(where).textContent = explain(error);
   }
@@ -561,7 +567,7 @@ $('#guide-show').addEventListener('click', () => bareReader(false));
 try { bareReader(localStorage.getItem('studium-reader-bare') === '1'); } catch { /* the bar stays */ }
 
 document.querySelectorAll('[data-pane]').forEach((b) => b.addEventListener('click', () => {
-  location.hash = { material: '#/estudia/grafo', guide: '#/estudia/guia', mine: '#/mis-aportes' }[b.dataset.pane];
+  location.hash = { material: '#/estudiar/grafo', guide: '#/estudiar/guia', mine: '#/mis-aportes' }[b.dataset.pane];
 }));
 /* ---------- the links of the account e-mails ---------- */
 // They open Studium itself (?mode=…&oobCode=…), on the site students already use: confirming the address happens

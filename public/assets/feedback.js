@@ -142,7 +142,7 @@ function dialog() {
       await send({ kind: kind(), text: form.text.value.trim(), log: form.log.checked ? logOf(entry) : '', errors: form.errors.checked ? errorsOf() : '', shot });
       form.text.value = ''; shot = ''; $('[data-fb-thumb]', d).innerHTML = '';
       say('¡Enviado, gracias! Verás la respuesta en «Lo que enviaste».');
-    } catch (err) { say(err.message); }
+    } catch (err) { say(/permission|insufficient/i.test(err.message) ? 'No se pudo enviar: Studium no aceptó el mensaje. Si ya enviaste 10 hoy, mañana puedes enviar más; si no, avísame por otro medio.' : err.message); }
     finally { btn.disabled = false; }
   });
   d._preview = preview;

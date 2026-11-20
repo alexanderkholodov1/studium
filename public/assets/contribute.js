@@ -413,7 +413,7 @@ export function startGuide(files, preset) {
   if (files.length) { notes = files.slice(0, 20); }
   found = { piles: preset.piles ?? [], exams: preset.exams ?? [], links: preset.links ?? [] };
   pending = { course: preset.course, graph: true };
-  location.hash = '#/estudia/guia';
+  location.hash = '#/estudiar/guia';
 }
 export { droppedFiles };
 // The exact instructions «Procesar material» sends, for the person to read before anything runs.
@@ -1089,7 +1089,7 @@ function minePane() {
   const items = [...catalog, ...contributions].filter((x) => x.mine).sort((a, b) => b.updated - a.updated);
   if (!items.length) {
     return `<div class="empty glass"><h2>Todavía no aportaste nada</h2><p>Tus aportes y guías aparecen aquí: puedes cambiar quién los ve, reemplazarlos o borrarlos.</p>
-      <a class="button primary" href="#/estudia">Soltar material en Estudia</a></div>`;
+      <a class="button primary" href="#/estudiar">Soltar material en Estudia</a></div>`;
   }
   return `<ul class="mine">${items.map((x) => `<li class="glass" style="${themeStyle(x.theme)}" data-item="${esc(x.type)}:${esc(x.id)}">
       <div class="what"><span class="badge">${x.type === 'guide' ? 'Guía' : esc(KINDS[x.kind] ?? 'Aporte')}</span>

@@ -369,6 +369,27 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['at']) && request.resource.data.at == request.time;
     }
 
+    // «Yo quiero» in Comunidad: how many people wait for each coming idea. A person counts once: their mark
+    // wanted/{idea}__{uid} and the counter change together, up by one with the mark, down by one without it.
+    function ideas() { return ['amigos', 'grupos', 'horario', 'musica', 'postits', 'juego', 'logros', 'campus']; }
+    function mark(idea) { return at('wanted', idea + '__' + request.auth.uid); }
+    match /wants/{idea} {
+      allow read: if member();
+      allow create: if member() && idea in ideas() && request.resource.data.keys().hasOnly(['count']) && request.resource.data.count == 1
+        && !exists(mark(idea)) && existsAfter(mark(idea));
+      allow update: if member() && request.resource.data.keys().hasOnly(['count'])
+        && ((request.resource.data.count == resource.data.count + 1 && !exists(mark(idea)) && existsAfter(mark(idea)))
+          || (request.resource.data.count == resource.data.count - 1 && exists(mark(idea)) && !existsAfter(mark(idea))));
+    }
+    match /wanted/{id} {
+      allow get: if member() && id.matches('.*__' + request.auth.uid);
+      allow create: if member() && request.resource.data.keys().hasOnly(['idea']) && request.resource.data.idea in ideas()
+        && id == request.resource.data.idea + '__' + request.auth.uid
+        && getAfter(at('wants', request.resource.data.idea)).data.count == (exists(at('wants', request.resource.data.idea)) ? get(at('wants', request.resource.data.idea)).data.count + 1 : 1);
+      allow delete: if member() && id == resource.data.idea + '__' + request.auth.uid
+        && getAfter(at('wants', resource.data.idea)).data.count == get(at('wants', resource.data.idea)).data.count - 1;
+    }
+
     // How many people found each easter egg: a counter that only goes up by one.
     match /eggs/{id} {
       allow read: if admin();

@@ -609,7 +609,7 @@ function panel(n) {
       <div class="actions">
         <button class="button primary" data-act="route">Trazar una ruta</button>
         <button class="button ghost" data-act="timeline">Línea de tiempo</button>
-        ${n.contributions.length || n.guides.length ? `<a class="button ghost" href="#/estudia/guia/${encodeURIComponent(n.id)}">Crear una guía</a>` : '<a class="button ghost" href="#/estudia">Soltar material en Estudia</a>'}
+        ${n.contributions.length || n.guides.length ? `<a class="button ghost" href="#/estudiar/guia/${encodeURIComponent(n.id)}">Crear una guía</a>` : '<a class="button ghost" href="#/estudiar">Soltar material en Estudia</a>'}
       </div>
       ${nodeActions(n)}
       ${before.length ? `<h3>Se necesita antes</h3><div class="chips small">${chipsOf(before)}</div>` : ''}
@@ -704,7 +704,7 @@ function guideFrom(concepts, r) {
     course: course?.name ?? '', code: course?.code ?? '', title: r?.stage?.label ?? '', professor: r?.professor ?? '', term: r?.term ?? '', graph: true,
     route: { keys: concepts.map((n) => n.key), label: r ? `${r.stage ? `hasta ${r.stage.label}` : 'completa'}` : '', bands: r ? Object.fromEntries(r.steps.map((s) => [s.node.key, r.bandLabels[s.band]])) : null },
   });
-  location.hash = '#/estudia/guia';
+  location.hash = '#/estudiar/guia';
 }
 
 /* ---------- mounting ---------- */
