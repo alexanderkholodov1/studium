@@ -210,6 +210,12 @@ function geminiState(id) {
 }
 // Where a Gemini model's state comes from, to show next to it: { text, url, date }.
 export function costSource(way, id) {
+  // OpenRouter's own words (https://openrouter.ai/docs/faq, read 2026-11-20): «`:free` - A free version of the model
+  // with its own rate limits.» Any other model of OpenRouter is paid per use.
+  if (way === 'openrouter') {
+    return /:free$/.test(id) ? { text: '«:free - A free version of the model with its own rate limits.» (FAQ de OpenRouter)', url: 'https://openrouter.ai/docs/faq' }
+      : { text: 'Sin «:free» al final: se paga por uso según los precios de OpenRouter.', url: 'https://openrouter.ai/models' };
+  }
   if (way !== 'gemini' || !verified?.gemini) return null;
   const k = slug(id);
   const m = verified.gemini.models[k];
