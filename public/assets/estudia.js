@@ -385,7 +385,8 @@ function next(table) {
     </div>
     <div class="es-what glass">
       <h3>¿Qué hacemos con esto?</h3>
-      <label class="toggle"><input type="checkbox" checked disabled><span class="knob"></span>Agregar a tu escritorio de trabajo</label>
+      <p class="fine">Toca cualquier cosa de los montones para dejarla fuera; tócala otra vez para que vuelva.</p>
+      <label class="toggle"><input type="checkbox" data-es-desk checked><span class="knob"></span>Agregar a tu escritorio de trabajo</label>
       <label class="toggle"><input type="checkbox" data-es-graph checked><span class="knob"></span>Sumar al grafo de conocimiento</label>
       <label class="toggle"><input type="checkbox" data-es-guide><span class="knob"></span>Generar una guía de estudio</label>
       <p class="fine">Al grafo va solo el resumen anónimo que hace tu IA, después de que lo revises, con el orden de tus carpetas. Tu escritorio guarda tus carpetas de cada materia en este dispositivo.</p>
@@ -403,6 +404,14 @@ function next(table) {
         if (!$('.es-ask', table)) { $('[data-es-unsure]', table).hidden = true; $('.es-next > .note', table)?.remove(); }
         sfx.pick?.();
       }
+      // Leaving a thing out, or bringing it back: it stays in its pile, dimmed and crossed out.
+      const pick = !set && e.target.closest('[data-es-piles] .es-sheet');
+      if (pick) {
+        const it = batch.find((x) => x.id === pick.dataset.item);
+        if (it) { it.off = !it.off; pick.classList.toggle('off', it.off); sfx.tick?.(); }
+        const n = batch.filter((x) => !x.off).length;
+        const go = $('[data-es-go]', table); if (go) go.textContent = n === batch.length ? 'Listo' : `Listo (${n} de ${batch.length})`;
+      }
       if (e.target.closest('[data-es-cancel]')) { run += 1; batch = []; table.hidden = true; table.innerHTML = ''; delete table.dataset.wired; }
       if (e.target.closest('[data-es-go]')) go(table);
     });
@@ -413,21 +422,25 @@ function next(table) {
 async function go(table) {
   const course = $('[data-es-course]', table).value.trim();
   if (!course) { $('[data-es-course]', table).focus(); api.ctx.toast('¿De qué materia es? Con eso basta.'); return; }
+  const toDesk = $('[data-es-desk]', table).checked;
   const toGraph = $('[data-es-graph]', table).checked;
   const toGuide = $('[data-es-guide]', table).checked;
-  for (const it of batch) { it.course = course; if (!it.kind) it.kind = 'notes'; }
-  const code = batch.find((x) => x.code)?.code ?? '';
-  // On the desk of the course, on this device. Links have no file to keep.
-  await desk.put(batch.map(({ files: fs, ...rest }) => ({ ...rest, course, blobs: (fs ?? []).map((f) => ({ name: f.name, path: relOf(f), blob: f })), shared: toGraph })));
-  const withFiles = batch.filter((x) => x.files?.length).sort((a, b) => a.order - b.order);
+  const chosen = batch.filter((x) => !x.off);
+  if (!chosen.length) { api.ctx.toast('Dejaste todo fuera: toca algo de los montones para que vuelva.'); return; }
+  if (!toDesk && !toGraph && !toGuide) { api.ctx.toast('Elige qué hacemos con esto: el escritorio, el grafo o una guía.'); return; }
+  for (const it of chosen) { it.course = course; if (!it.kind) it.kind = 'notes'; }
+  const code = chosen.find((x) => x.code)?.code ?? '';
+  // On the desk of the course, on this device, if the person wants it there. Links have no file to keep.
+  if (toDesk) await desk.put(chosen.map(({ files: fs, ...rest }) => ({ ...rest, course, blobs: (fs ?? []).map((f) => ({ name: f.name, path: relOf(f), blob: f })), shared: toGraph })));
+  const withFiles = chosen.filter((x) => x.files?.length).sort((a, b) => a.order - b.order);
   const files = withFiles.flatMap((x) => x.files);
   // To the graph thing by thing, in the folders' order, each with where it was: «Semana 3/Clase 2», «Deber 1».
   if (toGraph && files.length) {
     for (const x of withFiles) await api.shareToGraph(x.files, { kind: GRAPH_KIND[x.kind] ?? 'other', course, code, folder: [x.path, x.count > 1 ? x.name : ''].filter(Boolean).join('/'), place: x.place });
   }
-  const done = batch; batch = [];
+  const done = chosen; batch = [];
   if (toGuide) api.startGuide(files, { course, piles: [...new Set(done.map((x) => x.kind))], exams: done.filter((x) => x.kind === 'exam').map((x) => x.name), links: done.filter((x) => x.url).map((x) => x.url) });
-  else location.hash = toGraph && files.length ? '#/estudia/grafo' : `#/estudia/materia/${encodeURIComponent(course)}`;
+  else location.hash = toGraph && files.length ? '#/estudia/grafo' : toDesk ? `#/estudia/materia/${encodeURIComponent(course)}` : '#/estudia';
 }
 
 /* ---------- the desk of a course ---------- */

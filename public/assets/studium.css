@@ -1960,3 +1960,7 @@ html.has-announce .page { padding-top: 170px; }
 @keyframes peek-out { from { opacity: 0; transform: translateY(-14px) scale(.8); } }
 @keyframes peek-in { to { opacity: 0; transform: translateY(-22px) scale(.6); } }
 .es-sheet.spill { z-index: 2; }
+[data-es-piles] .es-sheet { cursor: pointer; transition: opacity .25s, filter .25s; }
+[data-es-piles] .es-sheet:hover { filter: brightness(1.04); box-shadow: 0 8px 16px -8px rgba(0, 0, 0, .5), 0 0 0 2px color-mix(in oklab, var(--blue) 40%, transparent); }
+.es-sheet.off { opacity: .4; filter: grayscale(1); }
+.es-sheet.off span { text-decoration: line-through; }
