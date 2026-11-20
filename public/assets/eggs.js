@@ -12,7 +12,8 @@ import { sfx } from './sfx.js';
 import { t } from './i18n.js';
 import { auth, countEgg } from './data.js';
 import { flag } from './settings.js';
-import { STATIONS, GENERATORS, stationOf, embedURL } from './stations.js';
+import { STATIONS, GENERATORS, stationOf } from './stations.js';
+import { props, pokeProp } from './props3d.js';
 
 const FOUND = 'studium-eggs';
 const RADIO = 'studium-radio';
@@ -52,32 +53,10 @@ function discover(id, message) {
 }
 const layer = (cls, html = '') => { const el = document.createElement('div'); el.className = cls; el.innerHTML = html; el.setAttribute('aria-hidden', 'true'); document.body.append(el); return el; };
 
-/* ---------- the drawings (original) ---------- */
-// A chocolate cake, the classic kind: dark sponge with shavings, a ring of white cream dollops, a cherry on each, and
-// one candle; lit or not. Drawn here, not taken from any game.
-export const cakeSVG = (lit = true) => `<svg class="cake-svg" viewBox="0 0 120 120" aria-hidden="true">
-  <ellipse cx="60" cy="110" rx="52" ry="7" fill="rgba(0,0,0,.2)"/><ellipse cx="60" cy="104" rx="50" ry="8" fill="#e9e4dc"/>
-  <path d="M16 62v36c0 6 20 10 44 10s44-4 44-10V62Z" fill="#3b1f14"/>
-  <path d="M16 62v36c0 6 20 10 44 10V62Z" fill="#4a281a"/>
-  ${[24, 36, 48, 62, 76, 90].map((x, i) => `<path d="M${x} ${74 + (i % 2) * 10}l3 2-2 3" stroke="#6b3a24" stroke-width="2" fill="none"/>`).join('')}
-  <ellipse cx="60" cy="62" rx="44" ry="11" fill="#2f170f"/>
-  ${[[24, 60], [36, 55], [50, 53], [66, 53], [80, 55], [94, 60], [86, 68], [70, 71], [52, 71], [34, 68]].map(([x, y]) => `<g><ellipse cx="${x}" cy="${y}" rx="7" ry="5" fill="#fbf7f0"/><path d="M${x - 5} ${y}q5-8 10 0" fill="#fff"/><circle cx="${x}" cy="${y - 6}" r="3.6" fill="#c8102e"/><circle cx="${x - 1}" cy="${y - 7.2}" r="1" fill="#ff8a9a"/></g>`).join('')}
-  <rect x="57" y="22" width="6" height="34" rx="2" fill="#f4efe6"/><path d="M57 28l6-3M57 36l6-3M57 44l6-3M57 52l6-3" stroke="#c8102e" stroke-width="1.6"/>
-  <path d="M60 22v-3" stroke="#222" stroke-width="1.2"/>
-  <g class="flame" ${lit ? '' : 'opacity="0"'}><ellipse cx="60" cy="13" rx="4.5" ry="7.5" fill="#ffb627"/><ellipse cx="60" cy="14.5" rx="2.2" ry="4" fill="#fff4c2"/></g>
-</svg>`;
-// Someone in a white coat with a stethoscope and a green heart, arms up. Original, not any game's character.
-const medicSVG = `<svg viewBox="0 0 120 160" aria-hidden="true">
-  <path d="M36 66 14 22M84 66l22-44" stroke="#f3d2b5" stroke-width="12" stroke-linecap="round"/><path d="M36 66 26 46M84 66l10-20" stroke="#fbfbfb" stroke-width="16" stroke-linecap="round"/>
-  <path d="M30 60c0-14 13-22 30-22s30 8 30 22v62H30Z" fill="#fbfbfb" stroke="#d8dde6" stroke-width="2"/>
-  <path d="M52 40l8 18 8-18" fill="#5aa9ff"/><path d="M42 64c0 18 10 26 18 26s18-8 18-26" stroke="#3b4251" stroke-width="3" fill="none"/>
-  <circle cx="60" cy="92" r="5" fill="#3b4251"/>
-  <path d="M74 74c4-5 11-2 9 4-1 4-9 9-9 9s-8-5-9-9c-2-6 5-9 9-4Z" fill="#2ecc71"/>
-  <rect x="36" y="118" width="18" height="34" rx="6" fill="#3b4251"/><rect x="66" y="118" width="18" height="34" rx="6" fill="#3b4251"/>
-  <circle cx="60" cy="26" r="20" fill="#f3d2b5"/><path d="M40 24c2-14 12-20 20-20s18 6 20 20c-6-6-14-8-20-8s-14 2-20 8Z" fill="#5b3b28"/>
-  <circle cx="52" cy="27" r="2.6" fill="#222"/><circle cx="68" cy="27" r="2.6" fill="#222"/>
-  <ellipse cx="60" cy="37" rx="7" ry="5.5" fill="#7a2230"/>
-</svg>`;
+/* ---------- the objects: real 3D (props3d.js), never flat drawings ---------- */
+// A canvas that props3d.js fills with a lit, shaded object; the object comes with the canvas.
+export const prop3d = (kind, cls = '') => `<canvas class="prop ${cls}" data-prop="${kind}" aria-hidden="true"></canvas>`;
+const show3d = (el) => { props(el); return el; };
 
 /* ---------- words and codes ---------- */
 const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
@@ -105,11 +84,12 @@ export function setBackdrop(id) {
   write(BACKDROP, id);
   document.getElementById('egg-backdrop')?.remove();
   if (id !== 'cafe') return;
-  const el = layer('egg-backdrop cafe', `<i class="lamp"></i><svg class="cup" viewBox="0 0 120 120" aria-hidden="true">
-    <path class="steam" d="M48 40c-6-8 6-12 0-20M62 40c-6-8 6-12 0-20M76 40c-6-8 6-12 0-20"/>
-    <ellipse cx="62" cy="100" rx="44" ry="8" fill="rgba(0,0,0,.25)"/><path d="M30 50h64l-6 44a8 8 0 0 1-8 7H44a8 8 0 0 1-8-7Z" fill="#f2e6d6"/>
-    <path d="M93 58c14 0 14 22 0 22" stroke="#f2e6d6" stroke-width="7" fill="none"/><ellipse cx="62" cy="50" rx="32" ry="6" fill="#5b3a22"/></svg>`);
+  // The warm light of the lamp over the page, and the desk itself in a corner, in 3D.
+  const el = layer('egg-backdrop cafe', prop3d('desk', 'desk'));
   el.id = 'egg-backdrop';
+  // Behind the page, with the page's own background: under the floating decorations and every tile.
+  document.querySelector('body > .play')?.before(el);
+  show3d(el);
 }
 
 /* ---------- «No te mueras de hambre»: night falls, and a campfire is lit ---------- */
@@ -117,24 +97,16 @@ function nightfall() {
   if (still()) return;
   sfx.portal();
   const night = layer('egg-night');
-  const fire = layer('egg-fire', `<svg viewBox="0 0 120 120" aria-hidden="true"><ellipse cx="60" cy="108" rx="46" ry="8" fill="rgba(255,140,40,.25)"/>
-    <path d="M24 104l72-18M28 86l68 20" stroke="#5a3a24" stroke-width="10" stroke-linecap="round"/>
-    <path class="f1" d="M60 22c14 22 26 34 26 54a26 26 0 0 1-52 0c0-14 8-20 12-32 4 10 8 12 10 14 2-14 0-24 4-36Z" fill="#ff8a2a"/>
-    <path class="f2" d="M60 52c8 12 14 18 14 28a14 14 0 0 1-28 0c0-8 6-12 8-20 2 6 4 6 6 8 0-6 0-10 0-16Z" fill="#ffd25e"/></svg>`);
+  const fire = show3d(layer('egg-fire', prop3d('fire')));
   setTimeout(() => sfx.blow(), 900);
-  setTimeout(() => { night.classList.add('away'); fire.classList.add('away'); }, 4200);
-  setTimeout(() => { night.remove(); fire.remove(); }, 5200);
+  setTimeout(() => { night.classList.add('away'); fire.classList.add('away'); }, 4600);
+  setTimeout(() => { night.remove(); fire.remove(); }, 5600);
 }
-// A gramophone, for «Tus hallazgos» (an original drawing).
-export const gramophoneSVG = `<svg viewBox="0 0 100 100" aria-hidden="true">
-  <rect x="18" y="64" width="64" height="26" rx="4" fill="#7a4523"/><rect x="18" y="64" width="64" height="6" fill="#a8693b"/>
-  <ellipse cx="50" cy="64" rx="28" ry="5" fill="#222"/><path d="M50 62V44" stroke="#c9a14a" stroke-width="3"/>
-  <path class="horn" d="M50 46C52 30 66 14 90 8c4 14-4 30-22 38Z" fill="#d4a63c"/><path d="M50 46C52 30 66 14 90 8" stroke="#8a6420" stroke-width="2" fill="none"/></svg>`;
 
 /* ---------- the cake ---------- */
 function cakeFalls() {
   if (still()) return;
-  const el = layer('egg-cake-drop', cakeSVG(true));
+  const el = show3d(layer('egg-cake-drop', prop3d('cake')));
   sfx.pop();
   setTimeout(() => { sfx.impact(80, 500); confetti(innerWidth / 2, innerHeight * 0.55); }, 820);
   setTimeout(() => el.classList.add('away'), 2600);
@@ -152,7 +124,8 @@ function confetti(x, y, n = 40) {
 }
 
 /* ---------- ¡Médico! ---------- */
-// Someone jumps up from the bottom of the screen and shouts, a pulse line crosses the screen with its beeps, and +25.
+// A glossy heart jumps up from the bottom of the screen, beating, with the shout; a pulse line crosses the screen
+// with its beeps, and +25. (Specter in a doctor's coat joins this in step 9.)
 function shout(text) {
   // The browser's own voice, on this device: nothing is sent anywhere. Only with the page's sound on.
   try {
@@ -164,7 +137,7 @@ function shout(text) {
 }
 function medic() {
   if (still()) { heal(); return; }
-  const who = layer('egg-medic', `${medicSVG}<b class="bubble">${t('¡MÉDICO!')}</b>`);
+  const who = show3d(layer('egg-medic', `${prop3d('heart')}<b class="bubble">${t('¡MÉDICO!')}</b>`));
   setTimeout(() => shout(t('¡Médico!')), 380);
   const line = layer('egg-pulse', '<svg viewBox="0 0 1200 160" preserveAspectRatio="none"><path d="M0 80H380l30-10 20 10h40l18-66 26 132 22-90 14 24h50l26-14 24 14H1200"/></svg>');
   [520, 1240, 1960].forEach((ms) => setTimeout(() => sfx.beep(), ms));
@@ -236,17 +209,15 @@ function portals(x, y) {
 // portals; the trophy shines.
 export function poke(id, el) {
   if (!el) return;
+  const canvas = el.querySelector('canvas[data-prop]');
   if (id === 'cake') {
-    const flame = el.querySelector('.flame');
-    const lit = flame && flame.getAttribute('opacity') !== '0';
-    if (lit) { sfx.blow(); flame.setAttribute('opacity', '0'); } else { sfx.tick(); flame?.setAttribute('opacity', '1'); const r = el.getBoundingClientRect(); if (!still()) confetti(r.left + r.width / 2, r.top + 10, 18); }
-    el.setAttribute('aria-pressed', String(lit));
+    const lit = pokeProp(canvas);
+    if (lit === false) sfx.blow(); else { sfx.tick(); const r = el.getBoundingClientRect(); if (!still()) confetti(r.left + r.width / 2, r.top + 10, 18); }
+    el.setAttribute('aria-pressed', String(lit === false));
   } else if (id === 'medic') {
-    sfx.heartbeat(); setTimeout(() => sfx.beep(), 260);
-    el.classList.remove('beat'); void el.offsetWidth; el.classList.add('beat');
+    sfx.heartbeat(); setTimeout(() => sfx.beep(), 260); pokeProp(canvas);
   } else if (id === 'portal') {
-    sfx.portal();
-    el.classList.remove('through'); void el.offsetWidth; el.classList.add('through');
+    sfx.portal(); pokeProp(canvas);
   } else if (id === 'cafe') {
     setBackdrop(backdrop() === 'cafe' ? '' : 'cafe'); sfx.tick();
     el.setAttribute('aria-pressed', String(backdrop() === 'cafe'));
@@ -254,8 +225,7 @@ export function poke(id, el) {
     // The gramophone: the radio turns on and tunes to the phonograph.
     openRadio(); tune(0, 'fono'); sfx.tick();
   } else if (id === 'crit') {
-    sfx.crit();
-    el.classList.remove('shine'); void el.offsetWidth; el.classList.add('shine');
+    sfx.crit(); pokeProp(canvas);
   }
 }
 
@@ -323,33 +293,84 @@ export function stationOpen(s) { const f = found(); return s.opens === 'radio' |
 export const openStations = () => STATIONS.filter(stationOpen);
 const current = () => { const s = stationOf(read(RADIO, {}).station); return stationOpen(s) ? s : STATIONS[0]; };
 const needle = (s) => `${((s.freq - 88) / 20) * 100}%`;
-// An official upload plays in YouTube's own player, visible on the radio, with its credit and a link to the original.
+// An official upload plays in YouTube's own player (its official IFrame API), visible on the radio, with its credit
+// and a link to the original. The radio's own knobs play, pause and set its volume; what the player says (playing,
+// paused, an error, a click the browser asks for) is shown on the radio in words.
+let ytLoad = null;
+function youtube() {
+  ytLoad ??= new Promise((resolve, reject) => {
+    if (window.YT?.Player) { resolve(window.YT); return; }
+    const before = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => { before?.(); resolve(window.YT); };
+    const s = document.createElement('script');
+    s.src = 'https://www.youtube.com/iframe_api';
+    s.onerror = () => { ytLoad = null; reject(new Error('no-api')); };
+    document.head.append(s);
+    setTimeout(() => { if (!window.YT?.Player) { ytLoad = null; reject(new Error('slow')); } }, 15000);
+  });
+  return ytLoad;
+}
+const YT_ERRORS = {
+  2: 'YouTube no reconoce este video.',
+  5: 'Este navegador no puede reproducir este video.',
+  100: 'El video ya no está en YouTube.',
+  101: 'Su dueño no deja reproducirlo fuera de YouTube. Ábrelo en YouTube con el enlace.',
+  150: 'Su dueño no deja reproducirlo fuera de YouTube. Ábrelo en YouTube con el enlace.',
+};
+function status(el, text) { const p = el.querySelector('.yt-status'); if (p) { p.textContent = t(text); p.hidden = !text; } }
+function playingNow(el, on) {
+  radio.playing = on;
+  el.classList.toggle('playing', on);
+  el.querySelector('[data-radio-play]').setAttribute('aria-label', t(on ? 'Pausar' : 'Reproducir'));
+}
 function tv(el, s) {
   const box = el.querySelector('.radio-tv');
+  try { radio.yt?.destroy(); } catch { /* already gone */ }
+  radio.yt = null;
   if (!s?.video) { box.hidden = true; box.innerHTML = ''; return; }
   box.hidden = false;
-  box.innerHTML = `<iframe src="${embedURL(s)}" title="${t(s.name)}" allow="autoplay; encrypted-media" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+  box.innerHTML = `<div class="yt"></div><p class="yt-status" role="status">${t('Abriendo el reproductor de YouTube…')}</p>
     <p class="credit">${t(s.credit)} <a href="https://www.youtube.com/watch?v=${s.video}" target="_blank" rel="noopener">${t('Ver en YouTube')}</a></p>`;
   // Floating, the radio grows upward with its player and stays on screen.
   if (!el.classList.contains('docked')) setTimeout(() => place(el, { x: el.offsetLeft, y: el.offsetTop - box.offsetHeight }), 0);
+  youtube().then((YT) => {
+    if (current().id !== s.id || !el.isConnected) return;
+    radio.yt = new YT.Player(box.querySelector('.yt'), {
+      host: 'https://www.youtube.com', videoId: s.video, width: '100%', height: '200',
+      playerVars: { autoplay: 1, playsinline: 1, rel: 0, loop: 1, playlist: s.video, origin: location.origin },
+      events: {
+        onReady: (e) => {
+          e.target.setVolume(Math.round(radio.gain * 100));
+          e.target.playVideo();
+          status(el, '');
+          // A browser that blocks sound until a click inside the player: say so, instead of looking broken.
+          setTimeout(() => { if (radio.yt === e.target && e.target.getPlayerState?.() !== 1) status(el, 'Tu navegador pide un clic: pulsa ▶ en el video.'); }, 2500);
+        },
+        onStateChange: (e) => {
+          if (e.data === 1) { status(el, ''); playingNow(el, true); }
+          else if (e.data === 2) playingNow(el, false);
+          else if (e.data === 0) e.target.playVideo(); // the loop
+        },
+        onError: (e) => { status(el, YT_ERRORS[e.data] ?? 'YouTube no pudo reproducir este video.'); playingNow(el, false); },
+      },
+    });
+  }).catch(() => status(el, 'No se pudo cargar el reproductor de YouTube. Revisa tu internet y vuelve a sintonizar.'));
 }
-function tell(el, func, args = []) { el.querySelector('.radio-tv iframe')?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), 'https://www.youtube-nocookie.com'); }
 function play(el, on) {
   const s = current();
   radio.station = s.id;
   stopMusic();
   if (s.video) {
-    if (on && !el.querySelector('.radio-tv iframe')) tv(el, s);
-    else tell(el, on ? 'playVideo' : 'pauseVideo');
-    radio.playing = on;
-    if (on) setTimeout(() => tell(el, 'setVolume', [Math.round(radio.gain * 100)]), 1500);
+    if (!radio.yt && on) { tv(el, s); return; }
+    try { if (on) radio.yt?.playVideo(); else radio.yt?.pauseVideo(); } catch { /* not ready yet */ }
+    playingNow(el, on);
   } else {
     tv(el, null);
     if (on) startMusic();
+    playingNow(el, radio.playing);
   }
-  el.classList.toggle('playing', radio.playing);
-  el.querySelector('[data-radio-play]').setAttribute('aria-label', t(radio.playing ? 'Pausar' : 'Reproducir'));
 }
+function tell(_el, func, args = []) { try { radio.yt?.[func]?.(...args); } catch { /* not ready yet */ } }
 function syncStation(el) {
   const s = current();
   const open = openStations();
@@ -477,6 +498,8 @@ export function openRadio(discovered = false) {
 }
 export function closeRadio() {
   stopMusic();
+  try { radio.yt?.destroy(); } catch { /* already gone */ }
+  radio.yt = null;
   radio.playing = false;
   radioEl()?.remove();
   write(RADIO, { ...read(RADIO, {}), on: false });

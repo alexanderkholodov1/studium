@@ -13,7 +13,8 @@ import { rise } from './fx.js';
 import { auth } from './data.js';
 import { communityLabel, communityOf, flag, settings } from './settings.js';
 import { seen, markSeen, unmarkSeen, hintsOn, setHints } from './hints.js';
-import { luckyHit, found, radioOn, openRadio, radioDocked, placeRadio, rescueRadio, critCount, eggCount, cakeSVG, gramophoneSVG, poke, backdrop, EGGS, openStations } from './eggs.js';
+import { luckyHit, found, radioOn, openRadio, radioDocked, placeRadio, rescueRadio, critCount, eggCount, prop3d, poke, backdrop, EGGS, openStations } from './eggs.js';
+import { props } from './props3d.js';
 import { renderHomeSchedule } from './schedule.js';
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -268,12 +269,12 @@ function shelfTile(span) {
   const f = found();
   const crits = critCount();
   const items = [
-    f.has('cake') ? `<button type="button" class="trinket cake" data-trinket="cake" aria-label="La torta: sopla la vela" title="Sopla la vela">${cakeSVG(true)}<small>La torta</small></button>` : '',
-    f.has('medic') ? `<button type="button" class="trinket ecg" data-trinket="medic" aria-label="El monitor: tómate el pulso" title="Tómate el pulso"><svg viewBox="0 0 160 70" aria-hidden="true"><rect x="2" y="2" width="156" height="66" rx="10"/><path class="trace" d="M6 40h40l8-4 6 4h10l6-26 9 46 7-30 5 10h20l8-6 8 6h21"/></svg><small>♥ 72 · +25</small></button>` : '',
-    f.has('portal') ? '<button type="button" class="trinket portals" data-trinket="portal" aria-label="Los portales: suelta una canica" title="Suelta una canica"><span class="ring blue"></span><span class="ring red"></span><span class="marble"></span><small>Portales</small></button>' : '',
-    f.has('crit') ? `<button type="button" class="trinket trophy" data-trinket="crit" aria-label="Golpes críticos: ${crits}" title="Golpes críticos"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 8h28v14c0 10-6 17-14 17S18 32 18 22Z" fill="#ffd23f"/><path d="M18 12H8c0 10 5 15 11 15M46 12h10c0 10-5 15-11 15" fill="none" stroke="#ffd23f" stroke-width="4"/><rect x="28" y="38" width="8" height="10" fill="#e0b21f"/><rect x="18" y="48" width="28" height="8" rx="3" fill="#7a4a2b"/></svg><small>× ${crits} crítico${crits === 1 ? '' : 's'}</small></button>` : '',
-    f.has('cafe') ? `<button type="button" class="trinket cafe" data-trinket="cafe" aria-pressed="${backdrop() === 'cafe'}" title="Enciende o apaga la «Noche de estudio»"><svg viewBox="0 0 100 100" aria-hidden="true"><path class="steam" d="M40 30c-5-6 5-10 0-16M54 30c-5-6 5-10 0-16"/><path d="M22 38h50l-5 38a7 7 0 0 1-7 6H34a7 7 0 0 1-7-6Z" fill="#f2e6d6"/><path d="M71 44c12 0 12 18 0 18" stroke="#f2e6d6" stroke-width="6" fill="none"/><ellipse cx="47" cy="38" rx="25" ry="5" fill="#5b3a22"/></svg><small>Noche de estudio</small></button>` : '',
-    f.has('starve') ? `<button type="button" class="trinket gramophone" data-trinket="starve" title="Pon el fonógrafo">${gramophoneSVG}<small>El fonógrafo</small></button>` : '',
+    f.has('cake') ? `<button type="button" class="trinket" data-trinket="cake" aria-label="La torta: sopla la vela" title="Sopla la vela">${prop3d('cake')}<small>La torta</small></button>` : '',
+    f.has('medic') ? `<button type="button" class="trinket" data-trinket="medic" aria-label="El monitor: tómate el pulso" title="Tómate el pulso">${prop3d('monitor')}<small>El monitor</small></button>` : '',
+    f.has('portal') ? `<button type="button" class="trinket" data-trinket="portal" aria-label="Los portales: suelta una canica" title="Suelta una canica">${prop3d('portals')}<small>Portales</small></button>` : '',
+    f.has('crit') ? `<button type="button" class="trinket" data-trinket="crit" aria-label="Golpes críticos: ${crits}" title="Golpes críticos">${prop3d('trophy')}<small>× ${crits} crítico${crits === 1 ? '' : 's'}</small></button>` : '',
+    f.has('cafe') ? `<button type="button" class="trinket" data-trinket="cafe" aria-pressed="${backdrop() === 'cafe'}" title="Enciende o apaga la «Noche de estudio»">${prop3d('cup')}<small>Noche de estudio</small></button>` : '',
+    f.has('starve') ? `<button type="button" class="trinket" data-trinket="starve" title="Pon el fonógrafo">${prop3d('gramophone')}<small>El fonógrafo</small></button>` : '',
     f.has('radio') ? (radioDocked() ? '<div class="radio-stand" data-radio-stand></div>' : `<div class="trinket radio-slot">${radioOn() ? '<small>La radio va contigo. Con «Dejarla en Inicio» se queda aquí.</small>' : '<button type="button" class="button ghost small" data-radio-add>Encender la radio</button>'}</div>`) : '',
   ].filter(Boolean);
   const hidden = eggCount() - f.size;
@@ -324,6 +325,7 @@ export function renderHome() {
   rescueRadio(); // the radio left on Inicio is taken out before Inicio is redrawn, so its music goes on
   $('#dash').innerHTML = top + tiles + (editing ? trayTile() : '');
   placeRadio();
+  props($('#dash'));
   renderHomeSchedule($('#home-schedule'));
   $('#dash').classList.toggle('editing', editing);
   $('#home-edit').textContent = editing ? 'Listo' : 'Personalizar';

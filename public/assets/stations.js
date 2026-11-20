@@ -16,7 +16,6 @@ export const STATIONS = [
     credit: '«Ragtime», de Vince de Vera y Jason Garner, del soundtrack de Don’t Starve (Klei Entertainment). Se reproduce desde su canal oficial en YouTube.' },
 ];
 export const stationOf = (id) => STATIONS.find((s) => s.id === id) ?? STATIONS[0];
-export const embedURL = (s) => `https://www.youtube-nocookie.com/embed/${s.video}?autoplay=1&loop=1&playlist=${s.video}&enablejsapi=1&playsinline=1&rel=0&origin=${encodeURIComponent(location.origin)}`;
 
 /* ---------- the instruments ---------- */
 const hz = (n) => 440 * 2 ** ((n - 69) / 12); // a MIDI note to its frequency
