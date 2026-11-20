@@ -10,6 +10,7 @@
 // what this person has. The last choice per task is remembered.
 import { settings } from './settings.js';
 import { AIError, classify } from './aierror.js';
+import { redact } from './secrets.js';
 
 export { AIError };
 const LOCAL = 'studium-ai';
@@ -459,7 +460,7 @@ export async function models(way, key = keyOf(way)) {
 }
 
 /* ---------- files, read in the browser ---------- */
-const TEXT = /\.(txt|md|markdown|csv|tsv|json|tex|py|c|cc|cpp|h|hpp|java|js|ts|html?|css|sql|r|m|ipynb)$/i;
+const TEXT = /\.(txt|md|markdown|csv|tsv|json|tex|py|c|cc|cpp|h|hpp|java|js|ts|html?|css|sql|r|m|ipynb|ya?ml|properties|xml|toml|ini|conf|cfg|sh|ps1|env|example|http|gradle|kt|go|rs|rb|php|cs|swift)$/i;
 export const MAX_FILE = 25_000_000;
 export async function readFile(file) {
   if (file.size > MAX_FILE) return { name: file.name, skipped: 'pesa más de 25 MB' };
@@ -512,6 +513,9 @@ const openaiParts = (files, text) => [
 // wrote it and who makes it (provider), and where it ran (way), so that a guide can say what made it.
 export const longest = (c) => (c.provider === 'anthropic' || c.provider === 'bridge:claude' ? 64000 : 32000);
 export async function run({ system, text, files = [], maxTokens = 32000, onProgress, signal, task = 'guide', use = null } = {}) {
+  // Keys and passwords never reach the AI: whatever text goes, from a file or typed, is filtered here first.
+  if (text) text = redact(text).text;
+  files = files.map((f) => (f?.text ? { ...f, text: redact(f.text).text } : f));
   const c = { ...(use ?? choice(task)) };
   const way = c.provider;
   if (!WAYS[way] || !connected().includes(way)) throw new AIError('Conecta tu IA en Ajustes.', { kind: 'account', way });

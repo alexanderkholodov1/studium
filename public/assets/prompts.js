@@ -75,6 +75,8 @@ ${field('Universidad u organizador', m.university)}
 ${field('Profesor', contest ? 'no aplica: deja ""' : m.professor)}
 ${field(contest ? 'Edición' : 'Semestre', m.term)}
 ${field('Evaluación a la que pertenece', contest ? 'no aplica: deja ""' : m.stage)}
+${m.folder ? field('Dónde estaba en las carpetas de la materia', m.folder) : ''}
+${m.place ? field('Su lugar en el curso', `${m.place}: respeta ese orden al listar los conceptos y nómbralo en el campo de la evaluación si no hay otra`) : ''}
 
 ## Anónimo, siempre
 Otros estudiantes verán este aporte.
