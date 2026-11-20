@@ -97,6 +97,14 @@ if (existsSync(CONFIG)) {
   }
 }
 
+// Two animations with the same name: the last one wins everywhere, silently. 2026-11-20: a second «bob» made the
+// landing's cards fly forward and back, and a second «fade-out» slid every page change down.
+for (const file of files.filter((f) => f.endsWith('.css'))) {
+  const names = [...readFileSync(file, 'utf8').matchAll(/@keyframes\s+([\w-]+)/g)].map((m) => m[1]);
+  const twice = [...new Set(names.filter((n, i) => names.indexOf(n) !== i))];
+  if (twice.length) errors.push(`${file}: animations defined more than once (the last one wins everywhere): ${twice.join(', ')}`);
+}
+
 if (errors.length) {
   console.error(errors.join('\n'));
   process.exit(1);
