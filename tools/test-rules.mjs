@@ -371,6 +371,13 @@ try {
   expect('a profile whose known concepts are not a list is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ known: 'subred' }))]), 403);
   expect('student keeps its drafts of «Crea tu guía»', await commit(s.token, [put(`drafts/${s.uid}`, { material: { course: 'Redes' }, guide: { course: 'Cálculo II', level: 'standard' } })]), 200);
   expect('student reads its drafts', await status(s.token, 'GET', `/drafts/${s.uid}`), 200);
+  // An admin manages Studium, not people's private things: no admin path reads them.
+  expect('an admin cannot read the drafts of a member', await status(accounts.admin.token, 'GET', `/drafts/${s.uid}`), 403);
+  expect('an admin cannot read the profile of a member', await status(accounts.admin.token, 'GET', `/profiles/${s.uid}`), 403);
+  expect('an admin cannot read the schedule of a member', await status(accounts.admin.token, 'GET', `/schedules/${s.uid}`), 403);
+  expect('an admin cannot list the drafts', await list(accounts.admin.token, 'drafts'), 403);
+  expect('an admin cannot list the profiles', await list(accounts.admin.token, 'profiles'), 403);
+  expect('an admin cannot list the vaults', await list(accounts.admin.token, 'vaults'), 403);
   expect('classmate cannot read the drafts of another account', await status(c.token, 'GET', `/drafts/${s.uid}`), 403);
   expect('classmate cannot write the drafts of another account', await commit(c.token, [put(`drafts/${s.uid}`, { guide: {} })]), 403);
   expect('drafts with other fields are refused', await commit(s.token, [put(`drafts/${s.uid}`, { notes: 'x' })]), 403);
