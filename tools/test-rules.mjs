@@ -355,6 +355,9 @@ try {
     expect('feedback with an answer already is refused', await send(s.token, `${tag}-fb6`, fb({ answer: 'x' }), 2), 403);
     expect('feedback with a picture that is not an image is refused', await send(s.token, `${tag}-fb7`, fb({ shot: 'javascript:alert(1)' }), 2), 403);
     expect('feedback with its log and a picture', await send(s.token, `${tag}-fb8`, fb({ kind: 'ia', log: '[{"model":"x"}]', shot: 'data:image/jpeg;base64,AAAA' }), 2), 200);
+    expect('feedback with the largest picture allowed', await send(s.token, `${tag}-fb11`, fb({ shot: `data:image/jpeg;base64,${'A'.repeat(449000)}`, log: 'x'.repeat(149000) }), 3), 200);
+    expect('a picture over the limit is refused', await send(s.token, `${tag}-fb12`, fb({ shot: `data:image/jpeg;base64,${'A'.repeat(451000)}` }), 4), 403);
+    expect('an answer dated by the browser is refused', await commit(accounts.admin.token, [put(`feedback/${tag}-fb8`, { status: 'visto', answered: new Date(0) }, { stamp: false, mask: ['status', 'answered'] })]), 403);
     expect('the sender cannot answer its own feedback', await commit(s.token, [put(`feedback/${f1}`, { status: 'resuelto' }, { stamp: false, mask: ['status'] })]), 403);
     expect('admin answers the feedback', await commit(accounts.admin.token, [put(`feedback/${f1}`, { status: 'resuelto', answer: 'Gracias, arreglado' }, { stamp: 'answered', mask: ['status', 'answer'] })]), 200);
     expect('admin cannot change what was sent', await commit(accounts.admin.token, [put(`feedback/${f1}`, { text: 'otra cosa' }, { stamp: false, mask: ['text'] })]), 403);

@@ -223,7 +223,8 @@ service cloud.firestore {
       allow get, list: if admin() || (member() && resource.data.uid == request.auth.uid);
       allow update: if admin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'answer', 'answered'])
         && request.resource.data.status in ['nuevo', 'visto', 'resuelto', 'descartado']
-        && optional(request.resource.data, 'answer', 5000);
+        && optional(request.resource.data, 'answer', 5000)
+        && (!('answered' in request.resource.data) || request.resource.data.answered == request.time);
       allow delete: if admin() || (member() && resource.data.uid == request.auth.uid);
     }
     match /feedbackDay/{uid} {
