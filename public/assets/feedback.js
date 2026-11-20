@@ -180,7 +180,7 @@ async function drawMine(d) {
 }
 
 // Open the window; kind and an AI request's id preselect what it is about.
-export function openFeedback({ kind = 'error', entryId = '' } = {}) {
+export function openFeedback({ kind = 'error', entryId = '', text = '' } = {}) {
   if (!auth.currentUser) return;
   const d = dialog();
   const form = $('form', d);
@@ -189,6 +189,8 @@ export function openFeedback({ kind = 'error', entryId = '' } = {}) {
   form.log.checked = kind === 'ia' && ai.activity.length > 0;
   form.errors.checked = kind === 'error' || kind === 'ia' || kind === 'urgente';
   $('[data-fb-msg]', d).hidden = true;
+  // Opened from a place (a section of the guide): its name starts the text, for the person to go on.
+  if (text && !form.text.value.trim()) form.text.value = text.slice(0, 300);
   d._preview();
   if (!d.open) d.showModal();
   form.text.focus();
@@ -203,6 +205,6 @@ export function mountFeedback() {
     const t = e.target.closest('[data-feedback]');
     if (!t) return;
     e.preventDefault();
-    openFeedback({ kind: t.dataset.feedback || 'error', entryId: t.dataset.entry ?? '' });
+    openFeedback({ kind: t.dataset.feedback || 'error', entryId: t.dataset.entry ?? '', text: t.dataset.feedbackText ?? '' });
   });
 }
