@@ -280,8 +280,15 @@ async function recent(name) {
   const at = (d) => millis(d.data().updated ?? d.data().updatedAt);
   return { docs: [...snap.docs].sort((a, b) => at(b) - at(a)).slice(0, 300), empty: snap.empty };
 }
+// What a member marked «Solo yo» is shown to admins only behind this switch, off by default and for this browser
+// session; turning it on or off is written to the audit log (his decision, 2026-11-21: a filter that can be switched,
+// but the admin may look if needed).
+let seePrivate = (() => { try { return sessionStorage.getItem('studium-adm-private') === '1'; } catch { return false; } })();
+const hidden = (d) => d.visibility === 'private' && !seePrivate;
+const sealed = '<em class="muted">Contenido privado</em><small> · prende «Ver lo privado» para leerlo</small>';
 async function contentSection() {
-  const tabs = `<div class="seg adm-sub">${Object.entries(KINDS).map(([k, l]) => `<label><input type="radio" name="adm-kind" value="${k}" ${k === contentKind ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>`;
+  const privateSwitch = `<label class="check adm-private"><input type="checkbox" data-adm-private ${seePrivate ? 'checked' : ''}> Ver lo privado <small>(lo que cada persona marcó «Solo yo»; queda en el registro)</small></label>`;
+  const tabs = privateSwitch + `<div class="seg adm-sub">${Object.entries(KINDS).map(([k, l]) => `<label><input type="radio" name="adm-kind" value="${k}" ${k === contentKind ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>`;
   const row = (cells, id, actions) => `<tr data-id="${esc(id)}">${cells.map((c) => `<td>${c}</td>`).join('')}<td class="row-actions">${actions}</td></tr>`;
   const vis = (d) => (d.visibility === 'private' ? '<span class="badge">privada</span>' : '<span class="badge ok">pública</span>');
   let body = '';
@@ -289,7 +296,7 @@ async function contentSection() {
   if (contentKind === 'guides') {
     const snap = await recent('catalog');
     body = `<thead><tr><th>Guía</th><th>Materia</th><th>Fecha</th><th>Visibilidad</th><th>Cambiada</th><th></th></tr></thead><tbody>${snap.docs.map((d) => { const g = d.data(); return row([
-      `<a href="#/guia/${encodeURIComponent(d.id)}"><strong>${esc(g.title)}</strong></a>${g.by ? `<small> · ${esc(g.by)}</small>` : ''}`, esc(g.course), esc(g.date ?? ''), vis(g), esc(when(g.updated))], d.id,
+      hidden(g) ? sealed : `<a href="#/guia/${encodeURIComponent(d.id)}"><strong>${esc(g.title)}</strong></a>${g.by ? `<small> · ${esc(g.by)}</small>` : ''}`, hidden(g) ? '' : esc(g.course), hidden(g) ? '' : esc(g.date ?? ''), vis(g), esc(when(g.updated))], d.id,
       `<button class="link" data-mod="${g.visibility === 'private' ? 'show' : 'hide'}" data-kind="guides">${g.visibility === 'private' ? 'Mostrar' : 'Ocultar'}</button><button class="link" data-adm-history>Historial</button><button class="link danger" data-mod="delete" data-kind="guides">Borrar</button>`); }).join('')}</tbody>`;
   } else if (contentKind === 'contributions') {
     const [snap, pack] = await Promise.all([recent('contributions'), packInfo().catch(() => null)]);
@@ -298,7 +305,7 @@ async function contentSection() {
       <p class="fine">Cada visita lee el paquete (unos pocos documentos, guardados en el navegador) y solo lo que se publicó después, en lugar de una lectura por aporte. Compílalo después de subir muchos aportes; lo que se borra u oculta desaparece del grafo al instante aunque siga en el paquete.</p>
       <div class="actions"><button class="button primary" data-compile>Compilar ahora</button></div></section>`;
     body = `<thead><tr><th>Aporte</th><th>Materia</th><th>Tipo</th><th>Visibilidad</th><th>Cambiado</th><th></th></tr></thead><tbody>${snap.docs.map((d) => { const c = d.data(); return row([
-      `<strong>${esc(c.title)}</strong><small> · ${n(c.questions)} preguntas${c.stage ? ` · ${esc(c.stage)}` : ''}${c.source ? ` · ${esc(c.source)}` : ''}</small>`, esc(c.course), esc(c.kind), vis(c), esc(when(c.updated))], d.id,
+      hidden(c) ? sealed : `<strong>${esc(c.title)}</strong><small> · ${n(c.questions)} preguntas${c.stage ? ` · ${esc(c.stage)}` : ''}${c.source ? ` · ${esc(c.source)}` : ''}</small>`, hidden(c) ? '' : esc(c.course), hidden(c) ? '' : esc(c.kind), vis(c), esc(when(c.updated))], d.id,
       `<button class="link" data-mod="${c.visibility === 'private' ? 'show' : 'hide'}" data-kind="contributions">${c.visibility === 'private' ? 'Mostrar' : 'Ocultar'}</button><button class="link" data-adm-history>Historial</button><button class="link danger" data-mod="delete" data-kind="contributions">Borrar</button>`); }).join('')}</tbody>`;
   } else if (contentKind === 'library') {
     const snap = await recent('library');
@@ -485,7 +492,8 @@ async function showHistory(row) {
   for (const v of list) admKept.set(v.vid, v);
   const ACTION = { replaced: 'antes de un reemplazo', deleted: 'antes de borrarlo', restored: 'antes de una restauración' };
   const shown = list.filter((v) => v.col !== 'guides');
-  row.insertAdjacentHTML('afterend', `<tr class="adm-history"><td colspan="9">${shown.length ? `<ul>${shown.map((v) => `<li>${esc(v.data?.title ?? v.of)} · ${esc(ACTION[v.action] ?? v.action)} · ${esc(v.at?.toDate?.().toLocaleString('es') ?? '')} <button class="link" data-adm-restore="${esc(v.vid)}">Restaurar esta versión</button></li>`).join('')}</ul>` : '<p class="muted">Sin versiones guardadas: nunca se cambió desde que existe el historial.</p>'}</td></tr>`);
+  const sealedHistory = !seePrivate && row.querySelector('.badge')?.textContent === 'privada';
+  row.insertAdjacentHTML('afterend', `<tr class="adm-history"><td colspan="9">${shown.length ? `<ul>${shown.map((v) => `<li>${sealedHistory ? 'Versión privada' : esc(v.data?.title ?? v.of)} · ${esc(ACTION[v.action] ?? v.action)} · ${esc(v.at?.toDate?.().toLocaleString('es') ?? '')} <button class="link" data-adm-restore="${esc(v.vid)}">Restaurar esta versión</button></li>`).join('')}</ul>` : '<p class="muted">Sin versiones guardadas: nunca se cambió desde que existe el historial.</p>'}</td></tr>`);
 }
 
 async function logSection() {
@@ -632,6 +640,12 @@ export function mountAdmin(context) {
   view.addEventListener('change', (e) => {
     const t = e.target;
     if (t.name === 'adm-kind') { contentKind = t.value; renderAdmin('contenido'); return; }
+    if (t.dataset.admPrivate !== undefined) {
+      seePrivate = t.checked;
+      try { sessionStorage.setItem('studium-adm-private', seePrivate ? '1' : ''); } catch { /* this view only */ }
+      audit(seePrivate ? 'Vio el contenido privado' : 'Dejó de ver el contenido privado').catch(() => {});
+      renderAdmin('contenido'); return;
+    }
     if (t.name === 'fb-kind') { fbKind = t.value; renderAdmin('feedback'); return; }
     if (!draft) return;
     if (t.dataset.admConfirm !== undefined) draft.confirmEmail = t.checked;
