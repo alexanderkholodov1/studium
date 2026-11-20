@@ -143,7 +143,7 @@ function remember(gid, parts) {
   while (prepared.size > 4) prepared.delete(prepared.keys().next().value);
 }
 async function unitOf(job, group, list) {
-  if (!prepared.has(group.id)) remember(group.id, prepareGroup({ name: group.name, files: list, code: group.code }));
+  if (!prepared.has(group.id)) remember(group.id, prepareGroup({ name: group.name, files: list, code: group.code, folder: !!group.v?.oneFolder }));
   const parts = await prepared.get(group.id);
   const unit = parts?.units?.[job.index];
   if (!unit) throw new ai.AIError('No se pudo volver a leer este archivo.', { kind: 'job' });
@@ -173,7 +173,22 @@ function storeFor() {
 // The other tabs wait for their turn: when the tab that runs the queue closes, the next one takes it over.
 const lockQueue = (fn) => (navigator.locks?.request ? navigator.locks.request('studium-queue', () => fn()) : fn());
 let lastCounts = null;
+const watchers = new Set();
+// «Estudia» draws the processing as it happens: it hears every change of the queue.
+export function watchQueue(fn) { watchers.add(fn); return () => watchers.delete(fn); }
+export async function queueControl(action) {
+  const q = await startQueue();
+  if (action === 'pause') q.pause();
+  if (action === 'resume') q.resume();
+  if (action === 'discard') {
+    await q.discardAll();
+    for (const [id, item] of reviews) if (item.jobId && !item.done) { reviews.delete(id); document.getElementById(id)?.remove(); }
+  }
+  return q;
+}
+export const reviewOfJob = (jobId) => reviews.get(reviewOf.get(jobId));
 function onQueue(change) {
+  for (const fn of watchers) { try { fn(change, queue); } catch (e) { console.warn('[estudia]', e); } }
   if (change.progress) { const row = document.querySelector(`#q-${CSS.escape(change.progress)} > .state`); if (row) row.textContent = change.status.progress; return; }
   // Only this tab's own changes are announced: reading what another tab announced must not answer it back.
   if (!change.loaded) channel?.postMessage('changed');
@@ -287,7 +302,8 @@ async function enqueue(zone, files, given) {
   if (!given && $('[data-ai-pick="material"]')) ai.picked('material');
   queueNotes.length = 0;
   let added = 0;
-  for (const group of groupFiles(files)) {
+  // From «Estudia», a folder is one group (one material, packed into as few requests as fit).
+  for (const group of given?.oneFolder ? [{ name: given.oneFolder, files, folder: true }] : groupFiles(files)) {
     const print = await printOf(group).catch(() => '');
     const queued = print ? q.groups().find((g) => g.print === print) : null;
     if (queued) {
@@ -400,6 +416,8 @@ export function startGuide(files, preset) {
   location.hash = '#/estudia/guia';
 }
 export { droppedFiles };
+// The exact instructions «Procesar material» sends, for the person to read before anything runs.
+export const materialInstructions = (values) => contributionInstructions(valuesFor(values));
 
 /* ---------- material ---------- */
 function materialPane() {
@@ -918,23 +936,30 @@ function renderReview(item) {
       ${!ready && !blocking.length && isGuide && !/^\d{4}-\d{2}-\d{2}$/.test(m.date || '') ? '<span class="hint">Falta la fecha de la evaluación.</span>' : ''}
     </div>`}`;
   syncBulk(item.zone.startsWith('replace:') ? 'mine' : item.zone);
-  if (!isGuide && !curriculum && !item.done && !item.coherence && ai.ready()) checkCoherence(item);
 }
 
 /* ---------- before it is public: does it belong together? The person's AI says, and the person decides ---------- */
-async function checkCoherence(item) {
-  item.coherence = { state: 'running' };
+function coherenceRequest(item) {
   const m = item.parsed.meta;
   const names = (item.parsed.data.concepts ?? []).map((c) => c.name).slice(0, 80);
   const course = courseNode(m.course);
   const g = ctx.state.graph;
   const known = course ? g.links.filter((l) => l.kind === 'in' && l.source === course).map((l) => l.target.name).slice(0, 150) : [];
+  return {
+    names,
+    system: COHERENCE,
+    text: `Materia: ${m.course}\nTítulo: ${m.title}\nTipo: ${KINDS[m.kind] ?? m.kind}\nConceptos del aporte: ${names.join('; ')}\nConceptos que la materia ya tiene en el grafo: ${known.join('; ') || '(ninguno todavía)'}`,
+  };
+}
+const COHERENCE = 'Revisas, antes de que se publique, un aporte anónimo al grafo de conocimiento de una materia universitaria. Di si su contenido es de esa materia y si sus conceptos tienen que ver entre ellos. Responde solo JSON: {"fits": true o false, "why": "una frase", "outliers": ["conceptos de la lista que no son de esta materia o no tienen que ver con el resto"]}.';
+async function checkCoherence(item) {
+  const card = document.getElementById(item.id);
+  const use = ai.picked('ask', card ?? document);
+  item.coherence = { state: 'running' };
+  renderReview(item);
+  const { names, system, text } = coherenceRequest(item);
   try {
-    const res = await ai.run({
-      system: 'Revisas, antes de que se publique, un aporte anónimo al grafo de conocimiento de una materia universitaria. Di si su contenido es de esa materia y si sus conceptos tienen que ver entre ellos. Responde solo JSON: {"fits": true o false, "why": "una frase", "outliers": ["conceptos de la lista que no son de esta materia o no tienen que ver con el resto"]}.',
-      text: `Materia: ${m.course}\nTítulo: ${m.title}\nTipo: ${KINDS[m.kind] ?? m.kind}\nConceptos del aporte: ${names.join('; ')}\nConceptos que la materia ya tiene en el grafo: ${known.join('; ') || '(ninguno todavía)'}`,
-      maxTokens: 800, use: ai.choice('ask'),
-    });
+    const res = await ai.run({ system, text, maxTokens: 800, task: 'ask', use });
     const a = JSON.parse(String(res.text ?? '').match(/\{[\s\S]*\}/)?.[0] ?? '{}');
     const set = new Set(names.map((n) => keyOf(n)));
     item.coherence = { state: 'done', fits: a.fits !== false, why: String(a.why ?? '').slice(0, 300), outliers: (Array.isArray(a.outliers) ? a.outliers : []).map(String).filter((n) => set.has(keyOf(n))).slice(0, 20) };
@@ -943,7 +968,13 @@ async function checkCoherence(item) {
 }
 function coherenceHTML(item) {
   const c = item.coherence;
-  if (!c) return ai.ready() ? '' : '<p class="fine">Con tu IA conectada, revisa también que todo tenga que ver con la materia antes de publicar.</p>';
+  if (!c) {
+    if (!ai.ready()) return '<p class="fine">Con tu IA conectada, puedes revisar también que todo tenga que ver con la materia antes de publicar.</p>';
+    const r = coherenceRequest(item);
+    return `<div class="coherence"><p>¿Quieres que tu IA revise que todo tenga que ver con ${esc(item.parsed.meta.course || 'la materia')}? Es opcional.</p>
+      ${ai.pickerHTML('ask')}${ai.promptHTML(r.system, r.text)}
+      <div class="actions"><button type="button" class="button ghost small" data-coherence="${item.id}">Revisar con mi IA</button></div></div>`;
+  }
   if (c.state === 'running') return `<p class="coherence">Tu IA está revisando que todo tenga que ver con ${esc(item.parsed.meta.course || 'la materia')}…</p>`;
   if (c.state === 'error') return '<p class="coherence">Tu IA no pudo revisarlo ahora; revísalo tú.</p>';
   if (c.fits && !c.outliers.length) return `<p class="coherence ok">${c.why === 'Quitaste lo que no era de aquí.' ? esc(c.why) : `Tu IA lo revisó: todo tiene que ver con ${esc(item.parsed.meta.course)}.`}</p>`;
@@ -1095,6 +1126,8 @@ export function mountContribute(context) {
     if (t) { e.preventDefault(); queueAction(t); }
   });
   view.addEventListener('click', (e) => {
+    const check = e.target.closest('[data-coherence]');
+    if (check) { const item = reviews.get(check.dataset.coherence); if (item) checkCoherence(item); }
     const drop = e.target.closest('[data-drop-concept]');
     if (drop) {
       const item = reviews.get(drop.dataset.dropConcept); const k = keyOf(drop.dataset.name);
@@ -1229,7 +1262,9 @@ const grown = new Set(); // what this person published in this visit: the graph 
 let shown = '';
 export function renderPane(pane, preset) {
   shown = pane;
-  const deps = { ctx, shareToGraph, startGuide, droppedFiles };
+  const deps = { ctx, shareToGraph, startGuide, droppedFiles, materialInstructions, watchQueue, queueControl, reviewOfJob, syncReviews: () => syncReviews(), startQueue };
+  // Only one place shows the reviews at a time: the old page's list must not catch «Estudia»'s cards.
+  if (pane === 'estudia' || pane === 'desk') $('#pane-material').innerHTML = '';
   if (pane === 'estudia' || pane === 'desk') {
     for (const name of ['material', 'guide', 'mine']) $(`#pane-${name}`).hidden = true;
     const el = $('#pane-estudia'); el.hidden = false;

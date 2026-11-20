@@ -569,6 +569,7 @@ export function groupFiles(files) {
 }
 // The units of a group: one file as prepare() gives it; several photos as one unit with every page.
 export async function prepareGroup(group) {
+  if (group.folder) return prepareFolder(group);
   if (group.files.length === 1) return prepare(group.files[0]);
   if (group.code) {
     const fence = '`'.repeat(3);
@@ -586,6 +587,34 @@ export async function prepareGroup(group) {
       note: `Son ${plural(group.files.length, 'foto', 'fotos')} del mismo material, en orden`,
       make: async () => (await Promise.all(group.files.map((f) => imagePart(f, baseName(f.webkitRelativePath || f.relativePath || f.name))))).filter(Boolean),
     }],
+  };
+}
+// A folder of a course is one material: every file of it goes together, packed into as few requests as fit (a request
+// carries up to FOLDER_BUDGET of text and files, or 20 parts). A huge folder becomes a few requests, never hundreds.
+const FOLDER_BUDGET = 1_500_000;
+async function prepareFolder(group) {
+  const pieces = [];
+  for (const f of group.files) {
+    try {
+      const p = await prepare(f);
+      for (const u of p.units ?? []) if (u.selected !== false) pieces.push({ from: baseName(f.webkitRelativePath || f.relativePath || f.name), parts: await u.make() });
+    } catch { /* a file that cannot be read is left out of the request */ }
+  }
+  const bins = [];
+  let cur = null;
+  for (const piece of pieces) {
+    const size = partsSize(piece.parts);
+    if (!cur || cur.size + size > FOLDER_BUDGET || cur.parts.length + piece.parts.length > 20) { cur = { parts: [], names: [], size: 0 }; bins.push(cur); }
+    cur.parts.push(...piece.parts); cur.names.push(piece.from); cur.size += size;
+  }
+  return {
+    name: group.name,
+    units: bins.map((b, i) => ({
+      label: bins.length > 1 ? `${group.name} · ${i + 1} de ${bins.length}` : group.name,
+      kind: 'whole', selected: true,
+      note: `Es una carpeta de la materia, «${group.name}»: ${plural(b.names.length, 'archivo', 'archivos')} que van juntos (${b.names.slice(0, 12).join(', ')}${b.names.length > 12 ? '…' : ''}). Trátalos como un solo material: lo que enseña o evalúa esta carpeta.${bins.length > 1 ? ` Es la parte ${i + 1} de ${bins.length} de la carpeta.` : ''}`,
+      make: async () => b.parts,
+    })),
   };
 }
 // A PDF part as pictures of its pages, for an AI that reads pictures but not PDFs (Codex through the bridge, for

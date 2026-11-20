@@ -147,13 +147,22 @@ const versionOf = (id) => { const m = String(id).match(/(\d+)(?:[.-](\d{1,2}))?(
 // What a model costs the person: free; their subscription (no charge per use); Puter's allowance; or paid per use.
 export function costOf(way, id) {
   if (way.startsWith('bridge:')) return 'sub';
-  if (way === 'gemini') return load().noFree?.[id] || (/(pro|ultra)/i.test(id) && !/flash/i.test(id)) ? 'nofree' : 'free';
+  // Gemini: «Gratis» only for the models Google documents with a free tier; any other may charge a key with billing,
+  // and is never assumed free (2026-11-20: Studium had labelled every non-«pro» model free, unverified).
+  if (way === 'gemini') return load().noFree?.[id] ? 'nofree' : GEMINI_FREE.test(id) ? 'free' : 'unverified';
   if (way === 'openrouter') return /:free$/.test(id) ? 'free' : 'paid';
   if (way === 'puter') return 'puter';
   return 'paid';
 }
-export const COST = { free: 'Gratis', sub: 'Tu suscripción', puter: 'Tu cuenta de Puter', nofree: 'Sin uso gratis', paid: 'De pago' };
-const COST_RANK = { free: 0, sub: 0, puter: 1, nofree: 3, paid: 2 };
+export const COST = { free: 'Gratis', sub: 'Tu suscripción', puter: 'Tu cuenta de Puter', nofree: 'Sin uso gratis', paid: 'De pago', unverified: 'Sin verificar: podría cobrarte' };
+const COST_RANK = { free: 0, sub: 0, puter: 1, nofree: 3, paid: 2, unverified: 2 };
+// The Gemini models with a free tier that Google documents (2.0 and 2.5 Flash and Flash-Lite, their «latest» aliases,
+// and Gemma). A model not on this list is «Sin verificar» until Google documents it.
+const GEMINI_FREE = /^(models\/)?(gemini-2\.[05]-flash(-lite)?(-\d{3}|-preview[\w-]*)?|gemini-flash(-lite)?-latest|gemma-[\w.-]+)$/i;
+// A model that may cost is used only after the person said yes to it, for that model.
+export const mayCost = (way, id) => ['paid', 'unverified', 'nofree'].includes(costOf(way, id));
+export const costAccepted = (id) => !!load().acceptCost?.[id];
+export const acceptCost = (id, yes) => patch((s) => { s.acceptCost = { ...(s.acceptCost ?? {}) }; if (yes) s.acceptCost[id] = true; else delete s.acceptCost[id]; });
 const FIT = { strong: { strong: 0, mid: 1, light: 2 }, mid: { mid: 0, strong: 1, light: 2 }, light: { light: 0, mid: 1, strong: 2 } };
 // A Gemini model that answered «no free use» is remembered as such.
 const markNoFree = (id) => patch((s) => { s.noFree = { ...(s.noFree ?? {}), [id]: true }; });
@@ -270,7 +279,7 @@ export function pickerHTML(task, { open = false } = {}) {
   const cost = costOf(c.provider, c.model);
   return `<details class="ai-pick" data-ai-pick="${esc(task)}" ${open ? 'open' : ''}>
     <summary><span class="ai-pick-now">Con <b>${esc(WAYS[c.provider]?.name)}</b> · ${esc(c.model || 'el modelo de tu cuenta')}${efforts.length ? ` · piensa ${esc((EFFORTS[c.effort] ?? '').toLowerCase())}` : ''}</span>
-      <span class="tag ${isRec ? 'rec' : ''}">${isRec ? 'Recomendado' : 'Elegido por ti'}</span>${cost === 'paid' || cost === 'nofree' ? `<span class="tag c-${cost}">${COST[cost]}</span>` : ''}
+      <span class="tag ${isRec ? 'rec' : ''}">${isRec ? 'Recomendado' : 'Elegido por ti'}</span>${cost !== 'free' && cost !== 'sub' ? `<span class="tag c-${cost}">${COST[cost]}</span>` : ''}
       <span class="ai-pick-change">Cambiar</span></summary>
     <div class="ai-pick-body">
       <p class="fine">${esc(t.name ?? '')}: ${esc(t.why ?? '')}. Studium ya elige lo mejor de lo que tienes gratis; cámbialo solo si quieres.</p>
@@ -279,6 +288,7 @@ export function pickerHTML(task, { open = false } = {}) {
         ${list.slice(0, SHOWN).map(row).join('')}
         ${list.length > SHOWN ? `<details class="ai-more"><summary>Ver ${list.length - SHOWN} más</summary>${list.slice(SHOWN).map((m, i) => row(m, i + SHOWN)).join('')}</details>` : ''}
       </div>
+      ${mayCost(c.provider, c.model) ? `<label class="check ai-cost"><input type="checkbox" name="acceptCost" ${costAccepted(c.model) ? 'checked' : ''}> Acepto que «${esc(c.model)}» podría cobrarme</label>` : ''}
       ${efforts.length ? `<label class="field ai-think"><span>Cuánto piensa</span><select name="effort">${efforts.map((k) => `<option value="${esc(k)}" ${k === c.effort ? 'selected' : ''}>${esc(EFFORTS[k] ?? k)}${k === recEffort ? ' (recomendado)' : ''}</option>`).join('')}</select>
         <small>Pensar más da mejores respuestas, pero tarda más${c.provider === 'gemini' ? ' y gasta más de tu límite gratis' : ''}.</small></label>` : ''}
       ${isRec ? '' : `<button type="button" class="button ghost small" data-ai-suggest="${esc(task)}">Volver a lo recomendado</button>`}
@@ -286,12 +296,20 @@ export function pickerHTML(task, { open = false } = {}) {
   </details>`;
 }
 // What the picker of a task says right now (and remember it).
+// What an AI receives, shown before it runs (his rule for the whole page: every use of an AI lets the person choose
+// which and how, and read the exact prompt; choosing is never required).
+export function promptHTML(system, text = '', more = '') {
+  const e = (s) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+  return `<details class="prompt"><summary>Ver las instrucciones exactas que recibe tu IA</summary><pre>${e(system)}${text ? `\n\n${e(text)}` : ''}${more ? `\n\n[${e(more)}]` : ''}</pre></details>`;
+}
 export function picked(task, root = document) {
   const el = root.querySelector(`[data-ai-pick="${task}"]`);
   if (!el) return choice(task);
   const now = choice(task);
   const provider = el.querySelector('[name="provider"]')?.value ?? now.provider;
   const model = el.querySelector(`input[name="ai-model-${task}"]:checked`)?.value ?? now.model;
+  const accept = el.querySelector('[name="acceptCost"]');
+  if (accept) acceptCost(model || now.model, accept.checked);
   const c = { provider, model: model || recommend(task, provider), effort: fitEffort(provider, el.querySelector('[name="effort"]')?.value ?? now.effort) };
   setChoice(task, c);
   return c;
@@ -522,6 +540,9 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
   const model = c.model || recommend(task, way);
   if (!model) throw new AIError('Elige un modelo: pulsa «Probar» en Ajustes para ver los de tu cuenta.', { kind: 'account', way });
   const effort = fitEffort(way, c.effort);
+  if (way === 'gemini' && mayCost(way, model) && !costAccepted(model)) {
+    throw new AIError(`«${model}» no está verificado como gratis: podría cobrarte si tu clave tiene facturación. Elige un modelo «Gratis» en el selector, o elígelo y marca «Acepto que podría cobrarme».`, { kind: 'account', way });
+  }
   const usable = await adapt(files.filter((f) => !f.skipped), readsOf(way), way);
   const meta = { provider: vendorOf(way, model), way, model, effort };
   bump(way);

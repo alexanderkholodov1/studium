@@ -358,7 +358,7 @@ async function ask(text, withAI) {
     const status = $('#map-said');
     status.hidden = false; status.textContent = 'Tu IA está leyendo el grafo…';
     try {
-      const res = await ai.run({ system: askInstructions(), text: `Índice del grafo de Studium:\n\n${mapIndex(g)}\n\nPregunta: ${text}`, maxTokens: 1500, use: ai.choice('ask') });
+      const res = await ai.run({ system: askInstructions(), text: `Índice del grafo de Studium:\n\n${mapIndex(g)}\n\nPregunta: ${text}`, maxTokens: 1500, task: 'ask', use: ai.picked('ask', $('#map-drawer')) });
       answer = readAskAnswer(g, res.text);
     } catch (error) { ctx.toast(error.message || 'Tu IA no respondió; respondo yo.'); }
     status.hidden = true;
@@ -477,6 +477,7 @@ function renderDrawer() {
       <select data-f-until><option value="">Todo</option>${stages.map((s) => `<option ${F.until === s.label ? 'selected' : ''}>${esc(s.label)}</option>`).join('')}</select></section>` : ''}
     ${profs.size ? `<section><h3>Profesor</h3><div class="opts">${[...profs].sort((a, b) => a[0].localeCompare(b[0], 'es')).map(([name, courses]) => check('professor', name, esc(name), F.professors.includes(name), `<small>${esc(courses.slice(0, 2).join(', '))}</small>`)).join('')}</div></section>` : ''}
     ${terms.length ? `<section><h3>Semestre académico</h3><div class="opts">${terms.map((x) => check('term', x, esc(termLabel(x)), F.terms.includes(x), `<small>${esc(x)}</small>`)).join('')}</div></section>` : ''}
+    ${ai.ready() ? `<section><h3>Tu IA, para preguntarle al grafo</h3>${ai.pickerHTML('ask')}${ai.promptHTML(askInstructions(), '', 'más el índice del grafo y tu pregunta')}</section>` : ''}
     <section><h3>De dónde viene</h3><div class="opts">${ctx.state.sources.map((s) => check('source', s.id, esc(s.name), F.sources.includes(s.id))).join('')}${check('source', 'community', 'Aportes de estudiantes', F.sources.includes('community'))}${check('source', 'mine', 'Lo que aporté yo', F.sources.includes('mine'))}</div></section>
     ${kinds.length ? `<section><h3>Tipo de material</h3><div class="opts">${kinds.map((k) => check('kind', k, esc(KINDS[k] ?? k), F.kinds.includes(k))).join('')}${check('kind', 'guide', 'Guías', F.kinds.includes('guide'))}</div></section>` : ''}
     <section><h3>Qué se ve</h3>

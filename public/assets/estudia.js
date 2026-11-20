@@ -15,6 +15,7 @@ import { keyOf } from './themes.js';
 import { sfx } from './sfx.js';
 import * as ai from './ai.js';
 import { SECRET_FILE, redact } from './secrets.js';
+import { parseContribution } from './prompts.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -308,7 +309,7 @@ async function take(el, files) {
     <div data-es-left></div>
     <div class="es-mesa" data-es-mesa></div>
     <div class="es-piles" data-es-piles></div>
-    <div class="es-unsure" data-es-unsure hidden><h3>Esto no lo tengo claro: ¿qué es?</h3><div class="es-unsure-list"></div></div>
+    <div class="es-unsure" data-es-unsure hidden><h3>Esto no lo tengo claro: ¿qué es?</h3><div class="es-unsure-list"></div><div data-es-askslot></div></div>
     <div class="es-next" data-es-next></div>`;
   const left = [
     skipped.length && `${skipped.length} archivos de compilación o de git, que no le sirven a nadie`,
@@ -320,7 +321,6 @@ async function take(el, files) {
   await sort(table, fresh, ticket);
   if (ticket !== run) return;
   next(table);
-  askAI(table);
 }
 
 // Folder by folder: it opens, its things come out onto the table, projects go back in and close, and each thing flies
@@ -401,20 +401,27 @@ function place(table, it, el) {
 }
 
 /* ---------- what the names did not say, the person's AI says: one request for all of them ---------- */
-async function askAI(table) {
+// What the classification sends: only names and folders, never a file's content.
+function classifyRequest() {
   const unsure = batch.filter((x) => !x.sure);
-  if (!unsure.length || !ai.ready()) return;
-  const h = $('[data-es-unsure] h3', table);
-  if (h) h.textContent = `Tu IA está mirando ${unsure.length === 1 ? 'una cosa' : `${unsure.length} cosas`}…`;
   const kinds = Object.entries(PILES).map(([k, p]) => `${k} (${p.name})`).join(', ');
-  // Only names and folders go: never a file's content. Context: the course's folders around each thing.
   const tree = [...new Set(batch.map((x) => x.path).filter(Boolean))].sort(natural).slice(0, 80).join('\n');
   const list = unsure.slice(0, 120).map((x) => `${x.id}\t${x.path ? `${x.path}/` : ''}${x.name}${x.count > 1 ? ` [carpeta de ${x.count} archivos]` : ''}`).join('\n');
+  return {
+    unsure,
+    system: `Clasificas el material de una materia universitaria por su nombre y sus carpetas. Tipos que existen: ${kinds}. Responde solo un objeto JSON {"id": "tipo"}. Si nada de la lista le queda, inventa un tipo corto en español con el prefijo "nuevo:" (por ejemplo "nuevo:Facturas electrónicas"). Si de verdad no se puede saber, "?". Lo que está dentro de una carpeta «Deber», «Laboratorio», «Examen» o «Proyecto» es de ese tipo. Un documento con nombre de tema (por ejemplo «DDD, Hexagonal») suele ser material del profe; una «Solución» o un «Informe» es de la entrega que nombra; capturas de pantalla son evidencias de la entrega de su carpeta.`,
+    text: `Carpetas de la materia:\n${tree || '(ninguna)'}\n\nPor clasificar (id, ruta):\n${list}`,
+  };
+}
+async function askAI(table) {
+  const { unsure, system, text } = classifyRequest();
+  if (!unsure.length || !ai.ready()) return;
+  const use = ai.picked('ask', table);
+  const h = $('[data-es-unsure] h3', table);
+  if (h) h.textContent = `Tu IA está mirando ${unsure.length === 1 ? 'una cosa' : `${unsure.length} cosas`}…`;
+  $('[data-es-askpanel]', table)?.remove();
   try {
-    const res = await ai.run({
-      system: `Clasificas el material de una materia universitaria por su nombre y sus carpetas. Tipos que existen: ${kinds}. Responde solo un objeto JSON {"id": "tipo"}. Si nada de la lista le queda, inventa un tipo corto en español con el prefijo "nuevo:" (por ejemplo "nuevo:Facturas electrónicas"). Si de verdad no se puede saber, "?". Lo que está dentro de una carpeta «Deber», «Laboratorio», «Examen» o «Proyecto» es de ese tipo. Un documento con nombre de tema (por ejemplo «DDD, Hexagonal») suele ser material del profe; una «Solución» o un «Informe» es de la entrega que nombra; capturas de pantalla son evidencias de la entrega de su carpeta.`,
-      text: `Carpetas de la materia:\n${tree || '(ninguna)'}\n\nPor clasificar (id, ruta):\n${list}`, maxTokens: 2000, use: ai.choice('ask'),
-    });
+    const res = await ai.run({ system, text, maxTokens: 2000, task: 'ask', use });
     const answer = JSON.parse(String(res.text ?? res).match(/\{[\s\S]*\}/)?.[0] ?? '{}');
     for (const x of unsure) {
       let k = String(answer[x.id] ?? '');
@@ -435,6 +442,17 @@ async function askAI(table) {
 function next(table) {
   const out = $('[data-es-next]', table);
   const unsure = batch.filter((x) => !x.sure);
+  // Before the AI looks at what is unclear: which AI, model, effort and thinking, and what exactly it receives.
+  const slot = $('[data-es-askslot]', table);
+  if (slot && unsure.length && ai.ready()) {
+    const r = classifyRequest();
+    slot.innerHTML = `<div class="es-aipanel" data-es-askpanel>
+        <p><strong>¿Que tu IA decida lo que no está claro?</strong> Solo recibe los nombres y las carpetas, nunca el contenido.</p>
+        ${ai.pickerHTML('ask')}
+        <details class="prompt"><summary>Ver las instrucciones exactas que recibe tu IA</summary><pre>${esc(`${r.system}\n\n${r.text}`)}</pre></details>
+        <div class="actions"><button class="button primary small" data-es-ask>Que lo decida mi IA</button></div>
+      </div>`;
+  }
   // The course most of the items point to: one course per drop is the usual case.
   const tally = new Map(); for (const x of batch) if (x.course) tally.set(x.course, (tally.get(x.course) ?? 0) + 1);
   const courses = [...tally.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c);
@@ -453,6 +471,11 @@ function next(table) {
       <p class="fine">Toca cualquier cosa de los montones para dejarla fuera; tócala otra vez para que vuelva.</p>
       <label class="toggle"><input type="checkbox" data-es-desk checked><span class="knob"></span>Agregar a tu escritorio de trabajo</label>
       <label class="toggle"><input type="checkbox" data-es-graph checked><span class="knob"></span>Sumar al grafo de conocimiento</label>
+      <div class="es-aipanel" data-es-graph-ai ${ai.ready() ? '' : 'hidden'}>
+        <p class="fine">Tu IA lee cada carpeta como un solo material: un pedido por carpeta.</p>
+        ${ai.pickerHTML('material')}
+        <details class="prompt"><summary>Ver las instrucciones exactas que recibe tu IA</summary><pre data-es-graph-prompt></pre></details>
+      </div>
       <label class="toggle"><input type="checkbox" data-es-guide><span class="knob"></span>Generar una guía de estudio</label>
       <p class="fine">Al grafo va solo el resumen anónimo que hace tu IA, después de que lo revises, con el orden de tus carpetas. Tu escritorio guarda tus carpetas de cada materia en este dispositivo.</p>
       <div class="actions"><button class="button primary" data-es-go>Listo</button><button class="button ghost" data-es-cancel>Descartar</button></div>
@@ -480,6 +503,12 @@ function next(table) {
       if (e.target.closest('[data-es-cancel]') || e.target.closest('[data-es-trash]')) trash(table);
       if (e.target.closest('[data-es-keep]')) $('[data-es-confirm]', table)?.remove();
       if (e.target.closest('[data-es-go]')) go(table);
+      if (e.target.closest('[data-es-ask]')) askAI(table);
+      const prompt = e.target.closest('[data-es-graph-ai] details summary');
+      if (prompt) { const pre = $('[data-es-graph-prompt]', table); const first = folders(batch.filter((x) => !x.off))[0]; if (pre && first) pre.textContent = api.materialInstructions({ kind: GRAPH_KIND[first.kind] ?? '', course: $('[data-es-course]', table)?.value.trim() ?? '', code: first.code, folder: first.name, place: first.place, tool: first.tool, oneFolder: first.name }); }
+    });
+    table.addEventListener('change', (e) => {
+      if (e.target.matches('[data-es-graph]')) $('[data-es-graph-ai]', table).hidden = !e.target.checked || !ai.ready();
     });
   }
 }
@@ -541,13 +570,136 @@ async function go(table) {
   if (toDesk) await desk.put(chosen.map(({ files: fs, ...rest }) => ({ ...rest, course, blobs: (fs ?? []).map((f) => ({ name: f.name, path: relOf(f), blob: f })), shared: toGraph })));
   const withFiles = chosen.filter((x) => x.files?.length).sort((a, b) => a.order - b.order);
   const files = withFiles.flatMap((x) => x.files);
-  // To the graph thing by thing, in the folders' order, each with where it was: «Semana 3/Clase 2», «Deber 1».
+  // To the graph folder by folder (his rule: a folder is one material), in the folders' order, with the AI chosen above.
+  const started = Date.now();
   if (toGraph && files.length) {
-    for (const x of withFiles) await api.shareToGraph(x.files, { kind: GRAPH_KIND[x.kind] ?? 'other', course, code, folder: [x.path, x.count > 1 ? x.name : ''].filter(Boolean).join('/'), place: x.place, tool: x.tool });
+    if (ai.ready()) ai.picked('material', table);
+    for (const f of folders(withFiles)) await api.shareToGraph(f.files, { kind: GRAPH_KIND[f.kind] ?? 'other', course, code, folder: f.name, place: f.place, tool: f.tool, oneFolder: f.name });
   }
   const done = chosen; batch = [];
+  if (toGraph && files.length && !toGuide) { processing(table, started, course); return; }
   if (toGuide) api.startGuide(files, { course, piles: [...new Set(done.map((x) => x.kind))], exams: done.filter((x) => x.kind === 'exam').map((x) => x.name), links: done.filter((x) => x.url).map((x) => x.url) });
   else location.hash = toGraph && files.length ? '#/estudia/grafo' : toDesk ? `#/estudia/materia/${encodeURIComponent(course)}` : '#/estudia';
+}
+
+// The folders of a drop: everything under the same top folder goes together; things dropped loose go together too.
+function folders(list) {
+  const by = new Map();
+  for (const x of list) {
+    const top = x.path.split('/')[0] || (x.count > 1 ? x.name : 'Sueltos');
+    const f = by.get(top) ?? { name: top, files: [], kinds: new Map(), place: x.place, tool: x.tool, code: x.code };
+    f.files.push(...(x.files ?? [])); f.kinds.set(x.kind, (f.kinds.get(x.kind) ?? 0) + 1);
+    if (!f.tool && x.tool) f.tool = x.tool;
+    by.set(top, f);
+  }
+  return [...by.values()].filter((f) => f.files.length).map((f) => ({ ...f, kind: [...f.kinds].sort((a, b) => b[1] - a[1])[0][0] }));
+}
+
+/* ---------- the processing, in sight: each folder is read, opened, its questions taken out, its nodes kept ---------- */
+let unwatch = null;
+function processing(table, since, course) {
+  unwatch?.();
+  table.dataset.wired = '';
+  table.innerHTML = `
+    <div class="es-proc">
+      <div class="es-proc-head"><h2>Tu IA está leyendo ${esc(course)}</h2><div class="actions" data-proc-actions></div></div>
+      <div class="es-proc-line" data-proc-line></div>
+      <div class="es-proc-stage">
+        <div class="es-proc-desk" data-proc-desk><p class="muted">Preparando…</p></div>
+        <div class="es-proc-slips" data-proc-slips><p class="es-proc-label">Preguntas, sin nombres ni notas</p></div>
+        <div class="es-proc-graph"><p class="es-proc-label">Tu grafo <b data-proc-count>0</b> conceptos</p><div class="es-proc-nodes" data-proc-nodes></div></div>
+      </div>
+      <div class="es-proc-row" data-proc-row></div>
+      <div class="es-proc-review" data-proc-review hidden><h3>Revisa antes de publicar</h3><p class="fine">Nada se publica hasta que lo apruebes aquí.</p></div>
+      <div class="reviews" data-reviews="material"></div>
+    </div>`;
+  const seen = new Set(); // jobs already shown opening
+  const nodes = new Set();
+  const mine = (q) => q.groups().filter((g) => g.created >= since - 1000 && g.v?.oneFolder);
+  const draw = (q, change) => {
+    if (!table.isConnected) { unwatch?.(); return; }
+    const groups = mine(q); const ids = new Set(groups.map((g) => g.id));
+    const jobs = q.jobs().filter((j) => ids.has(j.gid));
+    const st = q.status();
+    const running = jobs.find((j) => j.state === 'running');
+    // The folders, in a row, each with its state.
+    $('[data-proc-row]', table).innerHTML = groups.map((g) => {
+      const js = jobs.filter((j) => j.gid === g.id);
+      const s = js.some((j) => j.state === 'running') ? 'reading' : js.every((j) => ['done', 'published', 'discarded'].includes(j.state)) ? 'done' : js.some((j) => j.state === 'error') ? 'error' : 'waiting';
+      return `<span class="es-proc-chip ${s}" title="${esc(g.v.oneFolder)}"><svg viewBox="0 0 24 24" aria-hidden="true">${FOLDER}</svg>${esc(g.v.oneFolder)}<i>${{ reading: 'leyendo', done: 'listo', error: 'falló', waiting: 'en espera' }[s]}</i></span>`;
+    }).join('');
+    // One line for the whole queue: what stops it, said once, with what to do.
+    const line = $('[data-proc-line]', table);
+    line.innerHTML = st.stopped ? `<div class="es-proc-stop"><p><strong>Se detuvo:</strong> ${esc(st.stopped)}</p><div class="actions"><a class="button ghost small" href="#/ajustes">Elegir otra IA o modelo</a><button class="button primary small" data-proc="resume">Seguir</button></div></div>`
+      : st.paused ? '<p class="es-proc-note">En pausa.</p>' : st.waitUntil > Date.now() ? `<p class="es-proc-note">${esc(st.note || 'Tu IA pidió una pausa')}: sigue sola en un momento.</p>` : '';
+    const busy = jobs.some((j) => ['waiting', 'running'].includes(j.state));
+    $('[data-proc-actions]', table).innerHTML = `${busy && !st.paused && !st.stopped ? '<button class="button ghost small" data-proc="pause">Pausar</button>' : ''}${st.paused ? '<button class="button primary small" data-proc="resume">Seguir</button>' : ''}${jobs.some((j) => j.state !== 'published') ? '<button class="button ghost small danger" data-proc="discard">Descartar todo</button>' : ''}`;
+    // On the desk: the folder being read.
+    const deskEl = $('[data-proc-desk]', table);
+    if (running && deskEl.dataset.job !== running.id) {
+      deskEl.dataset.job = running.id;
+      const g = q.group(running.gid);
+      deskEl.innerHTML = `<div class="es-proc-folder reading"><div class="es-box-lid"></div><div class="es-box-body"><svg viewBox="0 0 24 24" aria-hidden="true">${FOLDER}</svg><b>${esc(g?.v?.oneFolder ?? running.label)}</b><small>Tu IA lo está leyendo<span class="es-dots"><i></i><i></i><i></i></span></small></div></div>`;
+    }
+    if (!running && !busy && jobs.length && !st.stopped) {
+      deskEl.dataset.job = '';
+      deskEl.innerHTML = `<p class="es-proc-done">Listo: ${groups.length === 1 ? 'tu carpeta' : `tus ${groups.length} carpetas`}. Revísalas abajo antes de publicar.</p>`;
+    }
+    // A folder read: it opens, its questions come out as slips, its concepts fly to the graph.
+    const fresh = change?.done && ids.has(change.done.gid) ? change.done : null;
+    if (fresh && !seen.has(fresh.id)) { seen.add(fresh.id); opened(table, q, fresh, nodes); }
+    api.syncReviews();
+    $('[data-proc-review]', table).hidden = !$('.review', table);
+  };
+  table.onclick = async (e) => {
+    const b = e.target.closest('[data-proc]');
+    if (!b) return;
+    if (b.dataset.proc === 'discard' && !b.dataset.sure) { b.dataset.sure = '1'; b.textContent = '¿Descartar todo lo que no publicaste? Toca otra vez'; return; }
+    const q = await api.queueControl(b.dataset.proc);
+    if (b.dataset.proc === 'discard') { unwatch?.(); trashAll(table); return; }
+    draw(q);
+  };
+  unwatch = api.watchQueue((change, q) => draw(q, change));
+  api.startQueue().then((q) => draw(q));
+}
+function opened(table, q, job, nodes) {
+  const g = q.group(job.gid);
+  const parsed = parseContribution(job.result?.text ?? '', g?.v ?? {});
+  const deskEl = $('[data-proc-desk]', table);
+  const folder = $('.es-proc-folder', deskEl);
+  folder?.classList.remove('reading'); folder?.classList.add('open');
+  const from = (folder ?? deskEl).getBoundingClientRect();
+  if (parsed.error) {
+    // What the AI could not make sense of: asked here, where it happens.
+    deskEl.insertAdjacentHTML('beforeend', `<p class="es-proc-ask">Tu IA no entendió bien «${esc(g?.v?.oneFolder ?? job.label)}». Mira su tarjeta abajo: puedes corregirla, pedirla de nuevo o quitarla.</p>`);
+    return;
+  }
+  // The questions: slips taken out of the folder (as the AI wrote them: no names, no grades).
+  const slips = $('[data-proc-slips]', table);
+  const qs = ['exam', 'homework', 'lab'].includes(parsed.meta.kind) ? parsed.data.questions.slice(0, 6) : [];
+  qs.forEach((x, i) => {
+    const el = node(`<div class="es-slip"><b>${esc(x.number ? `${x.number}.` : '•')}</b> ${esc(x.text.slice(0, 120))}${x.text.length > 120 ? '…' : ''}</div>`);
+    slips.append(el);
+    flip(el, from, { scale: 0.3, rotate: (Math.random() - 0.5) * 50, duration: 700 + i * 90 });
+  });
+  while (slips.children.length > 13) slips.children[1].remove();
+  // The concepts: nodes that leave the folder for the graph, and stay.
+  const box = $('[data-proc-nodes]', table);
+  const fresh = parsed.data.concepts.map((c) => c.name).filter((n) => !nodes.has(n.toLowerCase())).slice(0, 18);
+  fresh.forEach((n, i) => {
+    nodes.add(n.toLowerCase());
+    const el = node(`<span class="es-node" style="--h:${(i * 47) % 360}">${esc(n)}</span>`);
+    box.prepend(el);
+    setTimeout(() => flip(el, from, { scale: 0.2, duration: 800 }), 250 + i * 70);
+  });
+  $('[data-proc-count]', table).textContent = String(nodes.size);
+  sfx.release?.(700, 50);
+}
+// «Descartar todo» during the processing: the folders on the row fly into the bin.
+async function trashAll(table) {
+  const row = $('[data-proc-row]', table);
+  await trash(table);
+  row?.remove();
 }
 
 /* ---------- the desk of a course ---------- */

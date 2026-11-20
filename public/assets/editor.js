@@ -38,11 +38,13 @@ function fragment(text) {
   return [...doc.body.children];
 }
 
+const SYS_ALL = 'Editas guías de estudio de Studium: páginas HTML autocontenidas. Mantienes el bloque <script type="application/json" id="studium">, las secciones con id y todo lo que funciona; cambias solo lo que el estudiante pide. Respondes solo con el HTML completo, desde <!doctype html> hasta </html>.';
+const SYS_PART = 'Editas una guía de estudio HTML de Studium por partes. Respondes solo con el HTML de la sección pedida, sin texto antes ni después: los mismos tipos de elementos, clases y estilos que ya usa la guía, y el JavaScript que haga falta dentro de la sección.';
 export function openEditor(options) {
   job = { ...options, next: null };
   const doc = parse(job.html);
   const list = parts(doc);
-  $('#edit-who').innerHTML = ai.ready() ? `${ai.pickerHTML('edit')}<p class="fine">Solo tú puedes editar esta guía.</p>` : '';
+  $('#edit-who').innerHTML = ai.ready() ? `${ai.pickerHTML('edit')}${ai.promptHTML(`Para rehacer toda la guía:\n${SYS_ALL}\n\nPara cambiar o agregar una sección:\n${SYS_PART}`, '', 'más tu pedido y la guía o la sección que se cambia')}<p class="fine">Solo tú puedes editar esta guía.</p>` : '';
   $('#edit-section').innerHTML = list.map((p) => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join('');
   $('#edit-what').value = '';
   $('#edit-progress').hidden = true;
@@ -85,7 +87,7 @@ async function run() {
     let next;
     if (mode === 'all') {
       const res = await ai.run({
-        system: 'Editas guías de estudio de Studium: páginas HTML autocontenidas. Mantienes el bloque <script type="application/json" id="studium">, las secciones con id y todo lo que funciona; cambias solo lo que el estudiante pide. Respondes solo con el HTML completo, desde <!doctype html> hasta </html>.',
+        system: SYS_ALL,
         text: `Pedido del estudiante: ${what}\n\nLa guía actual:\n\n${job.html}`,
         maxTokens: ai.longest(use), onProgress, use,
       });
@@ -98,7 +100,7 @@ async function run() {
       if (!target) throw new Error('No encontré esa sección en la guía.');
       const fresh = mode === 'add' ? `seccion-${Date.now().toString(36)}` : id;
       const res = await ai.run({
-        system: 'Editas una guía de estudio HTML de Studium por partes. Respondes solo con el HTML de la sección pedida, sin texto antes ni después: los mismos tipos de elementos, clases y estilos que ya usa la guía, y el JavaScript que haga falta dentro de la sección.',
+        system: SYS_PART,
         text: mode === 'add'
           ? `Guía: «${title}». Escribe una sección nueva, como un único <section id="${fresh}"> con un solo <h2>, que va justo después de esta:\n\n${target.html}\n\nLo que debe tener: ${what}\n\nEstilos de la guía, para usar sus clases:\n${styles(doc)}`
           : `Guía: «${title}». Reescribe esta sección según el pedido. Conserva su id «${id}» en el primer elemento.\n\nPedido: ${what}\n\nSección actual:\n${target.html}\n\nEstilos de la guía, para usar sus clases:\n${styles(doc)}`,

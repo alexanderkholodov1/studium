@@ -2003,3 +2003,40 @@ html.has-announce .page { padding-top: 170px; }
 .es-drawer-in { display: flex; flex-wrap: wrap; gap: 14px; padding: 6px 18px 18px; }
 .es-drawer.pulled { transform: translateX(26px) scale(1.02); }
 .es-drawer.incoming { outline: 2px dashed rgba(255, 255, 255, .5); }
+/* «Estudia», the processing: the folder on the desk, its questions as slips, its concepts as nodes kept in the graph. */
+.es-aipanel { display: grid; gap: 8px; padding: 12px 14px; border-radius: 16px; background: color-mix(in oklab, var(--blue) 6%, var(--card)); }
+.es-aipanel[hidden] { display: none; }
+.es-proc { display: grid; gap: 16px; }
+.es-proc-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.es-proc-head h2 { font-size: clamp(24px, 2.6vw, 34px); letter-spacing: -.03em; }
+.es-proc-stage { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; min-height: 340px; }
+.es-proc-desk { display: grid; place-items: center; align-content: center; gap: 12px; padding: 18px; border-radius: 24px;
+  background: linear-gradient(170deg, #e9dcc3, #dccaa8); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .45), inset 0 -10px 30px rgba(90, 60, 20, .18); }
+.es-proc-folder { position: relative; width: 210px; height: 150px; perspective: 600px; }
+.es-proc-folder .es-box-body small { display: flex; align-items: center; gap: 4px; }
+.es-proc-folder.reading { animation: reading 1.6s ease-in-out infinite; }
+.es-proc-folder.open .es-box-lid { transform: rotateX(-125deg) translateY(-6px); }
+@keyframes reading { 50% { transform: translateY(-5px) rotate(-1deg); } }
+.es-dots { display: inline-flex; gap: 2px; } .es-dots i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; animation: dot 1s ease-in-out infinite; }
+.es-dots i:nth-child(2) { animation-delay: .15s; } .es-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes dot { 50% { transform: translateY(-3px); opacity: .4; } }
+.es-proc-done, .es-proc-ask { color: #5b4a2c; font: 700 15px var(--display); text-align: center; max-width: 260px; }
+.es-proc-slips, .es-proc-graph { padding: 14px; border-radius: 24px; background: var(--card); box-shadow: 0 20px 34px -26px rgba(30, 30, 60, .5); overflow: hidden; }
+.es-proc-slips { display: flex; flex-direction: column; gap: 8px; }
+.es-proc-label { font: 800 13px var(--display); color: var(--ink-2); text-transform: uppercase; letter-spacing: .05em; }
+.es-proc-label b { color: var(--blue); }
+.es-slip { padding: 8px 12px; border-radius: 3px 10px 10px 10px; font: 600 13px/1.3 var(--body); color: #1b2440;
+  background: repeating-linear-gradient(180deg, transparent 0 19px, rgba(36, 83, 230, .14) 19px 20px), #fffdf7; box-shadow: 0 6px 12px -8px rgba(0, 0, 0, .45); rotate: -.6deg; }
+.es-slip:nth-child(odd) { rotate: .8deg; }
+.es-proc-nodes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; max-height: 300px; overflow: hidden; }
+.es-node { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px 5px 6px; border-radius: 999px; font: 700 12px var(--display);
+  background: color-mix(in oklab, hsl(var(--h) 70% 55%) 14%, var(--card)); color: var(--ink); }
+.es-node::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff, hsl(var(--h) 70% 55%) 60%); box-shadow: 0 0 0 2px color-mix(in oklab, hsl(var(--h) 70% 55%) 30%, transparent); }
+.es-proc-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.es-proc-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 12px; font: 700 13px var(--display); background: var(--card); box-shadow: 0 6px 12px -10px rgba(0, 0, 0, .5); }
+.es-proc-chip svg { width: 16px; height: 16px; color: #c08a00; } .es-proc-chip i { font-style: normal; font-weight: 600; color: var(--muted); }
+.es-proc-chip.reading { outline: 2px solid var(--blue); } .es-proc-chip.reading i { color: var(--blue); }
+.es-proc-chip.done i { color: var(--teal); } .es-proc-chip.error i { color: var(--red); }
+.es-proc-stop { display: grid; gap: 8px; padding: 12px 16px; border-radius: 16px; background: color-mix(in oklab, var(--red) 10%, var(--card)); }
+.es-proc-note { color: var(--ink-2); font-weight: 700; }
+@media (max-width: 900px) { .es-proc-stage { grid-template-columns: 1fr; } }

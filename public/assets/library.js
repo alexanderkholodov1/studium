@@ -58,6 +58,7 @@ export function renderLibrary() {
 }
 
 /* ---------- identify a file, in the browser ---------- */
+const IDENTIFY = 'Identificas documentos de cursos universitarios. Respondes solo con un objeto JSON, sin texto alrededor.';
 async function pdfText(file, pages = 4) {
   const pdfjs = await import(PDFJS);
   pdfjs.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
@@ -103,7 +104,7 @@ async function identify(file) {
     status.textContent = 'Tu IA está identificando el documento…';
     try {
       const res = await ai.run({
-        system: 'Identificas documentos de cursos universitarios. Respondes solo con un objeto JSON, sin texto alrededor.',
+        system: IDENTIFY,
         text: `Nombre del archivo: «${file.name}». Primeras páginas:\n\n${text.slice(0, 12000)}\n\nDevuelve {"kind": uno de "syllabus", "reading", "lab", "assignment", "slides", "other"; "course": nombre de la materia; "code": código como MAT-1101; "professor": nombre del profesor; "term": semestre o periodo; "title": un título corto y claro del documento}. Usa "" en lo que no se sepa.`,
         maxTokens: 1200, use: ai.picked('identify', $('#doc-dialog')),
       });
@@ -125,7 +126,7 @@ function openShare() {
   const form = $('#doc-form');
   form.reset();
   $('#doc-id-status').textContent = ai.ready() ? 'Lo leen tu navegador y tu IA; el archivo no se sube a Studium.' : 'Lo lee tu navegador; el archivo no se sube a Studium.';
-  $('#doc-ai').innerHTML = ai.pickerHTML('identify');
+  $('#doc-ai').innerHTML = ai.pickerHTML('identify') + ai.promptHTML(IDENTIFY, '', 'más el nombre del archivo y sus primeras páginas, y el formato de la respuesta');
   $('#doc-msg').textContent = '';
   $('#doc-sign-wrap').innerHTML = prefs.get().name
     ? `<label class="check"><input type="checkbox" name="sign"> Firmar con mi nombre: <strong>${esc(prefs.get().name)}</strong></label>`
