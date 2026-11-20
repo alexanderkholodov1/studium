@@ -171,6 +171,11 @@ const MESSAGES = {
   'auth/user-disabled': 'Esta cuenta está desactivada.',
   'permission-denied': 'Tu cuenta no tiene permiso para esto. Recarga la página; si sigue igual, sal y vuelve a entrar.',
   unavailable: 'Sin conexión. Revisa tu internet y vuelve a probar.',
+  'resource-exhausted': 'Studium llegó por hoy al límite gratis de su base de datos. Lo que tienes en este navegador sigue aquí; vuelve a probar más tarde.',
+  'deadline-exceeded': 'La base de datos tardó demasiado en responder. Vuelve a probar en un momento.',
+  'auth/user-token-expired': 'Tu sesión ya no es válida (cambió tu contraseña o tu cuenta). Vuelve a entrar.',
+  'auth/user-not-found': 'Esa cuenta ya no existe.',
+  'auth/requires-recent-login': 'Por seguridad, vuelve a entrar con tu contraseña y repite esto.',
 };
 const explain = (error) => MESSAGES[error?.code] ?? 'Algo falló. Vuelve a intentarlo en un momento.';
 

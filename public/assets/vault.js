@@ -114,13 +114,18 @@ async function pull() {
   }
 }
 // Signing in with the password: the key is derived here, on the device, and kept here (not exportable).
+// Without a connection the account's copy cannot be read, and a new salt would later overwrite it: the password waits
+// in this page's memory only (never stored) and the sign-in finishes when the connection comes back.
+let waiting = null;
+addEventListener('online', () => { if (waiting) { const w = waiting; waiting = null; signedIn(w.id, w.password); } });
 export async function signedIn(id, password) {
   uid = id;
   try {
-    let snap = null;
-    try { snap = await getDoc(doc(db, 'vaults', uid)); } catch { /* offline: a new salt */ }
-    const salt = snap?.exists() ? snap.data().salt : b64(crypto.getRandomValues(new Uint8Array(16)));
-    account = await derive(password, unb64(salt), snap?.exists() ? snap.data().iter ?? ITER : ITER);
+    let snap;
+    try { snap = await getDoc(doc(db, 'vaults', uid)); } catch { waiting = { id, password }; tell(); return; }
+    waiting = null;
+    const salt = snap.exists() ? snap.data().salt : b64(crypto.getRandomValues(new Uint8Array(16)));
+    account = await derive(password, unb64(salt), snap.exists() ? snap.data().iter ?? ITER : ITER);
     await stored(`acc:${uid}`, account); await stored(`salt:${uid}`, salt);
     await pull();
   } catch { /* the keys stay on this device only */ }
@@ -144,7 +149,7 @@ export async function confirm(password) {
 // Signing out: this device forgets the keys and the account's key; the account keeps its encrypted copy.
 export async function signedOut() {
   if (uid) { await stored(`acc:${uid}`, null).catch(() => {}); await stored(`salt:${uid}`, null).catch(() => {}); }
-  secrets = { keys: {}, bridge: secrets.bridge }; account = null; uid = ''; note = '';
+  secrets = { keys: {}, bridge: secrets.bridge }; account = null; uid = ''; note = ''; waiting = null;
   await saveLocal();
   tell();
 }
