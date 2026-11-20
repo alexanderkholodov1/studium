@@ -143,6 +143,16 @@ export function createQueue({ store, process, now = () => Date.now(), timers = g
       api.start();
       poke();
     },
+    // «Descartar todo»: everything not published leaves, with its files; a part being read now is ignored when it ends.
+    async discardAll() {
+      for (const j of [...jobs.values()]) if (j.state !== 'published') { jobs.delete(j.id); await store.deleteJob(j.id); }
+      for (const g of [...groups.values()]) {
+        if ([...jobs.values()].some((j) => j.gid === g.id)) continue;
+        groups.delete(g.id); files.delete(g.id); await store.deleteGroup(g.id);
+      }
+      status.paused = false; status.stopped = ''; status.waitUntil = 0; status.note = '';
+      changed();
+    },
     // What is reviewed, not chosen or empty leaves the list; a group with nothing left leaves with its files.
     async clearFinished() {
       for (const j of [...jobs.values()]) if (['published', 'discarded', 'off'].includes(j.state)) { jobs.delete(j.id); await store.deleteJob(j.id); }
@@ -191,9 +201,11 @@ export function createQueue({ store, process, now = () => Date.now(), timers = g
       await save(job); changed();
       try {
         const result = await process(job, g, list);
+        if (!jobs.has(job.id)) continue; // discarded while it was being read
         job.state = 'done'; job.result = result; job.error = ''; job.attempts = 0;
         await save(job); changed({ done: job });
       } catch (e) {
+        if (!jobs.has(job.id)) continue; // discarded while it was being read
         const kind = e?.kind ?? 'job';
         job.error = String(e?.message ?? e);
         if (kind === 'rate' || kind === 'daily') {
@@ -205,9 +217,11 @@ export function createQueue({ store, process, now = () => Date.now(), timers = g
           job.attempts += 1;
           if (job.attempts >= RETRIES) job.state = 'error';
           else { job.state = 'waiting'; job.retryAt = now() + backoff * 2 ** (job.attempts - 1); }
-        } else if (kind === 'account' || kind === 'cancel') {
+        } else if (kind === 'account' || kind === 'model' || kind === 'cancel') {
+          // The account or its model cannot do it (no free model left): the queue stops once, with one message,
+          // instead of failing every part the same way.
           job.state = 'waiting'; job.retryAt = 0;
-          if (kind === 'account') status.stopped = job.error; else status.paused = true;
+          if (kind === 'cancel') status.paused = true; else status.stopped = job.error;
         } else {
           job.state = 'error';
         }

@@ -531,9 +531,9 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
     if (!String(out.text ?? '').trim()) throw new AIError('Tu IA devolvió una respuesta vacía. Studium vuelve a probar.', { kind: 'transient', way });
     return { ...out, ...meta, truncated: !!out.truncated };
   } catch (e) {
-    if (e instanceof AIError) throw e;
     if (signal?.aborted) throw new AIError('Cancelado.', { kind: 'cancel', way });
-    const err = classify({ way, status: e.status ?? 0, message: e.message, body: e.error ?? e.body, headers: e.headers, model });
+    // An error already explained by the provider's adapter still gets the free fallback below.
+    const err = e instanceof AIError ? e : classify({ way, status: e.status ?? 0, message: e.message, body: e.error ?? e.body, headers: e.headers, model });
     // A Gemini model with no free use, or whose free use ran out today: the same request goes to another «flash»
     // model of the person's account, once each, before giving up.
     if (way === 'gemini' && (err.kind === 'model' || err.kind === 'daily')) {

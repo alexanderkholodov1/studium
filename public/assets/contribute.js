@@ -159,7 +159,7 @@ async function processJob(job, group, list) {
   const files = await unit.make();
   queue.setProgress(job.id, `Tu IA lo está leyendo… (${kb(partsSize(files))})`);
   const res = await ai.run({
-    system: instructionsOf(job, group), files, maxTokens: 32000, use: ai.choice('material'),
+    system: instructionsOf(job, group), files, maxTokens: 32000, task: 'material', use: ai.choice('material'),
     text: 'Procesa el material adjunto siguiendo las instrucciones de Studium. Responde solo con el JSON, en un bloque de código.',
     onProgress: (n) => queue.setProgress(job.id, n < 0 ? 'Tu IA está escribiendo…' : `Tu IA está escribiendo… ${n.toLocaleString('es')} caracteres`),
   });
@@ -263,7 +263,8 @@ function renderQueue() {
       ${st.paused || st.stopped || waitingLimit ? '<button type="button" class="button primary small" data-q-resume>Seguir ahora</button>' : ''}
       ${c.error ? '<button type="button" class="button ghost small" data-q-retry-all>Reintentar las fallidas</button>' : ''}
       ${c.manual && ai.ready() ? '<button type="button" class="button ghost small" data-q-auto>Que mi IA haga las del chat</button>' : ''}
-      ${c.reviewed || c.off ? '<button type="button" class="link" data-q-clear>Quitar lo terminado</button>' : ''}</div>`;
+      ${c.reviewed || c.off ? '<button type="button" class="link" data-q-clear>Quitar lo terminado</button>' : ''}
+      ${c.total > c.reviewed ? `<button type="button" class="button ghost small danger" data-q-discard-all>${discardAsked > Date.now() ? '¿Descartar todo lo que no publicaste? Toca otra vez' : 'Descartar todo'}</button>` : ''}</div>`;
 }
 // Every answer waits for review, also after a reload.
 function syncReviews() {
@@ -310,8 +311,17 @@ async function enqueue(zone, files, given) {
   if (added && manual) ctx.toast('Sin una IA conectada, cada parte queda lista para tu chat.');
   renderQueueSoon();
 }
+let discardAsked = 0; // «Descartar todo» asks once more before it empties the queue
 async function queueAction(t) {
   const q = await startQueue();
+  if (t.dataset.qDiscardAll !== undefined) {
+    if (discardAsked < Date.now()) { discardAsked = Date.now() + 5000; renderQueue(); setTimeout(renderQueueSoon, 5100); return; }
+    discardAsked = 0;
+    await q.discardAll();
+    for (const [id, item] of reviews) if (item.jobId && !item.done) { reviews.delete(id); document.getElementById(id)?.remove(); }
+    ctx.toast('Descartado. No se publicó nada de eso.');
+    return;
+  }
   if (t.dataset.qPause !== undefined) q.pause();
   if (t.dataset.qResume !== undefined) q.resume();
   if (t.dataset.qRetryAll !== undefined) q.retryFailed();
@@ -1073,6 +1083,17 @@ export function mountContribute(context) {
   const view = $('#view-contribute');
   if (view.dataset.ready) return;
   view.dataset.ready = '1';
+  // The queue's controls act on press, not on release: the list is drawn again as parts finish, and a click that
+  // waited for the release could land on a button that was already replaced.
+  view.addEventListener('pointerdown', (e) => {
+    const t = e.target.closest('[data-q-pause], [data-q-resume], [data-q-discard-all]');
+    if (!t || e.button > 0) return;
+    e.preventDefault(); queueAction(t);
+  });
+  view.addEventListener('keydown', (e) => {
+    const t = (e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-q-pause], [data-q-resume], [data-q-discard-all]');
+    if (t) { e.preventDefault(); queueAction(t); }
+  });
   view.addEventListener('click', (e) => {
     const drop = e.target.closest('[data-drop-concept]');
     if (drop) {
@@ -1158,7 +1179,7 @@ export function mountContribute(context) {
       const area = $(`[data-paste="${t.dataset.reviewPaste}"]`);
       if (area.value.trim()) { addReview(t.dataset.reviewPaste, area.value, 'Respuesta pegada'); area.value = ''; }
     }
-    if (t.matches('[data-q-pause], [data-q-resume], [data-q-retry-all], [data-q-clear], [data-q-auto], [data-q-retry], [data-q-chat], [data-q-copy], [data-q-download], [data-q-answer]')) queueAction(t);
+    if (t.matches('[data-q-retry-all], [data-q-clear], [data-q-auto], [data-q-retry], [data-q-chat], [data-q-copy], [data-q-download], [data-q-answer]')) queueAction(t);
     if (t.dataset.discard) {
       const gone = reviews.get(t.dataset.discard);
       if (gone?.jobId) queue?.reviewed(gone.jobId, 'discarded');
