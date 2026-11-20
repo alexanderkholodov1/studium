@@ -1,5 +1,6 @@
 // The person's own space: the home page (next exam, goals, focus timer, where they left off, what is new), the
 // ambience picker, and the settings. Everything the person chooses lives in prefs.js.
+import { careers, careerPicker } from './malla.js';
 import { myClasses } from './schedule.js';
 import * as vault from './vault.js';
 import { prefs, MODES, AMBIENCES, THEMES, AVATARS } from './prefs.js';
@@ -389,14 +390,20 @@ document.addEventListener('toggle', async (e) => {
     sel.insertAdjacentHTML('beforeend', list.length ? list.map((c) => `<option value="${esc(c.id)}">${esc(`${c.name}${c.when ? ` (${c.when})` : ''}`)}</option>`).join('') : '<option value="" disabled>Tu horario está vacío</option>');
   } catch { /* without the schedule, no class */ }
 }, true);
+// The career, from the university's own list: it sets «Mi malla» too (his words, 2026-11-20).
+async function fillCareer() {
+  const box = document.querySelector('[data-career-pick]');
+  if (!box) return;
+  const list = await careers();
+  if (list.length) box.innerHTML = careerPicker(list, prefs.get().malla, 'Carrera');
+}
 export function renderSettings() {
   const p = prefs.get();
-  const careers = ctx.state.graph?.nodes.filter((n) => n.type === 'career').map((n) => n.name) ?? [];
   $('#settings').innerHTML = `
     <section class="set glass"><h2>Tú</h2><p>Esto lo ves solo tú, salvo tu nombre público: aparece únicamente en lo que decidas firmar.</p>
       <div class="grid3">
         <label class="field"><span>Cómo te llamamos</span><input data-pref="nickname" maxlength="40" value="${esc(p.nickname)}" placeholder="Opcional"></label>
-        <label class="field"><span>Carrera</span><input data-pref="career" maxlength="80" list="careers" value="${esc(p.career)}" placeholder="Por ejemplo, Computación"><datalist id="careers">${careers.map((c) => `<option value="${esc(c)}">`).join('')}</datalist></label>
+        <div data-career-pick><label class="field"><span>Carrera</span><select disabled><option>${esc(p.career || 'Cargando las carreras…')}</option></select></label></div>
         <label class="field"><span>Semestre</span><select data-pref="semester"><option value="0">—</option>${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}" ${p.semester === i + 1 ? 'selected' : ''}>${i + 1}.º</option>`).join('')}</select></label>
       </div>
       <div class="grid3">
@@ -420,6 +427,7 @@ export function renderSettings() {
     <section class="set glass"><h2>Tu comunidad</h2>
       <p>${communityOf(auth.currentUser?.email) ? `Perteneces a la comunidad <strong>${esc(communityOf(auth.currentUser?.email).name)}</strong>.` : 'Entras como admin de Studium.'} Tus ajustes, metas y progreso se guardan en tu cuenta y solo los ves tú.</p></section>`;
   renderAmbiences($('#settings [data-ambience-picker]'));
+  fillCareer();
   rise($('#settings'));
 }
 

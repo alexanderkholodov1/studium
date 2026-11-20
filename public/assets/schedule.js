@@ -153,6 +153,8 @@ export async function renderSchedule() {
   nextMode = null; stale = false;
   paint();
 }
+// From anywhere (Mi malla): open «Mi horario» straight into preparing enrollment.
+export function prepareEnrollment() { nextMode = 'prep'; location.hash = '#/horario'; }
 // The classes of «Mi horario», for a to-do to be linked to one: id, name, and its first day and hour.
 export async function myClasses() {
   const uid = auth.currentUser?.uid ?? null;

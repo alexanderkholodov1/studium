@@ -369,6 +369,8 @@ try {
   expect('more than 150 passed classes is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ passed: Array.from({ length: 151 }, (_, i) => `MAT ${1000 + i}`) }))]), 403);
   expect('student saves its courses, interests and known concepts', await commit(s.token, [put(`profiles/${s.uid}`, profile({ courses: ['redes-de-computadores'], interests: ['area:redes'], known: ['subred', 'vlan'] }))]), 200);
   expect('student saves its to-dos', await commit(s.token, [put(`profiles/${s.uid}`, profile({ todos: [{ id: 't1', text: 'Leer el capítulo 3', done: false, due: '2026-11-25T15:00', cls: 'abc123', label: 'Redes' }] }))]), 200);
+  expect('student saves its plan for next semester', await commit(s.token, [put(`profiles/${s.uid}`, profile({ plan: ['CMP 4005', 'MAT 2203'] }))]), 200);
+  expect('a plan of more than 12 classes is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ plan: Array.from({ length: 13 }, (_, i) => `MAT ${1000 + i}`) }))]), 403);
   expect('more than 80 to-dos is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ todos: Array.from({ length: 81 }, (_, i) => ({ id: `t${i}`, text: 'x', done: false })) }))]), 403);
   expect('a profile whose known concepts are not a list is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ known: 'subred' }))]), 403);
   expect('student keeps its drafts of «Crea tu guía»', await commit(s.token, [put(`drafts/${s.uid}`, { material: { course: 'Redes' }, guide: { course: 'Cálculo II', level: 'standard' } })]), 200);

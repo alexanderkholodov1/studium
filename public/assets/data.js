@@ -320,8 +320,8 @@ export async function loadProfile(uid) {
 }
 export async function saveProfile(uid, profile) {
   // «Pendientes» go only when there are some: the published rules learn the field with the 0.6.0 release.
-  const { todos, ...rest } = profile;
-  await setDoc(doc(db, 'profiles', uid), { ...rest, ...(todos?.length ? { todos } : {}), updated: serverTimestamp() });
+  const { todos, plan, ...rest } = profile;
+  await setDoc(doc(db, 'profiles', uid), { ...rest, ...(todos?.length ? { todos } : {}), ...(plan?.length ? { plan } : {}), updated: serverTimestamp() });
 }
 
 /* ---------- drafts of «Crea tu guía»: what the person filled in, only its owner reads it ---------- */

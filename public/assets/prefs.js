@@ -20,7 +20,7 @@ export const THEMES = { auto: 'Como tu sistema', light: 'Día', dark: 'Noche' };
 export const AVATARS = ['blue', 'red', 'teal', 'butter', 'sky', 'peach'];
 const LANG = /^en\b/i.test(globalThis.navigator?.language ?? '') ? 'en' : 'es';
 const DEFAULTS = { mode: 'examenes', ambience: 'vivo', sound: false, theme: 'auto', lang: LANG, avatar: 'blue', semester: 0, career: '', nickname: '', name: '', goals: [], progress: {},
-  deadlines: [], todos: [], tiles: [], notes: '', links: [], focus: { study: 25, rest: 5 }, bubbles: false, courses: [], interests: [], known: [], malla: '', passed: [] };
+  deadlines: [], todos: [], tiles: [], notes: '', links: [], focus: { study: 25, rest: 5 }, bubbles: false, courses: [], interests: [], known: [], malla: '', passed: [], plan: [] };
 // The tiles the home page can show (space.js draws them).
 const TILE_IDS = ['todos', 'countdown', 'deadlines', 'week', 'goals', 'timer', 'notes', 'links', 'recent', 'news', 'explore'];
 const rid = () => Math.random().toString(36).slice(2, 10);
@@ -78,6 +78,8 @@ const clean = (p) => {
   // «Mi malla»: the career's code on the university's page (1CMP) and the classes the person marked as passed.
   out.malla = /^[0-9A-Z]{2,8}$/.test(out.malla ?? '') ? out.malla : '';
   out.passed = keys(out.passed, 150, /^[A-Z]{2,9}( [0-9]{1,4}[A-Z]?)?$/);
+  // What the person plans to take next semester, from «Mi malla» (up to 12 classes).
+  out.plan = keys(out.plan, 12, /^[A-Z]{2,9}( [0-9]{1,4}[A-Z]?)?$/);
   out.progress = Object.fromEntries(Object.entries(out.progress && typeof out.progress === 'object' ? out.progress : {})
     .filter(([, v]) => v === 'reading' || v === 'done').slice(0, 300));
   return out;
