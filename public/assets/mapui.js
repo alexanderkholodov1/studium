@@ -628,6 +628,9 @@ function panel(n) {
     html = `<p class="kicker">${esc(KINDS[x.kind] ?? 'Material')}</p><h2>${esc(x.title)}</h2>
       <p class="muted">${esc([n.course.name, x.stage, x.professor, x.term && termLabel(x.term)].filter(Boolean).join(' · '))}</p>
       <p>${plural(x.data?.concepts?.length ?? 0, 'concepto', 'conceptos')}, ${plural(x.data?.questions?.length ?? 0, 'pregunta', 'preguntas')}, ${plural(x.data?.examples?.length ?? 0, 'ejemplo', 'ejemplos')}.${credit([x.source])}</p>
+      ${x.data?.context?.place || x.data?.context?.folder || x.data?.context?.tool ? `<p class="muted">${esc([x.data.context.place, x.data.context.tool, x.data.context.folder && `en «${x.data.context.folder}»`].filter(Boolean).join(' · '))}</p>` : ''}
+      ${x.data?.activity ? `<h3>La actividad</h3>${x.data.activity.objective ? `<p>${esc(x.data.activity.objective)}</p>` : ''}${x.data.activity.steps?.length ? `<p class="muted">${plural(x.data.activity.steps.length, 'paso', 'pasos')}</p>` : ''}` : ''}
+      ${x.data?.context?.files?.length ? `<h3>Archivos</h3><ul class="profs">${x.data.context.files.map((f) => `<li>${f.url ? `<a class="link" href="${esc(f.url)}" target="_blank" rel="noopener noreferrer">${esc(f.name)}</a>` : esc(f.name)} <small class="muted">${f.from === 'alumno' ? 'respuesta de un alumno' : 'lo dio el profe'}</small></li>`).join('')}</ul>` : ''}
       ${x.data?.style ? `<h3>Cómo evalúa</h3><p>${esc(x.data.style)}</p>` : ''}
       ${x.data?.source?.title ? `<p class="muted">${esc([x.data.source.title, x.data.source.author, x.data.source.chapter].filter(Boolean).join(', '))}</p>` : ''}
       <div class="actions"><button class="button ghost" data-act="select-taught">Ver sus conceptos</button></div>
@@ -871,6 +874,15 @@ export function openMap(arg = '') {
   if (head === 'ruta' && courseId) {
     const c = g.byId.get(decodeURIComponent(courseId));
     if (c) setTimeout(() => startRoute({ course: c, stage: stage ? decodeURIComponent(stage).replace(/-/g, ' ') : null }), 300);
+    return;
+  }
+  // «nuevo:<ids>»: what the person just published, the graph growing with it, then its first piece in view.
+  if (head.startsWith('nuevo:')) {
+    const fresh = head.slice(6).split(',').map((id) => g.byId.get(`material:${decodeURIComponent(id)}`)).filter(Boolean);
+    if (!fresh.length) { ctx.toast('Lo que publicaste aparecerá en el grafo en cuanto se actualice.'); return; }
+    if (!F.show.material) { F.show.material = true; keep(); compute(); }
+    setTimeout(() => view.playGrowth(3600), 200);
+    setTimeout(() => { view.select(fresh[0], { fly: true }); ctx.toast(fresh.length === 1 ? 'Esto es lo que sumaste.' : `Sumaste ${fresh.length} cosas: esta es la primera.`); }, 4000);
     return;
   }
   const node = arg && g.byId.get(arg);

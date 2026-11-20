@@ -1972,3 +1972,11 @@ html.has-announce .page { padding-top: 170px; }
 .es-bin.open .es-bin-lid { transform: rotate(-38deg) translateY(-4px); }
 .es-bin.shake { animation: bin-shake .45s ease; }
 @keyframes bin-shake { 20% { rotate: -6deg; } 45% { rotate: 5deg; } 70% { rotate: -3deg; } 100% { rotate: 0deg; } }
+/* The review of a contribution: the AI's check, and a lab's files (the professor's or a student's answer). */
+.coherence { padding: 10px 14px; border-radius: 14px; background: color-mix(in oklab, var(--blue) 8%, var(--card)); font-size: 15px; }
+.coherence.ok { background: color-mix(in oklab, var(--teal) 14%, var(--card)); }
+.coherence.warn { background: color-mix(in oklab, var(--butter) 22%, var(--card)); display: grid; gap: 8px; }
+.labfiles { display: grid; gap: 8px; padding: 12px 14px; border-radius: 14px; border: 1px dashed var(--line); }
+.labfile { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.3fr); gap: 8px; align-items: center; }
+.labfile input, .labfile select { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 14px; min-width: 0; }
+@media (max-width: 700px) { .labfile { grid-template-columns: 1fr; } }

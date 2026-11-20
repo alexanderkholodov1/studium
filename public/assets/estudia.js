@@ -72,6 +72,9 @@ export function classify(name, path = '', size = 0) {
 }
 // «Semana 3», «Week 03», «Unidad 2», «Clase 5»: the place of a thing in the course, from its folders and name.
 const PLACE = /(semana|week|unidad|unit|cap[ií]tulo|chapter|tema|clase|lecture|m[oó]dulo|module)[ _-]?0*(\d{1,3})/i;
+// The tool a lab or a practice is done with, from its files.
+const TOOLS = [[/\.(pkt|pka)$/i, 'Packet Tracer'], [/\.(pcap|pcapng)$/i, 'Wireshark'], [/\.ipynb$/i, 'Google Colab o Jupyter'], [/\.(gns3|gns3project)$/i, 'GNS3'], [/\.(circ)$/i, 'Logisim'], [/\.(m|mlx)$/i, 'MATLAB'], [/\.(rmd)$/i, 'RStudio']];
+const toolOf = (files, project) => { for (const [re, name] of TOOLS) if (files.some((f) => re.test(f.name))) return name; return project ? 'GitHub o un repositorio' : ''; };
 const placeOf = (path, name) => { for (const s of [...path.split('/').reverse(), name]) { const m = s.match(PLACE); if (m) return `${m[1][0].toUpperCase()}${m[1].slice(1).toLowerCase()} ${m[2]}`; } return ''; };
 
 /* ---------- what is left out: build output, git's history, keys ---------- */
@@ -231,7 +234,7 @@ async function take(el, files) {
   const folder = root ? courseOfFolder(root) : null;
   const fresh = [...list, ...links.map((l) => ({ files: [], name: l.url, path: '', url: l.url }))].slice(0, 400).map((u, i) => {
     const size = u.files.reduce((n, f) => n + (f.size ?? 0), 0);
-    const it = { id: `e${Date.now().toString(36)}${i}`, name: u.name, path: u.path, size, files: u.files, count: u.files.length, url: u.url ?? '', project: !!u.project, added: Date.now(), place: placeOf(u.path, u.name) };
+    const it = { id: `e${Date.now().toString(36)}${i}`, name: u.name, path: u.path, size, files: u.files, count: u.files.length, url: u.url ?? '', project: !!u.project, added: Date.now(), place: placeOf(u.path, u.name), tool: u.url && /github\.com\//.test(u.url) ? 'GitHub' : toolOf(u.files, u.project) };
     const c = classify(u.name, u.path, size);
     // A project takes the kind its folders say (the project of «Deber 1» is homework); otherwise it is code.
     Object.assign(it, u.project ? (c.kind && c.kind !== 'code' && c.sure ? c : { kind: 'code', sure: true }) : c);
@@ -478,7 +481,7 @@ async function go(table) {
   const files = withFiles.flatMap((x) => x.files);
   // To the graph thing by thing, in the folders' order, each with where it was: «Semana 3/Clase 2», «Deber 1».
   if (toGraph && files.length) {
-    for (const x of withFiles) await api.shareToGraph(x.files, { kind: GRAPH_KIND[x.kind] ?? 'other', course, code, folder: [x.path, x.count > 1 ? x.name : ''].filter(Boolean).join('/'), place: x.place });
+    for (const x of withFiles) await api.shareToGraph(x.files, { kind: GRAPH_KIND[x.kind] ?? 'other', course, code, folder: [x.path, x.count > 1 ? x.name : ''].filter(Boolean).join('/'), place: x.place, tool: x.tool });
   }
   const done = chosen; batch = [];
   if (toGuide) api.startGuide(files, { course, piles: [...new Set(done.map((x) => x.kind))], exams: done.filter((x) => x.kind === 'exam').map((x) => x.name), links: done.filter((x) => x.url).map((x) => x.url) });

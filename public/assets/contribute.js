@@ -815,6 +815,14 @@ function addReview(zone, text, name, made = null, extra = {}) {
       : $('#m-form') ? { ...materialValues(), ...(extra.stage ? { stage: extra.stage } : {}) } : {};
   const parsed = html ? parseGuide(text, fallback) : parseContribution(text, fallback);
   if (!html && !parsed.error) parsed.meta.source = extra.source ?? fallback.source ?? '';
+  // Where it came from (the folders, the week, the tool): kept in the contribution's body, so the graph can order and
+  // relate nodes by it. The files of a lab say whether the professor gave them or they are a student's answer.
+  if (!html && !parsed.error) {
+    const tool = fallback.tool || parsed.data.activity?.tool || '';
+    const files = (parsed.data.activity?.files ?? []).map((f) => ({ ...f, url: '' }));
+    const context = { ...(fallback.folder ? { folder: String(fallback.folder).slice(0, 200) } : {}), ...(fallback.place ? { place: String(fallback.place).slice(0, 40) } : {}), ...(tool ? { tool: String(tool).slice(0, 60) } : {}), ...(files.length ? { files } : {}) };
+    if (Object.keys(context).length) parsed.data.context = context;
+  }
   const id = `r${serial += 1}`;
   const item = { id, zone, name, html, text, parsed, visibility: 'public', confirmed: false, replace: zone.startsWith('replace:') ? zone.slice(8) : '', ai: made, sign: false, print: extra.print ?? '' };
   reviews.set(id, item);
@@ -883,6 +891,8 @@ function renderReview(item) {
         : '<p class="hint wide">Para firmar tus guías con tu nombre, escríbelo en <a href="#/ajustes">Ajustes</a>.</p>') : ''}
     </form>
     <p class="summary">${summary}</p>
+    ${isGuide || curriculum ? '' : coherenceHTML(item)}
+    ${isGuide || curriculum ? '' : labFilesHTML(item)}
     ${twin ? `<p class="twin">${esc(twin)}</p>` : ''}
     ${parsed.warnings.length ? `<ul class="warnings">${parsed.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}
     ${findings.length ? `<div class="personal">
@@ -898,6 +908,46 @@ function renderReview(item) {
       ${!ready && !blocking.length && isGuide && !/^\d{4}-\d{2}-\d{2}$/.test(m.date || '') ? '<span class="hint">Falta la fecha de la evaluación.</span>' : ''}
     </div>`}`;
   syncBulk(item.zone.startsWith('replace:') ? 'mine' : item.zone);
+  if (!isGuide && !curriculum && !item.done && !item.coherence && ai.ready()) checkCoherence(item);
+}
+
+/* ---------- before it is public: does it belong together? The person's AI says, and the person decides ---------- */
+async function checkCoherence(item) {
+  item.coherence = { state: 'running' };
+  const m = item.parsed.meta;
+  const names = (item.parsed.data.concepts ?? []).map((c) => c.name).slice(0, 80);
+  const course = courseNode(m.course);
+  const g = ctx.state.graph;
+  const known = course ? g.links.filter((l) => l.kind === 'in' && l.source === course).map((l) => l.target.name).slice(0, 150) : [];
+  try {
+    const res = await ai.run({
+      system: 'Revisas, antes de que se publique, un aporte anónimo al grafo de conocimiento de una materia universitaria. Di si su contenido es de esa materia y si sus conceptos tienen que ver entre ellos. Responde solo JSON: {"fits": true o false, "why": "una frase", "outliers": ["conceptos de la lista que no son de esta materia o no tienen que ver con el resto"]}.',
+      text: `Materia: ${m.course}\nTítulo: ${m.title}\nTipo: ${KINDS[m.kind] ?? m.kind}\nConceptos del aporte: ${names.join('; ')}\nConceptos que la materia ya tiene en el grafo: ${known.join('; ') || '(ninguno todavía)'}`,
+      maxTokens: 800, use: ai.choice('ask'),
+    });
+    const a = JSON.parse(String(res.text ?? '').match(/\{[\s\S]*\}/)?.[0] ?? '{}');
+    const set = new Set(names.map((n) => keyOf(n)));
+    item.coherence = { state: 'done', fits: a.fits !== false, why: String(a.why ?? '').slice(0, 300), outliers: (Array.isArray(a.outliers) ? a.outliers : []).map(String).filter((n) => set.has(keyOf(n))).slice(0, 20) };
+  } catch { item.coherence = { state: 'error' }; }
+  if (document.getElementById(item.id)) renderReview(item);
+}
+function coherenceHTML(item) {
+  const c = item.coherence;
+  if (!c) return ai.ready() ? '' : '<p class="fine">Con tu IA conectada, revisa también que todo tenga que ver con la materia antes de publicar.</p>';
+  if (c.state === 'running') return `<p class="coherence">Tu IA está revisando que todo tenga que ver con ${esc(item.parsed.meta.course || 'la materia')}…</p>`;
+  if (c.state === 'error') return '<p class="coherence">Tu IA no pudo revisarlo ahora; revísalo tú.</p>';
+  if (c.fits && !c.outliers.length) return `<p class="coherence ok">${c.why === 'Quitaste lo que no era de aquí.' ? esc(c.why) : `Tu IA lo revisó: todo tiene que ver con ${esc(item.parsed.meta.course)}.`}</p>`;
+  return `<div class="coherence warn"><p>${c.fits ? '' : '<strong>¿Seguro que es de esta materia?</strong> '}${esc(c.why)}</p>${c.outliers.length ? `<p class="fine">No parecen de aquí; tócalos para quitarlos:</p><div class="chips small">${c.outliers.map((n) => `<button class="chip" data-drop-concept="${item.id}" data-name="${esc(n)}">${esc(n)} ✕</button>`).join('')}</div>` : ''}</div>`;
+}
+// A lab's files: each one says whether the professor gave it or it is a student's answer, with a link where it lives.
+function labFilesHTML(item) {
+  const files = item.parsed.data.context?.files ?? [];
+  if (item.parsed.meta.kind !== 'lab' && !files.length) return '';
+  const row = (f, i) => `<div class="labfile"><input data-labfile="${item.id}" data-i="${i}" data-f="name" value="${esc(f.name)}" maxlength="160" placeholder="Nombre del archivo (red-inicial.pkt)" aria-label="Nombre del archivo">
+      <select data-labfile="${item.id}" data-i="${i}" data-f="from"><option value="profesor" ${f.from === 'profesor' ? 'selected' : ''}>Lo dio el profe</option><option value="alumno" ${f.from === 'alumno' ? 'selected' : ''}>Respuesta de un alumno</option></select>
+      <input type="url" data-labfile="${item.id}" data-i="${i}" data-f="url" value="${esc(f.url ?? '')}" placeholder="Enlace donde está (Drive, OneDrive, la página del profe)"></div>`;
+  return `<div class="labfiles"><p><strong>Archivos del laboratorio</strong> <small class="muted">Studium guarda solo el enlace; tu respuesta no se publica si no lo eliges.</small></p>${files.map(row).join('')}
+    <button type="button" class="link" data-labfile-add="${item.id}">Agregar un archivo</button></div>`;
 }
 function readMeta(item) {
   const form = $(`[data-meta="${item.id}"]`);
@@ -929,7 +979,8 @@ async function publish(item) {
       item.done = `Publicada${item.visibility === 'private' ? ' solo para ti' : ''}. <a href="#/guia/${encodeURIComponent(id)}">Abrir la guía</a> · <a href="#/grafo/guide:${encodeURIComponent(id)}">Verla en el grafo</a>`;
     } else {
       id = await publishContribution(ctx.user.uid, { ...m, theme: m.kind === 'curriculum' ? 'estrellas' : m.theme, visibility: item.visibility, print: item.print }, item.parsed.data);
-      item.done = `Publicado${item.visibility === 'private' ? ' solo para ti' : ''}. <a href="#/grafo">Verlo en el grafo</a>`;
+      grown.add(id);
+      item.done = `Publicado${item.visibility === 'private' ? ' solo para ti' : ''}. <a href="#/grafo/nuevo:${[...grown].join(',')}">Ver cómo creció el grafo</a>`;
     }
     item.ready = false;
     if (item.jobId) queue?.reviewed(item.jobId, 'published');
@@ -1022,6 +1073,33 @@ export function mountContribute(context) {
   const view = $('#view-contribute');
   if (view.dataset.ready) return;
   view.dataset.ready = '1';
+  view.addEventListener('click', (e) => {
+    const drop = e.target.closest('[data-drop-concept]');
+    if (drop) {
+      const item = reviews.get(drop.dataset.dropConcept); const k = keyOf(drop.dataset.name);
+      const d = item.parsed.data;
+      d.concepts = d.concepts.filter((c) => keyOf(c.name) !== k);
+      for (const x of [...d.questions, ...d.examples]) x.concepts = (x.concepts ?? []).filter((n) => keyOf(n) !== k);
+      item.coherence.outliers = item.coherence.outliers.filter((n) => keyOf(n) !== k);
+      if (!item.coherence.outliers.length) Object.assign(item.coherence, { fits: true, why: 'Quitaste lo que no era de aquí.' });
+      renderReview(item);
+    }
+    const add = e.target.closest('[data-labfile-add]');
+    if (add) {
+      const item = reviews.get(add.dataset.labfileAdd);
+      const ctxt = item.parsed.data.context ??= {}; (ctxt.files ??= []).push({ name: '', from: 'profesor', url: '' }); renderReview(item);
+      document.querySelector(`#${item.id} .labfile:last-of-type input`)?.focus();
+    }
+  });
+  view.addEventListener('change', (e) => {
+    const f = e.target.closest('[data-labfile]');
+    if (!f) return;
+    const item = reviews.get(f.dataset.labfile); const file = item.parsed.data.context?.files?.[Number(f.dataset.i)];
+    if (!file) return;
+    if (f.dataset.f === 'url') { const v = f.value.trim(); file.url = /^https:\/\/\S+$/.test(v) ? v.slice(0, 500) : ''; if (v && !file.url) ctx.toast('Ese enlace no empieza con https://'); }
+    else if (f.dataset.f === 'name') file.name = f.value.trim().slice(0, 160);
+    else file.from = f.value === 'alumno' ? 'alumno' : 'profesor';
+  });
 
   view.addEventListener('input', (e) => {
     if (e.target.closest('#m-form')) $('#m-prompt').textContent = materialPrompt();
@@ -1126,6 +1204,7 @@ export function mountContribute(context) {
 }
 
 let drafted = false;
+const grown = new Set(); // what this person published in this visit: the graph shows it growing
 let shown = '';
 export function renderPane(pane, preset) {
   shown = pane;

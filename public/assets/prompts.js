@@ -26,6 +26,7 @@ const KIND_ONE = {
 // "1 examen", "3 exámenes".
 export const countKind = (kind, n) => `${n} ${n === 1 ? KIND_ONE[kind] ?? 'otro' : KIND_PLURALS[kind] ?? 'otros'}`;
 export const QUESTION_KINDS = {
+  activity: 'Actividad de laboratorio',
   'multiple-choice': 'Opción múltiple', 'true-false': 'Verdadero o falso', 'short-answer': 'Respuesta corta',
   computation: 'Cálculo', proof: 'Demostración', problem: 'Problema', code: 'Código', algorithmic: 'Problema de programación',
   diagram: 'Diagrama', essay: 'Desarrollo', oral: 'Oral',
@@ -78,6 +79,9 @@ ${field('Evaluación a la que pertenece', contest ? 'no aplica: deja ""' : m.sta
 ${m.folder ? field('Dónde estaba en las carpetas de la materia', m.folder) : ''}
 ${m.place ? field('Su lugar en el curso', `${m.place}: respeta ese orden al listar los conceptos y nómbralo en el campo de la evaluación si no hay otra`) : ''}
 
+## Si es un laboratorio o una práctica
+Además de lo demás, agrega "activity": { "objective": "para qué es, en una o dos frases", "tool": "la herramienta (Packet Tracer, Wireshark, Google Colab, Jupyter, GitHub, la página del profe…)", "steps": ["cada paso o pregunta de la actividad, con su texto exacto, sin datos personales"], "files": [ { "name": "nombre del archivo", "from": "profesor" si es parte del enunciado o lo entregó el profe, o "alumno" si es la respuesta o la evidencia de un estudiante } ] }. Si no es un laboratorio, no pongas "activity".
+
 ## Anónimo, siempre
 Otros estudiantes verán este aporte.
 - Quita todo dato de estudiantes: nombres, firmas, códigos o números de estudiante, cédulas, correos, teléfonos,
@@ -112,7 +116,7 @@ Transcribe con cuidado los números, fórmulas y diagramas. Lo que no se lea con
       ? 'los ejercicios más representativos de esta parte (como máximo 25), con los conceptos que evalúan; la solución breve solo si la conoces con certeza.'
       : syllabus
         ? 'ninguna: deja [].'
-        : 'cada pregunta, ejercicio o problema, con su número tal como aparece (number), los conceptos que evalúa, su tipo, su dificultad, su puntaje si aparece, el enunciado en paráfrasis compacta y la solución correcta breve si la conoces con certeza (si no, deja ""). Si un mismo archivo trae varias evaluaciones, pon en cada pregunta su stage.'}
+        : 'cada pregunta, ejercicio o problema, con su número tal como aparece (number), los conceptos que evalúa, su tipo, su dificultad, su puntaje si aparece, el enunciado exacto, tal como está escrito, quitando solo los datos personales (nombres de estudiantes, notas, códigos o correos), y la solución correcta breve si la conoces con certeza (si no, deja ""). Si un mismo archivo trae varias evaluaciones, pon en cada pregunta su stage.'}
 - **examples**: ejemplos resueltos o casos que el material usa para explicar, en pocas líneas.
 - **style**: de 2 a 5 frases sobre cómo ${contest ? 'son los problemas de esta competencia (formato, dificultad, temas frecuentes, trampas)' : syllabus ? 'se evalúa la materia según el sílabo (pesos, tipo de evaluaciones, reglas)' : 'enseña o evalúa este profesor según este material: formato, qué pesa más, nivel de rigor, trampas habituales, notación'}.
 - **source**: solo para libros o textos publicados: título, autor y capítulo.${syllabus ? `
@@ -315,6 +319,13 @@ export function parseContribution(text, fallback = {}) {
     text: clip(q?.text, 2500), solution: clip(q?.solution, 3000),
   })).filter((q) => q.text);
   const examples = list(obj.examples).map((e) => ({ concepts: names(e?.concepts), text: clip(e?.text, 2000) })).filter((e) => e.text);
+  // A lab: one practice activity, its steps in their exact text, and its files: the professor's or a student's answer.
+  const a = obj.activity && typeof obj.activity === 'object' ? obj.activity : null;
+  const activity = a ? {
+    objective: clip(a.objective, 800), tool: clip(a.tool, 60),
+    steps: list(a.steps).map((x) => clip(typeof x === 'string' ? x : x?.text, 2500)).filter(Boolean).slice(0, 80),
+    files: list(a.files).map((f) => ({ name: clip(f?.name, 160), from: f?.from === 'alumno' ? 'alumno' : 'profesor' })).filter((f) => f.name).slice(0, 30),
+  } : null;
   if (questions.length > 200) warnings.push(`Trae ${questions.length} preguntas; se guardan las primeras 200.`);
   if (examples.length > 150) warnings.push(`Trae ${examples.length} ejemplos; se guardan los primeros 150.`);
   // Every concept a question, an example or a unit names is a concept of the contribution: the ones the AI forgot to
@@ -344,7 +355,7 @@ export function parseContribution(text, fallback = {}) {
     },
     data: {
       version: 2, concepts: concepts.slice(0, 300), questions: questions.slice(0, 200), examples: examples.slice(0, 150), style: clip(obj.style, 1500),
-      ...(source?.title ? { source } : {}), ...(plan ? { plan } : {}),
+      ...(source?.title ? { source } : {}), ...(plan ? { plan } : {}), ...(activity ? { activity } : {}),
     },
     warnings,
   };
@@ -398,7 +409,7 @@ export function guideInstructions(o) {
   const sources = [];
   if (!o.api || o.notes) sources.push(`${o.api ? 'Te adjunto mis apuntes' : 'Te adjunto mis apuntes (PDF, fotos o texto)'}: son la fuente principal. Cubre lo que contienen, con su notación, su orden y su nivel.`);
   if (o.graph) {
-    sources.push(`${o.contextFile ? `También te adjunto \`${o.contextFile}\` con` : 'Al final va'} el contexto de Studium: lo que otros estudiantes aportaron de esta ${contest ? 'competencia' : 'materia'}, de forma anónima (conceptos, relaciones y preguntas reales en paráfrasis${o.professor ? `, y cómo evalúa ${o.professor}` : ''}). Úsalo para decidir qué pesa más y para practicar con preguntas del mismo estilo, sin copiarlas.`);
+    sources.push(`${o.contextFile ? `También te adjunto \`${o.contextFile}\` con` : 'Al final va'} el contexto de Studium: lo que otros estudiantes aportaron de esta ${contest ? 'competencia' : 'materia'}, de forma anónima (conceptos, relaciones y preguntas reales, anónimas${o.professor ? `, y cómo evalúa ${o.professor}` : ''}). Úsalo para decidir qué pesa más y para practicar con preguntas del mismo estilo, sin copiarlas.`);
   }
   if (o.api && !o.notes && !o.graph) sources.push('No hay apuntes: usa lo que sabes del tema, al nivel de un curso universitario.');
   else if (!o.api) sources.push('Si no adjunto nada, usa lo que sabes del tema, al nivel de un curso universitario.');
@@ -523,7 +534,7 @@ export function contextPack({ course, professor, term, concepts, contributions, 
   const lines = [
     `# Studium: contexto de ${course.name}`,
     '',
-    'Material anónimo que aportaron estudiantes: conceptos, relaciones, preguntas reales en paráfrasis y ejemplos.',
+    'Material anónimo que aportaron estudiantes: conceptos, relaciones, preguntas reales sin datos personales y ejemplos.',
     '',
     `## ${contest ? 'La competencia' : 'La materia'}`,
     `- Nombre: ${course.name}${course.code ? ` (${course.code})` : ''}${course.university ? `, ${course.university}` : ''}`,
@@ -566,7 +577,7 @@ export function contextPack({ course, professor, term, concepts, contributions, 
     if (q.concepts.some((n) => wanted.has(looseKey(n))) || (!q.concepts.length && !ordered)) questions.push({ q, c });
   }
   if (questions.length) {
-    lines.push('## Preguntas de evaluaciones anteriores (paráfrasis anónima)', '');
+    lines.push('## Preguntas de evaluaciones anteriores (anónimas)', '');
     for (const { q, c } of questions.slice(0, 220)) {
       const other = professor && c.professor && c.professor !== professor ? ', otro profesor' : '';
       const tags = [q.stage || c.stage || c.title, c.term, c.professor, QUESTION_KINDS[q.kind], `dificultad ${q.difficulty} de 5`, q.points != null ? plural(q.points, 'punto', 'puntos') : ''].filter(Boolean).join(', ');
