@@ -30,7 +30,7 @@ const out = (x) => process.stdout.write(typeof x === 'string' ? x : JSON.stringi
 `;
 const scripts = {
   claude: `const CLI = 'claude';${common}
-if (args[0] === 'auth') { out({ loggedIn: s.signedIn !== false, authMethod: 'claude.ai' }); process.exit(0); }
+if (args[0] === 'auth') { out({ loggedIn: s.signedIn !== false, authMethod: 'claude.ai', ...(s.plan ? { subscriptionType: s.plan } : {}) }); process.exit(0); }
 record();
 if (s.sleep) { setTimeout(() => {}, s.sleep); } else {
   if (s.error) { out({ type: 'result', subtype: 'success', is_error: true, result: s.error }); process.exit(1); }
@@ -202,6 +202,27 @@ await test('Claude without a model, or with Fable, is refused before any call', 
     check(r.status === 400 && r.data.error.code === 'paid', `${model}: status ${r.status}`);
   }
   check(!calls().length, 'Claude Code must not be called without an included model');
+});
+await test('the allowed Claude models follow the plan table of the last full check', async () => {
+  const row = (id, plans) => ({ id, table: true, checkedAt: 'x', plans, quote: id, source: 'https://claude.com/pricing' });
+  writeFileSync(path.join(home, '.studium-bridge-catalog.json'), JSON.stringify({ providers: { claude: { models: [
+    row('Fable', { Free: 'no', Pro: 'creditos', Max: 'incluido' }), row('Opus', { Free: 'no', Pro: 'incluido', Max: 'incluido' }),
+    row('Sonnet', { Free: 'incluido', Pro: 'incluido', Max: 'incluido' }), row('Haiku', { Free: 'incluido', Pro: 'incluido', Max: 'incluido' }),
+  ] } } }));
+  try {
+    scenario({ claude: { plan: 'free' } });
+    const opus = await run({ engine: 'claude', model: 'claude-opus-5-5' });
+    check(opus.status === 400 && opus.data.error.code === 'paid', `Opus on Free: status ${opus.status}`);
+    check(!calls().length, 'a model the plan does not include must never be called');
+    const sonnet = await run({ engine: 'claude', model: 'claude-sonnet-5-5' });
+    check(sonnet.status === 200, `Sonnet on Free: status ${sonnet.status}`);
+    scenario({ claude: { plan: 'max' } });
+    const fable = await run({ engine: 'claude', model: 'claude-fable-5-2' });
+    check(fable.status === 400, `Fable on Max is never used in -p: status ${fable.status}`);
+    const st = await call('GET', '/v1/status');
+    const c = st.data.engines.find((e) => e.id === 'claude');
+    check(c.plan === 'max' && !c.models.some((m) => /fable/.test(m.id)), `the status offers no Fable: ${JSON.stringify(c.models)}`);
+  } finally { rmSync(path.join(home, '.studium-bridge-catalog.json'), { force: true }); }
 });
 await test('an answer that asks for usage credits stops, as «paid», without retrying', async () => {
   scenario({ claude: { error: 'Fable 5.2 requires usage credits. Switch to another model, or manage usage credits at https://claude.ai/settings/usage' } });

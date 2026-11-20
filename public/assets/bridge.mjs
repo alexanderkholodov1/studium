@@ -206,6 +206,18 @@ function resetOf(text, now = new Date()) {
 // Claude Code's own default depends on each person's settings (it may be Fable, which in -p mode bills usage credits
 // without asking), so the bridge never runs without one of these named.
 const CLAUDE_INCLUDED = new Set(['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5']);
+const CLAUDE_FAMILY = (id) => (String(id).match(/(opus|sonnet|haiku|fable)/i)?.[1] ?? '').toLowerCase();
+// The models this person's plan includes, from the last full check of claude.com/pricing (its «Models and usage» table,
+// read row by row), never Fable (in -p it bills usage credits without asking). Before any full check: the list read
+// from the same page on 2026-11-20 (Opus, Sonnet, Haiku «Yes» on Pro, Max and Ultra), and the status says so.
+function claudeAllowed(plan) {
+  let rows = null;
+  try { rows = JSON.parse(readFileSync(CATALOG, 'utf8')).providers?.claude?.models?.filter((m) => m.table); } catch { /* no check yet */ }
+  const col = { free: 'Free', pro: 'Pro', max: 'Max', ultra: 'Ultra', team: 'Team' }[String(plan).toLowerCase()] ?? '';
+  if (!rows?.length || !col) return { families: new Set(['opus', 'sonnet', 'haiku']), source: 'la lista leída de claude.com/pricing el 20-11-2026 (aún no hay una revisión completa)' };
+  const families = new Set(rows.filter((m) => m.plans?.[col] === 'incluido' && m.id.toLowerCase() !== 'fable').map((m) => m.id.toLowerCase()));
+  return { families, source: `la revisión completa del ${rows[0].checkedAt ?? ''}, tabla de claude.com/pricing` };
+}
 function failureOf(engine, text) {
   const name = { claude: 'Claude Code', codex: 'Codex', antigravity: 'Antigravity' }[engine];
   const t = String(text ?? '');
@@ -234,14 +246,17 @@ const ENGINES = {
       let info = null;
       try { info = JSON.parse(auth?.out ?? ''); } catch { /* an older Claude Code */ }
       const ready = info ? info.loggedIn === true : auth?.code === 0;
+      const allowed = claudeAllowed(info?.subscriptionType ?? '');
       return {
         ready, detail: ready ? `con tu sesión de ${info?.authMethod === 'claude.ai' ? 'claude.ai' : 'Claude'}${info?.subscriptionType ? `, plan ${info.subscriptionType}` : ''}` : 'sin sesión iniciada: abre claude una vez e inicia sesión',
         plan: String(info?.subscriptionType ?? ''),
+        allowed: { families: [...allowed.families], source: allowed.source },
+        // Only the models the plan includes, by the verified table; Studium offers nothing else.
         models: [
           { id: 'claude-opus-5-5', label: 'Claude Opus 5.5', tier: 'strong' },
           { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5', tier: 'mid' },
           { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5', tier: 'light' },
-        ],
+        ].filter((m) => allowed.families.has(CLAUDE_FAMILY(m.id))),
         // The efforts a guide may record (the database rules accept these).
         efforts: ['low', 'medium', 'high', 'xhigh'],
       };
@@ -250,8 +265,13 @@ const ENGINES = {
     // for a permission that a non-interactive run never grants (measured 2026-11-13: plain «Read» read a file in the
     // home folder). So material that tells the model to read other files gets nothing.
     async run(b, dir, body, names, timeoutMs) {
-      // Never the default model: only a model the plan includes, named explicitly.
-      if (!CLAUDE_INCLUDED.has(String(body.model ?? ''))) throw new Failure(400, 'paid', 'El puente solo usa modelos incluidos en tu plan de Claude (Opus 5.5, Sonnet 5.5 o Haiku 5.5), nombrados uno por uno. Elige uno en Studium.');
+      // Never the default model: only a model the person's plan includes (by the verified catalog), named explicitly.
+      const st = (await detectAll(true)).find((e) => e.id === 'claude'); // the plan right now, never a cached one
+      const allowed = claudeAllowed(st?.plan);
+      const fam = CLAUDE_FAMILY(body.model);
+      if (!CLAUDE_INCLUDED.has(String(body.model ?? '')) || fam === 'fable' || !allowed.families.has(fam)) {
+        throw new Failure(400, 'paid', `El puente solo usa modelos de Claude incluidos en tu plan, nombrados uno por uno (según ${allowed.source}). Elige uno en Studium.`);
+      }
       const args = ['-p', prompt(names), '--output-format', 'json', '--allowedTools', 'Read(./**)',
         '--disallowedTools', 'Bash', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'WebFetch', 'WebSearch', 'Task', 'Agent',
         '--model', String(body.model)];
@@ -324,8 +344,8 @@ const ENGINES = {
 // What this computer has, read without spending the student's quota; kept for a minute.
 let detected = null;
 let detectedAt = 0;
-async function detectAll() {
-  if (detected && Date.now() - detectedAt < DETECT_CACHE_MS) return detected;
+async function detectAll(fresh = false) {
+  if (!fresh && detected && Date.now() - detectedAt < DETECT_CACHE_MS) return detected;
   detected = await Promise.all(Object.entries(ENGINES).map(async ([id, e]) => {
     const b = await bin(id === 'antigravity' ? 'agy' : id);
     const base = { id, name: e.name, reads: e.reads };
@@ -380,15 +400,40 @@ Responde solo con un objeto JSON, sin texto antes ni después:
 {"models":[{"id":"el nombre o identificador del modelo tal como lo escribe la página","plans":{"<nombre del plan tal como la página lo llama>":"incluido|creditos|no|de pago|prueba"},"free":true o false o null,"temporary":"si la página dice que el acceso es temporal, de prueba, o que se retirará, en pocas palabras; si no, null","quote":"una frase EXACTA de la página, copiada letra por letra, que dice esto","source":"el nombre del archivo"}],
  "quotas":[{"plan":"...","text":"qué cuota o límite, y cuándo se reinicia","quote":"frase exacta","source":"archivo"}],
  "charges":[{"text":"cuándo se cobra algo aparte del plan, y si se puede impedir","quote":"frase exacta","source":"archivo"}]}
-Reglas: cada dato lleva su cita exacta copiada del archivo, sin cambiar ni una letra; si no encuentras una cita que lo diga, no pongas el dato. No supongas nada que la página no diga.`;
-async function verifyAll() {
-  const status = (await detectAll()).find((e) => e.id === 'claude');
+Reglas: cada dato lleva su cita exacta copiada del archivo, sin cambiar ni una letra; si no encuentras una cita que lo diga, no pongas el dato. No supongas nada que la página no diga.
+Tablas: cuando el dato está en una tabla (por ejemplo, una fila «Opus» con «Yes» en cada plan), pon un modelo por fila y cita la fila completa tal como aparece en el archivo, con el nombre del modelo y todas sus celdas en orden; en "plans" pon cada columna con el nombre del plan que la encabeza.`;
+// claude.com/pricing, «Models and usage»: the header row names the plans; each model's row is its name and one cell per
+// plan, in order. Read exactly, without an AI, each row quoted whole.
+function claudeTable(text, url, checkedAt) {
+  const i = text.search(/Models and usage/i);
+  if (i < 0) return [];
+  const lines = text.slice(i, i + 4000).split('\n').map((l) => l.trim()).filter(Boolean);
+  const h = lines.indexOf('Features');
+  if (h < 0) return [];
+  const plans = [];
+  for (let k = h + 1; k < lines.length && /^(Free|Pro|Max|Ultra|Team|Enterprise)$/.test(lines[k]); k++) plans.push(lines[k]);
+  const value = (v) => (/^yes$/i.test(v) ? 'incluido' : /^no$/i.test(v) ? 'no' : /usage credits/i.test(v) ? 'creditos' : /weekly limits/i.test(v) ? 'incluido' : v);
+  const out = [];
+  for (const name of ['Fable', 'Opus', 'Sonnet', 'Haiku']) {
+    const k = lines.findIndex((l) => l === name || l.startsWith(`${name} `));
+    if (k < 0 || !plans.length) continue;
+    const cells = lines.slice(k + 1, k + 1 + plans.length);
+    out.push({ id: name, table: true, checkedAt, plans: Object.fromEntries(plans.map((p, j) => [p, value(cells[j])])), notes: Object.fromEntries(plans.map((p, j) => [p, cells[j]])),
+      free: value(cells[0]) === 'incluido', quote: [lines[k], ...cells].join(' '), source: url });
+  }
+  return out;
+}
+async function verifyAll(body = {}) {
+  const only = Array.isArray(body.providers) && body.providers.length ? new Set(body.providers.map(String)) : null;
+  const status = (await detectAll(true)).find((e) => e.id === 'claude');
   if (!status?.ready) throw new Failure(424, 'not-ready', 'La revisión completa necesita tu Claude Code con sesión iniciada en esta computadora.');
-  const model = [...CLAUDE_INCLUDED].find((m) => /sonnet/.test(m)) ?? [...CLAUDE_INCLUDED][0];
-  const fetched = await Promise.all(SOURCES.map(fetchSource));
+  const allowed = claudeAllowed(status.plan);
+  const model = ['claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-opus-5-5'].find((m) => CLAUDE_INCLUDED.has(m) && allowed.families.has(CLAUDE_FAMILY(m)));
+  if (!model) throw new Failure(400, 'paid', `Tu plan de Claude no incluye ningún modelo que el puente pueda usar sin cobrar (según ${allowed.source}).`);
+  const fetched = await Promise.all(SOURCES.filter((s) => !only || only.has(s.provider)).map(fetchSource));
   const providers = {};
   let dropped = 0;
-  for (const provider of [...new Set(SOURCES.map((s) => s.provider))]) {
+  for (const provider of [...new Set(fetched.map((s) => s.provider))]) {
     const pages = fetched.filter((f) => f.provider === provider);
     const ok = pages.filter((p) => p.ok);
     const out = { sources: pages.map(({ text, ...p }) => p), models: [], quotas: [], charges: [], error: '' };
@@ -409,12 +454,20 @@ async function verifyAll() {
       dropped += 1; return null;
     };
     out.models = (Array.isArray(data.models) ? data.models : []).map(keep).filter(Boolean);
+    // Claude's plan table: read exactly, it replaces whatever the AI made of the same rows.
+    if (provider === 'claude') {
+      const page = ok.find((p) => /claude\.com\/pricing/.test(p.url));
+      const rows = page ? claudeTable(page.text, page.finalUrl ?? page.url, new Date().toISOString()) : [];
+      const names = new Set(rows.map((r) => r.id.toLowerCase()));
+      out.models = [...rows, ...out.models.filter((m) => !names.has(String(m.id).toLowerCase()))];
+    }
     out.quotas = (Array.isArray(data.quotas) ? data.quotas : []).map(keep).filter(Boolean);
     out.charges = (Array.isArray(data.charges) ? data.charges : []).map(keep).filter(Boolean);
   }
   const catalog = { checkedAt: new Date().toISOString(), plan: status.plan ?? '', model, providers, dropped };
   let before = null;
   try { before = JSON.parse(readFileSync(CATALOG, 'utf8')); } catch { /* the first check */ }
+  if (only && before) for (const [p, x] of Object.entries(before.providers ?? {})) if (!only.has(p)) catalog.providers[p] = x;
   catalog.changes = before ? changesOf(before, catalog) : [];
   try { writeFileSync(CATALOG, JSON.stringify(catalog, null, 2)); } catch { /* kept for this answer only */ }
   return catalog;
@@ -490,7 +543,11 @@ const server = createServer(async (req, res) => {
   if (!tokenValid(req.headers.authorization)) return fail(res, new Failure(401, 'token', 'El código de enlace no coincide. Vuelve a enlazar el puente en Ajustes.'), ok);
   try {
     if (req.method === 'GET' && pathname === '/v1/status') return send(res, 200, { name: NAME, version: VERSION, engines: await detectAll() }, ok);
-    if (req.method === 'POST' && pathname === '/v1/verify') return send(res, 200, await inLane('claude', verifyAll), ok);
+    if (req.method === 'POST' && pathname === '/v1/verify') {
+      let body = {};
+      try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}'); } catch { /* the whole check */ }
+      return send(res, 200, await inLane('claude', () => verifyAll(body)), ok);
+    }
     if (req.method === 'POST' && pathname === '/v1/run') {
       let body;
       try { body = JSON.parse((await readBody(req)).toString('utf8')); } catch (e) { throw e instanceof Failure ? e : new Failure(400, 'bad-request', 'El pedido no es JSON.'); }
