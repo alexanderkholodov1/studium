@@ -2158,3 +2158,17 @@ html.has-announce .page { padding-top: 170px; }
 .vault p { margin: 0 0 8px; } .vault-confirm { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; } .vault-confirm .field { flex: 1 1 220px; margin: 0; }
 .quiet .fb-fab { bottom: 76px; padding: 9px; opacity: .55; } .quiet .fb-fab-label { display: none; }
 .history { margin-top: 20px; padding: 22px 24px; border-radius: 26px; } .history h2 { margin: 0 0 4px; } .history > p { margin: 0 0 12px; }
+
+/* ---------- «Tus datos y tu seguridad» ---------- */
+.trust { max-width: 1240px; margin: 0 auto; padding: 20px 28px 30px; }
+.trust h2 { font-size: clamp(32px, 4.4vw, 54px); letter-spacing: -.045em; margin: 0; }
+@media (min-width: 1700px) { .trust { max-width: 1600px; } }
+.trust-sub { color: var(--ink-2); margin: 4px 0 18px; font-size: 16px; }
+.trust-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; align-items: start; }
+.trust details { border-radius: 20px; padding: 14px 18px; }
+.trust summary { cursor: pointer; list-style: none; display: grid; gap: 2px; }
+.trust summary::-webkit-details-marker { display: none; }
+.trust summary span { color: var(--ink-2); font-size: 14px; }
+.trust details[open] summary { margin-bottom: 8px; }
+.trust details p { margin: 0; font-size: 14.5px; line-height: 1.55; animation: rise .35s ease both; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
