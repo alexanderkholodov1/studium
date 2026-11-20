@@ -156,9 +156,12 @@ export function costOf(way, id) {
 }
 export const COST = { free: 'Gratis', sub: 'Tu suscripción', puter: 'Tu cuenta de Puter', nofree: 'Sin uso gratis', paid: 'De pago', unverified: 'Sin verificar: podría cobrarte' };
 const COST_RANK = { free: 0, sub: 0, puter: 1, nofree: 3, paid: 2, unverified: 2 };
-// The Gemini models with a free tier that Google documents (2.0 and 2.5 Flash and Flash-Lite, their «latest» aliases,
-// and Gemma). A model not on this list is «Sin verificar» until Google documents it.
-const GEMINI_FREE = /^(models\/)?(gemini-2\.[05]-flash(-lite)?(-\d{3}|-preview[\w-]*)?|gemini-flash(-lite)?-latest|gemma-[\w.-]+)$/i;
+// The Gemini models whose free tier Google's pricing page states in its own words (read 2026-11-20 at
+// https://aistudio.google.com/docs/pricing, «Free of charge» in the Free Tier column). A model not here is «Sin
+// verificar» and may charge a key with billing; the page states gemini-4-carbon, -argon and -neon have no free tier.
+// Update this list only from that page.
+const GEMINI_FREE_IDS = new Set(['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-4-hydrogen', 'gemini-3.5-flash-lite']);
+const GEMINI_FREE = { test: (id) => GEMINI_FREE_IDS.has(String(id).replace(/^models\//, '')) };
 // A model that may cost is used only after the person said yes to it, for that model.
 export const mayCost = (way, id) => ['paid', 'unverified', 'nofree'].includes(costOf(way, id));
 export const costAccepted = (id) => !!load().acceptCost?.[id];
@@ -529,8 +532,17 @@ const openaiParts = (files, text) => [
 // system: the instructions; text: the request; files: what readFile returned; task: what it is for (its remembered
 // choice applies), or use: the way, model and effort picked for it. Returns the text the model wrote, which model
 // wrote it and who makes it (provider), and where it ran (way), so that a guide can say what made it.
+/* ---------- what every request does, for the person to see (his rule: absolute control, if they want it) ---------- */
+// Each request is an entry with what went (AI, model, effort, files and their sizes, the exact instructions), when, how
+// long it waits, whether it changed model and why, and what came back or the exact error.
+export const activity = [];
+const hearers = new Set();
+export const onActivity = (fn) => { hearers.add(fn); return () => hearers.delete(fn); };
+const tell = (entry) => { for (const fn of hearers) { try { fn(entry); } catch { /* a closed window */ } } };
+function logLine(entry, text) { entry.lines.push({ at: Date.now(), text }); tell(entry); }
+const TIMEOUT = 120_000;
 export const longest = (c) => (c.provider === 'anthropic' || c.provider === 'bridge:claude' ? 64000 : 32000);
-export async function run({ system, text, files = [], maxTokens = 32000, onProgress, signal, task = 'guide', use = null } = {}) {
+export async function run({ system, text, files = [], maxTokens = 32000, onProgress, signal, task = 'guide', use = null, label = '', entry = null } = {}) {
   // Keys and passwords never reach the AI: whatever text goes, from a file or typed, is filtered here first.
   if (text) text = redact(text).text;
   files = files.map((f) => (f?.text ? { ...f, text: redact(f.text).text } : f));
@@ -545,14 +557,29 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
   }
   const usable = await adapt(files.filter((f) => !f.skipped), readsOf(way), way);
   const meta = { provider: vendorOf(way, model), way, model, effort };
+  // The entry of this request: kept, and told to whoever is watching.
+  const rec = entry ?? { id: `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, label, task, started: Date.now(), lines: [] };
+  if (!entry) { activity.unshift(rec); activity.length = Math.min(activity.length, 100); }
+  Object.assign(rec, { way, model, effort, phase: 'sending', system, text: text ?? '', files: usable.map((f) => ({ name: f.name, type: f.type, size: f.size ?? (f.data ? Math.round(f.data.length * 0.75) : (f.text ?? '').length) })) });
+  logLine(rec, `Pedido enviado a ${WAYS[way]?.name ?? way}, modelo ${model}${effort ? `, piensa ${(EFFORTS[effort] ?? effort).toLowerCase()}` : ''}: ${usable.length} ${usable.length === 1 ? 'archivo' : 'archivos'}, ${Math.round(((system ?? '').length + (text ?? '').length) / 1000)} mil caracteres de instrucciones.`);
+  rec.phase = 'waiting';
   bump(way);
   try {
-    const out = await send({ way, model, effort, system, text, files: usable, maxTokens, onProgress, signal });
+    // A request never hangs forever: past TIMEOUT it is cut, and the person is told.
+    let timer;
+    // Adapters report a count of characters written (or -1: «waiting, nothing yet»).
+    const watched = (n) => { if (typeof n === 'number' && n >= 0) { rec.received = n; rec.phase = 'receiving'; } tell(rec); onProgress?.(n); };
+    const out = await Promise.race([
+      send({ way, model, effort, system, text, files: usable, maxTokens, onProgress: watched, signal }),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new AIError(`${model} no respondió en ${TIMEOUT / 60000} minutos: Studium cortó el pedido.`, { kind: 'transient', way })), TIMEOUT); }),
+    ]).finally(() => clearTimeout(timer));
+    rec.phase = 'done'; rec.ms = Date.now() - rec.started; rec.response = String(out.text ?? '').slice(0, 60000);
+    logLine(rec, `Respondió en ${Math.round(rec.ms / 1000)} s: ${String(out.text ?? '').length} caracteres${out.truncated ? ' (cortado por el límite de largo)' : ''}.`);
     // An empty answer is a failure of the AI, never a result to review: it is tried again.
     if (!String(out.text ?? '').trim()) throw new AIError('Tu IA devolvió una respuesta vacía. Studium vuelve a probar.', { kind: 'transient', way });
     return { ...out, ...meta, truncated: !!out.truncated };
   } catch (e) {
-    if (signal?.aborted) throw new AIError('Cancelado.', { kind: 'cancel', way });
+    if (signal?.aborted) { rec.phase = 'error'; logLine(rec, 'Cancelado por ti.'); throw new AIError('Cancelado.', { kind: 'cancel', way }); }
     // An error already explained by the provider's adapter still gets the free fallback below.
     const err = e instanceof AIError ? e : classify({ way, status: e.status ?? 0, message: e.message, body: e.error ?? e.body, headers: e.headers, model });
     // A Gemini model with no free use, or whose free use ran out today: the same request goes to another «flash»
@@ -562,8 +589,13 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
       const tried = new Set([...(c.tried ?? []), model]);
       if (!cachedModels(way).length) { try { await models(way); } catch { /* the defaults */ } }
       const next = ranked(task, way).find((m) => m.cost === 'free' && !tried.has(m.id))?.id;
-      if (next) return run({ system, text, files, maxTokens, onProgress, signal, task, use: { ...c, model: next, tried: [...tried] } });
+      if (next) {
+        logLine(rec, `${model} falló (${err.message}). Studium prueba con ${next}, que es gratis.`);
+        return run({ system, text, files, maxTokens, onProgress, signal, task, label, entry: rec, use: { ...c, model: next, tried: [...tried] } });
+      }
     }
+    rec.phase = 'error'; rec.error = err.message; rec.ms = Date.now() - rec.started;
+    logLine(rec, `Error: ${err.message}`);
     throw err;
   }
 }

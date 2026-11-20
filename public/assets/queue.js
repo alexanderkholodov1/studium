@@ -75,6 +75,8 @@ export function createQueue({ store, process, now = () => Date.now(), timers = g
       return c;
     },
     // The files of a group: those dropped in this page, or those the store kept.
+    // The names of a group's files, for the person to see what is being read.
+    filesNames(gid) { return (files.get(gid) ?? []).map((f) => f.name); },
     async filesOf(gid) {
       if (files.has(gid)) return files.get(gid);
       const kept = await store.getFiles(gid);

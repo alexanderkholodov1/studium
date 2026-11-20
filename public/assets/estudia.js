@@ -595,104 +595,184 @@ function folders(list) {
   return [...by.values()].filter((f) => f.files.length).map((f) => ({ ...f, kind: [...f.kinds].sort((a, b) => b[1] - a[1])[0][0] }));
 }
 
-/* ---------- the processing, in sight: each folder is read, opened, its questions taken out, its nodes kept ---------- */
+/* ---------- the processing, in sight ----------
+   The folder's document in front, in the middle; its questions come out to the left as slips on the table (a lab comes
+   out whole); its concepts leave it to the right, where the graph is built node by node, joined by lines. Under the
+   document, what the AI is doing right now, in words; a tap opens everything: what went, when, the exact
+   instructions, every change of model, and what came back or the exact error. */
 let unwatch = null;
+let unhear = null;
 function processing(table, since, course) {
-  unwatch?.();
+  unwatch?.(); unhear?.();
   table.dataset.wired = '';
   table.innerHTML = `
     <div class="es-proc">
-      <div class="es-proc-head"><h2>Tu IA está leyendo ${esc(course)}</h2><div class="actions" data-proc-actions></div></div>
+      <div class="es-proc-head"><h2>${esc(course)}</h2><div class="actions" data-proc-actions></div></div>
       <div class="es-proc-line" data-proc-line></div>
-      <div class="es-proc-stage">
-        <div class="es-proc-desk" data-proc-desk><p class="muted">Preparando…</p></div>
-        <div class="es-proc-slips" data-proc-slips><p class="es-proc-label">Preguntas, sin nombres ni notas</p></div>
-        <div class="es-proc-graph"><p class="es-proc-label">Tu grafo <b data-proc-count>0</b> conceptos</p><div class="es-proc-nodes" data-proc-nodes></div></div>
+      <div class="es-scene">
+        <div class="es-scene-left" data-proc-slips aria-label="Preguntas, sin nombres ni notas"></div>
+        <div class="es-scene-mid" data-proc-desk></div>
+        <div class="es-scene-right"><svg class="es-graph" viewBox="0 0 400 400" data-proc-graph aria-label="El grafo que se arma"><g data-edges></g><g data-nodes></g></svg><p class="es-graph-count"><b data-proc-count>0</b> conceptos</p></div>
       </div>
       <div class="es-proc-row" data-proc-row></div>
       <div class="es-proc-review" data-proc-review hidden><h3>Revisa antes de publicar</h3><p class="fine">Nada se publica hasta que lo apruebes aquí.</p></div>
       <div class="reviews" data-reviews="material"></div>
     </div>`;
-  const seen = new Set(); // jobs already shown opening
-  const nodes = new Set();
+  const graph = { nodes: new Map(), edges: [] };
+  const seen = new Set();
   const mine = (q) => q.groups().filter((g) => g.created >= since - 1000 && g.v?.oneFolder);
+  let current = null; // { gid, label }
+  const live = () => {
+    // What the AI is doing now, in words, from its own log.
+    const el = $('[data-proc-status]', table);
+    if (!el || !current) return;
+    const e = ai.activity.find((x) => x.label === current.label);
+    const secs = e ? Math.round((Date.now() - e.started) / 1000) : 0;
+    el.textContent = !e ? 'Preparando el pedido…'
+      : e.phase === 'waiting' || e.phase === 'sending' ? `Esperando la respuesta de ${e.model} · ${secs} s`
+        : e.phase === 'receiving' ? `${e.model} está respondiendo: ${(e.received ?? 0).toLocaleString('es')} caracteres · ${secs} s`
+          : e.phase === 'error' ? `Error: ${e.error}` : `Respondió en ${Math.round((e.ms ?? 0) / 1000)} s`;
+    el.classList.toggle('bad', e?.phase === 'error');
+  };
+  const tick = setInterval(() => { if (!table.isConnected) { clearInterval(tick); unwatch?.(); unhear?.(); return; } live(); }, 1000);
+  unhear = ai.onActivity(() => { live(); const w = document.getElementById('es-log'); if (w?.open) drawLog(w, current?.label); });
   const draw = (q, change) => {
     if (!table.isConnected) { unwatch?.(); return; }
     const groups = mine(q); const ids = new Set(groups.map((g) => g.id));
     const jobs = q.jobs().filter((j) => ids.has(j.gid));
     const st = q.status();
     const running = jobs.find((j) => j.state === 'running');
-    // The folders, in a row, each with its state.
     $('[data-proc-row]', table).innerHTML = groups.map((g) => {
       const js = jobs.filter((j) => j.gid === g.id);
       const s = js.some((j) => j.state === 'running') ? 'reading' : js.every((j) => ['done', 'published', 'discarded'].includes(j.state)) ? 'done' : js.some((j) => j.state === 'error') ? 'error' : 'waiting';
-      return `<span class="es-proc-chip ${s}" title="${esc(g.v.oneFolder)}"><svg viewBox="0 0 24 24" aria-hidden="true">${FOLDER}</svg>${esc(g.v.oneFolder)}<i>${{ reading: 'leyendo', done: 'listo', error: 'falló', waiting: 'en espera' }[s]}</i></span>`;
+      return `<button type="button" class="es-proc-chip ${s}" data-log="${esc(g.v.oneFolder)}" title="Ver qué pasó con «${esc(g.v.oneFolder)}»"><svg viewBox="0 0 24 24" aria-hidden="true">${FOLDER}</svg>${esc(g.v.oneFolder)}<i>${{ reading: 'leyendo', done: 'listo', error: 'falló', waiting: 'en espera' }[s]}</i></button>`;
     }).join('');
-    // One line for the whole queue: what stops it, said once, with what to do.
     const line = $('[data-proc-line]', table);
-    line.innerHTML = st.stopped ? `<div class="es-proc-stop"><p><strong>Se detuvo:</strong> ${esc(st.stopped)}</p><div class="actions"><a class="button ghost small" href="#/ajustes">Elegir otra IA o modelo</a><button class="button primary small" data-proc="resume">Seguir</button></div></div>`
-      : st.paused ? '<p class="es-proc-note">En pausa.</p>' : st.waitUntil > Date.now() ? `<p class="es-proc-note">${esc(st.note || 'Tu IA pidió una pausa')}: sigue sola en un momento.</p>` : '';
+    line.innerHTML = st.stopped ? `<div class="es-proc-stop"><p><strong>Se detuvo:</strong> ${esc(st.stopped)}</p><div class="actions"><button class="button ghost small" data-log="">Ver qué pasó</button><a class="button ghost small" href="#/ajustes">Elegir otra IA o modelo</a><button class="button primary small" data-proc="resume">Seguir</button></div></div>`
+      : st.paused ? '<p class="es-proc-note">En pausa.</p>' : '';
     const busy = jobs.some((j) => ['waiting', 'running'].includes(j.state));
-    $('[data-proc-actions]', table).innerHTML = `${busy && !st.paused && !st.stopped ? '<button class="button ghost small" data-proc="pause">Pausar</button>' : ''}${st.paused ? '<button class="button primary small" data-proc="resume">Seguir</button>' : ''}${jobs.some((j) => j.state !== 'published') ? '<button class="button ghost small danger" data-proc="discard">Descartar todo</button>' : ''}`;
-    // On the desk: the folder being read.
+    $('[data-proc-actions]', table).innerHTML = `<button class="button ghost small" data-log="">Ver todo lo que hace la IA</button>${busy && !st.paused && !st.stopped ? '<button class="button ghost small" data-proc="pause">Pausar</button>' : ''}${st.paused ? '<button class="button primary small" data-proc="resume">Seguir</button>' : ''}${jobs.some((j) => j.state !== 'published') ? '<button class="button ghost small danger" data-proc="discard">Descartar todo</button>' : ''}`;
+    // In front: the document being read, with its files, and what the AI is doing.
     const deskEl = $('[data-proc-desk]', table);
     if (running && deskEl.dataset.job !== running.id) {
       deskEl.dataset.job = running.id;
       const g = q.group(running.gid);
-      deskEl.innerHTML = `<div class="es-proc-folder reading"><div class="es-box-lid"></div><div class="es-box-body"><svg viewBox="0 0 24 24" aria-hidden="true">${FOLDER}</svg><b>${esc(g?.v?.oneFolder ?? running.label)}</b><small>Tu IA lo está leyendo<span class="es-dots"><i></i><i></i><i></i></span></small></div></div>`;
+      current = { gid: running.gid, label: g?.v?.oneFolder || running.label };
+      const names = (q.filesNames?.(running.gid) ?? []).slice(0, 9);
+      deskEl.innerHTML = `<div class="es-doc reading"><div class="es-doc-sheet"><p class="es-doc-title">${esc(current.label)}</p>${names.map((n) => `<p class="es-doc-line">${esc(n)}</p>`).join('') || '<p class="es-doc-line">…</p><p class="es-doc-line">…</p><p class="es-doc-line">…</p>'}</div></div>
+        <button type="button" class="es-doc-status" data-log="${esc(current.label)}"><span data-proc-status>Preparando el pedido…</span><small>Ver qué está pasando</small></button>`;
+      if (!calm()) $('.es-doc', deskEl).animate([{ transform: 'translateY(-40px) scale(.85) rotate(-4deg)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 600, easing: 'cubic-bezier(.2,.9,.3,1.2)' });
+      live();
     }
     if (!running && !busy && jobs.length && !st.stopped) {
       deskEl.dataset.job = '';
       deskEl.innerHTML = `<p class="es-proc-done">Listo: ${groups.length === 1 ? 'tu carpeta' : `tus ${groups.length} carpetas`}. Revísalas abajo antes de publicar.</p>`;
     }
-    // A folder read: it opens, its questions come out as slips, its concepts fly to the graph.
     const fresh = change?.done && ids.has(change.done.gid) ? change.done : null;
-    if (fresh && !seen.has(fresh.id)) { seen.add(fresh.id); opened(table, q, fresh, nodes); }
+    if (fresh && !seen.has(fresh.id)) { seen.add(fresh.id); opened(table, q, fresh, graph); }
     api.syncReviews();
     $('[data-proc-review]', table).hidden = !$('.review', table);
   };
   table.onclick = async (e) => {
+    const log = e.target.closest('[data-log]');
+    if (log) { openLog(log.dataset.log); return; }
     const b = e.target.closest('[data-proc]');
     if (!b) return;
     if (b.dataset.proc === 'discard' && !b.dataset.sure) { b.dataset.sure = '1'; b.textContent = '¿Descartar todo lo que no publicaste? Toca otra vez'; return; }
     const q = await api.queueControl(b.dataset.proc);
-    if (b.dataset.proc === 'discard') { unwatch?.(); trashAll(table); return; }
+    if (b.dataset.proc === 'discard') { unwatch?.(); unhear?.(); trashAll(table); return; }
     draw(q);
   };
   unwatch = api.watchQueue((change, q) => draw(q, change));
   api.startQueue().then((q) => draw(q));
 }
-function opened(table, q, job, nodes) {
+
+// The window of everything the AI does: each request with what went, when, its lines, its instructions and its answer.
+function openLog(label) {
+  let w = document.getElementById('es-log');
+  if (!w) {
+    w = node('<dialog class="sheet-dialog wide es-log" id="es-log"><form method="dialog"><div class="es-log-head"><h2>Lo que hace tu IA</h2><button class="button ghost small" value="close">Cerrar</button></div><div data-log-body></div></form></dialog>');
+    document.body.append(w);
+  }
+  w.dataset.label = label ?? '';
+  drawLog(w, label);
+  if (!w.open) w.showModal();
+}
+function drawLog(w, label) {
+  const want = w.dataset.label;
+  const list = ai.activity.filter((x) => !want || x.label === want);
+  const kb = (n) => (n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1000))} KB`);
+  const time = (t) => new Date(t).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  $('[data-log-body]', w).innerHTML = list.length ? list.map((e) => `<section class="es-log-req ${e.phase}">
+      <p class="es-log-title"><b>${esc(e.label || e.task)}</b> · ${esc(WAYS_NAME[e.way] ?? e.way ?? '')} · ${esc(e.model ?? '')}${e.effort ? ` · piensa ${esc(e.effort)}` : ''} · <span>${{ sending: 'enviando', waiting: `esperando · ${Math.round((Date.now() - e.started) / 1000)} s`, receiving: `recibiendo · ${(e.received ?? 0).toLocaleString('es')} caracteres`, done: `respondió en ${Math.round((e.ms ?? 0) / 1000)} s`, error: 'error' }[e.phase] ?? e.phase}</span></p>
+      ${e.files?.length ? `<p class="fine">Archivos enviados: ${e.files.map((f) => `${esc(f.name)} (${kb(f.size)})`).join(', ')}</p>` : ''}
+      <ol class="es-log-lines">${e.lines.map((l) => `<li><time>${time(l.at)}</time> ${esc(l.text)}</li>`).join('')}</ol>
+      <details class="prompt"><summary>Instrucciones exactas</summary><pre>${esc(`${e.system ?? ''}\n\n${(e.text ?? '').slice(0, 20000)}`)}</pre></details>
+      ${e.response ? `<details class="prompt"><summary>Respuesta exacta</summary><pre>${esc(e.response.slice(0, 20000))}</pre></details>` : ''}
+      ${e.error ? `<p class="msg bad">${esc(e.error)}</p>` : ''}
+    </section>`).join('') : '<p class="muted">Todavía no se envió ningún pedido a tu IA.</p>';
+}
+const WAYS_NAME = { gemini: 'Gemini', anthropic: 'Claude', openai: 'ChatGPT', openrouter: 'OpenRouter', puter: 'Puter' };
+
+// A folder read: the document opens; its questions go left as slips (a lab, whole); its concepts go right, to the graph.
+function opened(table, q, job, graph) {
   const g = q.group(job.gid);
   const parsed = parseContribution(job.result?.text ?? '', g?.v ?? {});
   const deskEl = $('[data-proc-desk]', table);
-  const folder = $('.es-proc-folder', deskEl);
-  folder?.classList.remove('reading'); folder?.classList.add('open');
-  const from = (folder ?? deskEl).getBoundingClientRect();
+  const doc = $('.es-doc', deskEl);
+  doc?.classList.remove('reading'); doc?.classList.add('open');
+  const from = (doc ?? deskEl).getBoundingClientRect();
   if (parsed.error) {
-    // What the AI could not make sense of: asked here, where it happens.
-    deskEl.insertAdjacentHTML('beforeend', `<p class="es-proc-ask">Tu IA no entendió bien «${esc(g?.v?.oneFolder ?? job.label)}». Mira su tarjeta abajo: puedes corregirla, pedirla de nuevo o quitarla.</p>`);
+    deskEl.insertAdjacentHTML('beforeend', `<p class="es-proc-ask">Tu IA no entendió bien «${esc(g?.v?.oneFolder ?? job.label)}». Mira su tarjeta abajo: corrígela, pídela de nuevo o quítala.</p>`);
     return;
   }
-  // The questions: slips taken out of the folder (as the AI wrote them: no names, no grades).
-  const slips = $('[data-proc-slips]', table);
-  const qs = ['exam', 'homework', 'lab'].includes(parsed.meta.kind) ? parsed.data.questions.slice(0, 6) : [];
-  qs.forEach((x, i) => {
-    const el = node(`<div class="es-slip"><b>${esc(x.number ? `${x.number}.` : '•')}</b> ${esc(x.text.slice(0, 120))}${x.text.length > 120 ? '…' : ''}</div>`);
-    slips.append(el);
-    flip(el, from, { scale: 0.3, rotate: (Math.random() - 0.5) * 50, duration: 700 + i * 90 });
+  const left = $('[data-proc-slips]', table);
+  const a = parsed.data.activity;
+  if (a && (a.steps?.length || a.objective)) {
+    // A lab comes out whole: one sheet with its objective and its steps.
+    const el = node(`<div class="es-slip es-slip-lab"><b>${esc(parsed.meta.title)}</b>${a.objective ? `<p>${esc(a.objective)}</p>` : ''}<ol>${(a.steps ?? []).slice(0, 8).map((x) => `<li>${esc(x.slice(0, 90))}</li>`).join('')}</ol></div>`);
+    left.append(el); flip(el, from, { scale: 0.3, rotate: -20, duration: 800 });
+  } else {
+    parsed.data.questions.slice(0, 6).forEach((x, i) => {
+      const el = node(`<div class="es-slip" style="--r:${((i * 53) % 9) - 4}deg"><b>${esc(x.number ? `${x.number}.` : '•')}</b> ${esc(x.text.slice(0, 110))}${x.text.length > 110 ? '…' : ''}</div>`);
+      left.append(el);
+      setTimeout(() => flip(el, from, { scale: 0.25, rotate: (Math.random() - 0.5) * 60, duration: 750 }), i * 160);
+    });
+  }
+  while (left.children.length > 9) left.firstElementChild.remove();
+  // The graph: each concept leaves the document and takes its place, joined to the ones it relates to.
+  const svg = $('[data-proc-graph]', table);
+  const concepts = parsed.data.concepts.slice(0, 16);
+  const keyOfName = (n) => n.toLowerCase();
+  const nodesG = $('[data-nodes]', svg); const edgesG = $('[data-edges]', svg);
+  const svgBox = svg.getBoundingClientRect();
+  const fromX = ((from.left + from.width / 2 - svgBox.left) / svgBox.width) * 400; const fromY = ((from.top + from.height / 2 - svgBox.top) / svgBox.height) * 400;
+  let prev = null;
+  concepts.forEach((c, i) => {
+    const k = keyOfName(c.name);
+    if (!graph.nodes.has(k)) {
+      const n = graph.nodes.size; const angle = n * 2.399963; const r = 26 + 13 * Math.sqrt(n);
+      const pos = { x: 200 + Math.cos(angle) * Math.min(r, 175), y: 200 + Math.sin(angle) * Math.min(r, 175), h: (n * 47) % 360 };
+      graph.nodes.set(k, pos);
+      const el = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      el.setAttribute('class', 'es-gnode'); el.style.setProperty('--h', pos.h);
+      el.innerHTML = `<circle r="7"></circle><text y="-11">${esc(c.name.slice(0, 22))}</text>`;
+      el.style.transform = `translate(${fromX}px, ${fromY}px) scale(.3)`; el.style.opacity = '0';
+      nodesG.append(el);
+      setTimeout(() => { el.style.transform = `translate(${pos.x}px, ${pos.y}px)`; el.style.opacity = '1'; }, 300 + i * 140);
+    }
+    // Joined to what it relates to, or to the one before it in the same material.
+    const targets = (c.related ?? []).map((r) => keyOfName(r.to ?? '')).filter((t) => graph.nodes.has(t));
+    for (const t of (targets.length ? targets : prev ? [prev] : [])) {
+      const A = graph.nodes.get(k); const B = graph.nodes.get(t);
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', A.x); line.setAttribute('y1', A.y); line.setAttribute('x2', B.x); line.setAttribute('y2', B.y);
+      line.setAttribute('class', 'es-gedge'); line.style.animationDelay = `${0.5 + i * 0.14}s`;
+      edgesG.append(line);
+    }
+    prev = k;
   });
-  while (slips.children.length > 13) slips.children[1].remove();
-  // The concepts: nodes that leave the folder for the graph, and stay.
-  const box = $('[data-proc-nodes]', table);
-  const fresh = parsed.data.concepts.map((c) => c.name).filter((n) => !nodes.has(n.toLowerCase())).slice(0, 18);
-  fresh.forEach((n, i) => {
-    nodes.add(n.toLowerCase());
-    const el = node(`<span class="es-node" style="--h:${(i * 47) % 360}">${esc(n)}</span>`);
-    box.prepend(el);
-    setTimeout(() => flip(el, from, { scale: 0.2, duration: 800 }), 250 + i * 70);
-  });
-  $('[data-proc-count]', table).textContent = String(nodes.size);
+  $('[data-proc-count]', table).textContent = String(graph.nodes.size);
   sfx.release?.(700, 50);
 }
 // «Descartar todo» during the processing: the folders on the row fly into the bin.
