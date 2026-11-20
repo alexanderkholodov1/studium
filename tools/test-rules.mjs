@@ -319,6 +319,18 @@ try {
   expect('classmate cannot read the drafts of another account', await status(c.token, 'GET', `/drafts/${s.uid}`), 403);
   expect('classmate cannot write the drafts of another account', await commit(c.token, [put(`drafts/${s.uid}`, { guide: {} })]), 403);
   expect('drafts with other fields are refused', await commit(s.token, [put(`drafts/${s.uid}`, { notes: 'x' })]), 403);
+  // The encrypted keys: only their owner.
+  {
+    const box = (extra = {}) => ({ salt: 'c2FsdA==', iter: 600000, iv: 'aXY=', data: 'ZGF0YQ==', ...extra });
+    expect('student keeps its encrypted keys', await commit(s.token, [put(`vaults/${s.uid}`, box())]), 200);
+    expect('student reads its encrypted keys', await status(s.token, 'GET', `/vaults/${s.uid}`), 200);
+    expect('classmate cannot read the keys of another', await status(c.token, 'GET', `/vaults/${s.uid}`), 403);
+    expect('an admin cannot read the keys of a member', await status(accounts.admin.token, 'GET', `/vaults/${s.uid}`), 403);
+    expect('classmate cannot write the keys of another', await commit(c.token, [put(`vaults/${s.uid}`, box())]), 403);
+    expect('keys with another field are refused', await commit(s.token, [put(`vaults/${s.uid}`, box({ plain: 'sk-x' }))]), 403);
+    expect('too few rounds are refused', await commit(s.token, [put(`vaults/${s.uid}`, box({ iter: 1000 }))]), 403);
+    expect('student deletes its encrypted keys', await commit(s.token, [remove(`vaults/${s.uid}`)]), 200);
+  }
   // «Yo quiero»: each person counts once, the counter and the mark change together.
   {
     await call(admin, 'POST', `${firestore}:commit`, { writes: [remove('wants/grupos'), remove(`wanted/grupos__${s.uid}`), remove(`wanted/grupos__${c.uid}`)] });

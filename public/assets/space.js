@@ -1,5 +1,6 @@
 // The person's own space: the home page (next exam, goals, focus timer, where they left off, what is new), the
 // ambience picker, and the settings. Everything the person chooses lives in prefs.js.
+import * as vault from './vault.js';
 import { prefs, MODES, AMBIENCES, THEMES, AVATARS } from './prefs.js';
 import * as ai from './ai.js';
 import { when, nextMidnight } from './aierror.js';
@@ -312,6 +313,17 @@ function tickTimer() {
 }
 
 /* ---------- settings ---------- */
+vault.onVault(() => { const box = document.querySelector('[data-vault]'); if (box && !box.contains(document.activeElement)) box.innerHTML = vaultHTML(); });
+document.addEventListener('submit', async (e) => {
+  const form = e.target.closest?.('[data-vault-confirm]');
+  if (!form) return;
+  e.preventDefault();
+  const msg = form.parentElement.querySelector('[data-vault-msg]');
+  const btn = form.querySelector('button');
+  btn.disabled = true; msg.textContent = 'Cifrando tus claves…';
+  try { await vault.confirm(form.password.value); form.closest('[data-vault]').innerHTML = vaultHTML(); }
+  catch (err) { msg.textContent = err.message; btn.disabled = false; }
+});
 export function renderSettings() {
   const p = prefs.get();
   const careers = ctx.state.graph?.nodes.filter((n) => n.type === 'career').map((n) => n.name) ?? [];
@@ -525,8 +537,16 @@ function aiSettings() {
     <div class="ai-vendors" role="tablist">${Object.entries(VENDORS).map(([k, x]) => `<button role="tab" class="ai-vendor" aria-selected="${k === v}" data-ai-vendor="${k}">${esc(x.name)}<small>${esc(x.note)}</small>${now.some((w) => vendorOfWay(w) === k) ? '<i class="dot" title="conectada"></i>' : ''}</button>`).join('')}</div>
     <div class="ai-panel">${vendorPanel(v)}</div>
     ${ai.offered('bridge:claude') ? bridgeAdvanced() : ''}
-    <p class="fine">Las claves y sesiones se guardan solo en este navegador: no llegan a la base de datos de Studium ni a su creador.</p>
+    <div class="vault" data-vault>${vaultHTML()}</div>
   </section>`;
+}
+// Where the keys are, said exactly (vault.js).
+function vaultHTML() {
+  const v = vault.state();
+  const note = v.note ? `<p class="msg">${esc(v.note)}</p>` : '';
+  if (v.synced) return `${note}<p class="vault-on"><b>🔒 Tus claves están cifradas</b>, en este dispositivo y en tu cuenta. Solo tu contraseña de Studium las abre: ni Studium ni sus admins pueden leerlas. En tu celular aparecen al iniciar sesión; al cerrar sesión se borran de aquí y vuelven cuando entras.</p>`;
+  return `${note}<p><b>🔒 Tus claves están cifradas en este dispositivo.</b> Para tenerlas también en tu celular y tus otros dispositivos, confirma tu contraseña de Studium una vez: con ella se cifran en tu cuenta, y nadie más puede abrirlas, ni Studium ni sus admins.</p>
+    <form class="vault-confirm" data-vault-confirm><label class="field"><span>Tu contraseña de Studium</span><input type="password" name="password" autocomplete="current-password" required></label><button class="button ghost small">Llevar mis claves a mis dispositivos</button></form><p class="msg" data-vault-msg></p>`;
 }
 // What «Revisar el estado» found: per AI, the lines it checked, its models with their cost and whether they answered.
 function statusHTML(st) {

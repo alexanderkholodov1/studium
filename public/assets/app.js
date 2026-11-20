@@ -33,6 +33,7 @@ import { mountHints } from './hints.js';
 import { mountEggs } from './eggs.js';
 import { mountAdmin, renderAdmin } from './admin.js';
 import { mountFeedback } from './feedback.js';
+import * as vault from './vault.js';
 import { mountComunidad, renderComunidad } from './comunidad.js';
 
 const $ = (s) => document.querySelector(s);
@@ -225,11 +226,13 @@ $('#auth-form').addEventListener('submit', (event) => {
   say('#auth-msg', '');
   busy($('#auth-submit'), async () => {
     try {
-      if (mode === 'in') await signInWithEmailAndPassword(auth, email, password);
+      // The password also opens the person's keys in their account (vault.js): derived here, never sent.
+      if (mode === 'in') { const { user } = await signInWithEmailAndPassword(auth, email, password); vault.signedIn(user.uid, password); }
       else {
         const { user } = await createUserWithEmailAndPassword(auth, email, password);
         await settings.load();
         if (!allowed(email)) { await user.delete().catch(() => signOut(auth)); say('#auth-msg', NOT_MEMBER); return; }
+        vault.signedIn(user.uid, password);
         if (confirmEmail()) await sendConfirmation(user);
       }
     } catch (error) { say('#auth-msg', explain(error)); }
@@ -278,7 +281,8 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && !$('#view-verify').hidden) recheck().catch(() => {});
 });
 
-const leave = () => signOut(auth).then(() => { prefs.detach(); location.hash = '#/'; });
+// Signing out forgets the keys on this device; the account keeps them encrypted, and signing in brings them back.
+const leave = () => vault.signedOut().catch(() => {}).then(() => signOut(auth)).then(() => { prefs.detach(); location.hash = '#/'; });
 for (const id of ['#sign-out', '#verify-other', '#denied-out']) $(id).addEventListener('click', leave);
 
 /* ---------- data ---------- */
@@ -305,6 +309,7 @@ async function refresh() {
   if (current === 'profes') renderProfes();
   refreshMap();
 }
+await ai.initKeys();
 const context = { state, get user() { return { uid: auth.currentUser?.uid, email: auth.currentUser?.email ?? '' }; }, refresh, toast, explain, presetGuide };
 mountMap(context);
 mountSpace(context);
@@ -605,7 +610,8 @@ $('#reset-form').addEventListener('submit', async (e) => {
   button.disabled = true;
   try {
     await confirmPasswordReset(auth, form.dataset.code, password);
-    await signInWithEmailAndPassword(auth, form.dataset.email, password);
+    const { user } = await signInWithEmailAndPassword(auth, form.dataset.email, password);
+    await vault.signedIn(user.uid, password);
     $('#reset-dialog').close();
     toast('Listo: tienes contraseña nueva.');
   } catch (error) { say('#reset-msg', explain(error)); } finally { button.disabled = false; }
@@ -630,7 +636,7 @@ onAuthStateChanged(auth, async (user) => {
   document.documentElement.classList.toggle('is-admin', role.admin);
   document.documentElement.classList.toggle('is-member', isMember(user));
   // A member's queue of material resumes wherever they land: it lives in this browser.
-  if (isMember(user)) { await prefs.attach(user.uid); seen(); startQueue(context); } else prefs.detach();
+  if (isMember(user)) { await prefs.attach(user.uid); vault.attach(user.uid); seen(); startQueue(context); } else prefs.detach();
   await route();
 });
 // Presence, on real events only: signing in (above), changing page and coming back to the tab.

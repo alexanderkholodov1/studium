@@ -5,9 +5,11 @@
 // - OpenRouter, signed in with one click (its free models cost nothing);
 // - Puter, signed in with one click (its allowance pays).
 // Without any of them, the chat: Studium copies the instructions and the person takes them to any chat by hand.
-// Keys and sign-ins stay in this browser (localStorage); they never reach Studium's database. Studium charges nothing.
+// Keys are kept encrypted (vault.js): on this device with a key it cannot export, and in the person's account with a
+// key derived from their own password, which Firebase never receives. Studium charges nothing.
 // Where, which model and which effort is chosen when the AI is used, for that task, and the page proposes the best of
 // what this person has. The last choice per task is remembered.
+import * as vault from './vault.js';
 import { settings } from './settings.js';
 import { AIError, classify } from './aierror.js';
 import { redact } from './secrets.js';
@@ -73,15 +75,34 @@ const CLAUDE_EFFORT = /^claude-(fable|mythos|opus|sonnet|haiku-5)/;
 const CLAUDE_FALLBACK = new Set(['claude-fable-5-1', 'claude-opus-5-5', 'claude-opus-5', 'claude-sonnet-5-5']);
 
 /* ---------- what this browser keeps ---------- */
+// The choices in plain storage; the keys and the bridge's token only in the vault, encrypted.
 function load() {
   let raw = {};
   try { raw = JSON.parse(localStorage.getItem(LOCAL) ?? '{}'); } catch { /* nothing kept */ }
-  // Before 0.5.0 there was one provider with one model and effort for everything: its key carries over, and each task
-  // starts from its own recommendation.
-  if (raw.key && !raw.keys) raw = { keys: { [raw.provider || 'anthropic']: raw.key } };
-  return { keys: {}, models: {}, use: {}, puter: false, bridge: null, ...raw };
+  const v = vault.get();
+  return { models: {}, use: {}, puter: false, ...raw, key: undefined, keys: v.keys, bridge: raw.bridge ? { ...raw.bridge, token: v.bridge } : null };
 }
-function keep(state) { try { localStorage.setItem(LOCAL, JSON.stringify(state)); } catch { /* not kept */ } }
+function keep(state) {
+  const { keys, key, ...rest } = state;
+  const token = state.bridge?.token ?? '';
+  try { localStorage.setItem(LOCAL, JSON.stringify({ ...rest, bridge: state.bridge ? { ...state.bridge, token: undefined } : null })); } catch { /* not kept */ }
+  const v = vault.get();
+  if (JSON.stringify(v.keys) !== JSON.stringify(keys ?? {}) || v.bridge !== token) vault.set({ keys, bridge: token });
+}
+// At start, before anything uses a key: open the vault, and move keys kept in plain text by an older version into it.
+export async function initKeys() {
+  await vault.init();
+  let raw = {};
+  try { raw = JSON.parse(localStorage.getItem(LOCAL) ?? '{}'); } catch { return; }
+  // Before 0.5.0 there was one provider with one key.
+  const old = { ...(raw.key ? { [raw.provider || 'anthropic']: raw.key } : {}), ...(raw.keys ?? {}) };
+  const token = raw.bridge?.token ?? '';
+  if (!Object.keys(old).length && !token) return;
+  const v = vault.get();
+  await vault.set({ keys: { ...old, ...v.keys }, bridge: v.bridge || token });
+  const { keys, key, provider, ...rest } = raw;
+  try { localStorage.setItem(LOCAL, JSON.stringify({ ...rest, bridge: raw.bridge ? { ...raw.bridge, token: undefined } : null })); } catch { /* not kept */ }
+}
 function patch(fn) { const s = load(); fn(s); keep(s); return s; }
 export function offered(way) {
   const w = WAYS[way];

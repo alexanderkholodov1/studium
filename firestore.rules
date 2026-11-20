@@ -370,6 +370,19 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['at']) && request.resource.data.at == request.time;
     }
 
+    // The person's AI keys, encrypted on their device with a key derived from their password (vault.js): only its owner
+    // reads or writes it, not even the admins; and what is kept is ciphertext.
+    match /vaults/{uid} {
+      allow get, delete: if member() && request.auth.uid == uid;
+      allow create, update: if member() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['salt', 'iter', 'iv', 'data', 'updated'])
+        && request.resource.data.keys().hasAll(['salt', 'iter', 'iv', 'data', 'updated'])
+        && text(request.resource.data.salt, 64) && request.resource.data.iter is int
+        && request.resource.data.iter >= 100000 && request.resource.data.iter <= 10000000
+        && text(request.resource.data.iv, 32) && text(request.resource.data.data, 40000)
+        && request.resource.data.updated == request.time;
+    }
+
     // «Yo quiero» in Comunidad: how many people wait for each coming idea. A person counts once: their mark
     // wanted/{idea}__{uid} and the counter change together, up by one with the mark, down by one without it.
     function ideas() { return ['amigos', 'grupos', 'horario', 'musica', 'postits', 'juego', 'logros', 'campus']; }
