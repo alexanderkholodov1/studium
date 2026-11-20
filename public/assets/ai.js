@@ -600,6 +600,24 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
   }
 }
 
+// «Probar este modelo»: one minimal request (a few tokens) with its own time limit, reporting exactly what the
+// provider answered and how long it took. For Gemini, the thinking setting can be left out or given as the API's own
+// enum, so a person (and Studium) can see which request shape a model answers.
+export async function probe(model, { thinking = null, ms = 25_000 } = {}) {
+  const t0 = Date.now(); const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), ms);
+  const generationConfig = { maxOutputTokens: 64, ...(thinking ? { thinkingConfig: { thinkingLevel: thinking } } : {}) };
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(keyOf('gemini'))}`, {
+      method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Responde solo: ok' }] }], generationConfig }),
+    });
+    const body = await res.json().catch(() => ({}));
+    return { model, thinking, status: res.status, ms: Date.now() - t0, text: body.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('').slice(0, 40) ?? '', finish: body.candidates?.[0]?.finishReason ?? '', error: body.error?.message ?? '' };
+  } catch (e) {
+    return { model, thinking, status: 0, ms: Date.now() - t0, error: e.name === 'AbortError' ? `sin respuesta en ${ms / 1000} s` : e.message };
+  } finally { clearTimeout(timer); }
+}
+
 // How much a Gemini model thinks: a level for Gemini 3 and later, a budget of tokens for 2.5 (which counts within the
 // answer's tokens, so it never takes more than half of them).
 function geminiThinking(model, effort, maxTokens) {
