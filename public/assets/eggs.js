@@ -279,7 +279,9 @@ function stopMusic() { radio.playing = false; clearInterval(radio.timer); radio.
 function radioEl() { return document.getElementById('egg-radio'); }
 function place(el, pos) {
   const w = el.offsetWidth || 300; const h = el.offsetHeight || 210;
-  const x = Math.max(8, Math.min(innerWidth - w - 8, pos.x)); const y = Math.max(8, Math.min(innerHeight - h - 8, pos.y));
+  // Never over the navigation bar at the top.
+  const top = (document.getElementById('nav')?.getBoundingClientRect().bottom ?? 0) + 8;
+  const x = Math.max(8, Math.min(innerWidth - w - 8, pos.x)); const y = Math.max(top, Math.min(innerHeight - h - 8, pos.y));
   el.style.left = `${x}px`; el.style.top = `${y}px`;
   return { x, y };
 }

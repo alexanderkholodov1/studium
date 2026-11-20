@@ -121,7 +121,7 @@ export function startTour(kind = 'section') {
   root.className = 'tour';
   root.innerHTML = `<div class="tour-hole"></div>
     <section class="tour-card" role="dialog" aria-label="Recorrido con Specter">
-      <canvas class="prop tour-specter" data-prop="specter" data-skin="${specterSkin()}" data-mood="glad" aria-hidden="true"></canvas>
+      <canvas class="prop tour-specter" data-prop="specter" data-skin="${specterSkin()}" aria-hidden="true"></canvas>
       <div class="tour-body"><p class="tour-text" aria-live="polite"></p>
         <div class="tour-actions"><span class="tour-count"></span><button type="button" class="button ghost small" data-tour-prev>Anterior</button><button type="button" class="button primary small" data-tour-next>Siguiente</button></div>
         <button type="button" class="link tour-close" data-tour-close>Salir del recorrido</button></div>
@@ -158,7 +158,7 @@ export function offerTour() {
     if (currentView() !== 'view-home') return;
     const card = document.createElement('div');
     card.className = 'tour-offer glass';
-    card.innerHTML = `<canvas class="prop tour-specter" data-prop="specter" data-skin="${specterSkin()}" data-mood="glad" aria-hidden="true"></canvas>
+    card.innerHTML = `<canvas class="prop tour-specter" data-prop="specter" data-skin="${specterSkin()}" aria-hidden="true"></canvas>
       <p>Hola, soy Specter. ¿Te muestro Studium en un minuto?</p>
       <div class="tour-actions"><button type="button" class="button primary small" data-yes>Sí, muéstrame</button><button type="button" class="button ghost small" data-no>Ahora no</button></div>
       <small>Cuando quieras, el «?» de abajo te explica cada parte.</small>`;
