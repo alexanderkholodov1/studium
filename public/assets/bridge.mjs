@@ -235,7 +235,8 @@ const ENGINES = {
       try { info = JSON.parse(auth?.out ?? ''); } catch { /* an older Claude Code */ }
       const ready = info ? info.loggedIn === true : auth?.code === 0;
       return {
-        ready, detail: ready ? `con tu sesión de ${info?.authMethod === 'claude.ai' ? 'claude.ai' : 'Claude'}` : 'sin sesión iniciada: abre claude una vez e inicia sesión',
+        ready, detail: ready ? `con tu sesión de ${info?.authMethod === 'claude.ai' ? 'claude.ai' : 'Claude'}${info?.subscriptionType ? `, plan ${info.subscriptionType}` : ''}` : 'sin sesión iniciada: abre claude una vez e inicia sesión',
+        plan: String(info?.subscriptionType ?? ''),
         models: [
           { id: 'claude-opus-5-5', label: 'Claude Opus 5.5', tier: 'strong' },
           { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5', tier: 'mid' },
@@ -335,6 +336,109 @@ async function detectAll() {
   return detected;
 }
 
+/* ---------- «Revisar el estado completo»: the providers' own pages, read, and every fact checked word for word ---------- */
+// The bridge downloads each provider's official pages (a web page cannot; Google's pages draw their text with
+// JavaScript, so their published plain-text versions, «.md», are read instead), the person's own Claude Code extracts the
+// facts (models, what each plan includes, free or paid, temporary access, quotas, extra charges) each with an exact
+// quote, and the bridge keeps only the facts whose quote appears, letter for letter, in the page it downloaded. The
+// result is compared with the last check, so a new model, a model that starts to cost or becomes free, or a quota
+// that changes is said, with its source.
+const SOURCES = [
+  { provider: 'gemini', url: 'https://aistudio.google.com/docs/pricing.md', what: 'Precios y plan gratis de la API de Gemini' },
+  { provider: 'gemini', url: 'https://aistudio.google.com/docs/rate-limits.md', what: 'Límites y reinicio de la cuota de la API de Gemini' },
+  { provider: 'claude', url: 'https://claude.com/pricing', what: 'Qué incluye cada plan de Claude' },
+  { provider: 'claude', url: 'https://code.claude.com/docs/en/model-config.md', what: 'Modelos de Claude Code y créditos de uso' },
+  { provider: 'antigravity', url: 'https://antigravity.google/docs/models', what: 'Modelos de Antigravity por plan' },
+  { provider: 'antigravity', url: 'https://antigravity.google/docs/plans', what: 'Cuotas y cobros extra de Antigravity' },
+  { provider: 'codex', url: 'https://learn.chatgpt.com/docs/pricing', what: 'Codex con los planes de ChatGPT' },
+];
+const CATALOG = path.join(homedir(), '.studium-bridge-catalog.json');
+const SOURCE_CHARS = 160_000;
+const decodeEntities = (s) => s.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;|&#x27;/g, "'")
+  .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)));
+function pageText(html) {
+  return decodeEntities(String(html)
+    .replace(/<(script|style|noscript|svg)[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<(br|\/p|\/div|\/li|\/tr|\/h\d|\/section|\/td|\/th)[^>]*>/gi, '\n')
+    .replace(/<[^>]+>/g, ' '))
+    .replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n').trim();
+}
+// Quotes are compared on letters and digits only, so spaces, punctuation and typography never decide.
+const plain = (s) => String(s ?? '').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+async function fetchSource(src) {
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 25_000);
+  try {
+    const res = await fetch(src.url, { signal: ctl.signal, redirect: 'follow', headers: { 'user-agent': 'StudiumBridge/1 (estado de modelos)' } });
+    const body = await res.text();
+    if (!res.ok) return { ...src, ok: false, status: res.status, error: `HTTP ${res.status}` };
+    return { ...src, ok: true, status: res.status, finalUrl: res.url, text: pageText(body).slice(0, SOURCE_CHARS), fetchedAt: new Date().toISOString() };
+  } catch (e) { return { ...src, ok: false, error: e.name === 'AbortError' ? 'no respondió en 25 s' : e.message }; }
+  finally { clearTimeout(t); }
+}
+const EXTRACT = `Lees páginas oficiales de un proveedor de IA, guardadas como archivos de texto en esta carpeta, y sacas datos para que un estudiante sepa qué puede usar sin pagar.
+Responde solo con un objeto JSON, sin texto antes ni después:
+{"models":[{"id":"el nombre o identificador del modelo tal como lo escribe la página","plans":{"<nombre del plan tal como la página lo llama>":"incluido|creditos|no|de pago|prueba"},"free":true o false o null,"temporary":"si la página dice que el acceso es temporal, de prueba, o que se retirará, en pocas palabras; si no, null","quote":"una frase EXACTA de la página, copiada letra por letra, que dice esto","source":"el nombre del archivo"}],
+ "quotas":[{"plan":"...","text":"qué cuota o límite, y cuándo se reinicia","quote":"frase exacta","source":"archivo"}],
+ "charges":[{"text":"cuándo se cobra algo aparte del plan, y si se puede impedir","quote":"frase exacta","source":"archivo"}]}
+Reglas: cada dato lleva su cita exacta copiada del archivo, sin cambiar ni una letra; si no encuentras una cita que lo diga, no pongas el dato. No supongas nada que la página no diga.`;
+async function verifyAll() {
+  const status = (await detectAll()).find((e) => e.id === 'claude');
+  if (!status?.ready) throw new Failure(424, 'not-ready', 'La revisión completa necesita tu Claude Code con sesión iniciada en esta computadora.');
+  const model = [...CLAUDE_INCLUDED].find((m) => /sonnet/.test(m)) ?? [...CLAUDE_INCLUDED][0];
+  const fetched = await Promise.all(SOURCES.map(fetchSource));
+  const providers = {};
+  let dropped = 0;
+  for (const provider of [...new Set(SOURCES.map((s) => s.provider))]) {
+    const pages = fetched.filter((f) => f.provider === provider);
+    const ok = pages.filter((p) => p.ok);
+    const out = { sources: pages.map(({ text, ...p }) => p), models: [], quotas: [], charges: [], error: '' };
+    providers[provider] = out;
+    if (!ok.length) { out.error = 'No se pudo leer ninguna de sus páginas oficiales.'; continue; }
+    const files = ok.map((p, i) => ({ name: `fuente-${i + 1}.txt`, type: 'text/plain', text: `Fuente: ${p.finalUrl ?? p.url}\n\n${p.text}` }));
+    let answer = '';
+    try { ({ text: answer } = await handleRun({ engine: 'claude', model, effort: 'low', system: EXTRACT, text: `Proveedor: ${provider}. Lee los archivos y devuelve el JSON.`, files, timeoutMs: 300_000 })); }
+    catch (e) { out.error = `Tu Claude Code no pudo leer las páginas: ${e.message}`; continue; }
+    let data = {};
+    try { data = JSON.parse(String(answer).slice(String(answer).indexOf('{'), String(answer).lastIndexOf('}') + 1)); } catch { out.error = 'La respuesta no fue JSON.'; continue; }
+    // Only what the page says, word for word: each fact's quote must be in the file it names.
+    const textOf = new Map(files.map((f) => [f.name, plain(f.text)]));
+    const urlOf = new Map(files.map((f, i) => [f.name, ok[i].finalUrl ?? ok[i].url]));
+    const keep = (x) => {
+      const src = textOf.get(String(x?.source ?? '')); const q = plain(x?.quote);
+      if (src && q.length >= 12 && src.includes(q)) return { ...x, source: urlOf.get(x.source) };
+      dropped += 1; return null;
+    };
+    out.models = (Array.isArray(data.models) ? data.models : []).map(keep).filter(Boolean);
+    out.quotas = (Array.isArray(data.quotas) ? data.quotas : []).map(keep).filter(Boolean);
+    out.charges = (Array.isArray(data.charges) ? data.charges : []).map(keep).filter(Boolean);
+  }
+  const catalog = { checkedAt: new Date().toISOString(), plan: status.plan ?? '', model, providers, dropped };
+  let before = null;
+  try { before = JSON.parse(readFileSync(CATALOG, 'utf8')); } catch { /* the first check */ }
+  catalog.changes = before ? changesOf(before, catalog) : [];
+  try { writeFileSync(CATALOG, JSON.stringify(catalog, null, 2)); } catch { /* kept for this answer only */ }
+  return catalog;
+}
+// What changed since the last check, model by model, with the new fact's source.
+function changesOf(a, b) {
+  const out = [];
+  for (const [p, now] of Object.entries(b.providers)) {
+    const was = new Map((a.providers?.[p]?.models ?? []).map((m) => [String(m.id).toLowerCase(), m]));
+    for (const m of now.models) {
+      const k = String(m.id).toLowerCase(); const old = was.get(k);
+      if (!old) { out.push({ provider: p, kind: 'new', id: m.id, model: m }); continue; }
+      if (old.free !== m.free && m.free != null) out.push({ provider: p, kind: m.free ? 'now-free' : 'now-paid', id: m.id, model: m });
+      if (JSON.stringify(old.plans ?? {}) !== JSON.stringify(m.plans ?? {})) out.push({ provider: p, kind: 'plans', id: m.id, before: old.plans, model: m });
+      if ((old.temporary ?? null) !== (m.temporary ?? null) && m.temporary) out.push({ provider: p, kind: 'temporary', id: m.id, model: m });
+      was.delete(k);
+    }
+    for (const [, m] of was) out.push({ provider: p, kind: 'gone', id: m.id, model: m });
+    const q = (x) => JSON.stringify((x ?? []).map((y) => plain(y.text)).sort());
+    if (q(a.providers?.[p]?.quotas) !== q(now.quotas) && now.quotas.length) out.push({ provider: p, kind: 'quotas', quotas: now.quotas });
+  }
+  return out;
+}
+
 /* ---------- one request at a time per CLI ---------- */
 const lanes = new Map();
 function inLane(id, fn) {
@@ -386,6 +490,7 @@ const server = createServer(async (req, res) => {
   if (!tokenValid(req.headers.authorization)) return fail(res, new Failure(401, 'token', 'El código de enlace no coincide. Vuelve a enlazar el puente en Ajustes.'), ok);
   try {
     if (req.method === 'GET' && pathname === '/v1/status') return send(res, 200, { name: NAME, version: VERSION, engines: await detectAll() }, ok);
+    if (req.method === 'POST' && pathname === '/v1/verify') return send(res, 200, await inLane('claude', verifyAll), ok);
     if (req.method === 'POST' && pathname === '/v1/run') {
       let body;
       try { body = JSON.parse((await readBody(req)).toString('utf8')); } catch (e) { throw e instanceof Failure ? e : new Failure(400, 'bad-request', 'El pedido no es JSON.'); }

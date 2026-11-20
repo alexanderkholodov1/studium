@@ -2097,3 +2097,6 @@ html.has-announce .page { padding-top: 170px; }
 @keyframes ai-new-in { from { opacity: 0; transform: translateY(16px) scale(.92); } }
 @keyframes ai-new-spin { to { rotate: 360deg; } }
 @media (prefers-reduced-motion: reduce) { .ai-new, .ai-new-burst { animation: none; } }
+.ai-cite { display: inline-block; margin-left: 4px; font-size: 12px; } .ai-cite summary { cursor: pointer; color: var(--blue); font-weight: 700; }
+.ai-cite blockquote { margin: 6px 0; padding: 6px 10px; border-left: 3px solid var(--blue); background: var(--card); font-style: italic; }
+.ai-status .actions { display: flex; flex-wrap: wrap; gap: 8px; }

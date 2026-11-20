@@ -161,7 +161,15 @@ const COST_RANK = { free: 0, sub: 0, puter: 1, nofree: 3, paid: 2, unverified: 2
 // verificar» and may charge a key with billing; the page states gemini-4-carbon, -argon and -neon have no free tier.
 // Update this list only from that page.
 const GEMINI_FREE_IDS = new Set(['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-4-hydrogen', 'gemini-3.5-flash-lite']);
-const GEMINI_FREE = { test: (id) => GEMINI_FREE_IDS.has(String(id).replace(/^models\//, '')) };
+const slug = (s) => String(s ?? '').toLowerCase().replace(/^models\//, '').trim().replace(/\s+/g, '-');
+const GEMINI_FREE = { test: (id) => {
+  const c = load().catalog?.providers?.gemini;
+  const k = slug(id);
+  if (c?.models?.length) { const m = c.models.find((x) => slug(x.id) === k); return m ? m.free === true : false; }
+  return GEMINI_FREE_IDS.has(k);
+} };
+// The source of «Gratis» for a Gemini model: the last full check's quote, or the list read on 2026-11-20.
+export const freeSource = (id) => load().catalog?.providers?.gemini?.models?.find((x) => slug(x.id) === slug(id)) ?? null;
 // A model that may cost is used only after the person said yes to it, for that model.
 export const mayCost = (way, id) => ['paid', 'unverified', 'nofree'].includes(costOf(way, id));
 export const costAccepted = (id) => !!load().acceptCost?.[id];
@@ -608,6 +616,13 @@ export const healthOf = (way, id) => load().health?.[`${way}:${id}`] ?? null;
 const silent = (way, id) => { const h = healthOf(way, id); return !!h && !h.ok && Date.now() - h.at < 6 * 3600_000; };
 const markHealth = (way, id, rec) => patch((s) => { s.health = { ...(s.health ?? {}), [`${way}:${id}`]: rec }; });
 export const lastStatus = () => load().lastStatus ?? null;
+export const lastCatalog = () => load().catalog ?? null;
+// «Revisar el estado completo»: through the bridge, the providers' own pages, every fact with its exact quote.
+export async function checkFull() {
+  const catalog = await bridgeFetch('/v1/verify', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+  patch((s) => { s.catalog = catalog; });
+  return catalog;
+}
 export async function checkStatus(onStep = () => {}) {
   const out = { at: Date.now(), ways: [], fresh: [] };
   for (const way of connected()) {

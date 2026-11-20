@@ -520,7 +520,7 @@ function aiSettings() {
     <p class="ai-lede">Studium usa una IA para leer tus archivos, tu horario y crear guías. Tú eliges cuál. <strong>Studium no cobra nada.</strong></p>
     <div class="ai-now ${now.length ? 'on' : ''}">${c ? `Ahora Studium usa <b>${esc(ai.WAYS[c.provider]?.name ?? c.provider)}</b>, con el modelo adecuado para cada tarea. Hoy: ${count(ai.usageToday(c.provider), 'pedido', 'pedidos')}.`
       : 'Todavía no conectaste ninguna. <b>Para empezar, Gemini es gratis y toma un minuto.</b> Si usas ChatGPT o Claude, también sirven.'}</div>
-    ${now.length ? `<div class="ai-status"><div class="ai-status-head"><div><h3>El estado de tus IA</h3><p class="fine">Qué está gratis, qué responde ahora, cuánto te queda y cuándo se reinicia, según cada proveedor.</p></div><button type="button" class="button ghost small" data-ai-status>Revisar el estado</button></div><div data-ai-status-out>${statusHTML(ai.lastStatus())}</div></div>` : ''}
+    ${now.length ? `<div class="ai-status"><div class="ai-status-head"><div><h3>El estado de tus IA</h3><p class="fine">Qué está gratis, qué responde ahora, cuánto te queda y cuándo se reinicia, según cada proveedor.</p></div><div class="actions"><button type="button" class="button ghost small" data-ai-status>Revisar mis cuentas</button><button type="button" class="button ghost small" data-ai-full ${ai.connected().includes('bridge:claude') ? '' : 'disabled title="Necesita el puente con tu Claude Code"'}>Revisar el estado completo</button></div></div><div data-ai-status-out>${statusHTML(ai.lastStatus())}</div><div data-ai-full-out>${fullHTML(ai.lastCatalog())}</div></div>` : ''}
     <p class="ai-ask">¿Qué IA usas?</p>
     <div class="ai-vendors" role="tablist">${Object.entries(VENDORS).map(([k, x]) => `<button role="tab" class="ai-vendor" aria-selected="${k === v}" data-ai-vendor="${k}">${esc(x.name)}<small>${esc(x.note)}</small>${now.some((w) => vendorOfWay(w) === k) ? '<i class="dot" title="conectada"></i>' : ''}</button>`).join('')}</div>
     <div class="ai-panel">${vendorPanel(v)}</div>
@@ -542,11 +542,37 @@ function statusHTML(st) {
       ${w.models.length ? `<ul class="ai-status-models">${w.models.map((m) => `<li><span class="id">${esc(m.id)}</span> <span class="tag c-${esc(m.cost)}">${esc(ai.COST[m.cost] ?? m.cost)}</span> ${m.testing ? '<span class="muted">probando…</span>' : m.ok === true ? `<span class="ok">respondió en ${(m.ms / 1000).toFixed(1)} s</span>` : m.ok === false ? `<span class="bad">no respondió: ${esc(m.error)}</span>` : ''}</li>`).join('')}</ul>` : ''}
       ${w.links.length ? `<p class="fine">${w.links.map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.label)} ↗</a>`).join(' · ')}</p>` : ''}</div>`).join('')}`;
 }
+// The full check: per provider, the pages read, the models with what each plan includes, quotas and extra charges,
+// each with its exact quote and source; what changed since the last check first.
+const PROVIDER = { gemini: 'Gemini (API de Google)', claude: 'Claude y Claude Code', antigravity: 'Antigravity', codex: 'Codex (ChatGPT)' };
+const CHANGE = { new: 'Nuevo', 'now-free': 'Ahora es gratis', 'now-paid': 'Empieza a cobrar', plans: 'Cambió lo que incluye cada plan', temporary: 'Acceso temporal', gone: 'Ya no aparece', quotas: 'Cambió la cuota' };
+function fullHTML(c) {
+  if (!c) return '<p class="muted">La revisión completa lee las páginas oficiales de cada proveedor con tu Claude Code, por el puente, y verifica cada dato palabra por palabra.</p>';
+  const cite = (x) => `<details class="ai-cite"><summary>Fuente</summary><blockquote>${esc(x.quote)}</blockquote><a href="${esc(x.source)}" target="_blank" rel="noopener noreferrer">${esc(x.source)} ↗</a></details>`;
+  const changes = (c.changes ?? []).map((x) => `<div class="ai-new"><span class="ai-new-burst" aria-hidden="true"></span><p class="ai-new-kicker">${esc(CHANGE[x.kind] ?? x.kind)} · ${esc(PROVIDER[x.provider] ?? x.provider)}</p>
+      <h4>${esc(x.id ?? '')}</h4>${x.model ? `<p>${esc(Object.entries(x.model.plans ?? {}).map(([p, v]) => `${p}: ${v}`).join(' · '))}${x.model.temporary ? ` · ${esc(x.model.temporary)}` : ''}</p>${cite(x.model)}` : ''}${x.quotas ? x.quotas.map((q) => `<p>${esc(q.plan)}: ${esc(q.text)}</p>`).join('') : ''}</div>`).join('');
+  const when = new Date(c.checkedAt).toLocaleString('es', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  return `${changes}<p class="fine">Revisión completa del ${esc(when)}${c.plan ? ` · tu plan de Claude: ${esc(c.plan)}` : ''} · leída con ${esc(c.model)}. ${c.dropped ? `${c.dropped} datos descartados porque su cita no estaba, palabra por palabra, en la página.` : 'Todos los datos tienen su cita en la página.'}</p>
+    ${Object.entries(c.providers).map(([p, x]) => `<div class="ai-status-way"><h4>${esc(PROVIDER[p] ?? p)}</h4>
+      <p class="fine">${x.sources.map((s) => `<a href="${esc(s.finalUrl ?? s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.what)}</a> ${s.ok ? '✓' : `<span class="bad">(${esc(s.error)})</span>`}`).join(' · ')}</p>
+      ${x.error ? `<p class="bad">${esc(x.error)}</p>` : ''}
+      ${x.models.length ? `<ul class="ai-status-models">${x.models.map((m) => `<li><span class="id">${esc(m.id)}</span> ${m.free === true ? '<span class="tag c-free">Gratis</span>' : m.free === false ? '<span class="tag c-paid">Cobra</span>' : ''} <span class="muted">${esc(Object.entries(m.plans ?? {}).map(([pl, v]) => `${pl}: ${v}`).join(' · '))}</span>${m.temporary ? ` <span class="bad">${esc(m.temporary)}</span>` : ''}${cite(m)}</li>`).join('')}</ul>` : ''}
+      ${x.quotas.map((q) => `<p>Cuota${q.plan ? ` (${esc(q.plan)})` : ''}: ${esc(q.text)}</p>${cite(q)}`).join('')}
+      ${x.charges.map((q) => `<p>Cobro aparte: ${esc(q.text)}</p>${cite(q)}`).join('')}</div>`).join('')}`;
+}
+async function runFull(btn) {
+  const out = document.querySelector('[data-ai-full-out]');
+  btn.disabled = true; btn.textContent = 'Leyendo las páginas oficiales…';
+  if (out) out.innerHTML = '<p class="muted">El puente descarga las páginas de cada proveedor y tu Claude Code las lee; puede tardar unos minutos. Cada dato se verifica palabra por palabra.</p>';
+  try { const c = await ai.checkFull(); if (out) out.innerHTML = fullHTML(c); }
+  catch (e) { if (out) out.innerHTML = `<p class="bad">${esc(e.message)}</p>`; }
+  finally { btn.disabled = false; btn.textContent = 'Revisar el estado completo'; }
+}
 async function runStatus(btn) {
   const out = document.querySelector('[data-ai-status-out]');
   btn.disabled = true; btn.textContent = 'Revisando…';
   try { await ai.checkStatus((st) => { if (out) out.innerHTML = statusHTML(st); }); }
-  finally { btn.disabled = false; btn.textContent = 'Revisar el estado'; }
+  finally { btn.disabled = false; btn.textContent = 'Revisar mis cuentas'; }
 }
 async function testAI(way) {
   const msg = document.querySelector(`[data-ai-msg="${way}"]`);
@@ -616,6 +642,7 @@ export function mountSpace(context) {
     if (t.dataset.aiDefault) { ai.setDefault(t.dataset.aiDefault); ctx?.toast(`Studium usará ${ai.WAYS[t.dataset.aiDefault]?.name ?? 'esta IA'}.`); renderSettings(); sfx.tick(); return; }
     if (t.dataset.aiTest) testAI(t.dataset.aiTest);
     if (t.dataset.aiStatus !== undefined) runStatus(t);
+    if (t.dataset.aiFull !== undefined) runFull(t);
     if (t.closest('#set-map')) {
       const p = prefs.get();
       if (t.dataset.myCourse) prefs.set({ courses: p.courses.includes(t.dataset.myCourse) ? p.courses.filter((x) => x !== t.dataset.myCourse) : [...p.courses, t.dataset.myCourse] });
