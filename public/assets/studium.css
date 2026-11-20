@@ -1980,3 +1980,26 @@ html.has-announce .page { padding-top: 170px; }
 .labfile { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.3fr); gap: 8px; align-items: center; }
 .labfile input, .labfile select { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 14px; min-width: 0; }
 @media (max-width: 700px) { .labfile { grid-template-columns: 1fr; } }
+/* The desk: this semester's courses as folders lying on it; past semesters in drawers of a cabinet. */
+.es-workdesk { margin-top: 30px; display: grid; gap: 16px; }
+.es-desk-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.es-surface { display: flex; flex-wrap: wrap; gap: 18px; padding: 26px 22px; border-radius: 26px; min-height: 150px;
+  background: linear-gradient(170deg, #e9dcc3, #dccaa8); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .45), inset 0 -10px 30px rgba(90, 60, 20, .18), 0 24px 40px -28px rgba(60, 40, 10, .6); }
+.es-surface > .muted { color: #6b5a3d; align-self: center; }
+.es-folder { position: relative; display: block; width: 200px; padding-top: 18px; color: #3b2a07; text-decoration: none; rotate: var(--r, 0deg); transition: transform .3s cubic-bezier(.2, .9, .3, 1.3); }
+.es-folder:hover { transform: translateY(-6px) rotate(calc(var(--r) * -1)); }
+.es-folder-tab { position: absolute; left: 0; top: 0; max-width: 60%; padding: 4px 12px; border-radius: 10px 10px 0 0; font: 800 11px var(--display); background: #f6c84d;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.es-folder-body { display: grid; gap: 4px; min-height: 96px; padding: 14px; border-radius: 4px 14px 14px 14px; background: linear-gradient(170deg, #ffd98a, #f2b705);
+  box-shadow: 0 14px 22px -12px rgba(90, 60, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .6); }
+.es-folder-body strong { font: 800 16px/1.15 var(--display); } .es-folder-body small { font: 700 12px var(--display); opacity: .75; }
+.es-cabinet { display: grid; gap: 8px; }
+.es-drawer { border-radius: 16px; background: linear-gradient(180deg, #8f97ab, #6c7489); color: #fff; box-shadow: inset 0 2px 0 rgba(255, 255, 255, .25), 0 12px 22px -14px rgba(0, 0, 0, .55); transition: transform .35s cubic-bezier(.2, .9, .3, 1.2); }
+.es-drawer summary { display: flex; align-items: center; gap: 12px; padding: 14px 18px; cursor: pointer; list-style: none; }
+.es-drawer summary::-webkit-details-marker { display: none; }
+.es-drawer summary small { opacity: .8; font: 700 12px var(--display); margin-left: auto; }
+.es-handle { width: 46px; height: 10px; border-radius: 6px; background: linear-gradient(180deg, #d9dde6, #9aa1b2); box-shadow: 0 2px 0 rgba(0, 0, 0, .25); }
+.es-drawer[open] { transform: translateY(4px); }
+.es-drawer-in { display: flex; flex-wrap: wrap; gap: 14px; padding: 6px 18px 18px; }
+.es-drawer.pulled { transform: translateX(26px) scale(1.02); }
+.es-drawer.incoming { outline: 2px dashed rgba(255, 255, 255, .5); }

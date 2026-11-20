@@ -189,8 +189,6 @@ function flip(el, first, { rotate = 0, scale = 1, duration = 600 } = {}) {
 export async function renderEstudia(el, deps) {
   api = deps;
   const items = await desk.all();
-  const byCourse = new Map();
-  for (const it of items) { const k = it.course || 'Sin materia'; byCourse.set(k, [...(byCourse.get(k) ?? []), it]); }
   el.innerHTML = `
     <div class="es-drop glass" data-es-drop>
       <div class="es-drop-in">
@@ -202,9 +200,65 @@ export async function renderEstudia(el, deps) {
       </div>
     </div>
     <section class="es-table" data-es-table hidden></section>
-    ${byCourse.size ? `<section class="es-desks"><h2>Tus escritorios</h2><div class="es-desk-list">${[...byCourse].map(([c, list]) => `<a class="es-desk glass" href="#/estudia/materia/${encodeURIComponent(c)}"><strong>${esc(c)}</strong><span>${list.length} ${list.length === 1 ? 'cosa' : 'cosas'}</span><span class="es-mini">${[...new Set(list.map((x) => x.kind))].map((k) => `<i style="--c:${pileOf(k).color}" title="${esc(pileOf(k).name)}"></i>`).join('')}</span></a>`).join('')}</div></section>` : ''}
+    ${deskHTML(items)}
     <p class="fine es-mine"><a class="link" href="#/mis-aportes">Lo que publicaste</a>: cambia quién lo ve o bórralo.</p>`;
   wire(el);
+}
+
+/* ---------- the desk: this semester's courses as folders on it, past semesters in drawers ---------- */
+const byCourse = (list) => { const m = new Map(); for (const it of list) { const k = it.course || 'Sin materia'; m.set(k, [...(m.get(k) ?? []), it]); } return m; };
+const folderCard = (course, list, i) => `<a class="es-folder" href="#/estudia/materia/${encodeURIComponent(course)}" data-course="${esc(course)}" style="--i:${i};--r:${((i * 37) % 7) - 3}deg">
+    <span class="es-folder-tab">${esc(course)}</span>
+    <span class="es-folder-body"><strong>${esc(course)}</strong><small>${list.length} ${list.length === 1 ? 'cosa' : 'cosas'}</small>
+      <span class="es-mini">${[...new Set(list.map((x) => x.kind))].map((k) => `<i style="--c:${pileOf(k).color}" title="${esc(pileOf(k).name)}"></i>`).join('')}</span></span></a>`;
+function deskHTML(items) {
+  const now = items.filter((x) => !x.drawer);
+  const drawers = new Map();
+  for (const it of items.filter((x) => x.drawer)) drawers.set(it.drawer, [...(drawers.get(it.drawer) ?? []), it]);
+  if (!items.length) return '';
+  const courses = byCourse(now);
+  return `<section class="es-workdesk">
+      <div class="es-desk-top">
+        <h2>Tu escritorio</h2>
+        ${courses.size ? '<button class="button ghost small" data-end-term>Terminar el semestre</button>' : ''}
+      </div>
+      <div class="es-surface" data-surface>${courses.size ? [...courses].map(([c, list], i) => folderCard(c, list, i)).join('') : '<p class="muted">El escritorio está libre: suelta arriba lo de tus materias de este semestre.</p>'}</div>
+      <div class="es-cabinet" data-cabinet>${[...drawers].sort((a, b) => b[1][0].archived - a[1][0].archived).map(([name, list]) => drawerHTML(name, list)).join('')}</div>
+    </section>`;
+}
+const drawerHTML = (name, list) => `<details class="es-drawer" data-drawer="${esc(name)}"><summary><span class="es-handle"></span><strong>${esc(name)}</strong><small>${byCourse(list).size} ${byCourse(list).size === 1 ? 'materia' : 'materias'}</small></summary>
+    <div class="es-drawer-in">${[...byCourse(list)].map(([c, l], i) => folderCard(c, l, i)).join('')}</div></details>`;
+// The semester ends: every folder on the desk flies into a new drawer, which closes.
+async function endTerm(el) {
+  const surface = $('[data-surface]', el); const cabinet = $('[data-cabinet]', el);
+  const items = (await desk.all()).filter((x) => !x.drawer);
+  if (!items.length) return;
+  const d = new Date();
+  const name = `Semestre hasta ${d.toLocaleDateString('es', { month: 'long', year: 'numeric' })}`;
+  const draw = node(drawerHTML(name, items));
+  draw.classList.add('incoming');
+  cabinet.prepend(draw);
+  const target = draw.querySelector('summary').getBoundingClientRect();
+  const folders = $$('.es-folder', surface);
+  if (!calm()) {
+    draw.classList.add('pulled');
+    await sleep(250);
+    folders.forEach((f, i) => {
+      const r = f.getBoundingClientRect();
+      f.animate([{ transform: `rotate(${f.style.getPropertyValue('--r')})`, opacity: 1 },
+        { transform: `translate(${(target.left + target.width / 2 - (r.left + r.width / 2)) * 0.6}px, ${(target.top - r.top) * 0.6 - 60}px) rotate(-8deg) scale(.8)`, opacity: 1, offset: 0.5 },
+        { transform: `translate(${target.left + target.width / 2 - (r.left + r.width / 2)}px, ${target.top + 10 - (r.top + r.height / 2)}px) scale(.25)`, opacity: 0 }],
+      { duration: 760, delay: i * 120, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'forwards' });
+    });
+    await sleep(760 + folders.length * 120);
+    draw.classList.remove('pulled'); sfx.impact?.(140, 700);
+  }
+  const archived = Date.now();
+  await desk.put(items.map((x) => ({ ...x, drawer: name, archived })));
+  draw.classList.remove('incoming');
+  surface.innerHTML = '<p class="muted">El escritorio está libre: suelta arriba lo de tus materias de este semestre.</p>';
+  $('[data-end-term]', el)?.remove();
+  api.ctx.toast('Guardado en su cajón. Tu escritorio está libre para el próximo semestre.');
 }
 
 function wire(el) {
@@ -212,7 +266,15 @@ function wire(el) {
   zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('over'); });
   zone.addEventListener('dragleave', () => zone.classList.remove('over'));
   zone.addEventListener('drop', async (e) => { e.preventDefault(); zone.classList.remove('over'); take(el, await api.droppedFiles(e.dataTransfer)); });
-  el.addEventListener('change', (e) => { if (e.target.matches('[data-es-files]')) { take(el, [...e.target.files]); e.target.value = ''; } });
+  // The pane is drawn again on every visit: its handlers are replaced, never added up.
+  el.onchange = (e) => { if (e.target.matches('[data-es-files]')) { take(el, [...e.target.files]); e.target.value = ''; } };
+  el.onclick = (e) => {
+    const end = e.target.closest('[data-end-term]');
+    if (!end) return;
+    if (end.dataset.sure) { endTerm(el); return; }
+    end.dataset.sure = '1'; end.textContent = '¿Guardar todo en un cajón? Toca otra vez';
+    setTimeout(() => { if (end.isConnected) { delete end.dataset.sure; end.textContent = 'Terminar el semestre'; } }, 4000);
+  };
   $('[data-es-link]', el).addEventListener('submit', (e) => {
     e.preventDefault(); const input = e.target.querySelector('input'); const url = input.value.trim();
     if (!/^https?:\/\/\S+$/.test(url)) { api.ctx.toast('Eso no parece un enlace.'); return; }
