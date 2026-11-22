@@ -201,6 +201,7 @@ export async function renderEstudia(el, deps) {
         <h2>Suelta aquí lo que tengas</h2>
         <p>Archivos, carpetas enteras, fotos del cuaderno. Mejor de una materia a la vez.</p>
         <div class="actions"><label class="button primary">Elegir archivos<input type="file" multiple hidden data-es-files></label><label class="button ghost">Elegir una carpeta<input type="file" webkitdirectory multiple hidden data-es-files></label></div>
+        <p class="es-wait" data-es-wait role="status" hidden></p>
         <form class="es-link" data-es-link><input type="url" placeholder="O pega un enlace: una página, un repo de GitHub…" aria-label="Pegar un enlace"><button class="button ghost small">Agregar</button></form>
       </div>
     </div>
@@ -271,14 +272,43 @@ async function endTerm(el) {
   api.ctx.toast('Guardado en su cajón. Tu escritorio está libre para el próximo semestre.');
 }
 
+/* ---------- the browser's window for choosing files ----------
+   While it is open, or while Chrome counts a huge folder before asking «¿Subir N archivos?» (minutes, for a whole disk),
+   the browser opens no other one and says nothing, not even after a reload (his case, 2026-11-22: 830 000 files chosen
+   by mistake). Studium says it, and asks before reading a folder far bigger than a course. */
+const picker = { at: 0, timer: 0 };
+const BIG = 20000;
+const COUNTING = '<strong>Chrome está revisando la carpeta que elegiste.</strong> Si es muy grande (un disco entero, tu carpeta de usuario) puede tardar varios minutos, y después Chrome te preguntará si quieres «subir» esos archivos: si no era esa carpeta, elige <em>Cancelar</em>. Mientras tanto Chrome no abre otra ventana para elegir; arrastrar archivos aquí sí funciona.';
+const BUSY = '<strong>Chrome todavía está ocupado con la ventana para elegir archivos</strong>, por eso no se abre otra. Puede estar detrás de esta ventana (búscala con Alt+Tab) o revisando una carpeta muy grande: espera su pregunta y elige <em>Cancelar</em> si no era esa. Arrastrar archivos aquí sí funciona.';
+function waitNote(html) {
+  const p = document.querySelector('[data-es-wait]');
+  if (!p) return;
+  p.innerHTML = html; p.hidden = !html;
+}
+function pickerDone() { picker.at = 0; clearTimeout(picker.timer); waitNote(''); }
+// The window did open (this one lost the focus to it): whatever was said about a busy browser no longer holds.
+addEventListener('blur', () => { if (picker.at) { picker.at = Date.now(); clearTimeout(picker.timer); waitNote(''); } });
+// Back from the window with nothing chosen yet and no «cancel»: the browser is still busy with it (counting a folder).
+addEventListener('focus', () => {
+  if (!picker.at) return;
+  clearTimeout(picker.timer);
+  picker.timer = setTimeout(() => { if (picker.at) waitNote(COUNTING); }, 1500);
+});
+
 function wire(el) {
   const zone = $('[data-es-drop]', el);
   zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('over'); });
   zone.addEventListener('dragleave', () => zone.classList.remove('over'));
   zone.addEventListener('drop', async (e) => { e.preventDefault(); zone.classList.remove('over'); take(el, await api.droppedFiles(e.dataTransfer)); });
   // The pane is drawn again on every visit: its handlers are replaced, never added up.
-  el.onchange = (e) => { if (e.target.matches('[data-es-files]')) { take(el, [...e.target.files]); e.target.value = ''; } };
+  el.onchange = (e) => { if (e.target.matches('[data-es-files]')) { pickerDone(); take(el, [...e.target.files]); e.target.value = ''; } };
+  el.oncancel = (e) => { if (e.target.matches?.('[data-es-files]')) pickerDone(); };
   el.onclick = (e) => {
+    if (e.target.matches('[data-es-files]')) {
+      // Asked again while the browser is still busy with the last one: it will not open, so say why.
+      if (picker.at) waitNote(BUSY); else picker.at = Date.now();
+      return;
+    }
     if (e.target.closest('[data-es-tour]')) { startTour('section'); return; }
     const end = e.target.closest('[data-end-term]');
     if (!end) return;
@@ -300,9 +330,27 @@ async function take(el, files) {
   const table = $('[data-es-table]', el);
   table.hidden = false;
   table.innerHTML = '<p class="es-reading">Abriendo…</p>';
+  if (files.length > BIG && !files.sure) {
+    const top = relOf(files[0]).split('/')[0] || files[0].name;
+    table.innerHTML = `<div class="es-confirm"><p><strong>Elegiste ${files.length.toLocaleString('es')} archivos</strong>${top ? ` de «${esc(top)}»` : ''}. Es mucho más que una materia: ¿quizá un disco entero o tu carpeta de usuario? Revisarlos todos puede tardar mucho.</p>
+      <div class="actions"><button class="button primary" data-es-big="no">No era esa, elijo otra</button><button class="button ghost" data-es-big="yes">Sí, revísala igual</button></div></div>`;
+    table.onclick = (e) => {
+      const b = e.target.closest('[data-es-big]');
+      if (!b) return;
+      table.onclick = null;
+      if (b.dataset.esBig === 'yes') { files.sure = true; take(el, files); } else { table.hidden = true; table.innerHTML = ''; }
+    };
+    return;
+  }
   const known = knownCourses();
   const links = files.filter((f) => f.url);
-  const { units: list, skipped, secrets, hidden, root } = await units(files.filter((f) => !f.url));
+  let read;
+  try { read = await units(files.filter((f) => !f.url)); } catch (error) {
+    console.error(error);
+    if (ticket === run) table.innerHTML = '<p class="msg">No pude leer lo que elegiste. Prueba con una carpeta más pequeña, o arrastra los archivos aquí.</p>';
+    return;
+  }
+  const { units: list, skipped, secrets, hidden, root } = read;
   if (ticket !== run) return;
   const folder = root ? courseOfFolder(root) : null;
   const fresh = [...list, ...links.map((l) => ({ files: [], name: l.url, path: '', url: l.url }))].slice(0, 400).map((u, i) => {
