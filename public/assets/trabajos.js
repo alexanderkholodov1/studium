@@ -149,10 +149,12 @@ function aiLine(task) {
   if (!ai.ready()) return `<p class="fine">Todavía no conectaste una IA. <button type="button" class="link" data-tj="connect" data-vendor="${task === 'tutor' ? 'gemini' : 'anthropic'}" data-bridge="${task === 'tutor' ? '' : '1'}">Conectar ${task === 'tutor' ? 'Gemini, gratis' : 'tu Claude'}</button></p>`;
   return ai.pickerHTML(task);
 }
-async function askAI(task, system, text, files = [], label = '') {
+async function askAI(task, system, text, files = [], label = '', live = null) {
   // The trabajo's own folder, when its writer is Claude through the bridge.
   const folder = task === 'solution' && T && ai.choice(task).provider === 'bridge:claude' ? folderOf(T.id) : '';
-  return ai.run({ system, text, files, task, label, folder, maxTokens: task === 'solution' ? ai.longest(ai.choice(task)) : 4000 });
+  try {
+    return await ai.run({ system, text, files, task, label, folder, maxTokens: task === 'solution' ? ai.longest(ai.choice(task)) : 4000, onEvent: live?.onEvent, onProgress: live?.onProgress });
+  } finally { live?.stop(); }
 }
 // «Conectar» opens exactly the recommended option in the settings, and the answers given so far wait here.
 async function connectWay(vendor, bridge) {
@@ -167,6 +169,64 @@ async function connectWay(vendor, bridge) {
   target.classList.add('tj-glow');
   setTimeout(() => target.classList.remove('tj-glow'), 2600);
   ctx.toast('Cuando termines, vuelve a «Trabajos»: tus respuestas siguen ahí.');
+}
+
+/* ---------- live: what the AI is doing, while it works ---------- */
+// The bridge says each file it reads or changes; other AIs say how much they have written. Shown as a small swarm of
+// lit spheres around the AI (it can be turned off) and as a list, with the time, so the person always knows it works.
+const SWARM = 'studium-tj-swarm';
+const swarmOn = () => { try { return localStorage.getItem(SWARM) !== 'off'; } catch { return true; } };
+const VERB = { Read: 'Lee', Glob: 'Busca archivos', Grep: 'Busca en los archivos', Edit: 'Edita', Write: 'Escribe', MultiEdit: 'Edita', NotebookEdit: 'Edita el notebook', Bash: 'Ejecuta', think: 'Piensa', write: 'Escribe la respuesta' };
+function liveHTML(title) {
+  return `<div class="tj-live" data-live>
+      <div class="tj-live-head"><b>${esc(title)}</b><span class="tj-live-time" data-live-time>0 s</span></div>
+      ${swarmOn() ? '<div class="tj-swarm" data-live-swarm><i class="core"></i></div>' : ''}
+      <p class="tj-live-now" data-live-now>Preparando el pedido…</p>
+      <ol class="tj-live-log" data-live-log></ol>
+      <button type="button" class="link small" data-tj="swarm">${swarmOn() ? 'Ocultar la animación' : 'Mostrar la animación'}</button>
+    </div>`;
+}
+function liveFeed(scope) {
+  const el = scope.querySelector('[data-live]');
+  const t0 = Date.now();
+  let seen = 0;
+  let files = 0;
+  let last = Date.now();
+  const tick = setInterval(() => {
+    const s = Math.round((Date.now() - t0) / 1000);
+    const time = el.querySelector('[data-live-time]');
+    if (time) time.textContent = s < 60 ? `${s} s` : `${Math.floor(s / 60)} min ${s % 60} s`;
+    if (Date.now() - last > 20000) { const now = el.querySelector('[data-live-now]'); if (now) now.textContent = 'Sigue trabajando: está pensando o escribiendo una parte larga…'; }
+  }, 1000);
+  const add = (kind, target) => {
+    last = Date.now();
+    const log = el.querySelector('[data-live-log]');
+    const now = el.querySelector('[data-live-now]');
+    const text = `${VERB[kind] ?? kind}${target ? ` ${target}` : ''}`;
+    if (now) now.textContent = `${text}…`;
+    if (log && kind !== 'write' && kind !== 'think') { log.insertAdjacentHTML('afterbegin', `<li>${esc(text)}</li>`); while (log.children.length > 8) log.lastElementChild.remove(); }
+    const swarm = el.querySelector('[data-live-swarm]');
+    if (swarm && (kind === 'Read' || kind === 'Glob' || kind === 'Grep' || kind === 'Edit' || kind === 'Write') && files < 14) {
+      files += 1;
+      const r = 60 + (files % 4) * 22;
+      swarm.insertAdjacentHTML('beforeend', `<i class="sat ${kind === 'Edit' || kind === 'Write' ? 'w' : ''}" style="--r:${r}px;--d:${7 + (files % 5) * 2}s;--a:${files * 47}deg" title="${esc(target)}"><span>${esc(String(target).split('/').pop().slice(0, 18))}</span></i>`);
+    }
+    if (swarm && (kind === 'write' || kind === 'think')) { swarm.classList.remove('pulse'); void swarm.offsetWidth; swarm.classList.add('pulse'); }
+  };
+  return {
+    onEvent(p) {
+      if (p.waiting) { const now = el.querySelector('[data-live-now]'); if (now) now.textContent = 'Esperando su turno en el puente…'; return; }
+      if (p.lost) { const now = el.querySelector('[data-live-now]'); if (now) now.textContent = 'No se pudo leer el avance del puente; el pedido sigue.'; return; }
+      for (const e of p.events ?? []) { seen += 1; add(e.kind, e.target); }
+      if (!seen) { const now = el.querySelector('[data-live-now]'); if (now) now.textContent = 'Tu IA leyó las instrucciones y está pensando…'; }
+    },
+    onProgress(n) {
+      const now = el.querySelector('[data-live-now]');
+      if (now && n >= 0) { last = Date.now(); now.textContent = `Escribiendo: ${n.toLocaleString('es')} caracteres…`; }
+      if (now && n < 0) now.textContent = 'Esperando la primera respuesta…';
+    },
+    stop() { clearInterval(tick); },
+  };
 }
 
 /* ---------- the list ---------- */
@@ -221,10 +281,11 @@ function placeHTML(now) {
   const folders = ai.bridgeOf()?.folders ?? [];
   const modeSel = (f) => `<select data-tj-mode="${esc(f.id)}" aria-label="Permiso en ${esc(f.name)}">${Object.entries(MODE_TEXT).map(([k, v]) => `<option value="${k}" ${f.mode === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
   return `<label class="tj-pick ${now === 'temp' || !now ? 'on' : ''}"><input type="radio" name="workspace" value="temp" data-tj-ws ${now === 'temp' || !now ? 'checked' : ''}> Una carpeta temporal <small>se crea en cada pedido y se borra al terminar; tu IA solo lee lo que trajiste</small></label>
-    ${folders.map((f) => `<div class="tj-pick ${now === f.id ? 'on' : ''} ${f.exists === false ? 'off' : ''}"><label><input type="radio" name="workspace" value="${esc(f.id)}" data-tj-ws ${now === f.id ? 'checked' : ''} ${f.exists === false ? 'disabled' : ''}> ${esc(f.name)} <small>${esc(f.path)}${f.exists === false ? ' · ya no existe' : ''}</small></label>
-      <span class="tj-mode">${modeSel(f)}<small>${esc(MODE_WHY[f.mode] ?? '')}</small></span><button type="button" class="link" data-tj="folder-remove" data-id="${esc(f.id)}">quitar</button></div>`).join('')}
+    ${folders.map((f) => `<div class="tj-pick ${now === f.id ? 'on' : ''} ${f.exists === false || f.expired ? 'off' : ''}"><label><input type="radio" name="workspace" value="${esc(f.id)}" data-tj-ws ${now === f.id ? 'checked' : ''} ${f.exists === false || f.expired ? 'disabled' : ''}> ${esc(f.name)} <small>${esc(f.path)}${f.exists === false ? ' · ya no existe' : f.expired ? ' · el acceso venció' : f.expires ? ` · acceso hasta el ${esc(new Date(f.expires).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))}` : ''}</small></label>
+      ${f.expired ? `<button type="button" class="button primary small" data-tj="folder-renew" data-id="${esc(f.id)}">Renovar el acceso</button>` : `<span class="tj-mode">${modeSel(f)}<small>${esc(MODE_WHY[f.mode] ?? '')}</small></span>`}<button type="button" class="link" data-tj="folder-remove" data-id="${esc(f.id)}">quitar</button></div>`).join('')}
     ${ai.bridgeOld() ? `<p class="tj-warn">Tu puente abierto es la versión ${esc(ai.bridgeOf()?.version || 'anterior')}; para trabajar en tus carpetas necesitas la ${ai.BRIDGE_VERSION}. Ciérralo (Ctrl+C), <a href="${esc(ai.BRIDGE_URL)}" download="studium-bridge.mjs">descárgalo de nuevo</a> y ábrelo con <code>${esc(ai.bridgeCommand())}</code>. Después pulsa <button type="button" class="link" data-tj="bridge-recheck">Ya lo abrí</button>.</p>` : `<div class="tj-addfolder"><button type="button" class="button ghost small" data-tj="folder-pick">Elegir una carpeta de mi computadora…</button>
       <select data-tj-newmode aria-label="Permiso para la carpeta nueva">${Object.entries(MODE_TEXT).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('')}</select>
+      <select data-tj-hours aria-label="Cuánto dura el acceso"><option value="1">por 1 hora</option><option value="8" selected>por 8 horas</option><option value="168">por 7 días</option></select>
       <span class="fine" id="tj-folder-status" role="status">Se abre la ventana de tu computadora para elegirla. Cada trabajo puede tener la suya, sin cerrar el puente.</span></div>`}`;
 }
 async function myName() {
@@ -381,25 +442,26 @@ async function createTrabajo() {
   keepFolder(ref.id, draft.workspace);
   return { id: ref.id, pdfs: binaries, notes };
 }
-function working(text) {
-  root.innerHTML = `<div class="tj-wizard tj-working panel glass"><div class="tj-spinner" aria-hidden="true"></div><h1>${esc(text)}</h1><p class="lede-small">Puedes dejar esta pestaña abierta y volver en un rato.</p></div>`;
+function working(text, live = false) {
+  root.innerHTML = `<div class="tj-wizard tj-working panel glass">${live ? '' : '<div class="tj-spinner" aria-hidden="true"></div>'}<h1>${esc(text)}</h1>${live ? liveHTML('Lo que hace tu IA, ahora') : ''}<p class="lede-small">Puedes dejar esta pestaña abierta y volver en un rato.</p></div>`;
+  return live ? liveFeed(root) : null;
 }
 
-async function generateOutline(files = []) {
+async function generateOutline(files = [], live = null) {
   const system = outlinePrompt({ parts: T.parts, course: T.course, deadline: deadlineText(T.deadline), prefs: T.prefs });
   const text = `El enunciado del trabajo «${T.title}»${T.group ? ` (grupo: ${T.group})` : ''} y lo que lo acompaña:\n\n${T.statement}`;
   let r;
-  try { r = await askAI('solution', system, text, files, `Esquema de «${T.title}»`); T.lastError = ''; } catch (e) { T.lastError = e.message; throw e; }
+  try { r = await askAI('solution', system, text, files, `Esquema de «${T.title}»`, live); T.lastError = ''; } catch (e) { T.lastError = e.message; throw e; }
   keepResume(T.id, r.resume);
   const outline = cleanOutline(parseJSON(r.text), T.parts);
   await setDoc(tRef(T.id), { outline: await pack(outline), ai: madeBy(r), updated: serverTimestamp() }, { merge: true });
   T.outline = outline; T.ai = madeBy(r);
   await logAI({ task: 'solution', step: 'esquema', model: r.model, provider: r.way, prompt: `${system}\n\n[el enunciado y lo que lo acompaña: ${T.statement.length} caracteres]` });
 }
-async function generateMilestone(hid) {
+async function generateMilestone(hid, live = null) {
   const milestone = T.outline.hitos.find((h) => h.id === hid);
   const system = milestonePrompt({ milestone, outline: T.outline, prefs: T.prefs });
-  const r = await askAI('solution', system, `Escribe el hito ${hid} completo.`, [], `Hito ${hid} de «${T.title}»`);
+  const r = await askAI('solution', system, `Escribe el hito ${hid} completo.`, [], `Hito ${hid} de «${T.title}»`, live);
   keepResume(T.id, r.resume);
   const data = cleanMilestone(parseJSON(r.text), milestone);
   await setDoc(tRef(T.id, 'hitos', hid), { data: await pack(data), encoding: 'gzip', by: uid(), ai: madeBy(r), updated: serverTimestamp() });
@@ -665,9 +727,11 @@ async function ask(key, label) {
 }
 async function writeAll(button) {
   const missing = T.outline.hitos.filter((h) => !T.hitos[h.id]);
+  const box = button.closest('.card') ?? gRoot();
   for (const [i, h] of missing.entries()) {
-    say('#tj-gen-status', `Escribiendo el capítulo ${T.outline.hitos.indexOf(h) + 1} (${i + 1} de ${missing.length})…`);
-    await generateMilestone(h.id);
+    box.querySelector('[data-live]')?.remove();
+    box.insertAdjacentHTML('beforeend', liveHTML(`Capítulo ${T.outline.hitos.indexOf(h) + 1} (${i + 1} de ${missing.length}): ${h.titulo}`));
+    await generateMilestone(h.id, liveFeed(box));
   }
   repaint();
 }
@@ -734,8 +798,8 @@ function wire(root) {
         T = await loadTrabajo(made.id);
         draft = null;
         if (!later && ai.ready()) {
-          working('Tu IA está leyendo el enunciado y armando la guía…');
-          try { await generateOutline(made.pdfs); } catch (e) { T.lastError = e.message; }
+          const live = working('Tu IA está leyendo el enunciado y armando la guía', true);
+          try { await generateOutline(made.pdfs, live); } catch (e) { T.lastError = e.message; }
         }
         location.hash = `#/trabajos/${made.id}`;
       } catch (e) { console.error(e); renderDraft(e.message); }
@@ -805,17 +869,34 @@ function wire(root) {
       }).catch((e) => say('#tj-answer-status', e.message));
       return;
     }
+    if (kind === 'swarm') {
+      try { localStorage.setItem(SWARM, swarmOn() ? 'off' : 'on'); } catch { /* this time only */ }
+      const s = b.closest('[data-live]')?.querySelector('[data-live-swarm]');
+      if (s) s.remove(); else b.closest('[data-live]')?.querySelector('.tj-live-head')?.insertAdjacentHTML('afterend', '<div class="tj-swarm" data-live-swarm><i class="core"></i></div>');
+      b.textContent = swarmOn() ? 'Ocultar la animación' : 'Mostrar la animación';
+      return;
+    }
     if (kind === 'bridge-recheck') {
       await busy(b, async () => { await ai.bridgeStatus(); if (draft) { keepAnswer(); renderDraft(); } else repaint(); ctx.toast(ai.bridgeOld() ? 'Sigue abierta la versión anterior del puente.' : `Puente ${ai.bridgeOf()?.version} listo.`); }).catch(() => {});
       return;
     }
     if (kind === 'folder-pick') {
       const mode = b.parentElement.querySelector('[data-tj-newmode]')?.value ?? 'read';
-      say('#tj-folder-status', 'Elige la carpeta en la ventana que se abrió en tu computadora (puede quedar detrás del navegador)…');
+      const hours = Number(b.parentElement.querySelector('[data-tj-hours]')?.value ?? 8);
+      say('#tj-folder-status', 'Elige la carpeta en la ventana que se abrió en tu computadora…');
       await busy(b, async () => {
-        const f = await ai.pickBridgeFolder(mode);
+        const f = await ai.pickBridgeFolder(mode, { hours });
         if (draft) { keepAnswer(); draft.workspace = f.id; renderDraft(); } else if (T) { keepFolder(T.id, f.id); repaint(); }
         ctx.toast(`Carpeta lista: ${f.name} (${MODE_TEXT[f.mode]}).`);
+      }).catch((e) => say('#tj-folder-status', e.message));
+      return;
+    }
+    if (kind === 'folder-renew') {
+      say('#tj-folder-status', 'Confirma la carpeta en la ventana que se abrió en tu computadora…');
+      await busy(b, async () => {
+        const f = await ai.pickBridgeFolder('', { renew: b.dataset.id });
+        if (draft) { keepAnswer(); draft.workspace = f.id; renderDraft(); } else repaint();
+        ctx.toast(`Acceso renovado: ${f.name}.`);
       }).catch((e) => say('#tj-folder-status', e.message));
       return;
     }
@@ -844,11 +925,18 @@ function wire(root) {
     }
     if (kind === 'take') { await busy(b, async () => { await setDoc(tRef(T.id, 'partes', b.dataset.part), { uid: uid(), at: serverTimestamp() }); T.taken[b.dataset.part] = uid(); repaint(); }).catch(() => ctx.toast('Esa parte ya la tomó alguien.')); return; }
     if (kind === 'leave') { const L = myPart(); await busy(b, async () => { await deleteDoc(tRef(T.id, 'partes', L)); delete T.taken[L]; repaint(); }).catch(() => {}); return; }
-    if (kind === 'outline') { await busy(b, async () => { say('#tj-gen-status', 'Tu IA está armando la guía…'); await generateOutline(); repaint(); }).catch((e) => say('#tj-gen-status', e.message)); return; }
+    if (kind === 'outline') {
+      const box = b.closest('.card') ?? gRoot();
+      box.insertAdjacentHTML('beforeend', liveHTML('Tu IA está armando la guía'));
+      await busy(b, async () => { await generateOutline([], liveFeed(box)); repaint(); }).catch((e) => { say('#tj-gen-status', e.message); repaint(); });
+      return;
+    }
     if (kind === 'gen-all') { await busy(b, () => writeAll(b)).catch((e) => say('#tj-gen-status', e.message)); return; }
     if (kind === 'gen') {
       const status = (t) => { const el = gRoot().querySelector(`[data-status="${b.dataset.hito}"]`); if (el) el.textContent = t; };
-      await busy(b, async () => { status('Tu IA lo está escribiendo, con cada línea explicada (unos minutos)…'); await generateMilestone(b.dataset.hito); repaint(); }).catch((e) => status(e.message));
+      const box = b.closest('.card, section') ?? gRoot();
+      box.insertAdjacentHTML('beforeend', liveHTML('Tu IA escribe este capítulo, con cada línea explicada'));
+      await busy(b, async () => { await generateMilestone(b.dataset.hito, liveFeed(box)); repaint(); }).catch((e) => { status(e.message); box.querySelector('[data-live]')?.remove(); });
       return;
     }
     if (kind === 'check-gh') { await busy(b, checkGitHub).catch((e) => say('#tj-gh-status', e.message)); return; }

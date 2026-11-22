@@ -13,7 +13,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSyn
 import { homedir, platform, tmpdir } from 'node:os';
 import path from 'node:path';
 
-const VERSION = '1.3.0';
+const VERSION = '1.4.0';
 const NAME = 'studium-bridge';
 const DEFAULT_PORT = 41730;
 const MAX_BODY = 64 * 1024 * 1024;
@@ -98,26 +98,30 @@ const MODES = {
 };
 const NEVER = ['WebFetch', 'WebSearch', 'Task', 'Agent'];
 const folders = () => (Array.isArray(readConfig().folders) ? readConfig().folders : []).filter((f) => f && typeof f.path === 'string' && MODES[f.mode]);
-const folderView = (f) => ({ id: f.id, name: path.basename(f.path), path: f.path, mode: f.mode, label: MODES[f.mode].label, exists: existsSync(f.path) });
+const HOURS = [1, 8, 24 * 7];
+const expired = (f) => !f.expires || Date.parse(f.expires) <= Date.now();
+const folderView = (f) => ({ id: f.id, name: path.basename(f.path), path: f.path, mode: f.mode, label: MODES[f.mode].label, exists: existsSync(f.path), expires: f.expires ?? '', expired: expired(f) });
 // This computer's own «choose a folder» dialog.
 // PowerShell 7 shows Windows' modern folder dialog; Windows PowerShell 5 only the old tree.
 let PWSH = null;
 if (WIN) execFile('where.exe', ['pwsh.exe'], { timeout: 8000, windowsHide: true }, (err, out) => { if (!err) PWSH = String(out).split(/\r?\n/).find((l) => /pwsh\.exe$/i.test(l.trim()))?.trim() ?? null; });
-function pickFolder() {
-  const script = "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Application]::EnableVisualStyles(); $d = New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description = 'Studium: elige la carpeta donde trabajará tu IA'; try { $d.UseDescriptionForTitle = $true } catch {}; $d.ShowNewFolderButton = $true; $f = New-Object System.Windows.Forms.Form; $f.TopMost = $true; $f.ShowInTaskbar = $false; $f.Opacity = 0; $f.StartPosition = 'CenterScreen'; $f.Show(); $f.Activate(); $r = $d.ShowDialog($f); $f.Close(); if ($r -eq 'OK') { [Console]::OutputEncoding = [Text.Encoding]::UTF8; Write-Output $d.SelectedPath }";
+function pickFolder(start = '') {
+  const script = "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Application]::EnableVisualStyles(); $d = New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description = 'Studium: elige la carpeta donde trabajará tu IA'; try { $d.UseDescriptionForTitle = $true } catch {}; $d.ShowNewFolderButton = $true; if ($env:STUDIUM_START -and (Test-Path -LiteralPath $env:STUDIUM_START)) { $d.SelectedPath = $env:STUDIUM_START }; $f = New-Object System.Windows.Forms.Form; $f.TopMost = $true; $f.ShowInTaskbar = $false; $f.Opacity = 0; $f.StartPosition = 'CenterScreen'; $f.Show(); $f.Activate(); $r = $d.ShowDialog($f); $f.Close(); if ($r -eq 'OK') { [Console]::OutputEncoding = [Text.Encoding]::UTF8; Write-Output $d.SelectedPath }";
   const [cmd, args] = WIN
     ? [PWSH ?? 'powershell.exe', ['-NoProfile', '-STA', '-Command', script]]
     : platform() === 'darwin' ? ['osascript', ['-e', 'POSIX path of (choose folder with prompt "Studium: elige la carpeta donde trabajará tu IA")']]
       : ['zenity', ['--file-selection', '--directory', '--title=Studium: elige la carpeta donde trabajará tu IA']];
-  return new Promise((resolve) => execFile(cmd, args, { timeout: 10 * 60_000, windowsHide: false, encoding: 'utf8' }, (err, out) => {
+  return new Promise((resolve) => execFile(cmd, args, { timeout: 10 * 60_000, windowsHide: false, encoding: 'utf8', env: { ...process.env, STUDIUM_START: start } }, (err, out) => {
     const chosen = String(out ?? '').trim().split(/\r?\n/).pop()?.replace(/[\\/]$/, '') ?? '';
     resolve(!err && chosen && existsSync(chosen) && statSync(chosen).isDirectory() ? chosen : '');
   }));
 }
 async function addFolder(body) {
-  const mode = MODES[body?.mode] ? body.mode : 'read';
-  console.log('\nStudium pidió agregar una carpeta: elige una en la ventana que se abrió (o ciérrala para no agregar ninguna).');
-  const chosen = await pickFolder();
+  const old = body?.renew ? folders().find((x) => x.id === body.renew) : null;
+  const mode = MODES[body?.mode] ? body.mode : old?.mode ?? 'read';
+  const hours = HOURS.includes(Number(body?.hours)) ? Number(body.hours) : 8;
+  console.log(old ? `\nStudium pidió renovar el acceso a ${old.path}: confírmalo en la ventana que se abrió (o ciérrala para no renovarlo).` : '\nStudium pidió agregar una carpeta: elige una en la ventana que se abrió (o ciérrala para no agregar ninguna).');
+  const chosen = await pickFolder(old?.path ?? '');
   if (!chosen) { console.log('  No se agregó ninguna carpeta.'); throw new Failure(400, 'no-folder', 'No elegiste ninguna carpeta.'); }
   let real = chosen;
   try { real = realpathSync.native(chosen); } catch { /* as chosen */ }
@@ -125,10 +129,10 @@ async function addFolder(body) {
     console.log(`  No se agregó ${real}: es demasiado amplia.`);
     throw new Failure(400, 'too-wide', 'Esa carpeta es demasiado amplia (tu carpeta personal o un disco entero). Elige la carpeta del trabajo.');
   }
-  const list = folders().filter((f) => path.resolve(f.path) !== path.resolve(real));
-  const f = { id: randomBytes(6).toString('base64url'), path: real, mode };
+  const list = folders().filter((f) => path.resolve(f.path) !== path.resolve(real) && f.id !== old?.id);
+  const f = { id: old?.id ?? randomBytes(6).toString('base64url'), path: real, mode, expires: new Date(Date.now() + hours * 3600_000).toISOString() };
   writeConfig({ folders: [...list, f] });
-  console.log(`  Carpeta agregada: ${real} (tu IA puede ${MODES[mode].label}).`);
+  console.log(`  Carpeta ${old ? 'renovada' : 'agregada'}: ${real} (tu IA puede ${MODES[mode].label}, hasta el ${new Date(f.expires).toLocaleString('es')}).`);
   return folderView(f);
 }
 function changeFolder(body) {
@@ -316,16 +320,27 @@ function failureOf(engine, text, who = '') {
   return new Failure(502, 'failed', `${name}${account} terminó con un error: ${said || 'sin detalle'}`);
 }
 
-// One line per thing the AI does, in the bridge's window.
-function showStep(line) {
+// One line per thing the AI does, in the bridge's window, and kept for the page (its progress, live).
+const progress = new Map();
+function progressOf(id) {
+  if (!id) return null;
+  for (const [k, v] of progress) if (Date.now() - v.started > 30 * 60_000) progress.delete(k);
+  if (!progress.has(id)) progress.set(id, { started: Date.now(), events: [], done: false, chars: 0 });
+  return progress.get(id);
+}
+function showStep(line, run = null) {
   let e; try { e = JSON.parse(line); } catch { return; }
   if (e.type !== 'assistant') return;
   for (const c of e.message?.content ?? []) {
+    if (c.type === 'text' && run) { run.chars += String(c.text ?? '').length; run.events.push({ at: Date.now(), kind: 'write', target: '' }); continue; }
+    if (c.type === 'thinking' && run) { run.events.push({ at: Date.now(), kind: 'think', target: '' }); continue; }
     if (c.type !== 'tool_use') continue;
     const target = c.input?.file_path ?? c.input?.path ?? c.input?.pattern ?? c.input?.command ?? '';
     const what = { Read: 'lee', Glob: 'busca archivos', Grep: 'busca en los archivos', Edit: 'edita', Write: 'escribe', MultiEdit: 'edita', NotebookEdit: 'edita el notebook', Bash: 'ejecuta' }[c.name] ?? c.name;
     console.log(`    · ${what} ${String(target).slice(0, 140)}`);
+    run?.events.push({ at: Date.now(), kind: c.name, target: String(target).split(/[\\/]/).slice(-2).join('/').slice(0, 120) });
   }
+  if (run && run.events.length > 400) run.events.splice(0, run.events.length - 400);
 }
 
 /* ---------- Claude's accounts on this computer ---------- */
@@ -394,7 +409,9 @@ const ENGINES = {
       const fmt = args.indexOf('json');
       if (fmt > 0) args.splice(fmt, 1, 'stream-json', '--verbose');
       console.log(`\nTu IA trabaja (${account.email || account.id}, ${body.model}${body.place ? `, en ${body.place.path}, puede ${MODES[body.place.mode].label}` : ', en una carpeta temporal'})…`);
-      const r = await runCli(b, args, { cwd: body.place ? body.place.path : dir, timeoutMs, env: account.env, onLine: showStep });
+      const live = progressOf(body.runId);
+      const r = await runCli(b, args, { cwd: body.place ? body.place.path : dir, timeoutMs, env: account.env, onLine: (l) => showStep(l, live) });
+      if (live) live.done = true;
       let result = null;
       for (const line of r.out.split(/\r?\n/)) { try { const e = JSON.parse(line); if (e.type === 'result') result = e; } catch { /* not an event */ } }
       if (!result) { try { result = JSON.parse(r.out.trim()); } catch { /* not the JSON result */ } }
@@ -645,6 +662,7 @@ async function handleRun(body) {
     const f = folders().find((x) => x.id === body.folder);
     if (!f) throw new Failure(404, 'no-folder', 'Esa carpeta ya no está en el puente. Elígela otra vez en Studium.');
     if (!existsSync(f.path)) throw new Failure(404, 'no-folder', `La carpeta ${f.path} ya no existe en esta computadora.`);
+    if (expired(f)) throw new Failure(403, 'expired', `El acceso de tu IA a ${f.path} venció. Renuévalo en Studium (se te pedirá confirmarlo en tu computadora), o usa la carpeta temporal.`);
     if (body.engine !== 'claude') throw new Failure(400, 'bad-request', 'Por ahora solo Claude Code trabaja en tus carpetas.');
     place = { ...f, rel: `.studium/run-${randomBytes(4).toString('hex')}` };
   }
@@ -654,6 +672,7 @@ async function handleRun(body) {
   try { dir = realpathSync.native(made); } catch { /* keep the path as made */ }
   try {
     const names = writeRun(dir, body);
+    if (typeof body.runId !== 'string' || !/^[\w-]{6,40}$/.test(body.runId)) body.runId = '';
     const got = await engine.run(await bin(body.engine === 'antigravity' ? 'agy' : body.engine), dir, { ...body, place }, names, timeoutMs);
     const text = typeof got === 'string' ? got : got.text;
     return { text, session: got?.session ?? '', resume: got?.resume ?? '', engine: body.engine, model: String(body.model ?? ''), effort: String(body.effort ?? ''), ms: Date.now() - started, folder: place ? place.path : '' };
@@ -686,6 +705,12 @@ const server = createServer(async (req, res) => {
   if (!tokenValid(req.headers.authorization)) return fail(res, new Failure(401, 'token', 'El código de enlace no coincide. Vuelve a enlazar el puente en Ajustes.'), ok);
   try {
     if (req.method === 'GET' && pathname === '/v1/status') return send(res, 200, { name: NAME, version: VERSION, cwd: process.cwd(), engines: (await detectAll()).map((e) => ({ ...e, accounts: e.accounts?.map(({ env, ...a }) => a) })) }, ok);
+    if (req.method === 'GET' && pathname === '/v1/progress') {
+      const id = new URL(req.url, 'http://127.0.0.1').searchParams.get('id') ?? '';
+      const p = progress.get(id);
+      const since = Number(new URL(req.url, 'http://127.0.0.1').searchParams.get('since') ?? 0) || 0;
+      return send(res, 200, p ? { started: p.started, ms: Date.now() - p.started, done: p.done, chars: p.chars, total: p.events.length, events: p.events.slice(since) } : { unknown: true }, ok);
+    }
     if (req.method === 'GET' && pathname === '/v1/folders') return send(res, 200, { folders: folders().map(folderView), modes: Object.fromEntries(Object.entries(MODES).map(([k, m]) => [k, m.label])) }, ok);
     if (req.method === 'POST' && (pathname === '/v1/folders/pick' || pathname === '/v1/folders/change')) {
       let body = {};

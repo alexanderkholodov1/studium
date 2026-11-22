@@ -170,7 +170,8 @@ await test('claude works in a folder of the person, with the tools of its permis
   writeFileSync(path.join(work, 'notebook.ipynb'), '{}');
   const cfg = path.join(home, '.studium-bridge.json');
   const before = JSON.parse(readFileSync(cfg, 'utf8'));
-  writeFileSync(cfg, JSON.stringify({ ...before, folders: [{ id: 'leer', path: work, mode: 'read' }, { id: 'git', path: work, mode: 'git' }] }));
+  const soon = new Date(Date.now() + 3600_000).toISOString();
+  writeFileSync(cfg, JSON.stringify({ ...before, folders: [{ id: 'leer', path: work, mode: 'read', expires: soon }, { id: 'git', path: work, mode: 'git', expires: soon }, { id: 'vieja', path: work, mode: 'read', expires: '2020-01-01T00:00:00Z' }] }));
   try {
     scenario({ claude: { answer: 'hecho' } });
     const r = await run({ engine: 'claude', model: 'claude-haiku-5-5', folder: 'leer', files: [{ name: 'notas.txt', type: 'text/plain', text: 'hola' }] });
@@ -189,10 +190,16 @@ await test('claude works in a folder of the person, with the tools of its permis
     const gAllowed = g.args.slice(g.args.indexOf('--allowedTools') + 1, g.args.indexOf('--disallowedTools'));
     check(gAllowed.includes('Edit(./**)') && gAllowed.includes('Bash(git commit:*)') && !gAllowed.includes('Bash'), `git mode allowed ${gAllowed.join(' ')}`);
     check(g.args.includes('WebFetch'), 'git mode still has no web');
+    const old = await run({ engine: 'claude', model: 'claude-haiku-5-5', folder: 'vieja' });
+    check(old.status === 403 && old.data.error.code === 'expired', `expired access: ${old.status}`);
+    scenario({ claude: { answer: 'hecho' } });
+    const live = await run({ engine: 'claude', model: 'claude-haiku-5-5', folder: 'leer', runId: 'prueba-123' });
+    const prog = await call('GET', '/v1/progress?id=prueba-123');
+    check(live.status === 200 && prog.status === 200 && prog.data.done === true, `progress ${JSON.stringify(prog.data)}`);
     const gone = await run({ engine: 'claude', model: 'claude-haiku-5-5', folder: 'nope' });
     check(gone.status === 404, `unknown folder: ${gone.status}`);
     const list = await call('GET', '/v1/folders');
-    check(list.status === 200 && list.data.folders.length === 2 && list.data.folders[0].label === 'solo leer', JSON.stringify(list.data));
+    check(list.status === 200 && list.data.folders.length === 3 && list.data.folders[0].label === 'solo leer' && list.data.folders[2].expired === true, JSON.stringify(list.data));
   } finally {
     writeFileSync(cfg, JSON.stringify(before));
     rmSync(work, { recursive: true, force: true });

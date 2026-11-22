@@ -502,7 +502,7 @@ export async function findBridge(port = BRIDGE_PORT) {
   try { const r = await fetch(`http://127.0.0.1:${port}/v1/hello`); return r.ok ? await r.json() : null; } catch { return null; }
 }
 // The bridge's version this page expects (bridge.mjs, VERSION): an older one is downloaded again.
-export const BRIDGE_VERSION = '1.3.0';
+export const BRIDGE_VERSION = '1.4.0';
 // Is the bridge that answered older than this page needs? (Compared number by number.)
 export function bridgeOld(version = load().bridge?.version) {
   const a = String(version ?? '0').split('.').map(Number);
@@ -563,11 +563,11 @@ export async function bridgeFolders() {
   patch((s) => { if (s.bridge) { s.bridge.folders = body.folders ?? []; s.bridge.modes = body.modes ?? {}; } });
   return body.folders ?? [];
 }
-export async function pickBridgeFolder(mode = 'read') {
+export async function pickBridgeFolder(mode = 'read', { hours = 8, renew = '' } = {}) {
   const hello = await findBridge(bridgeOf()?.port);
   if (!hello) throw new AIError('El puente no está abierto. Ábrelo en tu computadora y vuelve a intentarlo.', { kind: 'account', way: 'bridge:claude' });
   if (bridgeOld(hello.version)) throw new AIError(`Tu puente abierto es la versión ${hello.version ?? 'anterior'}: para elegir carpetas necesitas la ${BRIDGE_VERSION}. Ciérralo, descárgalo de nuevo desde Studium y ábrelo otra vez.`, { kind: 'account', way: 'bridge:claude' });
-  const body = await bridgeFetch('/v1/folders/pick', { method: 'POST', body: JSON.stringify({ mode }) });
+  const body = await bridgeFetch('/v1/folders/pick', { method: 'POST', body: JSON.stringify({ mode, hours, renew }) });
   await bridgeFolders();
   return body.folder;
 }
@@ -672,7 +672,7 @@ const TIMEOUT = 120_000;
 // A whole milestone of a solution guide, every line explained, takes a strong model several minutes.
 const TIMEOUT_OF = { solution: 15 * 60_000 };
 export const longest = (c) => (c.provider === 'anthropic' || c.provider === 'bridge:claude' ? 64000 : 32000);
-export async function run({ system, text, files = [], maxTokens = 32000, onProgress, signal, task = 'guide', use = null, label = '', entry = null, folder = '' } = {}) {
+export async function run({ system, text, files = [], maxTokens = 32000, onProgress, onEvent = null, signal, task = 'guide', use = null, label = '', entry = null, folder = '' } = {}) {
   // Keys and passwords never reach the AI: whatever text goes, from a file or typed, is filtered here first.
   if (text) text = redact(text).text;
   files = files.map((f) => (f?.text ? { ...f, text: redact(f.text).text } : f));
@@ -701,7 +701,7 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
     // Adapters report a count of characters written (or -1: «waiting, nothing yet»).
     const watched = (n) => { if (typeof n === 'number' && n >= 0) { rec.received = n; rec.phase = 'receiving'; } tell(rec); onProgress?.(n); };
     const out = await Promise.race([
-      send({ way, model, effort, system, text, files: usable, maxTokens, onProgress: watched, signal, folder }),
+      send({ way, model, effort, system, text, files: usable, maxTokens, onProgress: watched, signal, folder, onEvent }),
       new Promise((_, reject) => { const limit = TIMEOUT_OF[task] ?? TIMEOUT; timer = setTimeout(() => reject(new AIError(`${model} no respondió en ${limit / 60000} minutos: Studium cortó el pedido.`, { kind: 'transient', way })), limit); }),
     ]).finally(() => clearTimeout(timer));
     rec.phase = 'done'; rec.ms = Date.now() - rec.started; rec.response = String(out.text ?? '').slice(0, 60000);
@@ -824,7 +824,7 @@ function geminiThinking(model, effort, maxTokens) {
   const budget = { low: 1024, medium: 4096, high: 12288, xhigh: 24576 }[effort] ?? 4096;
   return { thinkingConfig: { thinkingBudget: Math.min(budget, Math.floor(maxTokens / 2)) } };
 }
-async function send({ way, model, effort, system, text, files, maxTokens, onProgress, signal, folder = '' }) {
+async function send({ way, model, effort, system, text, files, maxTokens, onProgress, signal, folder = '', onEvent = null }) {
   if (way === 'anthropic') {
     const client = await claude(keyOf(way));
     // Pictures carry their name in a line before them, so the AI knows their order («hoja 1», «hoja 2»).
@@ -917,10 +917,24 @@ async function send({ way, model, effort, system, text, files, maxTokens, onProg
   // The bridge: the person's own CLI, on their computer.
   onProgress?.(-1);
   const engine = WAYS[way].engine;
-  const body = await bridgeFetch('/v1/run', {
-    method: 'POST', signal, engine,
-    body: JSON.stringify({ engine, account: engine === 'claude' ? load().bridge?.account ?? '' : '', folder: engine === 'claude' ? folder : '', model, effort, system, text, files: files.map((f) => (f.data ? { name: f.name, type: f.type, data: f.data } : { name: f.name, type: 'text/plain', text: f.text })) }),
-  });
+  // While it works, what the AI does, read from the bridge (GET /v1/progress), for the page to show it live.
+  const runId = `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  let since = 0;
+  const watch = onEvent ? setInterval(async () => {
+    try {
+      const p = await bridgeFetch(`/v1/progress?id=${runId}&since=${since}`);
+      if (p.unknown) { onEvent({ waiting: true }); return; }
+      since = p.total ?? since;
+      onEvent(p);
+    } catch { onEvent({ lost: true }); }
+  }, 1200) : null;
+  let body;
+  try {
+    body = await bridgeFetch('/v1/run', {
+      method: 'POST', signal, engine,
+      body: JSON.stringify({ runId, engine, account: engine === 'claude' ? load().bridge?.account ?? '' : '', folder: engine === 'claude' ? folder : '', model, effort, system, text, files: files.map((f) => (f.data ? { name: f.name, type: f.type, data: f.data } : { name: f.name, type: 'text/plain', text: f.text })) }),
+    });
+  } finally { if (watch) clearInterval(watch); }
   return { text: String(body.text ?? ''), resume: String(body.resume ?? '') };
 }
 
