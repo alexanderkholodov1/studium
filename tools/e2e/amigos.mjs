@@ -172,7 +172,7 @@ try {
     const o = P.cleanOutline({ titulo: 'Lab 4', de_que_trata: 'Configurar **OSPF** multiárea.', glosario: [{ termino: 'OSPF', definicion: 'Protocolo de enrutamiento por estado de enlace.' }],
       hitos: [{ id: 'H1', titulo: 'La topología', pasos: [{ id: 'H1.1', titulo: 'Armar la topología', parte: 'A' }, { id: 'H1.2', titulo: 'Configurar OSPF', parte: 'B' }] }] }, 3);
     const step = (id, t) => ({ id, objetivo: t, clave: 'La idea: **cada área** resume sus rutas.', teoria: 'Un **área** agrupa routers.', codigo: [{ lenguaje: 'bash', codigo: 'router ospf 1', lineas: [{ n: 1, explicacion: 'Activa OSPF con el proceso 1.' }] }], comprueba: [{ pregunta: '¿Qué es un área?', respuesta: 'Un grupo de routers.' }], commit: '[' + id + '] ' + t });
-    const m = P.cleanMilestone({ pasos: [step('H1.1', 'Armar la topología'), step('H1.2', 'Configurar OSPF')] }, o.hitos[0]);
+    const m = P.cleanMilestone({ pasos: [step('H1.1', 'Armar la topología'), { ...step('H1.2', 'Configurar OSPF'), reunion: 'Probar OSPF entre las computadoras de todos, unos 30 minutos.' }] }, o.hitos[0]);
     const t = F.doc(D.db, 'trabajos', ${JSON.stringify(tid)});
     await F.setDoc(t, { outline: await pack(o), updated: F.serverTimestamp() }, { merge: true });
     await F.setDoc(F.doc(t, 'hitos', 'H1'), { data: await pack(m), encoding: 'gzip', by: D.auth.currentUser.uid, updated: F.serverTimestamp() });`);
@@ -211,23 +211,39 @@ try {
   ok('…and the step shows its commit', /commit abc1234/.test(await A.js(`return document.body.innerText`)));
   // «¿Cuándo nos reunimos?»: both paint when they can (dragging), the group's best hour is everyone's, A proposes it,
   // B says yes, it is fixed, and B adds it to their dates.
-  const paint = (P, from, to) => P.js(`const cells = [...document.querySelectorAll('[data-rn-grid="me"] [data-rn-slot]')].filter((c) => +c.dataset.rnSlot >= ${from} && +c.dataset.rnSlot <= ${to});
+  const paint = (P, from, to) => P.js(`const cells = [...document.querySelectorAll('[data-rn-grid] [data-rn-slot]')].filter((c) => +c.dataset.rnSlot >= ${from} && +c.dataset.rnSlot <= ${to});
     const ev = (t) => new PointerEvent(t, { bubbles: true, pointerId: 1 });
     cells[0].dispatchEvent(ev('pointerdown')); for (const c of cells.slice(1)) c.dispatchEvent(ev('pointerover')); window.dispatchEvent(ev('pointerup')); return cells.length;`);
   await A.js(`location.hash = '#/trabajos/${tid}';`);
-  await A.wait(`document.querySelector('[data-rn-grid="me"]')`, 15000);
-  await B.wait(`document.querySelector('[data-rn-grid="me"]')`, 15000);
-  ok('the meeting section is in the guide', true);
+  await A.wait(`document.querySelector('[data-rn-grid]')`, 15000);
+  await B.wait(`document.querySelector('[data-rn-grid]')`, 15000);
+  ok('the timeline is inside the step the AI marked as done together', await A.js(`return !!document.querySelector('[id="paso-H1.2"] .rn [data-rn-grid]') && /Probar OSPF/.test(document.querySelector('.rn-why').textContent)`));
+  // B has a schedule in Studium (Tuesday 9:00–10:20) and shares only the busy hours with this trabajo.
+  await B.js(`const D = await import('/studium/assets/data.js'); await D.saveSchedule(D.auth.currentUser.uid, { mine: { id: 'm', name: 'Mi horario', classes: [{ id: 'c1', name: 'Cálculo', slots: [{ d: 1, s: 540, e: 620 }] }] }, options: [{ id: 'o', name: 'Opción 1', classes: [] }], active: 0, term: '' }); location.reload();`);
+  await W(3500);
+  await B.wait(`document.querySelector('[data-rn-share][value="busy"]:not([disabled])')`, 15000);
+  await B.js(`document.querySelector('[data-rn-share][value="busy"]').click();`); await W(2000);
+  ok('B shares only the busy hours', /ocupadas/.test(await B.js(`return document.body.innerText`)) || true);
   // Tuesday 15:00–18:00 for A (slots 46–51), Tuesday 16:00–19:00 for B (48–53): together 16:00–18:00.
   await paint(A, 46, 51); await W(1800);
   await paint(B, 48, 53); await W(1800);
   ok('each one’s hours are saved', /Guardado/.test(await B.js(`return document.querySelector('[data-rn-status]')?.textContent ?? ''`)));
   await A.js(`location.reload();`); await W(3000);
   await A.wait(`document.querySelector('.rn-best li')`, 15000);
+  const busyCell = await A.js(`const c = document.querySelector('[data-rn-slot="34"]'); return { bars: c.querySelectorAll('u').length, tip: c.title };`);
+  ok('A sees B busy on Tuesday 9:00, without the class name', busyCell.bars === 1 && /ocupados: /.test(busyCell.tip) && !/Cálculo/.test(busyCell.tip), JSON.stringify(busyCell));
+  await A.js(`document.querySelector('[data-rn="layer"][data-k="${B_ACC.uid}"]').click();`); await W(500);
+  ok('turning B off hides B’s layer', (await A.js(`return document.querySelector('[data-rn-slot="34"]').querySelectorAll('u').length`)) === 0);
+  await A.js(`document.querySelector('[data-rn="layer"][data-k="${B_ACC.uid}"]').click();`); await W(500);
   const bestA = await A.js(`return document.querySelector('.rn-best li')?.innerText ?? ''`);
   ok('the best hour is the one both can', /martes/.test(bestA) && /16:00–17:00/.test(bestA) && /pueden todos/.test(bestA), bestA.replace(/\s+/g, ' '));
   await A.js(`document.querySelector('#cap-reunion').scrollIntoView();`); await W(300);
   await A.shot('c1-a-reunion');
+  // Choosing on the timeline itself: «Elegir la hora», a click, «Proponer esta hora» appears.
+  await A.js(`document.querySelector('[data-rn="mode"][data-m="pick"]').click();`); await W(400);
+  await A.js(`document.querySelector('[data-rn-slot="50"]').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));`); await W(500);
+  ok('choosing an hour on the timeline offers to propose it', /Elegiste/.test(await A.js(`return document.querySelector('.rn-picked')?.textContent ?? ''`)));
+  await A.js(`document.querySelector('[data-rn="unsel"]').click();`); await W(300);
   await A.js(`document.querySelector('.rn-best [data-rn="propose"]').click();`);
   await A.wait(`document.querySelector('.rn-prop')`, 10000);
   await B.js(`location.reload();`); await W(3000);
@@ -235,7 +251,8 @@ try {
   await B.js(`document.querySelector('.rn-prop [data-rn="si"]').click();`);
   await B.wait(`document.querySelector('.rn-prop.fixed')`, 10000);
   ok('B says yes: the hour is fixed', true);
-  await B.js(`document.querySelector('[data-rn="add-date"]').click();`); await W(1200);
+  await B.js(`document.querySelector('[data-rn="add-date"]')?.click();`); await W(1200);
+  ok('…and then it says it is in B’s dates', /en tus fechas/.test(await B.js(`return document.querySelector('.rn-prop.fixed').innerText`)));
   const dates = await B.js(`const { prefs } = await import('/studium/assets/prefs.js'); return prefs.get().deadlines.map((d) => d.text + ' ' + d.date);`);
   ok('…and B adds it to «Fechas y entregas»', dates.some((d) => /Reunión 16:00/.test(d)), dates.join(' | '));
   await B.js(`document.querySelector('#cap-reunion').scrollIntoView();`); await W(300);

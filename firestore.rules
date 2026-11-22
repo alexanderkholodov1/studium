@@ -525,8 +525,11 @@ service cloud.firestore {
       match /disponible/{uid} {
         allow get, list: if member() && inTrabajo(tid);
         allow create, update: if member() && inTrabajo(tid) && uid == request.auth.uid
-          && request.resource.data.keys().hasOnly(['weeks', 'updated']) && request.resource.data.weeks is map
-          && request.resource.data.weeks.size() <= 8 && request.resource.data.updated == request.time;
+          && request.resource.data.keys().hasOnly(['weeks', 'share', 'busy', 'updated']) && request.resource.data.weeks is map
+          && request.resource.data.weeks.size() <= 8 && request.resource.data.updated == request.time
+          && (!('share' in request.resource.data) || request.resource.data.share in ['none', 'busy', 'detail'])
+          && (!('busy' in request.resource.data) || (request.resource.data.busy is list && request.resource.data.busy.size() <= 80
+            && (request.resource.data.busy.size() == 0 || request.resource.data.get('share', 'none') != 'none')));
         allow delete: if member() && (uid == request.auth.uid || ownsTrabajo(tid));
       }
       match /reunion/{pid} {

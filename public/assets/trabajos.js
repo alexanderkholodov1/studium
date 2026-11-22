@@ -14,7 +14,7 @@ import * as ai from './ai.js';
 import { prepare } from './files.js';
 import * as amigos from './amigos.js';
 import { communityOf } from './settings.js';
-import { reunionSection, wireReunion, resetReunion } from './reunion.js';
+import { reunionBlock, wireReunion, resetReunion } from './reunion.js';
 import { bridgeSteps, pairBridge, findBridgeSay } from './space.js';
 import { LETTERS, outlinePrompt, milestonePrompt, wholePrompt, adjustPrompt, ADJUST_KINDS, TUTOR, parseJSON, cleanOutline, cleanMilestone } from './trabajo-prompts.js';
 
@@ -1298,6 +1298,7 @@ function rulesBlock() {
     ${reqs.length ? `<details class="q"><summary class="qh">Lo que pide el enunciado, punto por punto</summary><div class="ans"><ul class="tight">${reqs.map((x) => `<li>${inline(x.texto)}${x.peso ? ` <span class="wt">${esc(x.peso)}</span>` : ''}</li>`).join('')}</ul></div></details>` : ''}`;
 }
 
+let MEET = { at: '', others: new Set(), html: '' };
 function stepHTML(s, step) {
   const holder = T.taken[s.parte];
   const code = (step?.codigo ?? []).map((c) => {
@@ -1315,6 +1316,7 @@ function stepHTML(s, step) {
           ${step.comprueba.map((q) => `<details class="q"><summary class="qh">${inline(q.pregunta)}</summary><div class="ans">${md(q.respuesta)}</div></details>`).join('')}
           ${step.commit ? `<p class="small mut">Al guardarlo en GitHub: <code>${esc(step.commit)}</code> <button type="button" class="ask" data-tj="copy" data-text="${esc(step.commit)}">copiar</button></p>` : ''}</div></div>
         ${code}${(step.tu_turno ?? []).length ? `<div class="turn no-i18n"><h4>✋ Tu turno</h4><ul>${step.tu_turno.map((x) => `<li>${inline(x)}</li>`).join('')}</ul></div>` : ''}${stepChecks(s.id, `el paso «${s.titulo}»${step.objetivo ? `: ${step.objetivo}` : ''}`)}` : ''}
+      ${s.id === MEET.at ? MEET.html : MEET.others.has(s.id) ? `<p class="rn-also">👥 <b>Este paso se hace juntos:</b> ${esc(step.reunion)} <a href="#cap-reunion" data-tj="jump">Ver cuándo se reúnen</a></p>` : ''}
     </article>`;
 }
 
@@ -1365,6 +1367,7 @@ function closing() {
   const used = T.members.reduce((n, m) => n + (T.ia[m.uid]?.length ?? 0), 0);
   return `<section class="sec" id="cap-entrega" style="--c:var(--rose);--cs:var(--rose-s)">
       <h2><span class="n">✓</span>Entregar y defender</h2>
+      ${MEET.at ? '' : MEET.html}
       <div class="row"><div>
         <h3>Cómo va cada uno</h3>
         <div class="progress">${T.members.map((m) => {
@@ -1416,8 +1419,11 @@ function paint() {
   if (!T) return;
   prepareTerms();
   const theme = localStorage.getItem(THEME) ?? '';
-  const meet = T.outline ? reunionSection(T, { repaint, ref: tRef, people: () => T?.members ?? [] }) : '';
-  gRoot().innerHTML = `<div class="tjg-app" data-template="${templateOf()}" ${theme ? `data-theme="${theme}"` : ''}>${topbar()}<div class="wrap">${hero()}${T.outline ? intro() + meet + T.outline.hitos.map(chapter).join('') + closing() : noOutline()}</div></div>`;
+  // The meeting goes where the AI said the group works together (the first such step shown), else at the end.
+  const together = T.outline ? steps().filter((s) => (!onlyMine || s.parte === myPart()) && T.hitos[s.hito]?.pasos?.find((p) => p.id === s.id)?.reunion) : [];
+  const why = together[0] ? T.hitos[together[0].hito].pasos.find((p) => p.id === together[0].id).reunion : '';
+  MEET = { at: together[0]?.id ?? '', others: new Set(together.slice(1).map((s) => s.id)), html: T.outline ? reunionBlock(T, { repaint, ref: tRef, people: () => T?.members ?? [], why }) : '' };
+  gRoot().innerHTML = `<div class="tjg-app" data-template="${templateOf()}" ${theme ? `data-theme="${theme}"` : ''}>${topbar()}<div class="wrap">${hero()}${T.outline ? intro() + T.outline.hitos.map(chapter).join('') + closing() : noOutline()}</div></div>`;
   markChapter();
   drawDiagrams();
   paintTray();
@@ -1871,7 +1877,7 @@ function wire(root) {
     if (kind === 'drop-file') { keepAnswer(); draft.files.splice(Number(b.dataset.i), 1); renderDraft(); return; }
     if (kind === 'connect') { if (draft) keepAnswer(); await connectWay(b.dataset.vendor, !!b.dataset.bridge); return; }
     if (kind === 'paste') { draft.pasting = true; renderDraft(); return; }
-    if (kind === 'jump') { ev.preventDefault(); const el = document.getElementById(b.getAttribute('href').slice(1)); if (el) scroller().scrollTo({ top: el.offsetTop - 56, behavior: 'smooth' }); return; }
+    if (kind === 'jump') { ev.preventDefault(); const el = document.getElementById(b.getAttribute('href').slice(1)); if (el) { const sc = scroller(); sc.scrollTo({ top: el.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - 56, behavior: 'smooth' }); } return; }
     if (kind === 'theme') {
       const app = gRoot().querySelector('.tjg-app');
       const dark = app.dataset.theme ? app.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;

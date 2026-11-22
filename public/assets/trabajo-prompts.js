@@ -104,6 +104,7 @@ Para cada paso:
 - "comprueba": 1 o 2 preguntas para comprobar que lo entendió, con su respuesta.
 - "defensa": 1 a 3 preguntas que un profesor podría hacer en la defensa sobre este paso, con su respuesta.
 - "commit": un mensaje de commit corto que empiece con el id del paso entre corchetes, por ejemplo "[H1.2] Carga del dataset".
+- "reunion": SOLO si este paso exige que el grupo esté junto a la misma hora (en persona o en línea): probar algo entre las computadoras de varios, integrar las partes de todos, ensayar la defensa, una sesión con el profesor. Una frase: qué harán juntos y cuánto dura más o menos ("Probar la VPN entre las tres computadoras, unos 45 minutos"). Si cada uno puede hacerlo por su cuenta, vacío. Studium pone ahí el cronograma para que el grupo elija la hora.
 Si un paso no es de código (por ejemplo revisar los términos de uso de un sitio), "codigo" va vacío y "teoria" explica cómo hacerlo.
 
 Formato exacto:
@@ -112,7 +113,7 @@ Formato exacto:
   "codigo": [{ "lenguaje": "python", "codigo": "…", "lineas": [{ "n": 1, "explicacion": "…" }] }],
   "librerias": [{ "nombre": "…", "para_que": "…" }],
   "esperado": "…", "comprueba": [{ "pregunta": "…", "respuesta": "…" }],
-  "defensa": [{ "pregunta": "…", "respuesta": "…" }], "commit": "[${milestone.id}.1] …" }] }
+  "defensa": [{ "pregunta": "…", "respuesta": "…" }], "commit": "[${milestone.id}.1] …", "reunion": "" }] }
 \`\`\`
 
 El esquema de la guía:
@@ -240,6 +241,7 @@ export function cleanMilestone(m, milestone) {
     comprueba: list(p?.comprueba, 4).map((q) => ({ pregunta: str(q?.pregunta, 400), respuesta: str(q?.respuesta, 1500) })).filter((q) => q.pregunta),
     defensa: list(p?.defensa, 5).map((q) => ({ pregunta: str(q?.pregunta, 400), respuesta: str(q?.respuesta, 1500) })).filter((q) => q.pregunta),
     commit: str(p?.commit, 120),
+    reunion: str(p?.reunion, 300),
   }));
   if (!pasos.length) throw new Error(`La respuesta de tu IA no trae los pasos del hito ${milestone.id}.`);
   return { id: milestone.id, pasos };
