@@ -9,7 +9,7 @@ import { sfx } from './sfx.js';
 import { specter } from './play.js';
 
 const GENERAL = [
-  { sel: '#nav [data-tab="home"]', text: 'Hola, soy Specter. Te muestro Studium en un minuto. Inicio es tu espacio: lo que viene, tus pendientes, tu enfoque y lo que vas encontrando.' },
+  { sel: '#nav [data-tab="home"]', text: '¡Vamos! Empecemos por Inicio: es tu espacio, con lo que viene, tus pendientes, tu enfoque y lo que vas encontrando.' },
   { sel: '#nav [data-tab="contribute"]', text: 'Estudiar: todo lo de tus materias en un solo lugar, y las guías que tu IA hace con eso.' },
   { sel: '#nav [data-tab="map"]', text: 'El Grafo: lo que aportamos entre todos, unido por conceptos, materias y evaluaciones. Puedes buscar y seguir rutas.' },
   { sel: '#nav [data-tab="profes"]', text: 'Profes: lo que la comunidad sabe de cada profe, para que elijas sabiendo qué esperar.' },

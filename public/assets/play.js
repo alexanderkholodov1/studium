@@ -44,6 +44,7 @@ let bodies = [];
 let bubbles = [];
 let nodo = null;
 let ambience = 'vivo';
+let held = 0; // how many things (the tour, its offer) show him instead of the page
 // Bubbles to pop: only in the playful ambience, when the person turned them on in Settings and the admins allow them.
 let bubblesOn = false;
 let quiet = false;
@@ -511,7 +512,8 @@ function routine() {
   for (const [ms, fn] of steps) setTimeout(() => { if (run === routineRun && nodo && !drag && !nodo.fly && !nodo.gone) fn(); }, ms);
 }
 export function say(text, ms = 2600) {
-  if (!nodo || !chatty()) return;
+  // Never words where he is not: hidden, away, or while the tour's card shows him instead.
+  if (!nodo || !chatty() || nodo.gone || held || nodo.el.style.visibility === 'hidden') return;
   front.querySelector('.speech')?.remove();
   const el = document.createElement('div');
   el.className = 'speech';
@@ -891,8 +893,7 @@ function costumeDrag(e) {
 document.addEventListener('pointerdown', costumeDrag);
 
 // Only one Specter on screen: when something else shows him (the tour), the one of the page spins away, and comes
-// back to his place when it ends. Nested callers are counted.
-let held = 0;
+// back to his place when it ends. Nested callers are counted (`held`, declared at the top).
 function leavePage() {
   held += 1;
   if (!nodo || nodo.gone) return;
@@ -980,14 +981,18 @@ export const play = {
     // stay exactly where they are, and only Specter comes or goes, spinning.
     if (name === 'enfoque' || was === 'enfoque' || !bodies.length) { build(); wake(); return; }
     const wants = name === 'jugueton' || name === 'vivo';
-    if (wants && !nodo) { makeNodo(); spin('in'); setTimeout(() => nodo?.el.classList.remove('spin-in'), 600); }
+    if (wants && !nodo) {
+      makeNodo();
+      if (held) { nodo.gone = true; nodo.el.style.visibility = 'hidden'; } // the tour's card has him; he comes back with it
+      else { spin('in'); setTimeout(() => nodo?.el.classList.remove('spin-in'), 600); }
+    }
     else if (!wants && nodo) {
       const gone = nodo; stopRoutine(); spin('out');
       setTimeout(() => { gone.el.remove(); bodies = bodies.filter((b) => b !== gone); if (nodo === gone) nodo = null; front.querySelector('.speech')?.remove(); }, 560);
     }
     if (!chatty()) { dancing = 0; front?.querySelectorAll('.speech').forEach((el) => el.remove()); }
     // Into the playful one, he says so: here he plays and talks.
-    if (name === 'jugueton' && nodo) setTimeout(() => { if (nodo && chatty()) { mood('glad', 1600); say(['¡Ahora sí! Aquí juego y hablo contigo.', '¡Modo juguetón! Ahora sí podemos conversar.', '¡Yupi! Aquí tengo mucho que contarte.'][Math.floor(Math.random() * 3)], 2600); } }, 700);
+    if (name === 'jugueton' && nodo) setTimeout(() => { if (nodo && chatty() && !nodo.gone && !held) { mood('glad', 1600); say(['¡Ahora sí! Aquí juego y hablo contigo.', '¡Modo juguetón! Ahora sí podemos conversar.', '¡Yupi! Aquí tengo mucho que contarte.'][Math.floor(Math.random() * 3)], 2600); } }, 700);
     wake();
   },
   // The map and the guide reader need the whole screen still.
