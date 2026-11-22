@@ -3108,6 +3108,8 @@ canvas.prop { display: block; }
 .tj-error details { margin: 6px 0 10px; }
 .tj-error pre { white-space: pre-wrap; font-size: 12.5px; max-height: 200px; overflow: auto; }
 .tj-error-act { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; }
+.tj-err-ai:not(:empty) { margin: 4px 0 12px; padding: 10px 14px; border-radius: 12px; background: color-mix(in oklab, var(--blue, #2f5bd3) 8%, var(--card, #fff)); box-shadow: inset 0 0 0 1px var(--line); }
+.tj-err-ai p { margin: 4px 0; }
 
 /* Drafts of a new trabajo, on this device. */
 .tj-sub { font-size: 18px; margin: 22px 0 10px; }
