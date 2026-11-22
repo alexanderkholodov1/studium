@@ -539,7 +539,7 @@ export async function bridgeStatus() {
   const engines = Array.isArray(body.engines) ? body.engines : [];
   patch((s) => {
     if (!s.bridge) return;
-    s.bridge.engines = engines; s.bridge.at = Date.now();
+    s.bridge.engines = engines; s.bridge.at = Date.now(); s.bridge.cwd = String(body.cwd ?? '');
     for (const e of engines) s.models[`bridge:${e.id}`] = (e.models ?? []).map((m) => m.id);
     // The Claude account: the one chosen, while it still has its session; else the first signed in.
     const claude = engines.find((e) => e.id === 'claude');

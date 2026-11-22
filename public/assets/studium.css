@@ -2792,3 +2792,23 @@ canvas.prop { display: block; }
 .tj-bridge { margin: 4px 0 6px; padding: 14px 18px; border-radius: 16px; background: color-mix(in oklab, var(--blue) 6%, transparent); }
 .tj-bridge .howto { margin: 0 0 10px; }
 .vault-more > summary { cursor: pointer; color: var(--ink-2); font-weight: 650; }
+/* «Trabajos»: who writes, who answers, where; how the guide should be; the terms as cards. */
+.tj-roles { display: grid; gap: 14px; }
+.tj-roles h3, .tj-prefs h3, .tj-ways-title { margin: 6px 0; font-size: 17px; }
+.tj-pick { display: flex; align-items: center; gap: 10px; padding: 10px 14px; margin: 6px 0; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; font-weight: 650; }
+.tj-pick input { width: auto; margin: 0; accent-color: var(--blue); }
+.tj-pick small { color: var(--muted); font-weight: 500; }
+.tj-pick.on { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--blue) 60%, transparent); background: color-mix(in oklab, var(--blue) 7%, transparent); }
+.tj-pick.off { opacity: .6; cursor: not-allowed; }
+.tj-prefs { display: grid; gap: 10px; }
+.tj-seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.tj-seg label { padding: 8px 14px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; font-weight: 650; font-size: 15px; }
+.tj-seg label.on { background: var(--blue); color: #fff; box-shadow: none; }
+.tj-seg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.tj-boxes { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0 10px; }
+.tjg-app .flash { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.tjg-app .fc { background: var(--panel); border: 1px solid var(--line); border-top: 4px solid var(--c); border-radius: 6px; min-height: 110px; padding: 14px 16px; cursor: pointer; }
+.tjg-app .fc > summary { list-style: none; font: 700 18px var(--gd); text-align: center; padding: 18px 0; }
+.tjg-app .fc > summary::-webkit-details-marker { display: none; }
+.tjg-app .fc[open] { background: var(--cs); }
+.tjg-app .fc[open] > summary { font-size: 14px; padding: 0 0 6px; color: var(--muted); }

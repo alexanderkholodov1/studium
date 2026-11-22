@@ -565,7 +565,7 @@ const server = createServer(async (req, res) => {
   if (req.method === 'GET' && pathname === '/v1/hello') return send(res, 200, { name: NAME, version: VERSION }, ok);
   if (!tokenValid(req.headers.authorization)) return fail(res, new Failure(401, 'token', 'El código de enlace no coincide. Vuelve a enlazar el puente en Ajustes.'), ok);
   try {
-    if (req.method === 'GET' && pathname === '/v1/status') return send(res, 200, { name: NAME, version: VERSION, engines: (await detectAll()).map((e) => ({ ...e, accounts: e.accounts?.map(({ env, ...a }) => a) })) }, ok);
+    if (req.method === 'GET' && pathname === '/v1/status') return send(res, 200, { name: NAME, version: VERSION, cwd: process.cwd(), engines: (await detectAll()).map((e) => ({ ...e, accounts: e.accounts?.map(({ env, ...a }) => a) })) }, ok);
     if (req.method === 'POST' && pathname === '/v1/verify') {
       let body = {};
       try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}'); } catch { /* the whole check */ }

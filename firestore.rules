@@ -463,7 +463,7 @@ service cloud.firestore {
     function inTrabajo(tid) { return exists(/databases/$(database)/documents/trabajos/$(tid)/miembros/$(request.auth.uid)); }
     function ownsTrabajo(tid) { return get(trabajoAt(tid)).data.owner == request.auth.uid; }
     function trabajo(d) {
-      return d.keys().hasOnly(['title', 'course', 'group', 'deadline', 'parts', 'owner', 'code', 'statement', 'outline', 'encoding', 'ai', 'repo', 'created', 'updated'])
+      return d.keys().hasOnly(['title', 'course', 'group', 'deadline', 'prefs', 'parts', 'owner', 'code', 'statement', 'outline', 'encoding', 'ai', 'repo', 'created', 'updated'])
         && d.keys().hasAll(['title', 'parts', 'owner', 'code', 'statement', 'encoding', 'created', 'updated'])
         && text(d.title, 160) && optional(d, 'course', 120) && optional(d, 'group', 80) && optional(d, 'deadline', 40)
         && d.parts is int && d.parts >= 1 && d.parts <= 8
@@ -471,6 +471,7 @@ service cloud.firestore {
         && d.statement is bytes && d.statement.size() <= 600000 && d.encoding == 'gzip'
         && (!('outline' in d) || (d.outline is bytes && d.outline.size() <= 600000))
         && (!('ai' in d) || made(d.ai))
+        && (!('prefs' in d) || (d.prefs is map && d.prefs.size() <= 12 && (!('note' in d.prefs) || (d.prefs.note is string && d.prefs.note.size() <= 1500))))
         && (!('repo' in d) || (d.repo is map && d.repo.keys().hasOnly(['owner', 'name']) && text(d.repo.owner, 100) && text(d.repo.name, 100)))
         && d.created is timestamp && d.updated == request.time;
     }

@@ -407,9 +407,18 @@ document.addEventListener('submit', async (e) => {
   e.preventDefault();
   const msg = form.parentElement.querySelector('[data-vault-msg]');
   const btn = form.querySelector('button');
-  btn.disabled = true; msg.textContent = 'Cifrando tus claves…';
-  try { await vault.confirm(form.password.value); form.closest('[data-vault]').innerHTML = vaultHTML(); }
-  catch (err) { msg.textContent = err.message; btn.disabled = false; }
+  // Every step said, and never a silent wait: past 20 seconds the person is told what is going on.
+  btn.disabled = true; msg.textContent = 'Comprobando tu contraseña…';
+  const slow = setTimeout(() => { msg.textContent = 'Sigue trabajando: cifrar tus claves con tu contraseña tarda unos segundos, y luego se guardan en tu cuenta. Si no termina en un minuto, revisa tu conexión.'; }, 20000);
+  try {
+    await vault.confirm(form.password.value);
+    msg.textContent = 'Guardando tus claves cifradas en tu cuenta…';
+    const box = form.closest('[data-vault]');
+    box.innerHTML = vaultHTML();
+    const after = box.querySelector('[data-vault-msg]') ?? box;
+    if (!vault.state().synced) after.insertAdjacentHTML('beforeend', '<p class="msg">No se pudieron guardar en tu cuenta ahora (sin conexión con ella). Siguen cifradas en este dispositivo; Studium lo intenta otra vez cuando vuelva la conexión.</p>');
+  } catch (err) { msg.textContent = err.message; btn.disabled = false; }
+  finally { clearTimeout(slow); }
 });
 // «Pendientes»: add, check, remove; its class list is filled when «Fecha o clase» opens.
 document.addEventListener('submit', (e) => {

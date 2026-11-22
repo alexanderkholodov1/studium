@@ -190,18 +190,21 @@ const QUESTIONS = [
   { key: 'course', ask: '¿De qué materia es?', input: 'text', placeholder: 'Machine Learning', optional: true },
   { key: 'statement', ask: 'Trae el enunciado', hint: 'Y todo lo que lo acompaña: la rúbrica, archivos de inicio, un ZIP. Puedes traer varios.', input: 'files', required: true },
   { key: 'ai', ask: 'Tu IA para este trabajo', input: 'ai' },
+  { key: 'prefs', ask: '¿Cómo quieres la guía?', hint: 'Elige lo que prefieras; lo demás queda como viene.', input: 'prefs' },
   { key: 'parts', ask: '¿Cuántos son en el grupo?', hint: 'La guía se divide en una parte por persona.', input: 'count' },
   { key: 'group', ask: '¿Cómo se llama el grupo?', hint: 'Algunos trabajos lo piden en el informe.', input: 'text', placeholder: 'Grupo 4', optional: true },
   { key: 'deadline', ask: '¿Cuándo es la entrega?', input: 'date', optional: true },
   { key: 'ready', ask: 'Todo listo', input: 'ready' },
 ];
+export const PREF_DEFAULT = { tone: 'balanced', level: 'zero', length: 'normal', text: 'some', cards: true, defense: true, practice: false, visuals: true, note: '' };
+const bridgeCwd = () => ai.bridgeOf()?.cwd ?? '';
 async function myName() {
   const p = await loadProfile(uid()).catch(() => null);
   const u = auth.currentUser;
   return String(p?.nickname || u?.displayName || (u?.email ?? '').split('@')[0] || 'Yo').slice(0, 40);
 }
 function startDraft() {
-  draft = { at: 0, title: '', course: '', text: '', files: [], parts: 3, group: '', date: '', time: '', pasting: false };
+  draft = { at: 0, title: '', course: '', text: '', files: [], parts: 3, group: '', date: '', time: '', pasting: false, workspace: 'temp', prefs: { ...PREF_DEFAULT } };
   renderDraft();
 }
 const sameFile = (a, b) => a.name === b.name && a.size === b.size && a.lastModified === b.lastModified;
@@ -235,16 +238,41 @@ function renderDraft(error = '') {
     const what = [k.pdf && `${k.pdf} PDF`, k.office && `${k.office} ${k.office === 1 ? 'documento' : 'documentos'} de Office`, k.image && `${k.image} ${k.image === 1 ? 'foto' : 'fotos'}`, k.archive && `${k.archive} ${k.archive === 1 ? 'archivo comprimido' : 'archivos comprimidos'}`, k.code && `${k.code} de código o notebooks`, (k.text + (draft.text ? 1 : 0)) && `${k.text + (draft.text ? 1 : 0)} de texto`, k.other && `${k.other} de otro tipo`].filter(Boolean);
     hint = `Trajiste ${what.join(', ')} (${sizeText(an.size)}). Tu IA los lee y arma la guía; esto es lo que conviene para este caso:`;
     const ready = opts.find(usable);
-    control = `<div class="tj-ways">${opts.map((o, i) => `<div class="tj-way glass ${i === 0 ? 'rec' : ''}">
+    const ways = ai.connected();
+    const writer = ai.choice('solution').provider;
+    const tutor = ai.choice('tutor').provider;
+    const wayRadio = (task, now) => ways.map((w) => `<label class="tj-pick ${w === now ? 'on' : ''}"><input type="radio" name="use-${task}" value="${esc(w)}" data-tj-use="${task}" ${w === now ? 'checked' : ''}> ${esc(ai.WAYS[w]?.name ?? w)} <small>${esc(ai.WAYS[w]?.where ?? '')}</small></label>`).join('');
+    const bridgeWrites = writer.startsWith('bridge:');
+    const roles = ways.length ? `<div class="tj-roles">
+        <div><h3>Quién escribe la guía</h3>${wayRadio('solution', writer)}</div>
+        <div><h3>Quién responde tus dudas al instante</h3><p class="fine">Cuando pulses «No lo entiendo». Conviene una rápida.</p>${wayRadio('tutor', tutor)}</div>
+        ${bridgeWrites ? `<div><h3>Dónde trabaja tu IA</h3>
+          <label class="tj-pick ${draft.workspace === 'temp' ? 'on' : ''}"><input type="radio" name="workspace" value="temp" data-tj-ws ${draft.workspace === 'temp' ? 'checked' : ''}> En una carpeta temporal <small>se crea para cada pedido y se borra al terminar; tu IA solo lee lo que trajiste</small></label>
+          <label class="tj-pick off"><input type="radio" name="workspace" value="folder" disabled> En la carpeta donde abriste el puente${bridgeCwd() ? ` <small>${esc(bridgeCwd())}</small>` : ''} <span class="tag">Pronto</span></label>
+          <p class="fine">Trabajar en tu propia carpeta le da a tu IA un permiso nuevo en tu computadora: primero te muestro cómo funciona y qué puede y no puede hacer.</p></div>` : ''}
+      </div>` : '';
+    control = `${roles}<h3 class="tj-ways-title">${ways.length ? 'Otras formas, según lo que trajiste' : 'Lo que conviene, según lo que trajiste'}</h3><div class="tj-ways">${opts.map((o, i) => `<div class="tj-way glass ${i === 0 ? 'rec' : ''}">
         <div><b>${esc(o.name)}</b>${i === 0 ? ' <span class="tag rec">Recomendado</span>' : ''}<p>${esc(o.why)}</p><p class="fine">${esc(o.how)}</p></div>
         ${usable(o) ? '<span class="tj-ok">Conectada ✓</span>' : o.id === 'bridge' ? `<button type="button" class="button ${i === 0 ? 'primary' : 'ghost'} small" data-tj="pair-here">Conectar aquí</button>` : `<button type="button" class="button ${i === 0 ? 'primary' : 'ghost'} small" data-tj="connect" data-vendor="${o.vendor}" data-bridge="${o.bridge ? '1' : ''}">Conectar</button>`}</div>
         ${o.id === 'bridge' && draft.pairing && !usable(o) ? `<div class="tj-bridge ai-bridge">${bridgeSteps().replace('data-ai-pair>', 'data-tj="pair-code">')}</div>` : ''}`).join('')}</div>
-      ${ready ? ai.pickerHTML('solution') : '<p class="fine">Puedes seguir sin conectar ninguna y escribir la guía después.</p>'}`;
+      ${ready ? '' : '<p class="fine">Puedes seguir sin conectar ninguna y escribir la guía después.</p>'}`;
+  }
+  if (q.input === 'prefs') {
+    const seg = (key, choices) => `<div class="tj-seg" role="radiogroup">${choices.map(([v, label]) => `<label class="${draft.prefs[key] === v ? 'on' : ''}"><input type="radio" name="p-${key}" value="${v}" data-tj-pref="${key}" ${draft.prefs[key] === v ? 'checked' : ''}>${esc(label)}</label>`).join('')}</div>`;
+    const box = (key, label) => `<label class="tj-pick ${draft.prefs[key] ? 'on' : ''}"><input type="checkbox" data-tj-pref="${key}" ${draft.prefs[key] ? 'checked' : ''}> ${esc(label)}</label>`;
+    control = `<div class="tj-prefs">
+        <div><h3>Cómo explica</h3>${seg('tone', [['direct', 'Directo a la respuesta'], ['balanced', 'Equilibrado'], ['didactic', 'Muy didáctico']])}</div>
+        <div><h3>Desde dónde parte</h3>${seg('level', [['zero', 'Desde cero'], ['basic', 'Sé lo básico'], ['advanced', 'Tengo experiencia']])}</div>
+        <div><h3>Qué tan larga</h3>${seg('length', [['short', 'Corta'], ['normal', 'Normal'], ['full', 'Completa']])}</div>
+        <div><h3>Texto en pantalla</h3>${seg('text', [['little', 'Poco, al grano'], ['some', 'Lo justo'], ['much', 'Explicaciones largas']])}</div>
+        <div><h3>Qué incluye</h3><div class="tj-boxes">${box('cards', 'Tarjetas de términos al final')}${box('defense', 'Preguntas de defensa')}${box('practice', 'Ejercicios para practicar')}${box('visuals', 'Gráficas y diagramas, cuando ayuden')}</div></div>
+        <div><h3>Algo más que tu IA deba saber <small>(opcional)</small></h3><textarea class="tj-paste plain" name="note" rows="3" maxlength="1500" placeholder="Por ejemplo: el profesor pide todo en inglés; ya tenemos el scraper hecho.">${esc(draft.prefs.note)}</textarea></div>
+      </div>`;
   }
   if (q.input === 'ready') {
     control = `<p class="tj-sentence">Tu IA va a leer el enunciado de <b>${esc(draft.title)}</b> y escribir una guía de solución para <b>${draft.parts} ${draft.parts === 1 ? 'persona' : 'personas'}</b>, paso a paso, con cada línea explicada.</p>
       ${ai.ready() ? ai.pickerHTML('solution') : ''}
-      ${ai.promptHTML(outlinePrompt({ parts: draft.parts, course: draft.course, deadline: deadlineText(draftDeadline()) }), '', 'el enunciado y lo que trajiste')}
+      ${ai.promptHTML(outlinePrompt({ parts: draft.parts, course: draft.course, deadline: deadlineText(draftDeadline()), prefs: draft.prefs }), '', 'el enunciado y lo que trajiste')}
       <p class="fine">El trabajo es privado: solo entra quien tenga tu enlace de invitación.</p>`;
   }
   root.innerHTML = `<form class="tj-wizard panel glass" id="tj-wizard">
@@ -271,6 +299,7 @@ function keepAnswer() {
   if (!form) return;
   if (q.input === 'text') draft[q.key] = String(form.v.value).trim();
   if (q.input === 'files' && form.text) draft.text = String(form.text.value).trim();
+  if (q.input === 'prefs' && form.note) draft.prefs.note = String(form.note.value).trim().slice(0, 1500);
   if (q.input === 'date') { draft.date = form.date.value; draft.time = form.time.value; }
 }
 function nextQuestion() {
@@ -309,7 +338,7 @@ async function createTrabajo() {
   const code = newCode();
   const batch = writeBatch(db);
   batch.set(ref, {
-    title: draft.title.slice(0, 160), course: draft.course.slice(0, 120), group: draft.group.slice(0, 80), deadline: draftDeadline(),
+    title: draft.title.slice(0, 160), course: draft.course.slice(0, 120), group: draft.group.slice(0, 80), deadline: draftDeadline(), prefs: { ...draft.prefs },
     parts: draft.parts, owner: uid(), code, statement: await pack((statement + (binaries.length ? `\n\n(Archivos entregados a la IA tal como son: ${binaries.map((p) => p.name).join(', ')})` : '')).slice(0, 2_000_000)),
     encoding: 'gzip', created: serverTimestamp(), updated: serverTimestamp(),
   });
@@ -323,7 +352,7 @@ function working(text) {
 }
 
 async function generateOutline(files = []) {
-  const system = outlinePrompt({ parts: T.parts, course: T.course, deadline: deadlineText(T.deadline) });
+  const system = outlinePrompt({ parts: T.parts, course: T.course, deadline: deadlineText(T.deadline), prefs: T.prefs });
   const text = `El enunciado del trabajo «${T.title}»${T.group ? ` (grupo: ${T.group})` : ''} y lo que lo acompaña:\n\n${T.statement}`;
   const r = await askAI('solution', system, text, files, `Esquema de «${T.title}»`);
   const outline = cleanOutline(parseJSON(r.text), T.parts);
@@ -333,7 +362,7 @@ async function generateOutline(files = []) {
 }
 async function generateMilestone(hid) {
   const milestone = T.outline.hitos.find((h) => h.id === hid);
-  const system = milestonePrompt({ milestone, outline: T.outline });
+  const system = milestonePrompt({ milestone, outline: T.outline, prefs: T.prefs });
   const r = await askAI('solution', system, `Escribe el hito ${hid} completo.`, [], `Hito ${hid} de «${T.title}»`);
   const data = cleanMilestone(parseJSON(r.text), milestone);
   await setDoc(tRef(T.id, 'hitos', hid), { data: await pack(data), encoding: 'gzip', by: uid(), ai: madeBy(r), updated: serverTimestamp() });
@@ -524,7 +553,9 @@ function closing() {
         ${repo ? '<p><button type="button" class="act" data-tj="check-gh">Revisar mis commits</button> <span class="mut" id="tj-gh-status" role="status"></span></p>' : ''}
       </div></div>
       ${defense.length ? `<h3>Practicar la defensa</h3><p>Las preguntas que les podrían hacer. Respóndanlas en voz alta antes de abrir la respuesta.</p><div class="cols2">${defense.map((q) => `<details class="q"><summary class="qh">${esc(q.pregunta)}</summary><div class="ans">${md(q.respuesta)}</div></details>`).join('')}</div>` : ''}
-      ${T.outline.glosario.length ? `<h3>Términos</h3><dl class="gloss">${T.outline.glosario.map((g) => `<dt>${esc(g.termino)}</dt><dd>${esc(g.definicion)}</dd>`).join('')}</dl>` : ''}
+      ${T.outline.glosario.length ? (T.prefs?.cards === false
+    ? `<h3>Términos</h3><dl class="gloss">${T.outline.glosario.map((g) => `<dt>${esc(g.termino)}</dt><dd>${esc(g.definicion)}</dd>`).join('')}</dl>`
+    : `<h3>Tarjetas de términos</h3><p>Lee el término, di en voz alta qué significa y gira la tarjeta.</p><div class="flash">${T.outline.glosario.map((g) => `<details class="fc"><summary>${esc(g.termino)}</summary><p>${esc(g.definicion)}</p></details>`).join('')}</div>`) : ''}
     </section>`;
 }
 
@@ -687,6 +718,9 @@ function wire(root) {
       try { await toggle(kind, el.dataset.key, el.checked); repaint(); } catch (e) { el.checked = !el.checked; ctx.toast(ctx.explain(e)); }
     } else if (kind === 'mine') { onlyMine = el.checked; repaint(); }
     else if (el.name === 'files' && draft) { keepAnswer(); addFiles([...el.files]); renderDraft(); }
+    else if (el.dataset?.tjUse) { ai.setChoice(el.dataset.tjUse, { provider: el.value, model: '', effort: '' }); keepAnswer(); renderDraft(); }
+    else if (el.dataset?.tjWs !== undefined) { draft.workspace = el.value; renderDraft(); }
+    else if (el.dataset?.tjPref) { keepAnswer(); draft.prefs[el.dataset.tjPref] = el.type === 'checkbox' ? el.checked : el.value; renderDraft(); }
     else if (el.closest?.('[data-ai-pick]')) { const task = el.closest('[data-ai-pick]').dataset.aiPick; ai.setChoice(task, ai.picked(task, root)); }
   });
   // Files dropped on the question that asks for them.
