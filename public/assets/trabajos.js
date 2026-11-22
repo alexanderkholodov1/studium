@@ -1,8 +1,10 @@
 // «Trabajos»: a group assignment solved with a guide. The statement and the rubric become, with the person's own AI, a
 // solution guide that reaches the final deliverable, split in parts (Persona A, B, C…) and written so that every
-// member writes and understands each line. The group takes its parts, marks «Lo entiendo» and «Hecho» per step (or
-// GitHub marks «Hecho» from a commit that names the step), sees everyone's progress, asks its quick AI what it does not
-// understand (no chat between members), and exports at the end the citation of how AI was used.
+// member writes and understands each line. It reads like a study guide, top to bottom, one chapter after another
+// (rules/one-path-step-by-step in caspian-kb): no tabs, no forms. A new trabajo is a short conversation, one question
+// per screen. Each step ends with two quiet checks («Lo hice», «Lo entiendo») and «No lo entiendo», which the person's
+// quick AI answers at once (no chat between members). GitHub marks a step done from a commit that names it; at the end
+// the group downloads the citation of how AI was used.
 // Data (firestore.rules, «Trabajos»): trabajos/{tid} with miembros, partes, hitos, avance and ia; misTrabajos/{uid}.
 import {
   doc, getDoc, getDocs, setDoc, deleteDoc, collection, writeBatch, serverTimestamp, Bytes,
@@ -27,14 +29,27 @@ const CLASSIC = ['gh', 'p_'].join('');
 
 let ctx = null;
 let root = null;
-// The trabajo open now.
+// The trabajo open now, and how it is being read.
 let T = null;
-let tab = 'guia';
-let openMilestone = '';
 let onlyMine = false;
 const asking = new Map();
+// A new trabajo, one question at a time.
+let draft = null;
 
 /* ---------- a little formatting, always escaped first ---------- */
+// Terms of the glossary get their definition on hover, the first time they appear in each paragraph.
+let terms = [];
+function withTerms(html) {
+  let out = html;
+  for (const g of terms) {
+    const re = new RegExp(`(^|[^\\wáéíóúñ])(${g.re})(?=[^\\wáéíóúñ]|$)`, 'i');
+    out = out.replace(re, (m, pre, word) => `${pre}<dfn title="${esc(g.definicion)}">${word}</dfn>`);
+  }
+  return out;
+}
+function inline(s) {
+  return String(s).split('`').map((part, i) => (i % 2 ? `<code>${esc(part)}</code>` : withTerms(esc(part).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')))).join('');
+}
 function md(text) {
   const blocks = String(text ?? '').split(/```/);
   return blocks.map((b, i) => {
@@ -42,7 +57,6 @@ function md(text) {
     return b.split(/\n{2,}/).map((para) => {
       const lines = para.split('\n').filter((l) => l.trim());
       if (!lines.length) return '';
-      const inline = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
       if (lines.every((l) => /^\s*[-*]\s/.test(l))) return `<ul>${lines.map((l) => `<li>${inline(l.replace(/^\s*[-*]\s/, ''))}</li>`).join('')}</ul>`;
       return `<p>${lines.map(inline).join('<br>')}</p>`;
     }).join('');
@@ -50,6 +64,7 @@ function md(text) {
 }
 const pct = (a, b) => (b ? Math.round((100 * a) / b) : 0);
 const bar = (p, color = 'var(--teal)') => `<span class="tj-bar" style="--tj-p:${p}%;--tj-c:${color}"><i></i></span>`;
+const lower = (s) => { const t = String(s ?? '').trim(); return t ? t[0].toLowerCase() + t.slice(1) : ''; };
 
 /* ---------- data ---------- */
 async function myIds() {
@@ -76,7 +91,7 @@ async function loadTrabajo(tid) {
     taken: Object.fromEntries(parts.docs.map((p) => [p.id, p.data().uid])),
     hitos: {}, avance: {}, ia: {},
   };
-  for (const h of hitos.docs) { try { t.hitos[h.id] = { ...JSON.parse(await unpack(h.data().data)), by: h.data().by, ai: h.data().ai }; } catch { /* unreadable: generated again */ } }
+  for (const h of hitos.docs) { try { t.hitos[h.id] = { ...JSON.parse(await unpack(h.data().data)), by: h.data().by, ai: h.data().ai }; } catch { /* unreadable: written again */ } }
   for (const a of avance.docs) t.avance[a.id] = a.data().steps ?? {};
   for (const l of ia.docs) t.ia[l.id] = l.data().log ?? [];
   return t;
@@ -91,72 +106,116 @@ async function logAI(entry) {
 }
 
 /* ---------- the person's AI ---------- */
-function aiMissing(task) {
-  if (ai.ready()) return '';
-  return `<p class="tj-warn">${task === 'solution' ? 'Para generar la guía de solución necesitas conectar una IA potente: tu suscripción de Claude o ChatGPT con el puente local, o una clave.' : 'Para preguntarle a tu IA necesitas conectar una: la clave gratis de Gemini sirve y responde al instante.'} <a href="#/ajustes">Conectar en Ajustes</a></p>`;
-}
-function weakFor(task) {
-  if (task !== 'solution' || !ai.ready()) return '';
-  const c = ai.choice('solution');
-  return /gemini|openrouter|puter/.test(c.provider) ? '<p class="fine tj-note">Tu IA de ahora es gratuita y rápida: sirve para preguntas, pero una guía completa, con cada línea explicada, sale mucho mejor con una IA más potente (Claude o ChatGPT con el puente local).</p>' : '';
+const strongAI = () => ai.ready() && !/gemini|openrouter|puter/.test(ai.choice('solution').provider);
+function aiLine(task) {
+  if (!ai.ready()) return `<p class="tj-warn">${task === 'solution' ? 'Para escribir la guía necesitas conectar una IA potente (tu Claude o ChatGPT con el puente local).' : 'Para preguntarle a tu IA, conecta una: la clave gratis de Gemini sirve.'} <a href="#/ajustes">Conectar</a></p>`;
+  return `${task === 'solution' && !strongAI() ? '<p class="fine tj-note">Tu IA de ahora es rápida y gratis; para una guía completa, una más potente (Claude o ChatGPT con el puente local) lo hace mucho mejor.</p>' : ''}${ai.pickerHTML(task)}`;
 }
 async function askAI(task, system, text, files = [], label = '') {
-  const r = await ai.run({ system, text, files, task, label, maxTokens: task === 'solution' ? ai.longest(ai.choice(task)) : 4000 });
-  return r;
+  return ai.run({ system, text, files, task, label, maxTokens: task === 'solution' ? ai.longest(ai.choice(task)) : 4000 });
 }
 
-/* ---------- the list, and a new trabajo ---------- */
+/* ---------- the list ---------- */
 async function renderList() {
-  root.innerHTML = '<p class="status">Cargando tus trabajos…</p>';
+  root.innerHTML = '<p class="status">Cargando…</p>';
   const ids = await myIds();
   const rows = (await Promise.all(ids.map((id) => getDoc(tRef(id)).then((s) => (s.exists() ? { id, ...s.data() } : null)).catch(() => null)))).filter(Boolean);
-  const name = (await loadProfile(uid()).catch(() => null))?.nickname ?? '';
-  root.innerHTML = `<div class="page-head"><h1>Trabajos</h1></div>
-    <p class="lede-small tj-lede">Un trabajo en grupo, resuelto con una guía hasta el entregable final: cada integrante escribe y entiende cada línea. Tu IA la genera a partir del enunciado y la rúbrica; ustedes se reparten las partes y avanzan.</p>
-    ${rows.length ? `<div class="tj-cards">${rows.map((r) => `<a class="tj-card glass" href="#/trabajos/${esc(r.id)}"><b>${esc(r.title)}</b><span>${esc(r.course ?? '')}${r.deadline ? ` · entrega ${esc(r.deadline)}` : ''}</span><span class="fine">${r.parts} ${r.parts === 1 ? 'parte' : 'partes'}${r.owner === uid() ? ' · lo creaste tú' : ''}</span></a>`).join('')}</div>` : ''}
-    <form class="tj-new glass" id="tj-new">
-      <h2>Nuevo trabajo</h2>
-      <div class="tj-grid2">
-        <label class="field"><span>Título</span><input name="title" required maxlength="160" placeholder="Proyecto final: predicción de precios de casas"></label>
-        <label class="field"><span>Curso</span><input name="course" maxlength="120" placeholder="Machine Learning"></label>
-        <label class="field"><span>Entrega</span><input name="deadline" maxlength="40" placeholder="inicios de diciembre"></label>
-        <label class="field"><span>Integrantes (partes de la guía)</span><input name="parts" type="number" min="1" max="8" value="3" required></label>
-        <label class="field"><span>Tu nombre para el grupo</span><input name="name" required maxlength="40" value="${esc(name)}"></label>
-      </div>
-      <label class="field"><span>El enunciado y la rúbrica: pégalos aquí…</span><textarea name="statement" rows="7" maxlength="400000" placeholder="Copia el enunciado completo y la rúbrica."></textarea></label>
-      <label class="field"><span>…o súbelos (PDF, texto, Markdown)</span><input name="files" type="file" multiple accept=".pdf,.txt,.md,text/plain,application/pdf"></label>
-      ${aiMissing('solution')}${weakFor('solution')}
-      ${ai.pickerHTML('solution')}
-      ${ai.promptHTML(outlinePrompt({ parts: 3, course: '', deadline: '' }), '', 'el enunciado y la rúbrica que pegues o subas')}
-      <p class="fine">El trabajo es privado: solo lo ven quienes entren con tu enlace de invitación. Si el enunciado prohíbe publicar algo (datos, el repositorio), la guía lo respeta.</p>
-      <div class="tj-actions"><button class="button primary" type="submit">Crear y generar el esquema</button><span class="fine" id="tj-new-status" role="status"></span></div>
-    </form>`;
+  root.innerHTML = `<div class="tj-start">
+      <h1>Trabajos</h1>
+      <p class="lede-small">Resuelve un trabajo en grupo con una guía, paso a paso, entendiendo cada línea.</p>
+      <button type="button" class="button primary big" data-tj="new">Empezar un trabajo nuevo</button>
+    </div>
+    ${rows.length ? `<div class="tj-cards">${rows.map((r) => `<a class="tj-card glass" href="#/trabajos/${esc(r.id)}"><b>${esc(r.title)}</b><span class="fine">${esc(r.course ?? '')}${r.deadline ? ` · entrega ${esc(r.deadline)}` : ''}</span></a>`).join('')}</div>` : ''}`;
 }
 
-async function createTrabajo(form) {
-  const f = new FormData(form);
-  const title = String(f.get('title')).trim();
-  const parts = Math.min(8, Math.max(1, Number(f.get('parts')) || 3));
-  const name = String(f.get('name')).trim().slice(0, 40);
-  const files = [...form.querySelector('[name="files"]').files];
-  const read = await Promise.all(files.map((file) => ai.readFile(file)));
+/* ---------- a new trabajo: one question at a time ---------- */
+const QUESTIONS = [
+  { key: 'title', ask: '¿Cómo se llama el trabajo?', hint: 'Como aparece en el enunciado, o como lo llaman ustedes.', input: 'text', placeholder: 'Proyecto final de Machine Learning', required: true },
+  { key: 'course', ask: '¿De qué materia es?', input: 'text', placeholder: 'Machine Learning', optional: true },
+  { key: 'statement', ask: 'Trae el enunciado', hint: 'Y la rúbrica, si la tienen. Arrastra los archivos o pega el texto.', input: 'files', required: true },
+  { key: 'parts', ask: '¿Cuántos son en el grupo?', hint: 'La guía se divide en una parte por persona.', input: 'count' },
+  { key: 'deadline', ask: '¿Cuándo es la entrega?', input: 'text', placeholder: 'inicios de diciembre', optional: true },
+  { key: 'name', ask: '¿Cómo te llamamos en el grupo?', hint: 'Es lo que verán tus compañeros.', input: 'text', required: true },
+  { key: 'ready', ask: 'Todo listo', input: 'ready' },
+];
+async function startDraft() {
+  const name = (await loadProfile(uid()).catch(() => null))?.nickname ?? '';
+  draft = { at: 0, title: '', course: '', text: '', files: [], parts: 3, deadline: '', name, pasting: false };
+  renderDraft();
+}
+function renderDraft(error = '') {
+  const q = QUESTIONS[draft.at];
+  const dots = QUESTIONS.map((_, i) => `<i class="${i < draft.at ? 'done' : i === draft.at ? 'now' : ''}"></i>`).join('');
+  let control = '';
+  if (q.input === 'text') control = `<input class="tj-big-input" name="v" value="${esc(draft[q.key])}" placeholder="${esc(q.placeholder ?? '')}" maxlength="${q.key === 'name' ? 40 : 160}" autocomplete="off">`;
+  if (q.input === 'count') control = `<div class="tj-count">${[1, 2, 3, 4, 5, 6, 7, 8].map((n) => `<button type="button" class="${n === draft.parts ? 'on' : ''}" data-tj="count" data-n="${n}">${n}</button>`).join('')}</div>`;
+  if (q.input === 'files') {
+    control = `<label class="tj-drop" data-tj-drop>
+        <input type="file" name="files" multiple accept=".pdf,.txt,.md,text/plain,application/pdf" hidden>
+        <b>${draft.files.length ? draft.files.map((f) => esc(f.name)).join(' · ') : 'Suelta aquí el enunciado y la rúbrica'}</b>
+        <span class="fine">${draft.files.length ? 'Pulsa para cambiarlos' : 'o pulsa para elegirlos · PDF, texto o Markdown'}</span>
+      </label>
+      ${draft.pasting || draft.text ? `<textarea class="tj-paste" name="text" rows="6" placeholder="Pega aquí el enunciado y la rúbrica">${esc(draft.text)}</textarea>` : '<button type="button" class="link" data-tj="paste">Prefiero pegar el texto</button>'}`;
+  }
+  if (q.input === 'ready') {
+    control = `<p class="tj-sentence">Tu IA va a leer el enunciado de <b>${esc(draft.title)}</b> y escribir una guía de solución para <b>${draft.parts} ${draft.parts === 1 ? 'persona' : 'personas'}</b>, paso a paso, con cada línea explicada.</p>
+      ${aiLine('solution')}
+      ${ai.promptHTML(outlinePrompt({ parts: draft.parts, course: draft.course, deadline: draft.deadline }), '', 'el enunciado y la rúbrica')}
+      <p class="fine">El trabajo es privado: solo entra quien tenga tu enlace de invitación.</p>`;
+  }
+  root.innerHTML = `<form class="tj-wizard" id="tj-wizard">
+      <div class="tj-dots" aria-hidden="true">${dots}</div>
+      <h1>${esc(q.ask)}</h1>
+      ${q.hint ? `<p class="lede-small">${esc(q.hint)}</p>` : ''}
+      ${control}
+      ${error ? `<p class="tj-warn">${esc(error)}</p>` : ''}
+      <div class="tj-wizard-nav">
+        ${draft.at ? '<button type="button" class="link" data-tj="back">← Atrás</button>' : '<button type="button" class="link" data-tj="cancel">Cancelar</button>'}
+        <span></span>
+        ${q.optional ? '<button type="button" class="link" data-tj="skip">Saltar</button>' : ''}
+        ${q.input === 'ready'
+    ? `${ai.ready() ? '<button class="button primary big" type="submit">Escribir mi guía</button>' : '<button class="button ghost" type="submit" data-later="1">Crear sin la guía, por ahora</button>'}`
+    : '<button class="button primary" type="submit">Siguiente →</button>'}
+      </div>
+    </form>`;
+  root.querySelector('.tj-big-input, .tj-paste')?.focus();
+}
+function keepAnswer() {
+  const q = QUESTIONS[draft.at];
+  const form = $('#tj-wizard', root);
+  if (q.input === 'text') draft[q.key] = String(form.v.value).trim();
+  if (q.input === 'files' && form.text) draft.text = String(form.text.value).trim();
+}
+function nextQuestion() {
+  keepAnswer();
+  const q = QUESTIONS[draft.at];
+  if (q.required && q.input === 'text' && !draft[q.key]) return renderDraft('Escríbelo para seguir.');
+  if (q.input === 'files' && !draft.files.length && !draft.text) return renderDraft('Trae el enunciado para seguir: un archivo o el texto pegado.');
+  draft.at = Math.min(QUESTIONS.length - 1, draft.at + 1);
+  renderDraft();
+}
+
+async function createTrabajo() {
+  const read = await Promise.all(draft.files.map((file) => ai.readFile(file)));
   const skipped = read.filter((r) => r.skipped);
   if (skipped.length) throw new Error(`No se pudo leer: ${skipped.map((s) => `${s.name} (${s.skipped})`).join(', ')}.`);
-  const statement = [String(f.get('statement') ?? '').trim(), ...read.filter((r) => r.text).map((r) => `# ${r.name}\n\n${r.text}`)].filter(Boolean).join('\n\n');
+  const statement = [draft.text, ...read.filter((r) => r.text).map((r) => `# ${r.name}\n\n${r.text}`)].filter(Boolean).join('\n\n');
   const pdfs = read.filter((r) => r.data);
-  if (!statement && !pdfs.length) throw new Error('Pega el enunciado o sube su archivo.');
   const ref = doc(collection(db, 'trabajos'));
   const code = newCode();
   const batch = writeBatch(db);
   batch.set(ref, {
-    title, course: String(f.get('course') ?? '').trim().slice(0, 120), deadline: String(f.get('deadline') ?? '').trim().slice(0, 40),
-    parts, owner: uid(), code, statement: await pack(statement + (pdfs.length ? `\n\n(Archivos PDF entregados a la IA: ${pdfs.map((p) => p.name).join(', ')})` : '')),
+    title: draft.title.slice(0, 160), course: draft.course.slice(0, 120), deadline: draft.deadline.slice(0, 40),
+    parts: draft.parts, owner: uid(), code, statement: await pack(statement + (pdfs.length ? `\n\n(Archivos PDF entregados a la IA: ${pdfs.map((p) => p.name).join(', ')})` : '')),
     encoding: 'gzip', created: serverTimestamp(), updated: serverTimestamp(),
   });
-  batch.set(doc(db, 'trabajos', ref.id, 'miembros', uid()), { name, code, joined: serverTimestamp() });
+  batch.set(doc(db, 'trabajos', ref.id, 'miembros', uid()), { name: draft.name.slice(0, 40), code, joined: serverTimestamp() });
   await batch.commit();
   await keepIds([...(await myIds()), ref.id]);
-  return { id: ref.id, pdfs, parts };
+  return { id: ref.id, pdfs };
+}
+function working(text) {
+  root.innerHTML = `<div class="tj-wizard tj-working"><div class="tj-spinner" aria-hidden="true"></div><h1>${esc(text)}</h1><p class="lede-small">Puedes dejar esta pestaña abierta y volver en un rato.</p></div>`;
 }
 
 async function generateOutline(files = []) {
@@ -168,7 +227,6 @@ async function generateOutline(files = []) {
   T.outline = outline; T.ai = madeBy(r);
   await logAI({ task: 'solution', step: 'esquema', model: r.model, provider: r.way, prompt: `${system}\n\n[el enunciado y la rúbrica: ${T.statement.length} caracteres]` });
 }
-
 async function generateMilestone(hid) {
   const milestone = T.outline.hitos.find((h) => h.id === hid);
   const system = milestonePrompt({ milestone, outline: T.outline });
@@ -179,15 +237,17 @@ async function generateMilestone(hid) {
   await logAI({ task: 'solution', step: hid, model: r.model, provider: r.way, prompt: `${system.split('El esquema de la guía:')[0]}[el esquema de la guía]` });
 }
 
-/* ---------- joining ---------- */
+/* ---------- joining: one question ---------- */
 async function renderJoin(tid, code) {
   const name = (await loadProfile(uid()).catch(() => null))?.nickname ?? '';
-  root.innerHTML = `<div class="page-head"><h1>Unirte a un trabajo</h1></div>
-    <form class="tj-new glass narrow-form" id="tj-join" data-tid="${esc(tid)}" data-code="${esc(code)}">
-      <p>Te invitaron a un trabajo en grupo de Studium. Al entrar, el grupo verá tu nombre, la parte que tomes y tu avance.</p>
-      <label class="field"><span>Tu nombre para el grupo</span><input name="name" required maxlength="40" value="${esc(name)}"></label>
-      <div class="tj-actions"><button class="button primary" type="submit">Entrar al trabajo</button><span class="fine" id="tj-join-status" role="status"></span></div>
+  root.innerHTML = `<form class="tj-wizard" id="tj-join" data-tid="${esc(tid)}" data-code="${esc(code)}">
+      <h1>Te invitaron a un trabajo en grupo</h1>
+      <p class="lede-small">¿Cómo te llamamos en el grupo?</p>
+      <input class="tj-big-input" name="name" required maxlength="40" value="${esc(name)}" autocomplete="off">
+      <div class="tj-wizard-nav"><a class="link" href="#/trabajos">Ahora no</a><span></span><button class="button primary" type="submit">Entrar →</button></div>
+      <p class="fine" id="tj-join-status" role="status"></p>
     </form>`;
+  root.querySelector('.tj-big-input')?.focus();
 }
 async function join(form) {
   const { tid, code } = form.dataset;
@@ -198,174 +258,244 @@ async function join(form) {
   location.hash = `#/trabajos/${tid}`;
 }
 
-/* ---------- the trabajo ---------- */
-const steps = () => (T.outline?.hitos ?? []).flatMap((h) => h.pasos.map((p) => ({ ...p, hito: h.id })));
-const myPart = () => Object.entries(T.taken).find(([, u]) => u === uid())?.[0] ?? '';
+/* ---------- the guide: one document, chapter after chapter ---------- */
+const steps = () => (T.outline?.hitos ?? []).flatMap((h, i) => h.pasos.map((p, j) => ({ ...p, hito: h.id, num: `${i + 1}.${j + 1}` })));
+const partOf = (u) => Object.entries(T.taken).find(([, x]) => x === u)?.[0] ?? '';
+const myPart = () => partOf(uid());
 const nameOf = (u) => T.members.find((m) => m.uid === u)?.name ?? 'alguien';
 const mark = (key) => T.avance[uid()]?.[key] ?? {};
 const doneBy = (key) => T.members.filter((m) => T.avance[m.uid]?.[key]?.d);
-const understoodBy = (key) => T.members.filter((m) => T.avance[m.uid]?.[key]?.u);
 const isDone = (key) => doneBy(key).length > 0;
+const avatar = (letter, title = '') => `<i class="tj-av" style="--c:${letter ? colorOf(letter) : 'var(--muted)'}" ${title ? `title="${esc(title)}"` : ''}>${esc(letter || '·')}</i>`;
 
-function header() {
+function topbar() {
   const all = steps();
-  const done = all.filter((s) => isDone(s.id)).length;
-  const total = pct(done, all.length);
-  return `<div class="tj-head">
-      <div><a class="fine" href="#/trabajos">← Trabajos</a><h1>${esc(T.title)}</h1><p class="fine">${esc(T.course ?? '')}${T.deadline ? ` · entrega ${esc(T.deadline)}` : ''}${T.ai ? ` · guía generada con ${esc(T.ai.model)}` : ''}</p></div>
-      <div class="tj-total"><b>${total}%</b><span class="fine">del trabajo hecho</span>${bar(total)}</div>
-    </div>
-    <div class="tj-people">${T.members.map((m) => {
-      const letter = Object.entries(T.taken).find(([, u]) => u === m.uid)?.[0];
-      const mine = letter ? all.filter((s) => s.parte === letter) : [];
-      const p = pct(mine.filter((s) => T.avance[m.uid]?.[s.id]?.d).length, mine.length);
-      return `<span class="tj-person" style="--c:${letter ? colorOf(letter) : 'var(--muted)'}"><i>${esc(letter ?? '·')}</i>${esc(m.name)}${letter ? ` <small>${p}%</small>` : ' <small>sin parte</small>'}</span>`;
-    }).join('')}
-      <button type="button" class="button ghost small" data-tj="invite">Invitar</button>
-      <button type="button" class="button ghost small" data-tj="reload" title="Traer lo último del grupo">Actualizar</button></div>
-    <nav class="subtabs tj-tabs" aria-label="Partes del trabajo">${[['enunciado', 'Enunciado'], ['reparto', 'Reparto'], ['guia', 'Guía'], ['avance', 'Avance'], ['ia', 'Uso de IA']].map(([k, n]) => `<a href="#/trabajos/${esc(T.id)}/${k}" ${tab === k ? 'aria-current="true"' : ''}>${n}</a>`).join('')}</nav>`;
+  const total = pct(all.filter((s) => isDone(s.id)).length, all.length);
+  const chapters = T.outline ? T.outline.hitos.map((h, i) => `<a href="#cap-${esc(h.id)}" data-tj="jump" title="${esc(h.titulo)}">${i + 1}</a>`).join('') : '';
+  return `<nav class="tj-top" aria-label="Capítulos">
+      <a class="tj-top-title" href="#cap-inicio" data-tj="jump">${esc(T.title)}</a>
+      <span class="tj-top-caps">${chapters}${T.outline ? '<a href="#cap-entrega" data-tj="jump" title="Entregar y defender">✓</a>' : ''}</span>
+      ${myPart() ? `<label class="tj-mine"><input type="checkbox" data-tj="mine" ${onlyMine ? 'checked' : ''}> Solo mi parte</label>` : ''}
+      <span class="tj-top-pct">${total}%</span>
+      <span class="tj-top-bar">${bar(total)}</span>
+    </nav>`;
 }
 
-function tutorBox(key, label) {
-  const a = asking.get(key);
-  return `<div class="tj-tutor" data-key="${esc(key)}">
-    <button type="button" class="link" data-tj="ask" data-key="${esc(key)}" data-label="${esc(label)}">No lo entiendo</button>
-    ${a ? `<div class="tj-answer">${a.busy ? '<span class="fine">Tu IA está explicando…</span>' : a.error ? `<span class="tj-warn">${esc(a.error)}</span>` : `${md(a.text)}<p class="fine">Explicado por ${esc(a.model)}.</p>`}</div>` : ''}</div>`;
+function hero() {
+  const all = steps();
+  return `<header class="tj-hero" id="cap-inicio">
+      <a class="fine" href="#/trabajos">← Trabajos</a>
+      <h1>${esc(T.title)}</h1>
+      <p class="tj-sub">Guía de solución${T.course ? ` · ${esc(T.course)}` : ''}${T.deadline ? ` · entrega ${esc(T.deadline)}` : ''}</p>
+      <div class="tj-team">${T.members.map((m) => {
+        const L = partOf(m.uid);
+        const own = all.filter((s) => s.parte === L);
+        const p = pct(own.filter((s) => T.avance[m.uid]?.[s.id]?.d).length, own.length);
+        return `<span class="tj-member">${avatar(L)}${esc(m.name)}${L ? `<small>${p}%</small>` : ''}</span>`;
+      }).join('')}<button type="button" class="link" data-tj="invite">+ Invitar</button></div>
+    </header>`;
 }
-function checks(key, { done = true } = {}) {
+
+function stepChecks(key, label) {
   const m = mark(key);
-  const who = understoodBy(key).map((x) => x.name);
-  const doers = doneBy(key);
-  return `<div class="tj-checks">
-    <label class="check"><input type="checkbox" data-tj="u" data-key="${esc(key)}" ${m.u ? 'checked' : ''}> Lo entiendo</label>
-    ${done ? `<label class="check"><input type="checkbox" data-tj="d" data-key="${esc(key)}" ${m.d ? 'checked' : ''}> Hecho${m.c ? ` <small class="fine">(commit ${esc(m.c.slice(0, 7))})</small>` : ''}</label>` : ''}
-    <span class="fine">${who.length ? `Lo entienden: ${esc(who.join(', '))}` : 'Nadie lo marcó como entendido todavía'}${done && doers.length && !m.d ? ` · Hecho por ${esc(doers.map((x) => x.name).join(', '))}` : ''}</span>
-  </div>`;
+  const others = doneBy(key).filter((x) => x.uid !== uid()).map((x) => x.name);
+  const a = asking.get(key);
+  return `<footer class="tj-stepfoot">
+      <label class="tj-tick ${m.d ? 'on' : ''}"><input type="checkbox" data-tj="d" data-key="${esc(key)}" ${m.d ? 'checked' : ''}><span>Lo hice</span></label>
+      <label class="tj-tick ${m.u ? 'on' : ''}"><input type="checkbox" data-tj="u" data-key="${esc(key)}" ${m.u ? 'checked' : ''}><span>Lo entiendo</span></label>
+      <button type="button" class="link" data-tj="ask" data-key="${esc(key)}" data-label="${esc(label)}">No lo entiendo</button>
+      ${others.length ? `<span class="fine">Ya lo hizo ${esc(others.join(', '))}</span>` : ''}
+      ${m.c ? `<span class="fine">commit ${esc(m.c.slice(0, 7))}</span>` : ''}
+    </footer>${a ? `<div class="tj-answer">${a.busy ? '<span class="fine">Tu IA te lo está explicando…</span>' : a.error ? `<span class="tj-warn">${esc(a.error)}</span>` : `${md(a.text)}<p class="fine">Explicado por ${esc(a.model)}.</p>`}</div>` : ''}`;
 }
 
-function renderEnunciado() {
+function intro() {
   const o = T.outline;
-  if (!o) return noOutline();
-  return `<section class="tj-sec">
-    <div class="tj-box glass"><h2>De qué se trata</h2>${md(o.resumen)}${o.avisos.length ? `<h3>Antes de empezar</h3><ul>${o.avisos.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}</div>
-    <h2>Lo que pide, requisito por requisito</h2>
-    <p class="fine">Que todos estén en la misma página: cada uno marca «Lo entiendo». Si algo no se entiende, tu IA lo explica al instante.</p>
-    <div class="tj-reqs">${o.requisitos.map((r) => `<article class="tj-req glass"><header><b>${esc(r.id)}</b>${r.peso ? `<span class="tag">${esc(r.peso)}</span>` : ''}</header>
-      <p>${esc(r.texto)}</p>${r.cita ? `<blockquote>${esc(r.cita)}</blockquote>` : ''}${r.material ? `<p class="fine">Se apoya en: ${esc(r.material)}</p>` : ''}
-      ${checks(r.id, { done: false })}${tutorBox(r.id, `el requisito ${r.id}: «${r.texto}»${r.cita ? ` (del enunciado: «${r.cita}»)` : ''}`)}</article>`).join('')}</div>
-    ${o.glosario.length ? `<h2>Glosario</h2><dl class="tj-gloss">${o.glosario.map((g) => `<dt>${esc(g.termino)}</dt><dd>${esc(g.definicion)}</dd>`).join('')}</dl>` : ''}
-    <details class="tj-box"><summary>El enunciado tal como se entregó</summary><pre class="tj-pre">${esc(T.statement)}</pre></details>
-  </section>`;
-}
-
-function renderReparto() {
-  if (!T.outline) return noOutline();
-  const all = steps();
+  const reqs = o.requisitos.filter((r) => r.texto);
   const letters = LETTERS.slice(0, T.parts).split('');
-  const mine = myPart();
-  return `<section class="tj-sec"><p class="fine">Cada integrante toma una parte. Las partes avanzan en paralelo; aun así, cada uno debe entender todo el trabajo: la defensa es de todos.</p>
-    <div class="tj-board" style="--n:${letters.length}">${letters.map((L) => {
-      const holder = T.taken[L];
-      const list = all.filter((s) => s.parte === L);
-      const doneN = list.filter((s) => isDone(s.id)).length;
-      return `<div class="tj-col glass" style="--c:${colorOf(L)}"><header><i>${L}</i><b>Persona ${L}</b></header>
-        <div class="tj-holder">${holder ? `<span>${esc(nameOf(holder))}</span>${holder === uid() ? '<button type="button" class="link" data-tj="leave">Soltar</button>' : ''}` : mine ? '<span class="fine">Libre</span>' : `<button type="button" class="button small primary" data-tj="take" data-part="${L}">Tomar esta parte</button>`}</div>
-        <p class="fine">${list.length} pasos · ${doneN} hechos</p>${bar(pct(doneN, list.length), colorOf(L))}
-        <ol class="tj-mini">${list.map((s) => `<li class="${isDone(s.id) ? 'done' : ''}"><a href="#/trabajos/${esc(T.id)}/guia" data-tj="goto" data-hito="${esc(s.hito)}">${esc(s.id)}</a> ${esc(s.titulo)}</li>`).join('')}</ol></div>`;
-    }).join('')}</div></section>`;
+  const all = steps();
+  const missing = o.hitos.filter((h) => !T.hitos[h.id]).length;
+  return `<section class="tj-cap">
+      <div class="tj-prose">${md(o.resumen)}</div>
+      ${reqs.length ? `<h3>Lo que tienen que entregar</h3><ul class="tj-reqlist">${reqs.map((r) => `<li>${inline(r.texto)}${r.peso ? ` <span class="tj-weight">${esc(r.peso)}</span>` : ''}</li>`).join('')}</ul>` : ''}
+      ${o.avisos.length ? `<div class="tj-callout"><b>Antes de empezar</b>${o.avisos.map((a) => `<p>${inline(a)}</p>`).join('')}</div>` : ''}
+      <details class="tj-fold"><summary>Leer el enunciado original</summary><pre class="tj-pre">${esc(T.statement)}</pre></details>
+      <h3>Cómo se reparten</h3>
+      <p>Son ${T.parts} ${T.parts === 1 ? 'parte' : 'partes'}: cada uno toma una y avanza en paralelo. Aun así, <b>todos leen y entienden toda la guía</b>, porque la defensa es de todos.</p>
+      <div class="tj-parts">${letters.map((L) => {
+        const holder = T.taken[L];
+        const n = all.filter((s) => s.parte === L).length;
+        return `<div class="tj-part" style="--c:${colorOf(L)}">${avatar(L)}<span><b>Persona ${L}</b><small>${n} ${n === 1 ? 'paso' : 'pasos'}</small></span>
+          ${holder ? `<span class="tj-holder">${esc(nameOf(holder))}${holder === uid() ? ' <button type="button" class="link" data-tj="leave">soltar</button>' : ''}</span>` : myPart() ? '<span class="fine">libre</span>' : `<button type="button" class="button small primary" data-tj="take" data-part="${L}">Es la mía</button>`}</div>`;
+      }).join('')}</div>
+      ${missing ? `<div class="tj-callout soft"><p>${missing === o.hitos.length ? 'Los capítulos todavía no están escritos.' : (missing === 1 ? 'Falta un capítulo por escribir.' : `Faltan ${missing} capítulos por escribir.`)} Tu IA los escribe uno por uno; cada uno tarda unos minutos.</p>${aiLine('solution')}<button type="button" class="button primary" data-tj="gen-all">Escribir ${missing === 1 ? 'el capítulo que falta' : `los ${missing} capítulos`}</button> <span class="fine" id="tj-gen-status" role="status"></span></div>` : ''}
+      ${stepChecks('enunciado', `qué pide el trabajo «${T.title}»: ${o.resumen}`).replace('<span>Lo hice</span>', '<span>Lo leí</span>')}
+    </section>`;
 }
 
 function stepHTML(s, step) {
-  const key = s.id;
-  const code = (step?.codigo ?? []).map((c, ci) => {
+  const holder = T.taken[s.parte];
+  const code = (step?.codigo ?? []).map((c) => {
     const lines = c.codigo.replace(/\n$/, '').split('\n');
     const expl = new Map(c.lineas.map((l) => [l.n, l.explicacion]));
-    return `<div class="tj-code"><table>${lines.map((line, i) => `<tr><td class="n">${i + 1}</td><td class="c"><code>${esc(line) || ' '}</code></td><td class="e">${expl.has(i + 1) ? esc(expl.get(i + 1)) : ''}</td></tr>`).join('')}</table>
-      <div class="tj-code-foot"><button type="button" class="link" data-tj="copy" data-text="${esc(c.codigo)}">Copiar (mejor escríbelo tú)</button></div>
-      ${tutorBox(`${key}#${ci}`, `este código del paso ${key} («${s.titulo}»):\n${c.codigo}`)}</div>`;
+    return `<div class="tj-code"><table>${lines.map((line, i) => `<tr><td class="n">${i + 1}</td><td class="c"><code>${esc(line) || ' '}</code></td><td class="e">${expl.has(i + 1) ? inline(expl.get(i + 1)) : ''}</td></tr>`).join('')}</table></div>`;
   }).join('');
-  return `<article class="tj-step glass" id="paso-${esc(key)}" style="--c:${colorOf(s.parte)}">
-    <header><i>${esc(s.parte)}</i><b>${esc(key)} · ${esc(s.titulo)}</b>${s.requisitos.map((r) => `<span class="tag">${esc(r)}</span>`).join('')}${T.taken[s.parte] ? `<span class="fine">${esc(nameOf(T.taken[s.parte]))}</span>` : ''}</header>
-    ${step ? `${step.objetivo ? `<p><b>Objetivo:</b> ${esc(step.objetivo)}</p>` : ''}
-      ${step.teoria ? `<div class="tj-theory"><h4>La teoría</h4>${md(step.teoria)}</div>` : ''}
-      ${step.librerias.length ? `<p class="fine"><b>Librerías:</b> ${step.librerias.map((l) => `<code>${esc(l.nombre)}</code>: ${esc(l.para_que)}`).join(' · ')}</p>` : ''}
-      ${code}
-      ${step.esperado ? `<p><b>Lo que deberías ver:</b> ${esc(step.esperado)}</p>` : ''}
-      ${step.comprueba.map((q) => `<details class="tj-q"><summary>Comprueba: ${esc(q.pregunta)}</summary>${md(q.respuesta)}</details>`).join('')}
-      ${step.defensa.map((q) => `<details class="tj-q def"><summary>Defensa: ${esc(q.pregunta)}</summary>${md(q.respuesta)}</details>`).join('')}
-      ${step.commit ? `<p class="fine tj-commit">Commit: <code>${esc(step.commit)}</code> <button type="button" class="link" data-tj="copy" data-text="${esc(step.commit)}">Copiar</button> · con el id del paso entre corchetes, «Comprobar en GitHub» lo marca como hecho.</p>` : ''}` : ''}
-    ${checks(key)}${tutorBox(key, `el paso ${key} («${s.titulo}»)${step?.objetivo ? `: ${step.objetivo}` : ''}`)}
-  </article>`;
+  return `<article class="tj-step" id="paso-${esc(s.id)}" style="--c:${colorOf(s.parte)}">
+      <h3><span class="tj-num">${esc(s.num)}</span>${esc(s.titulo)} ${avatar(s.parte, holder ? nameOf(holder) : `Persona ${s.parte}`)}</h3>
+      ${step ? `${step.objetivo ? `<p class="tj-lead">${inline(step.objetivo)}</p>` : ''}
+        ${step.teoria ? `<div class="tj-prose">${md(step.teoria)}</div>` : ''}
+        ${step.librerias.length ? `<p class="fine">Usa ${step.librerias.map((l) => `<code title="${esc(l.para_que)}">${esc(l.nombre)}</code>`).join(', ')}.</p>` : ''}
+        ${code}
+        ${step.esperado ? `<p class="tj-expect"><b>Al correrlo verás:</b> ${inline(step.esperado)}</p>` : ''}
+        ${step.comprueba.map((q) => `<details class="tj-fold q"><summary>${esc(q.pregunta)}</summary>${md(q.respuesta)}</details>`).join('')}
+        ${step.commit ? `<p class="fine">Al guardarlo en GitHub: <code>${esc(step.commit)}</code> <button type="button" class="link" data-tj="copy" data-text="${esc(step.commit)}">copiar</button></p>` : ''}` : ''}
+      ${step ? stepChecks(s.id, `el paso «${s.titulo}»${step.objetivo ? `: ${step.objetivo}` : ''}`) : ''}
+    </article>`;
 }
 
-function renderGuia() {
-  if (!T.outline) return noOutline();
-  const hitos = T.outline.hitos;
-  if (!openMilestone || !hitos.some((h) => h.id === openMilestone)) openMilestone = (hitos.find((h) => h.pasos.some((p) => p.parte === myPart())) ?? hitos[0]).id;
-  const h = hitos.find((x) => x.id === openMilestone);
+function chapter(h, i) {
   const data = T.hitos[h.id];
   const byId = new Map((data?.pasos ?? []).map((p) => [p.id, p]));
-  const list = h.pasos.filter((p) => !onlyMine || p.parte === myPart());
-  return `<section class="tj-guide">
-    <aside class="tj-side glass"><label class="check"><input type="checkbox" data-tj="mine" ${onlyMine ? 'checked' : ''} ${myPart() ? '' : 'disabled'}> Solo mi parte</label>
-      <ol>${hitos.map((x) => {
-        const n = x.pasos.length;
-        const d = x.pasos.filter((p) => isDone(p.id)).length;
-        return `<li><a href="#/trabajos/${esc(T.id)}/guia" data-tj="goto" data-hito="${esc(x.id)}" ${x.id === h.id ? 'aria-current="true"' : ''}><b>${esc(x.id)}</b> ${esc(x.titulo)}<small>${T.hitos[x.id] ? `${d}/${n} hechos` : 'sin generar'}</small>${bar(pct(d, n))}</a></li>`;
-      }).join('')}</ol></aside>
-    <div class="tj-main">
-      <div class="tj-box glass"><h2>${esc(h.id)} · ${esc(h.titulo)}</h2><p><b>Entregable:</b> ${esc(h.entregable)}</p><p><b>Listo cuando:</b> ${esc(h.listo_cuando)}</p>${h.depende.length ? `<p class="fine">Depende de: ${esc(h.depende.join(', '))}</p>` : ''}
-        ${data ? `<p class="fine">Escrito con ${esc(data.ai?.model ?? 'IA')} por ${esc(nameOf(data.by))}. <button type="button" class="link" data-tj="gen" data-hito="${esc(h.id)}">Generarlo otra vez</button></p>` : `${aiMissing('solution')}${weakFor('solution')}${ai.pickerHTML('solution')}<p><button type="button" class="button primary" data-tj="gen" data-hito="${esc(h.id)}">Generar este hito con tu IA</button> <span class="fine">Escribe el código de cada paso con cada línea explicada. Tarda unos minutos.</span></p>`}
-        <span class="fine" id="tj-gen-status" role="status"></span></div>
-      ${list.map((p) => stepHTML(p, byId.get(p.id))).join('') || '<p class="status">Tu parte no tiene pasos en este hito.</p>'}
-    </div></section>`;
+  const list = steps().filter((s) => s.hito === h.id && (!onlyMine || s.parte === myPart()));
+  const done = steps().filter((s) => s.hito === h.id && isDone(s.id)).length;
+  return `<section class="tj-cap" id="cap-${esc(h.id)}">
+      <h2><span class="n">${i + 1}</span>${esc(h.titulo)}</h2>
+      <p class="tj-lead">${h.entregable ? `Al terminar este capítulo tendrán ${esc(lower(h.entregable))}.` : ''} ${h.listo_cuando ? `Está listo cuando ${esc(lower(h.listo_cuando))}.` : ''}</p>
+      ${data ? '' : `<div class="tj-callout soft"><p>Este capítulo todavía no está escrito.</p><button type="button" class="button primary small" data-tj="gen" data-hito="${esc(h.id)}">Escribirlo con tu IA</button> <span class="fine" data-status="${esc(h.id)}"></span></div>`}
+      ${data ? list.map((s) => stepHTML(s, byId.get(s.id))).join('') || '<p class="fine">Tu parte no tiene pasos en este capítulo.</p>' : `<ol class="tj-preview">${list.map((s) => `<li>${esc(s.titulo)} ${avatar(s.parte)}</li>`).join('')}</ol>`}
+      ${data ? `<p class="fine tj-capfoot">${done} de ${h.pasos.length} pasos hechos · escrito con ${esc(data.ai?.model ?? 'IA')} · <button type="button" class="link" data-tj="gen" data-hito="${esc(h.id)}">escribirlo otra vez</button></p>` : ''}
+    </section>`;
 }
 
-function renderAvance() {
-  if (!T.outline) return noOutline();
+function closing() {
   const all = steps();
-  const reqs = T.outline.requisitos;
   const repo = T.repo ? `${T.repo.owner}/${T.repo.name}` : '';
   const token = !!ai.keyOf('github');
-  return `<section class="tj-sec">
-    <div class="tj-table glass"><table><thead><tr><th>Integrante</th><th>Parte</th><th>Su parte hecha</th><th>Entiende los pasos</th><th>Entiende el enunciado</th></tr></thead><tbody>
-    ${T.members.map((m) => {
-      const L = Object.entries(T.taken).find(([, u]) => u === m.uid)?.[0] ?? '';
-      const own = all.filter((s) => s.parte === L);
-      const a = T.avance[m.uid] ?? {};
-      const pOwn = pct(own.filter((s) => a[s.id]?.d).length, own.length);
-      const pU = pct(all.filter((s) => a[s.id]?.u).length, all.length);
-      const pR = pct(reqs.filter((r) => a[r.id]?.u).length, reqs.length);
-      return `<tr><td>${esc(m.name)}</td><td>${L ? `Persona ${L}` : '—'}</td><td>${L ? `${pOwn}% ${bar(pOwn, colorOf(L))}` : '—'}</td><td>${pU}% ${bar(pU, 'var(--blue)')}</td><td>${pR}% ${bar(pR, 'var(--butter)')}</td></tr>`;
-    }).join('')}</tbody></table>
-    <p class="fine">Para la defensa, la columna que importa es «Entiende los pasos»: todos deben llegar al 100 %, no solo en su parte.</p></div>
-    <div class="tj-box glass"><h2>GitHub</h2>
-      <p class="fine">Cuando haces un commit cuyo mensaje empieza con el id del paso (por ejemplo <code>[H1.2] Carga del dataset</code>), «Comprobar en GitHub» lo encuentra y marca ese paso como hecho para ti.</p>
-      ${T.owner === uid() ? `<form class="tj-inline" id="tj-repo"><label class="field"><span>Repositorio (dueño/nombre)</span><input name="repo" value="${esc(repo)}" placeholder="usuario/ml-precios-casas" pattern="[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"></label><button class="button ghost small" type="submit">Guardar</button></form>` : `<p>Repositorio: ${repo ? `<a href="https://github.com/${esc(repo)}" target="_blank" rel="noopener">${esc(repo)}</a>` : 'todavía no se indicó'}</p>`}
-      <details ${token ? '' : 'open'}><summary>${token ? 'Tu token de GitHub está guardado, cifrado, en tu cuenta' : 'Conectar tu GitHub (token de solo lectura, recomendado)'}</summary>
-        <ol class="fine"><li>En GitHub: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Settings → Developer settings → Fine-grained tokens → Generate new token</a>.</li>
-          <li>«Repository access»: <b>Only select repositories</b> y elige solo el repositorio del trabajo.</li>
-          <li>«Permissions → Repository permissions → Contents»: <b>Read-only</b>. Nada más.</li>
-          <li>Ponle un vencimiento (por ejemplo, la fecha de entrega), genéralo y pégalo aquí.</li></ol>
-        <p class="fine">Con eso Studium solo puede <b>leer</b> ese repositorio, nunca escribir ni ver tus otros repositorios. Se guarda cifrado con tu contraseña, como las claves de tu IA.</p>
-        <form class="tj-inline" id="tj-token"><label class="field"><span>Token</span><input name="token" type="password" autocomplete="off" placeholder="${PAT}…"></label><button class="button ghost small" type="submit">Guardar</button>${token ? '<button class="button ghost small danger" type="button" data-tj="forget-token">Olvidar</button>' : ''}</form>
-        <p class="fine">Otras formas: <b>«Conectar con GitHub» en un clic</b> (pronto; GitHub le da acceso a todos tus repositorios privados, por eso no es la recomendada) y <b>el puente local</b> para trabajar en tu computadora (pronto).</p></details>
-      <p><button type="button" class="button primary small" data-tj="check-gh" ${repo ? '' : 'disabled'}>Comprobar en GitHub</button> <span class="fine" id="tj-gh-status" role="status"></span></p>
-    </div></section>`;
+  const defense = T.outline.hitos.flatMap((h) => (T.hitos[h.id]?.pasos ?? []).flatMap((p) => p.defensa));
+  const used = T.members.reduce((n, m) => n + (T.ia[m.uid]?.length ?? 0), 0);
+  return `<section class="tj-cap" id="cap-entrega">
+      <h2><span class="n">✓</span>Entregar y defender</h2>
+      <h3>Cómo va cada uno</h3>
+      <div class="tj-progress">${T.members.map((m) => {
+        const L = partOf(m.uid);
+        const own = all.filter((s) => s.parte === L);
+        const a = T.avance[m.uid] ?? {};
+        const pOwn = pct(own.filter((s) => a[s.id]?.d).length, own.length);
+        const pU = pct(all.filter((s) => a[s.id]?.u).length, all.length);
+        return `<div class="tj-prow">${avatar(L)}<b>${esc(m.name)}</b><span>${L ? `hizo ${pOwn}% de su parte` : 'sin parte'}</span>${bar(pOwn, L ? colorOf(L) : 'var(--muted)')}<span>entiende ${pU}% de la guía</span>${bar(pU, 'var(--blue)')}</div>`;
+      }).join('')}</div>
+      <p class="fine">Para la defensa, todos tienen que llegar a entender el 100 % de la guía, no solo su parte.</p>
+
+      <h3>GitHub</h3>
+      <p>Si el commit empieza con el número del paso entre corchetes, Studium lo encuentra y marca ese paso como hecho para ti.</p>
+      ${T.owner === uid() ? `<form class="tj-inline" id="tj-repo"><input name="repo" value="${esc(repo)}" placeholder="usuario/repositorio" pattern="[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+" aria-label="Repositorio"><button class="button ghost small" type="submit">Guardar</button></form>` : repo ? `<p><a href="https://github.com/${esc(repo)}" target="_blank" rel="noopener">${esc(repo)}</a></p>` : ''}
+      <details class="tj-fold" ${token ? '' : ''}><summary>${token ? 'Tu GitHub está conectado (solo lectura)' : 'Conectar tu GitHub'}</summary>
+        <ol><li>Abre <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">un token nuevo en GitHub</a>.</li>
+          <li>Elige <b>solo el repositorio del trabajo</b> y, en «Contents», <b>Read-only</b>. Nada más.</li>
+          <li>Genéralo y pégalo aquí. Se guarda cifrado, como tus claves de IA.</li></ol>
+        <form class="tj-inline" id="tj-token"><input name="token" type="password" autocomplete="off" placeholder="${PAT}…" aria-label="Token de GitHub"><button class="button ghost small" type="submit">Guardar</button>${token ? '<button class="link" type="button" data-tj="forget-token">olvidar</button>' : ''}</form>
+        <p class="fine">Pronto: conectar en un clic y trabajar desde tu computadora con el puente local.</p></details>
+      ${repo ? '<p><button type="button" class="button small" data-tj="check-gh">Revisar mis commits</button> <span class="fine" id="tj-gh-status" role="status"></span></p>' : ''}
+
+      <h3>La cita del uso de IA</h3>
+      <p>El curso pide decir cómo usaron la IA. Studium guardó qué IA usó cada uno y con qué instrucciones (${used} ${used === 1 ? 'vez' : 'veces'}), y lo arma en un documento listo para el entregable.</p>
+      <p><button type="button" class="button small" data-tj="cite">Descargar la cita</button></p>
+      ${used ? `<details class="tj-fold"><summary>Ver lo que se usó</summary>${T.members.flatMap((m) => (T.ia[m.uid] ?? []).map((e) => `<details class="tj-fold"><summary>${esc(m.name)} · ${esc(e.task === 'tutor' ? 'explicación' : 'guía')} · ${esc(e.model)}</summary><pre class="tj-pre">${esc(e.prompt)}</pre></details>`)).join('')}</details>` : ''}
+
+      ${defense.length ? `<h3>Practicar la defensa</h3><p>Las preguntas que les podrían hacer. Respóndanlas en voz alta antes de abrir la respuesta.</p>${defense.map((q) => `<details class="tj-fold q"><summary>${esc(q.pregunta)}</summary>${md(q.respuesta)}</details>`).join('')}` : ''}
+      ${T.outline.glosario.length ? `<h3>Términos</h3><dl class="tj-gloss">${T.outline.glosario.map((g) => `<dt>${esc(g.termino)}</dt><dd>${esc(g.definicion)}</dd>`).join('')}</dl>` : ''}
+    </section>`;
 }
 
-function renderIA() {
-  const rows = T.members.flatMap((m) => (T.ia[m.uid] ?? []).map((e) => ({ ...e, who: m.name }))).sort((a, b) => String(b.at).localeCompare(String(a.at)));
-  return `<section class="tj-sec"><div class="tj-box glass"><h2>Uso de IA</h2>
-    <p class="fine">Cada vez que alguien del grupo usa su IA en este trabajo, Studium guarda qué IA, qué modelo y las instrucciones exactas. Al final descargas la cita del uso de IA para el entregable.</p>
-    <button type="button" class="button primary small" data-tj="cite">Descargar la cita del uso de IA (Markdown)</button></div>
-    ${rows.length ? rows.map((e) => `<details class="tj-log glass"><summary><b>${esc(e.who)}</b> · ${esc(e.task === 'tutor' ? 'explicación' : 'guía')} · ${esc(e.step)} · ${esc(e.model)} <span class="fine">${esc(new Date(e.at).toLocaleString('es'))}</span></summary><pre class="tj-pre">${esc(e.prompt)}</pre></details>`).join('') : '<p class="status">Todavía nadie usó su IA en este trabajo.</p>'}</section>`;
+function noOutline() {
+  return `<section class="tj-cap"><div class="tj-callout soft">${T.owner === uid()
+    ? `<p>La guía todavía no está escrita. Tu IA lee el enunciado y arma los capítulos.</p>${aiLine('solution')}<button type="button" class="button primary" data-tj="outline">Escribir la guía</button> <span class="fine" id="tj-gen-status" role="status"></span>`
+    : '<p>Quien creó el trabajo todavía no escribió la guía.</p>'}</div></section>`;
+}
+
+function paint() {
+  if (!T) return;
+  terms = (T.outline?.glosario ?? []).filter((g) => g.termino.length > 2).map((g) => ({ ...g, re: g.termino.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }));
+  root.innerHTML = `<div class="tj-doc">${topbar()}${hero()}${T.outline ? intro() + T.outline.hitos.map(chapter).join('') + closing() : noOutline()}</div>`;
+}
+
+async function openTrabajo(tid) {
+  if (T?.id !== tid || T.viewer !== uid()) {
+    root.innerHTML = '<p class="status">Abriendo el trabajo…</p>';
+    T = await loadTrabajo(tid);
+    asking.clear();
+    if (!T) { root.innerHTML = '<p class="status">Ese trabajo no existe, o no eres parte de él.</p>'; return; }
+  }
+  paint();
+}
+
+/* ---------- what the buttons do ---------- */
+const say = (sel, text) => { const el = $(sel, root); if (el) el.textContent = text; };
+async function busy(button, work) {
+  const was = button?.disabled;
+  if (button) button.disabled = true;
+  try { await work(); } catch (e) { console.error(e); ctx?.toast?.(ctx.explain ? ctx.explain(e) : e.message); throw e; } finally { if (button && button.isConnected) button.disabled = was; }
+}
+// Repaint, keeping the place on the page.
+function repaint() { const y = scrollY; paint(); scrollTo({ top: y }); }
+function toggle(kind, key, on) {
+  const mine = { ...(T.avance[uid()] ?? {}) };
+  mine[key] = { ...(mine[key] ?? {}), [kind]: on };
+  if (kind === 'd' && !on) delete mine[key].c;
+  T.avance[uid()] = mine;
+  return saveAvance();
+}
+async function ask(key, label) {
+  if (!ai.ready()) { ctx.toast('Conecta una IA en Ajustes: la clave gratis de Gemini sirve.'); return; }
+  asking.set(key, { busy: true }); repaint();
+  const text = `Trabajo: «${T.title}»${T.course ? ` (curso ${T.course})` : ''}.\nNo entiendo ${label}.\nExplícamelo.`;
+  try {
+    const r = await askAI('tutor', TUTOR, text, [], 'No lo entiendo');
+    asking.set(key, { text: r.text, model: r.model });
+    await logAI({ task: 'tutor', step: key, model: r.model, provider: r.way, prompt: `${TUTOR}\n\n${text}` });
+  } catch (e) { asking.set(key, { error: e.message }); }
+  repaint();
+}
+async function writeAll(button) {
+  const missing = T.outline.hitos.filter((h) => !T.hitos[h.id]);
+  for (const [i, h] of missing.entries()) {
+    say('#tj-gen-status', `Escribiendo el capítulo ${T.outline.hitos.indexOf(h) + 1} (${i + 1} de ${missing.length})…`);
+    await generateMilestone(h.id);
+  }
+  repaint();
+}
+async function checkGitHub() {
+  const token = ai.keyOf('github');
+  const { owner, name } = T.repo;
+  say('#tj-gh-status', 'Leyendo tus commits…');
+  const res = await fetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/commits?per_page=100`, { headers: { accept: 'application/vnd.github+json', ...(token ? { authorization: `Bearer ${token}` } : {}) } });
+  if (res.status === 404 || res.status === 401) throw new Error(token ? 'GitHub no deja leer ese repositorio con tu token: revisa que incluya ese repositorio con «Contents: Read-only».' : 'El repositorio es privado: conecta tu GitHub (solo lectura) arriba.');
+  if (!res.ok) throw new Error(`GitHub respondió ${res.status}.`);
+  const commits = await res.json();
+  const all = steps();
+  const ids = new Set(all.map((s) => s.id));
+  const found = new Map();
+  for (const c of commits) {
+    for (const m of String(c.commit?.message ?? '').matchAll(/\[([A-Z]{1,2}\d{1,3}\.\d{1,3})\]/g)) if (ids.has(m[1]) && !found.has(m[1])) found.set(m[1], c.sha);
+  }
+  const part = myPart();
+  const mine = { ...(T.avance[uid()] ?? {}) };
+  let marked = 0;
+  for (const [id, sha] of found) {
+    if (part && all.find((x) => x.id === id).parte !== part) continue;
+    if (!mine[id]?.d) marked += 1;
+    mine[id] = { ...(mine[id] ?? {}), d: true, c: sha };
+  }
+  T.avance[uid()] = mine;
+  if (marked) await saveAvance();
+  repaint();
+  say('#tj-gh-status', marked ? `Listo: ${marked} ${marked === 1 ? 'paso marcado' : 'pasos marcados'} como hechos.` : 'No hay pasos nuevos en tus commits.');
 }
 
 function citation() {
   const lines = [`# Uso de inteligencia artificial en «${T.title}»`, '',
     `Este trabajo${T.course ? ` del curso ${T.course}` : ''} se desarrolló en grupo con **Studium** (alexanderkholodov.web.app/studium), una plataforma de estudio. Studium generó, con la IA que eligió cada integrante, una guía de solución a partir del enunciado y la rúbrica: la teoría, el código en piezas con cada línea explicada y preguntas para comprobar la comprensión. Cada integrante escribió y ejecutó el código personalmente siguiendo la guía, marcó qué entendió y qué hizo, y consultó a su IA cuando no entendía algo. Abajo están las IA, los modelos y las instrucciones (prompts) usados, por integrante.`, '',
-    '## Integrantes y partes', ...T.members.map((m) => { const L = Object.entries(T.taken).find(([, u]) => u === m.uid)?.[0]; return `- ${m.name}${L ? ` (Persona ${L})` : ''}`; }), '',
+    '## Integrantes y partes', ...T.members.map((m) => { const L = partOf(m.uid); return `- ${m.name}${L ? ` (Persona ${L})` : ''}`; }), '',
     '## Modelos usados', ...[...new Set(T.members.flatMap((m) => (T.ia[m.uid] ?? []).map((e) => `${e.model} (${e.provider})`)))].map((x) => `- ${x}`), ''];
   for (const m of T.members) {
     const log = T.ia[m.uid] ?? [];
@@ -376,82 +506,6 @@ function citation() {
   lines.push('## Créditos', '', '- Studium, plataforma de estudio en la que se generó y siguió la guía: alexanderkholodov.web.app/studium', `- Fecha de esta cita: ${new Date().toLocaleDateString('es')}`);
   return lines.join('\n');
 }
-
-function noOutline() {
-  const mine = T.owner === uid();
-  return `<div class="tj-box glass"><h2>Todavía no hay guía</h2>${mine ? `<p>Genera el esquema con tu IA: los requisitos, el glosario, los hitos y el reparto de pasos.</p>${aiMissing('solution')}${weakFor('solution')}${ai.pickerHTML('solution')}<p><button type="button" class="button primary" data-tj="outline">Generar el esquema</button> <span class="fine" id="tj-gen-status" role="status"></span></p>` : '<p>Quien creó el trabajo todavía no generó el esquema.</p>'}</div>`;
-}
-
-function paint() {
-  if (!T) return;
-  const body = { enunciado: renderEnunciado, reparto: renderReparto, guia: renderGuia, avance: renderAvance, ia: renderIA }[tab] ?? renderGuia;
-  root.innerHTML = header() + body();
-}
-
-async function openTrabajo(tid, sub) {
-  tab = ['enunciado', 'reparto', 'guia', 'avance', 'ia'].includes(sub) ? sub : (T?.id === tid ? tab : 'enunciado');
-  if (T?.id !== tid || T.viewer !== uid()) {
-    root.innerHTML = '<p class="status">Abriendo el trabajo…</p>';
-    T = await loadTrabajo(tid);
-    asking.clear(); openMilestone = '';
-    if (!T) { root.innerHTML = '<p class="status">Ese trabajo no existe, o no eres parte de él.</p>'; return; }
-  }
-  paint();
-}
-
-/* ---------- what the buttons do ---------- */
-const say = (id, text) => { const el = $(id, root); if (el) el.textContent = text; };
-async function busy(button, work) {
-  const was = button?.disabled;
-  if (button) button.disabled = true;
-  try { await work(); } catch (e) { console.error(e); ctx?.toast?.(ctx.explain ? ctx.explain(e) : e.message); throw e; } finally { if (button) button.disabled = was; }
-}
-function toggle(kind, key, on) {
-  const mine = { ...(T.avance[uid()] ?? {}) };
-  mine[key] = { ...(mine[key] ?? {}), [kind]: on };
-  if (kind === 'd' && !on) delete mine[key].c;
-  T.avance[uid()] = mine;
-  return saveAvance();
-}
-async function ask(key, label) {
-  if (!ai.ready()) { ctx.toast('Conecta una IA en Ajustes: la clave gratis de Gemini sirve.'); return; }
-  asking.set(key, { busy: true }); paint();
-  const text = `Trabajo: «${T.title}»${T.course ? ` (curso ${T.course})` : ''}.\nNo entiendo ${label}.\nExplícamelo.`;
-  try {
-    const r = await askAI('tutor', TUTOR, text, [], 'No lo entiendo');
-    asking.set(key, { text: r.text, model: r.model });
-    await logAI({ task: 'tutor', step: key.split('#')[0], model: r.model, provider: r.way, prompt: `${TUTOR}\n\n${text}` });
-  } catch (e) { asking.set(key, { error: e.message }); }
-  paint();
-}
-async function checkGitHub() {
-  const token = ai.keyOf('github');
-  const { owner, name } = T.repo;
-  say('#tj-gh-status', 'Leyendo los commits…');
-  const res = await fetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/commits?per_page=100`, { headers: { accept: 'application/vnd.github+json', ...(token ? { authorization: `Bearer ${token}` } : {}) } });
-  if (res.status === 404 || res.status === 401) throw new Error(token ? 'GitHub no deja leer ese repositorio con tu token: revisa que el token incluya ese repositorio con «Contents: Read-only».' : 'El repositorio es privado o no existe: conecta tu token de GitHub (solo lectura).');
-  if (!res.ok) throw new Error(`GitHub respondió ${res.status}.`);
-  const commits = await res.json();
-  const ids = new Set(steps().map((s) => s.id));
-  const found = new Map();
-  for (const c of commits) {
-    for (const m of String(c.commit?.message ?? '').matchAll(/\[([A-Z]{1,2}\d{1,3}\.\d{1,3})\]/g)) if (ids.has(m[1]) && !found.has(m[1])) found.set(m[1], c.sha);
-  }
-  const part = myPart();
-  const mine = { ...(T.avance[uid()] ?? {}) };
-  let marked = 0;
-  for (const [id, sha] of found) {
-    const s = steps().find((x) => x.id === id);
-    if (part && s.parte !== part) continue;
-    if (!mine[id]?.d) marked += 1;
-    mine[id] = { ...(mine[id] ?? {}), d: true, c: sha };
-  }
-  T.avance[uid()] = mine;
-  if (marked) await saveAvance();
-  paint();
-  say('#tj-gh-status', `${found.size} ${found.size === 1 ? 'paso encontrado' : 'pasos encontrados'} en los últimos ${commits.length} commits; ${marked} ${marked === 1 ? 'marcado' : 'marcados'} como hechos para ti${part ? ` (tu parte, la ${part})` : ''}.`);
-}
-
 function download(name, text) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }));
@@ -464,68 +518,84 @@ function wire() {
     const form = ev.target;
     ev.preventDefault();
     const button = form.querySelector('[type="submit"]');
-    if (form.id === 'tj-new') {
-      await busy(button, async () => {
-        say('#tj-new-status', 'Creando el trabajo…');
-        const made = await createTrabajo(form);
+    if (form.id === 'tj-wizard') {
+      if (QUESTIONS[draft.at].input !== 'ready') { nextQuestion(); return; }
+      const later = !!ev.submitter?.dataset.later;
+      try {
+        working('Creando el trabajo…');
+        const made = await createTrabajo();
         T = await loadTrabajo(made.id);
-        tab = 'enunciado';
-        history.replaceState(null, '', `#/trabajos/${made.id}/enunciado`);
-        if (ai.ready()) {
-          say('#tj-new-status', 'Tu IA está leyendo el enunciado y armando el esquema (uno o dos minutos)…');
-          try { await generateOutline(made.pdfs); } catch (e) { ctx.toast(`El trabajo se creó, pero el esquema falló: ${e.message}`); }
+        draft = null;
+        history.replaceState(null, '', `#/trabajos/${made.id}`);
+        if (!later && ai.ready()) {
+          working('Tu IA está leyendo el enunciado y armando la guía…');
+          try { await generateOutline(made.pdfs); } catch (e) { ctx.toast(`El trabajo se creó, pero tu IA no pudo armar la guía: ${e.message}`); }
         }
-        paint();
-      }).catch(() => say('#tj-new-status', ''));
+        paint(); scrollTo({ top: 0 });
+      } catch (e) { console.error(e); renderDraft(e.message); }
     } else if (form.id === 'tj-join') {
       await busy(button, () => join(form)).catch(() => say('#tj-join-status', 'No se pudo entrar: el enlace no es válido o ya no está vigente.'));
     } else if (form.id === 'tj-repo') {
-      const v = String(new FormData(form).get('repo') ?? '').trim();
-      const [owner, name] = v.split('/');
+      const [owner, name] = String(new FormData(form).get('repo') ?? '').trim().split('/');
       await busy(button, async () => {
         await setDoc(tRef(T.id), owner && name ? { repo: { owner, name }, updated: serverTimestamp() } : { updated: serverTimestamp() }, { merge: true });
         T.repo = owner && name ? { owner, name } : null;
-        paint(); ctx.toast('Repositorio guardado.');
+        repaint(); ctx.toast('Repositorio guardado.');
       }).catch(() => {});
     } else if (form.id === 'tj-token') {
       const v = String(new FormData(form).get('token') ?? '').trim();
       if (!(v.startsWith(PAT) || v.startsWith(CLASSIC)) || !/^[A-Za-z0-9_]{30,}$/.test(v)) { ctx.toast(`Eso no parece un token de GitHub (empieza con ${PAT}).`); return; }
-      ai.setKey('github', v); paint(); ctx.toast('Token guardado, cifrado.');
+      ai.setKey('github', v); repaint(); ctx.toast('Conectado, solo lectura.');
     }
   });
   root.addEventListener('change', async (ev) => {
     const el = ev.target;
     const kind = el.dataset?.tj;
     if (kind === 'u' || kind === 'd') {
-      try { await toggle(kind, el.dataset.key, el.checked); paint(); } catch (e) { el.checked = !el.checked; ctx.toast(ctx.explain(e)); }
-    } else if (kind === 'mine') { onlyMine = el.checked; paint(); }
+      try { await toggle(kind, el.dataset.key, el.checked); repaint(); } catch (e) { el.checked = !el.checked; ctx.toast(ctx.explain(e)); }
+    } else if (kind === 'mine') { onlyMine = el.checked; repaint(); }
+    else if (el.name === 'files' && draft) { draft.files = [...el.files]; keepAnswer(); renderDraft(); }
     else if (el.closest?.('[data-ai-pick]')) { const task = el.closest('[data-ai-pick]').dataset.aiPick; ai.setChoice(task, ai.picked(task, root)); }
+  });
+  // Files dropped on the question that asks for them.
+  root.addEventListener('dragover', (ev) => { if (ev.target.closest?.('[data-tj-drop]')) { ev.preventDefault(); ev.target.closest('[data-tj-drop]').classList.add('over'); } });
+  root.addEventListener('dragleave', (ev) => ev.target.closest?.('[data-tj-drop]')?.classList.remove('over'));
+  root.addEventListener('drop', (ev) => {
+    if (!ev.target.closest?.('[data-tj-drop]') || !draft) return;
+    ev.preventDefault();
+    keepAnswer();
+    draft.files = [...ev.dataTransfer.files].filter((f) => /\.(pdf|txt|md)$/i.test(f.name) || f.type.startsWith('text/'));
+    renderDraft();
   });
   root.addEventListener('click', async (ev) => {
     const b = ev.target.closest('[data-tj]');
     if (!b || b.tagName === 'INPUT') return;
     const kind = b.dataset.tj;
-    if (kind === 'goto') { ev.preventDefault(); openMilestone = b.dataset.hito; tab = 'guia'; history.replaceState(null, '', `#/trabajos/${T.id}/guia`); paint(); scrollTo({ top: 0 }); return; }
+    if (kind === 'new') { await startDraft(); return; }
+    if (kind === 'cancel') { draft = null; await renderList(); return; }
+    if (kind === 'back') { keepAnswer(); draft.at = Math.max(0, draft.at - 1); renderDraft(); return; }
+    if (kind === 'skip') { draft[QUESTIONS[draft.at].key] = ''; draft.at += 1; renderDraft(); return; }
+    if (kind === 'count') { draft.parts = Number(b.dataset.n); draft.at += 1; renderDraft(); return; }
+    if (kind === 'paste') { draft.pasting = true; renderDraft(); return; }
+    if (kind === 'jump') { ev.preventDefault(); document.getElementById(b.getAttribute('href').slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (kind === 'ask') { await ask(b.dataset.key, b.dataset.label); return; }
     if (kind === 'copy') { await navigator.clipboard.writeText(b.dataset.text).then(() => ctx.toast('Copiado.'), () => ctx.toast('No se pudo copiar.')); return; }
     if (kind === 'invite') {
       const link = `${location.origin}${location.pathname}#/trabajos/unirse/${T.id}/${T.code}`;
-      await navigator.clipboard.writeText(link).then(() => ctx.toast('Enlace de invitación copiado: compártelo solo con tu grupo.'), () => prompt('Enlace de invitación', link));
+      await navigator.clipboard.writeText(link).then(() => ctx.toast('Enlace copiado: compártelo solo con tu grupo.'), () => prompt('Enlace de invitación', link));
       return;
     }
-    if (kind === 'reload') { await busy(b, async () => { T = await loadTrabajo(T.id); paint(); }).catch(() => {}); return; }
-    if (kind === 'take') { await busy(b, async () => { await setDoc(tRef(T.id, 'partes', b.dataset.part), { uid: uid(), at: serverTimestamp() }); T.taken[b.dataset.part] = uid(); paint(); }).catch(() => ctx.toast('Esa parte ya la tomó alguien: pulsa «Actualizar».')); return; }
-    if (kind === 'leave') { const L = myPart(); await busy(b, async () => { await deleteDoc(tRef(T.id, 'partes', L)); delete T.taken[L]; paint(); }).catch(() => {}); return; }
-    if (kind === 'outline') {
-      await busy(b, async () => { say('#tj-gen-status', 'Tu IA está armando el esquema…'); await generateOutline(); paint(); }).catch((e) => say('#tj-gen-status', e.message));
-      return;
-    }
+    if (kind === 'take') { await busy(b, async () => { await setDoc(tRef(T.id, 'partes', b.dataset.part), { uid: uid(), at: serverTimestamp() }); T.taken[b.dataset.part] = uid(); repaint(); }).catch(() => ctx.toast('Esa parte ya la tomó alguien.')); return; }
+    if (kind === 'leave') { const L = myPart(); await busy(b, async () => { await deleteDoc(tRef(T.id, 'partes', L)); delete T.taken[L]; repaint(); }).catch(() => {}); return; }
+    if (kind === 'outline') { await busy(b, async () => { say('#tj-gen-status', 'Tu IA está armando la guía…'); await generateOutline(); repaint(); }).catch((e) => say('#tj-gen-status', e.message)); return; }
+    if (kind === 'gen-all') { await busy(b, () => writeAll(b)).catch((e) => say('#tj-gen-status', e.message)); return; }
     if (kind === 'gen') {
-      await busy(b, async () => { say('#tj-gen-status', `Tu IA está escribiendo el hito ${b.dataset.hito}, con cada línea explicada (unos minutos)…`); await generateMilestone(b.dataset.hito); paint(); }).catch((e) => say('#tj-gen-status', e.message));
+      const status = (t) => { const el = root.querySelector(`[data-status="${b.dataset.hito}"]`); if (el) el.textContent = t; };
+      await busy(b, async () => { status('Tu IA lo está escribiendo, con cada línea explicada (unos minutos)…'); await generateMilestone(b.dataset.hito); repaint(); }).catch((e) => status(e.message));
       return;
     }
     if (kind === 'check-gh') { await busy(b, checkGitHub).catch((e) => say('#tj-gh-status', e.message)); return; }
-    if (kind === 'forget-token') { ai.setKey('github', ''); paint(); return; }
+    if (kind === 'forget-token') { ai.setKey('github', ''); repaint(); return; }
     if (kind === 'cite') { download(`uso-de-ia-${T.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40)}.md`, citation()); }
   });
 }
@@ -542,7 +612,8 @@ export async function renderTrabajos(arg = []) {
     if (ids.includes(arg[1])) { location.hash = `#/trabajos/${arg[1]}`; return; }
     return renderJoin(arg[1], arg[2]);
   }
-  if (arg[0]) return openTrabajo(arg[0], arg[1]);
+  if (arg[0]) return openTrabajo(arg[0]);
   T = null;
+  if (draft) return renderDraft();
   return renderList();
 }

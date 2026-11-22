@@ -2608,91 +2608,128 @@ canvas.prop[data-prop="campfire"] { -webkit-mask-image: radial-gradient(closest-
 .dash-grid [data-tile="shelf"] .trinket.locked { width: 50px; min-width: 0; height: 76px; padding: 0; font-size: 22px; }
 .dash-grid [data-tile="shelf"] .shelf { gap: 10px; flex-wrap: nowrap; }
 
-/* ---------- «Trabajos» (trabajos.js): a group assignment with its solution guide ---------- */
-#view-trabajos .glass { padding: 18px 20px; }
-.tj-lede { margin: -6px 0 18px; }
-.tj-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin: 0 0 22px; }
-.tj-card { display: grid; gap: 4px; color: var(--ink); text-decoration: none; }
-.tj-card b { font: 700 18px var(--display); }
-.tj-new { display: grid; gap: 14px; max-width: 980px; }
-.tj-new h2 { margin: 0; font-size: 24px; }
-.tj-new textarea { width: 100%; resize: vertical; }
-.narrow-form { max-width: 560px; }
-.tj-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
-.tj-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+/* ---------- «Trabajos» (trabajos.js): a group assignment with its solution guide, read like a study guide ---------- */
+/* One reading column, one path (caspian-kb studium rules/one-path-step-by-step). */
+#view-trabajos { --tj-w: 820px; }
+#tj-body { position: relative; z-index: 2; max-width: var(--tj-w); margin: 0 auto; }
 .tj-warn { color: var(--red); font-weight: 600; }
 .tj-note { border-left: 3px solid var(--butter); padding-left: 10px; }
-.tj-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
-.tj-head h1 { margin: 2px 0 0; font-size: clamp(24px, 3vw, 34px); line-height: 1.1; }
-.tj-head p { margin: 4px 0 0; }
-.tj-total { display: grid; justify-items: end; min-width: 180px; }
-.tj-total b { font: 800 30px/1 var(--display); }
-.tj-bar { display: inline-block; vertical-align: middle; width: 100%; min-width: 60px; height: 7px; border-radius: 99px; background: color-mix(in oklab, var(--ink) 10%, transparent); overflow: hidden; }
+
+/* The start: one sentence, one action. */
+.tj-start { text-align: center; padding: 8vh 0 4vh; display: grid; justify-items: center; gap: 10px; }
+.tj-start h1 { margin: 0; font-size: clamp(38px, 5vw, 56px); }
+.tj-start .lede-small { margin: 0 0 14px; }
+.tj-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 18px; }
+.tj-card { display: grid; gap: 4px; padding: 16px 18px; color: var(--ink); text-decoration: none; }
+.tj-card b { font: 700 18px var(--display); }
+
+/* A new trabajo: one question per screen. */
+.tj-wizard { padding-left: 36px !important; padding-right: 36px !important; border-radius: 28px; background: color-mix(in oklab, var(--card) 92%, transparent); box-shadow: inset 0 0 0 1px var(--line); min-height: 56vh; display: grid; align-content: center; gap: 14px; max-width: 640px; margin: 0 auto; padding: 4vh 0; }
+.tj-wizard h1 { margin: 0; font-size: clamp(30px, 4vw, 44px); line-height: 1.1; }
+.tj-wizard .lede-small { margin: 0; }
+.tj-dots { display: flex; gap: 6px; }
+.tj-dots i { width: 26px; height: 5px; border-radius: 9px; background: color-mix(in oklab, var(--ink) 12%, transparent); }
+.tj-dots i.done { background: var(--teal); }
+.tj-dots i.now { background: var(--blue); }
+.tj-big-input { font: 600 24px var(--display); padding: 14px 18px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); color: var(--ink); width: 100%; box-sizing: border-box; }
+.tj-big-input:focus { outline: 2px solid var(--blue); outline-offset: 2px; }
+.tj-count { display: flex; flex-wrap: wrap; gap: 10px; }
+.tj-count button { width: 64px; height: 64px; border-radius: 18px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: 800 24px var(--display); cursor: pointer; }
+.tj-count button.on, .tj-count button:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
+.tj-drop { display: grid; place-items: center; gap: 4px; min-height: 160px; padding: 20px; border-radius: 20px; border: 2px dashed color-mix(in oklab, var(--blue) 45%, var(--line)); background: color-mix(in oklab, var(--blue) 5%, var(--card)); cursor: pointer; text-align: center; }
+.tj-drop.over { background: color-mix(in oklab, var(--blue) 14%, var(--card)); }
+.tj-drop b { font: 700 19px var(--display); }
+.tj-paste { width: 100%; box-sizing: border-box; border-radius: 14px; padding: 12px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: 15px/1.5 var(--body); }
+.tj-sentence { font-size: 20px; line-height: 1.5; margin: 0; }
+.tj-wizard-nav { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+.tj-wizard-nav span { flex: 1; }
+.tj-working { justify-items: center; text-align: center; }
+.tj-spinner { width: 46px; height: 46px; border-radius: 50%; border: 4px solid color-mix(in oklab, var(--blue) 20%, transparent); border-top-color: var(--blue); animation: tj-spin 1s linear infinite; }
+@keyframes tj-spin { to { transform: rotate(360deg); } }
+
+/* The guide: a document. */
+.tj-doc { display: grid; gap: 8px; padding: 14px 36px 34px; border-radius: 28px; background: color-mix(in oklab, var(--card) 92%, transparent); box-shadow: 0 30px 80px -40px rgba(0, 0, 0, .35), inset 0 0 0 1px var(--line); }
+.tj-top { position: sticky; top: 78px; z-index: 5; background: var(--card); border-radius: 16px; box-shadow: 0 10px 24px -16px rgba(0, 0, 0, .35), inset 0 0 0 1px var(--line); display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-radius: 16px; font-size: 14px; }
+.tj-top-title { font: 700 14.5px var(--display); color: var(--ink); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 230px; }
+.tj-top-caps { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
+.tj-top-caps a { display: inline-grid; place-items: center; min-width: 26px; height: 26px; border-radius: 8px; color: var(--ink-2); text-decoration: none; font-weight: 700; }
+.tj-top-caps a:hover { background: color-mix(in oklab, var(--blue) 14%, transparent); color: var(--ink); }
+.tj-mine { display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; color: var(--ink-2); }
+.tj-top-pct { font: 800 15px var(--display); }
+.tj-top-bar { width: 90px; }
+.tj-bar { display: inline-block; vertical-align: middle; width: 100%; min-width: 40px; height: 6px; border-radius: 99px; background: color-mix(in oklab, var(--ink) 10%, transparent); overflow: hidden; }
 .tj-bar i { display: block; width: var(--tj-p); height: 100%; border-radius: inherit; background: var(--tj-c); transition: width .5s ease; }
-td .tj-bar { width: 90px; margin-left: 6px; }
-.tj-people { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0; }
-.tj-person { display: inline-flex; align-items: center; gap: 7px; padding: 4px 12px 4px 4px; border-radius: 99px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line); font-weight: 650; font-size: 14.5px; }
-.tj-person i, .tj-col header i, .tj-step header i { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--c); color: #fff; font: 800 13px var(--display); font-style: normal; box-shadow: 0 3px 8px -3px var(--c), inset 0 -2px 0 rgba(0, 0, 0, .18), inset 0 2px 0 rgba(255, 255, 255, .25); }
-.tj-person small { color: var(--muted); font-weight: 600; }
-.tj-tabs { margin-top: 4px; }
-.tj-tabs a[aria-current="true"] { color: var(--ink); border-color: var(--blue); background: color-mix(in oklab, var(--blue) 16%, var(--card)); }
-.tj-sec { display: grid; gap: 14px; }
-.tj-sec > h2 { margin: 10px 0 0; font-size: 22px; }
-.tj-box h2 { margin: 0 0 6px; font-size: 21px; }
-.tj-box h3 { font-size: 16px; margin: 12px 0 4px; }
-.tj-reqs { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; }
-.tj-req header { display: flex; gap: 8px; align-items: center; }
-.tj-req p { margin: 6px 0; }
-.tj-req blockquote { margin: 6px 0; padding: 6px 12px; border-left: 3px solid var(--blue); color: var(--ink-2); font-size: 15px; background: color-mix(in oklab, var(--blue) 6%, transparent); border-radius: 0 10px 10px 0; }
+
+.tj-hero { padding: 26px 0 6px; }
+.tj-hero h1 { margin: 6px 0 4px; font-size: clamp(32px, 4vw, 46px); line-height: 1.08; }
+.tj-sub { margin: 0 0 14px; color: var(--muted); font-size: 16px; }
+.tj-team { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.tj-member { display: inline-flex; align-items: center; gap: 7px; font-weight: 650; }
+.tj-member small { color: var(--muted); font-weight: 600; }
+.tj-av { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--c); color: #fff; font: 800 12px var(--display); font-style: normal; flex: none; vertical-align: middle;
+  box-shadow: 0 3px 8px -3px var(--c), inset 0 -2px 0 rgba(0, 0, 0, .18), inset 0 2px 0 rgba(255, 255, 255, .25); }
+
+.tj-cap { padding: 26px 0 10px; border-top: 1px solid var(--line); scroll-margin-top: 140px; }
+.tj-cap h2 { display: flex; align-items: center; gap: 12px; margin: 0 0 8px; font-size: 28px; }
+.tj-cap h2 .n { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: var(--blue); color: #fff; font-size: 19px; flex: none; }
+.tj-cap h3 { margin: 22px 0 8px; font-size: 20px; }
+.tj-lead { font-size: 18px; color: var(--ink-2); margin: 0 0 10px; }
+.tj-prose { font-size: 17px; line-height: 1.65; }
+.tj-prose p { margin: 0 0 10px; }
+.tj-prose dfn, .tj-lead dfn, .tj-reqlist dfn { font-style: normal; text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
+.tj-reqlist { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 17px; }
+.tj-weight { color: var(--muted); font-size: 13px; font-weight: 700; white-space: nowrap; }
+.tj-callout { margin: 14px 0; padding: 12px 16px; border-radius: 14px; background: color-mix(in oklab, var(--red) 7%, var(--card)); border-left: 4px solid var(--red); }
+.tj-callout p { margin: 4px 0; }
+.tj-callout.soft { background: color-mix(in oklab, var(--blue) 6%, var(--card)); border-left-color: var(--blue); }
+.tj-callout .ai-pick { margin: 8px 0; }
+.tj-fold { margin: 8px 0; }
+.tj-fold > summary { cursor: pointer; color: var(--ink-2); font-weight: 650; }
+.tj-fold.q { padding: 8px 14px; border-radius: 12px; background: color-mix(in oklab, var(--blue) 5%, transparent); }
+.tj-fold.q > summary { color: var(--ink); }
+.tj-parts { display: grid; gap: 8px; }
+.tj-part { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 14px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line); border-left: 4px solid var(--c); }
+.tj-part span:nth-child(2) { display: grid; }
+.tj-part small { color: var(--muted); }
+.tj-holder { font-weight: 700; }
+.tj-preview { color: var(--ink-2); display: grid; gap: 4px; }
+
+/* A step. */
+.tj-step { margin: 18px 0; padding: 4px 0 4px 18px; border-left: 3px solid var(--c); scroll-margin-top: 140px; }
+.tj-step h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 6px; font-size: 21px; }
+.tj-num { color: var(--muted); font-weight: 700; font-size: 16px; }
+.tj-expect { padding: 8px 12px; border-radius: 12px; background: color-mix(in oklab, var(--teal) 8%, transparent); }
+.tj-code { margin: 12px 0; border-radius: 14px; overflow: hidden; box-shadow: inset 0 0 0 1px var(--line); background: color-mix(in oklab, var(--bg) 70%, var(--card)); }
+.tj-code table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.tj-code tr:hover { background: color-mix(in oklab, var(--blue) 9%, transparent); }
+.tj-code td { vertical-align: top; padding: 3px 10px; }
+.tj-code td.n { width: 28px; color: var(--muted); text-align: right; user-select: none; font: 12px/1.9 ui-monospace, monospace; }
+.tj-code td.c { width: 50%; white-space: pre-wrap; word-break: break-word; font: 13.5px/1.7 ui-monospace, Consolas, monospace; }
+.tj-code td.c code { background: none; padding: 0; }
+.tj-code td.e { color: var(--ink-2); border-left: 1px dashed var(--line); font-size: 14px; line-height: 1.45; padding-top: 4px; padding-bottom: 4px; }
+.tj-pre { white-space: pre-wrap; font: 13px/1.55 ui-monospace, Consolas, monospace; background: color-mix(in oklab, var(--bg) 70%, var(--card)); padding: 10px 12px; border-radius: 12px; max-height: 420px; overflow: auto; }
+.tj-stepfoot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 12px; }
+.tj-tick { display: inline-flex !important; white-space: nowrap; width: auto; grid-template-columns: none; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 99px; box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; font-weight: 650; font-size: 14.5px; }
+.tj-tick input { accent-color: var(--teal); }
+.tj-tick.on { background: color-mix(in oklab, var(--teal) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--teal) 45%, transparent); }
+.tj-answer { margin-top: 8px; padding: 10px 14px; border-radius: 14px; background: color-mix(in oklab, var(--teal) 9%, var(--card)); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--teal) 30%, transparent); }
+.tj-answer p { margin: 4px 0; }
+.tj-capfoot { margin-top: 8px; }
+
+/* The closing chapter. */
+.tj-progress { display: grid; gap: 8px; }
+.tj-prow { display: grid; grid-template-columns: auto 110px 150px 1fr 160px 1fr; align-items: center; gap: 10px; font-size: 14.5px; }
+.tj-inline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
+.tj-inline input { padding: 9px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--ink); min-width: 260px; }
 .tj-gloss { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; }
 .tj-gloss dt { font-weight: 750; }
 .tj-gloss dd { margin: 0; color: var(--ink-2); }
-.tj-checks { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); }
-.tj-tutor { margin-top: 6px; }
-.tj-answer { margin-top: 6px; padding: 10px 14px; border-radius: 14px; background: color-mix(in oklab, var(--teal) 9%, var(--card)); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--teal) 30%, transparent); }
-.tj-answer p { margin: 4px 0; }
-.tj-board { display: grid; grid-template-columns: repeat(var(--n), minmax(220px, 1fr)); gap: 12px; overflow-x: auto; }
-.tj-col { border-top: 4px solid var(--c); display: grid; align-content: start; gap: 8px; }
-.tj-col header { display: flex; align-items: center; gap: 8px; font: 750 17px var(--display); }
-.tj-holder { min-height: 38px; display: flex; align-items: center; gap: 10px; font-weight: 700; }
-.tj-mini { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 3px; max-height: 300px; overflow: auto; }
-.tj-mini li.done { color: var(--muted); text-decoration: line-through; }
-.tj-guide { display: grid; grid-template-columns: 270px 1fr; gap: 16px; align-items: start; }
-.tj-side { position: sticky; top: 84px; max-height: calc(100vh - 110px); overflow: auto; }
-.tj-side ol { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; }
-.tj-side a { display: grid; gap: 3px; padding: 8px 10px; border-radius: 12px; color: var(--ink-2); text-decoration: none; font-size: 14.5px; }
-.tj-side a[aria-current="true"], .tj-side a:hover { background: color-mix(in oklab, var(--blue) 12%, transparent); color: var(--ink); }
-.tj-side small { color: var(--muted); }
-.tj-main { display: grid; gap: 14px; min-width: 0; }
-.tj-main .tj-box p { margin: 4px 0; }
-.tj-step { border-left: 4px solid var(--c); }
-.tj-step header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font: 750 17px var(--display); margin-bottom: 6px; }
-.tj-theory { padding: 4px 14px; border-radius: 14px; background: color-mix(in oklab, var(--butter) 7%, transparent); }
-.tj-theory h4 { margin: 8px 0 0; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
-.tj-code { margin: 10px 0; border-radius: 14px; overflow: hidden; box-shadow: inset 0 0 0 1px var(--line); background: color-mix(in oklab, var(--bg) 70%, var(--card)); }
-.tj-code table { width: 100%; border-collapse: collapse; font-size: 13.5px; table-layout: fixed; }
-.tj-code tr:hover { background: color-mix(in oklab, var(--blue) 9%, transparent); }
-.tj-code td { vertical-align: top; padding: 2px 10px; }
-.tj-code td.n { width: 34px; color: var(--muted); text-align: right; user-select: none; font: 12px ui-monospace, monospace; padding-top: 4px; }
-.tj-code td.c { width: 52%; white-space: pre-wrap; word-break: break-word; font: 13px/1.6 ui-monospace, Consolas, monospace; }
-.tj-code td.c code { background: none; }
-.tj-code td.e { color: var(--ink-2); border-left: 1px dashed var(--line); font-size: 13.5px; line-height: 1.45; padding-top: 3px; padding-bottom: 3px; }
-.tj-code-foot { padding: 4px 10px; border-top: 1px solid var(--line); }
-.tj-code .tj-tutor { padding: 0 10px 8px; }
-.tj-pre { white-space: pre-wrap; font: 13px/1.55 ui-monospace, Consolas, monospace; background: color-mix(in oklab, var(--bg) 70%, var(--card)); padding: 10px 12px; border-radius: 12px; max-height: 420px; overflow: auto; }
-.tj-q { margin: 6px 0; padding: 6px 12px; border-radius: 12px; background: color-mix(in oklab, var(--blue) 6%, transparent); }
-.tj-q.def { background: color-mix(in oklab, var(--red) 6%, transparent); }
-.tj-q summary { cursor: pointer; font-weight: 650; }
-.tj-commit code { font-size: 13px; }
-.tj-table { overflow-x: auto; }
-.tj-table table { width: 100%; border-collapse: collapse; font-size: 15px; }
-.tj-table th, .tj-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-.tj-inline { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
-.tj-inline .field { min-width: 260px; }
-.tj-log summary { cursor: pointer; }
-@media (max-width: 860px) {
-  .tj-guide { grid-template-columns: 1fr; }
-  .tj-side { position: static; max-height: none; }
+
+@media (max-width: 760px) {
+  .tj-top { top: 64px; flex-wrap: wrap; }
+  .tj-top-title { max-width: 60%; }
+  .tj-prow { grid-template-columns: auto 1fr; }
+  .tj-prow .tj-bar { grid-column: 1 / -1; }
   .tj-code table, .tj-code tbody, .tj-code tr, .tj-code td { display: block; width: auto; }
   .tj-code td.n { display: none; }
   .tj-code td.e { border-left: 0; padding-bottom: 8px; }
