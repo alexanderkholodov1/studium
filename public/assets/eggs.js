@@ -579,6 +579,7 @@ export function openRadio(discovered = false, dock = undefined) {
 }
 export function closeRadio() {
   stopMusic();
+  dispatchEvent(new CustomEvent('studium-radio', { detail: { on: false, el: radioEl() } }));
   try { radio.yt?.destroy(); } catch { /* already gone */ }
   radio.yt = null;
   radio.playing = false;

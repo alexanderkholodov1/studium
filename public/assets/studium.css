@@ -2662,3 +2662,23 @@ canvas.prop { display: block; }
 .st-card .actions { align-items: center; }
 .st-card .st-msg { margin-left: auto; color: var(--muted); font-size: 14px; }
 @media (max-width: 760px) { .st-row { grid-template-columns: 1fr 1fr; } }
+
+/* ---------- the tour comes in and goes out: the dark fades, the light grows from its subject, the card springs ---------- */
+.tour { animation: tour-in .35s ease both; }
+.tour.out { animation: tour-out .3s ease both; }
+.tour-hole { animation: tour-hole-in .5s cubic-bezier(.2, .9, .3, 1) both; }
+.tour-card { animation: tour-card-in .55s cubic-bezier(.2, 1.4, .4, 1) .12s both; }
+.tour.out .tour-card { animation: tour-card-out .28s ease both; }
+.tour-specter { animation: tour-specter-in .6s cubic-bezier(.2, 1.6, .4, 1) .3s both; }
+.tour-specter.nod { animation: tour-nod .5s cubic-bezier(.3, 1.6, .5, 1); }
+.tour-body.step-in > * { animation: tour-step .35s ease both; }
+.tour-body.step-in > :nth-child(2) { animation-delay: .05s; }
+@keyframes tour-in { from { opacity: 0; } }
+@keyframes tour-out { to { opacity: 0; } }
+@keyframes tour-hole-in { from { opacity: 0; transform: scale(1.25); } }
+@keyframes tour-card-in { from { opacity: 0; transform: translateY(18px) scale(.9); } }
+@keyframes tour-card-out { to { opacity: 0; transform: translateY(10px) scale(.94); } }
+@keyframes tour-specter-in { from { opacity: 0; transform: scale(.2) rotate(-200deg); } }
+@keyframes tour-nod { 40% { transform: translateY(-6px) rotate(-4deg) scale(1.05); } }
+@keyframes tour-step { from { opacity: 0; transform: translateX(10px); } }
+@media (prefers-reduced-motion: reduce) { .tour, .tour.out, .tour-hole, .tour-card, .tour.out .tour-card, .tour-specter, .tour-specter.nod, .tour-body.step-in > * { animation: none; } }

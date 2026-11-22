@@ -314,6 +314,12 @@ function droppedOnDecor(x, y) {
   nodo.place = nodo.grabbedFrom ?? nodo.place;
   return playAt(c, true) || true;
 }
+// Where he dances: beside the radio (right of it if there is room, else left).
+function danceSpot(el) {
+  const r = el.getBoundingClientRect();
+  const right = r.right + nodo.r * 1.2 < innerWidth;
+  return { x: right ? r.right + nodo.r * 0.8 : r.left - nodo.r * 0.8, y: Math.min(innerHeight - nodo.r - 20, Math.max(90, r.top + r.height * 0.55)), r };
+}
 // When the radio plays, he comes to dance by it for a while: bouncing on the beat, swaying, hands up, notes; then back
 // to his place. While the music goes on, he comes back now and then.
 let music = { on: false, el: null, next: 0 };
@@ -321,11 +327,8 @@ let dancing = 0;
 function danceBy() {
   const el = music.el;
   if (!music.on || !nodo || nodo.gone || away || drag || dancing || !el?.isConnected || !running()) return false;
-  const r = el.getBoundingClientRect();
+  const { x, y, r } = danceSpot(el);
   if (!r.width || r.bottom < 80 || r.top > innerHeight - 40) return false;
-  const right = r.right + nodo.r * 1.2 < innerWidth;
-  const x = right ? r.right + nodo.r * 0.8 : r.left - nodo.r * 0.8;
-  const y = Math.min(innerHeight - nodo.r - 20, Math.max(90, r.top + r.height * 0.55));
   stopRoutine();
   if (nodo.place == null) nodo.place = nodo.home ?? nodo.x;
   specter.visit(x, y);
@@ -337,6 +340,9 @@ function danceBy() {
     for (let i = 0; i < beats; i += 1) {
       setTimeout(() => {
         if (run !== dancing || !nodo?.fly) return;
+        // The radio moved (dragged somewhere else): he goes with it, dancing.
+        const to = danceSpot(el);
+        if (Math.hypot(to.x - nodo.fly.x, to.y - nodo.fly.y) > 24) flyTo(to.x, to.y, { ms: 420, arc: 10 });
         const up = i % 2 === 0;
         pose({ y: up ? -14 : 0, rot: (i % 4 < 2 ? -1 : 1) * 10, scale: up ? 1.04 : 0.97, ms: beat * 0.9 });
         nodo.face.dataset.hands = i % 8 < 4 ? 'up' : 'wave';
@@ -353,11 +359,36 @@ function danceBy() {
   }, 1100);
   return true;
 }
+let offTimer = 0;
 addEventListener('studium-radio', (e) => {
+  const was = music.on;
   music.on = !!e.detail?.on; music.el = e.detail?.el ?? music.el;
-  if (music.on) setTimeout(danceBy, 1400);
-  else if (dancing) { dancing = 0; pose({ ms: 300 }); if (nodo) { nodo.face.dataset.hands = 'rest'; if (nodo.fly) specter.home(); } }
+  clearTimeout(offTimer);
+  if (music.on) { if (!dancing) setTimeout(danceBy, 1400); return; }
+  if (!was) return;
+  // Turned off (and still off a moment later: not just a change of station): he reacts.
+  offTimer = setTimeout(() => {
+    if (music.on || !nodo || nodo.gone || away) return;
+    if (dancing) {
+      dancing = 0; pose({ ms: 200 }); nodo.face.dataset.hands = 'cheeks';
+      mood('sad', 2200); say(['¡Oye! Estaba bailando…', '¿Por qué la apagaste?', 'Ay, justo en la mejor parte.'][Math.floor(Math.random() * 3)], 2200);
+      setTimeout(() => { if (nodo?.fly) specter.home(); }, 1600);
+    } else if (running()) {
+      mood('surprised', 1200); say(['¿Se acabó la música?', 'Mmm, silencio.', '¿Ya no hay radio?'][Math.floor(Math.random() * 3)], 1800);
+    }
+  }, 700);
 });
+// Dropped on the radio: he dances by it, and turns it on first if it was off.
+function droppedOnRadio(x, y) {
+  const el = document.getElementById('egg-radio');
+  if (!el || el.classList.contains('waiting')) return false;
+  const r = el.getBoundingClientRect();
+  if (!r.width || x < r.left - 10 || x > r.right + 10 || y < r.top - 10 || y > r.bottom + 10) return false;
+  music.el = el;
+  if (el.classList.contains('playing')) { music.on = true; danceBy(); }
+  else { mood('glad', 1200, true); say('¡Pongamos música!', 1400); el.querySelector('[data-radio-play]')?.click(); }
+  return true;
+}
 let routineRun = 0;
 function stopRoutine() {
   routineRun += 1;
@@ -484,7 +515,7 @@ function release() {
   // Thrown hard he gets dizzy; let go gently, glad.
   if (b.kind === 'nodo') b.home = null;
   // Dropped on the decoration: he goes in (the grab's rubbing sound ends here too, or it would go on).
-  if (b.kind === 'nodo' && drag.moved >= 4 && speed < 900 && droppedOnDecor(b.x, b.y)) { sfx.release(0, b.r * 2); drag = null; root.classList.remove('grabbing'); return; }
+  if (b.kind === 'nodo' && drag.moved >= 4 && speed < 900 && (droppedOnRadio(b.x, b.y) || droppedOnDecor(b.x, b.y))) { sfx.release(0, b.r * 2); drag = null; root.classList.remove('grabbing'); return; }
   if (b.kind === 'nodo') { if (drag.moved < 4) poked(b); else if (speed > 900) { mood('dizzy', 2200); say(['¡Wiii!', 'Mareado…', '¡Otra vez!'][Math.floor(Math.random() * 3)], 1500); } else mood('glad', 900); }
   else if (drag.moved < 4) { b.vy -= 160; b.va += rand(-1, 1); }
   sfx.release(drag.moved < 4 ? 600 : speed, b.r * 2);
@@ -698,7 +729,34 @@ function flyTo(x, y, { ms = 900, stay = 0, loops = 0, arc = 60, out = false, the
   wake();
   return true;
 }
+// Only one Specter on screen: when something else shows him (the tour), the one of the page spins away, and comes
+// back to his place when it ends. Nested callers are counted.
+let held = 0;
+function leavePage() {
+  held += 1;
+  if (!nodo || nodo.gone) return;
+  stopRoutine();
+  if (dancing) { dancing = 0; pose({ ms: 150 }); }
+  nodo.fly = null;
+  spin('out');
+  setTimeout(() => { if (!nodo || held === 0) return; nodo.el.classList.remove('spin-out'); nodo.gone = true; nodo.el.style.visibility = 'hidden'; front?.querySelector('.speech')?.remove(); }, 550);
+}
+function returnToPage() {
+  held = Math.max(0, held - 1);
+  if (held || !nodo || away) return;
+  if (!nodo.gone) { nodo.el.classList.remove('spin-out'); return; }
+  nodo.x = Math.max(nodo.r + 20, Math.min(W - nodo.r - 20, nodo.place ?? nodo.home ?? nodo.x)); nodo.y = H - nodo.r - 34; nodo.vx = 0; nodo.vy = 0;
+  nodo.home = nodo.x;
+  nodo.gone = false; nodo.el.style.visibility = '';
+  spin('in'); render();
+  setTimeout(() => { nodo?.el.classList.remove('spin-in'); mood('glad', 1000, true); }, 600);
+  wake();
+}
+
 export const specter = {
+  // Away from the page while something else shows him (the tour), and back.
+  leave: () => leavePage(),
+  comeBack: () => returnToPage(),
   // Is he on screen (the playful ambience, moving)?
   here: () => !!nodo && running() && !nodo.gone && !away,
   // Where he is, on the screen.
