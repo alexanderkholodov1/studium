@@ -225,6 +225,25 @@ export const sfx = {
   // Letters of the wordmark: soft wooden notes.
   note(step = 0) { if (!audio()) return; body(note(step + 7), now(), { gain: 0.035, decay: 0.6, bright: 0.35, room: 0.4 }); },
   boing(step = 0) { this.note(step); },
+  // The campfire: it flares up (a whoosh and crackles), something rustles behind a tree, eyes open in the dark.
+  whoosh() {
+    if (!audio() || !limit('whoosh', 300)) return;
+    const t = now();
+    hiss(t, { gain: 0.06, attack: 0.04, decay: 0.55, freq: 500, q: 0.6, sweep: 4, room: 0.3 });
+    sine(90, t, { gain: 0.04, attack: 0.05, decay: 0.5, glide: 0.7, room: 0.2 });
+    for (let i = 0; i < 7; i += 1) hiss(t + 0.08 + Math.random() * 0.7, { gain: 0.03 + Math.random() * 0.03, decay: 0.02, freq: 2500 + Math.random() * 3000, q: 2, room: 0.15 });
+  },
+  rustle() {
+    if (!audio() || !limit('rustle', 800)) return;
+    const t = now();
+    for (let i = 0; i < 4; i += 1) hiss(t + i * 0.07, { gain: 0.018, attack: 0.02, decay: 0.12, freq: 3200 + Math.random() * 1500, q: 0.9, room: 0.25, pan: -0.2 });
+  },
+  eerie() {
+    if (!audio() || !limit('eerie', 2000)) return;
+    const t = now();
+    sine(196, t, { gain: 0.018, type: 'triangle', attack: 0.4, decay: 1.4, glide: 0.97, room: 0.7 });
+    sine(207.7, t + 0.15, { gain: 0.014, type: 'triangle', attack: 0.4, decay: 1.3, glide: 0.97, room: 0.7 });
+  },
   // Specter's voice: a small sound of his own for each emotion, soft and short, never words.
   voice(mood = 'glad') {
     if (!audio() || !limit('voice', 260)) return;
