@@ -101,6 +101,8 @@ function build() {
 // Specter lives his little life (scenes, stories, dances, words) only in the playful ambience; in the lively one he is
 // there to be squashed and thrown, quietly; in the serene one and in focus, he is not there.
 const chatty = () => ambience === 'jugueton';
+// What he wears is what is drawn on him: his scenes follow the look on screen, never a value another tab changed.
+const wears = () => nodo?.face?.dataset.skin ?? '';
 
 /* ---------- Nodo ---------- */
 function makeNodo() {
@@ -291,7 +293,7 @@ function playAt(c, asked = false) {
       nodo.el.classList.remove('spin-out');
       nodo.fly = null; nodo.gone = true; nodo.el.style.visibility = 'hidden';
       front.querySelector('.speech')?.remove();
-      const started = actProp(c, 'story', { story, skin: specterSkin(), on: (ev) => {
+      const started = actProp(c, 'story', { story, skin: wears(), on: (ev) => {
         if (ev.say && ev.x !== undefined) { sceneSpeech(ev.say, ev.x, ev.y, ev.ms); sfx.babble(ev.say); }
         if (ev.notes && ev.x !== undefined) notesAt(ev.x, ev.y, ev.notes);
         if (ev.mark && ev.x !== undefined) markAt(ev.x, ev.y, ev.mark);
@@ -485,7 +487,7 @@ const MEDIC = {
 };
 let medicBusy = false;
 function medicRoutine() {
-  if (medicBusy || !nodo || nodo.gone || specterSkin() !== 'doctor') return false;
+  if (medicBusy || !nodo || nodo.gone || wears() !== 'doctor') return false;
   const names = Object.keys(MEDIC);
   const pick = names[Math.floor(Math.random() * names.length)];
   medicBusy = true;
@@ -502,7 +504,7 @@ function routine() {
   if (now - lastVisit > rand(6, 12) * 60000 && decorVisit()) { lastVisit = now; return; }
   if (music.on && now > music.next && danceBy()) return;
   // In his medic's costume, most of his little scenes are a medic's.
-  if (specterSkin() === 'doctor' && Math.random() < 0.65 && medicRoutine()) return;
+  if (wears() === 'doctor' && Math.random() < 0.65 && medicRoutine()) return;
   const names = Object.keys(ROUTINES);
   const steps = ROUTINES[names[Math.floor(Math.random() * names.length)]];
   const run = ++routineRun;
