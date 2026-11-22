@@ -463,9 +463,9 @@ service cloud.firestore {
     function inTrabajo(tid) { return exists(/databases/$(database)/documents/trabajos/$(tid)/miembros/$(request.auth.uid)); }
     function ownsTrabajo(tid) { return get(trabajoAt(tid)).data.owner == request.auth.uid; }
     function trabajo(d) {
-      return d.keys().hasOnly(['title', 'course', 'deadline', 'parts', 'owner', 'code', 'statement', 'outline', 'encoding', 'ai', 'repo', 'created', 'updated'])
+      return d.keys().hasOnly(['title', 'course', 'group', 'deadline', 'parts', 'owner', 'code', 'statement', 'outline', 'encoding', 'ai', 'repo', 'created', 'updated'])
         && d.keys().hasAll(['title', 'parts', 'owner', 'code', 'statement', 'encoding', 'created', 'updated'])
-        && text(d.title, 160) && optional(d, 'course', 120) && optional(d, 'deadline', 40)
+        && text(d.title, 160) && optional(d, 'course', 120) && optional(d, 'group', 80) && optional(d, 'deadline', 40)
         && d.parts is int && d.parts >= 1 && d.parts <= 8
         && d.code is string && d.code.matches('[A-Za-z0-9_-]{24,64}')
         && d.statement is bytes && d.statement.size() <= 600000 && d.encoding == 'gzip'

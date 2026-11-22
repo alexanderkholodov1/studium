@@ -615,7 +615,7 @@ try {
       touched.add(path);
       return { update: { name: `${base}/${path}`, fields: fields(data) }, updateTransforms: stamps.map((f) => ({ fieldPath: f, setToServerValue: 'REQUEST_TIME' })), ...(create ? { currentDocument: { exists: false } } : {}) };
     };
-    const trabajoDoc = (over = {}) => ({ title: 'Trabajo de prueba', course: 'Curso de prueba', parts: 3, owner: s.uid, code, statement: gz('enunciado'), encoding: 'gzip', ...over });
+    const trabajoDoc = (over = {}) => ({ title: 'Trabajo de prueba', course: 'Curso de prueba', group: 'Grupo 4', deadline: '2026-12-05T23:59', parts: 3, owner: s.uid, code, statement: gz('enunciado'), encoding: 'gzip', ...over });
     const at = (path) => `/trabajos/${tid}${path}`;
     expect('a trabajo without its creator as member is refused', await commit(s.token, [stamped(`trabajos/${tid}`, trabajoDoc(), ['created', 'updated'], true)]), 403);
     expect('student creates a trabajo, joining it in the same write', await commit(s.token, [

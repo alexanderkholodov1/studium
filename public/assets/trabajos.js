@@ -11,6 +11,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-lite.js';
 import { db, auth, gzip, gunzip, loadProfile } from './data.js';
 import * as ai from './ai.js';
+import { prepare } from './files.js';
 import { LETTERS, outlinePrompt, milestonePrompt, TUTOR, parseJSON, cleanOutline, cleanMilestone } from './trabajo-prompts.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -105,124 +106,227 @@ async function logAI(entry) {
   await setDoc(tRef(T.id, 'ia', uid()), { log, updated: serverTimestamp() }).catch((e) => console.warn('ia log', e));
 }
 
-/* ---------- the person's AI ---------- */
-const strongAI = () => ai.ready() && !/gemini|openrouter|puter/.test(ai.choice('solution').provider);
+/* ---------- the person's AI, for this situation ---------- */
+// What is needed depends on the trabajo and on what was brought, never a fixed «use a strong AI»: a few pages of text
+// go with any AI (the free Gemini key is enough); PDFs and photos need one that reads them; a ZIP, code, a notebook or
+// many files are read best on the person's own computer, through the bridge, in the folder of the trabajo.
+const NAMES = { gemini: 'Gemini (gratis)', anthropic: 'Claude', openai: 'ChatGPT', otras: 'OpenRouter o Puter' };
+function sizeText(n) { return n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`; }
+function analyze(files, text) {
+  const k = { text: 0, pdf: 0, image: 0, office: 0, archive: 0, code: 0, other: 0 };
+  let size = text.length;
+  for (const f of files) {
+    size += f.size;
+    const e = (f.name.match(/\.([a-z0-9]+)$/i)?.[1] ?? '').toLowerCase();
+    if (e === 'pdf') k.pdf += 1;
+    else if (/^(png|jpe?g|webp|gif|bmp)$/.test(e)) k.image += 1;
+    else if (/^(docx|pptx|xlsx|odt|odp|ods|epub)$/.test(e)) k.office += 1;
+    else if (/^(zip|rar|7z|tar|gz)$/.test(e)) k.archive += 1;
+    else if (/^(ipynb|py|java|c|cpp|h|js|ts|r|m|sql|pkt|pka|pcap|pcapng)$/.test(e)) k.code += 1;
+    else if (/^(txt|md|csv|json|html?)$/.test(e)) k.text += 1;
+    else k.other += 1;
+  }
+  return { k, size, count: files.length + (text ? 1 : 0) };
+}
+// The options for this situation, the recommended one first, each with why.
+function options(an) {
+  const { k, size, count } = an;
+  const heavy = k.archive || k.code || k.other || count > 10 || size > 25e6;
+  const reads = k.pdf || k.image || k.office;
+  const bridge = { id: 'bridge', name: 'Trabajar en tu computadora', how: 'Con tu Claude o tu ChatGPT, por el puente de Studium, en la carpeta del trabajo.', vendor: 'anthropic', bridge: true,
+    why: heavy ? 'Trajiste archivos comprimidos, código o muchos archivos: tu IA los lee mejor ahí mismo, en tu computadora, sin subirlos.' : 'Usa tu suscripción, sin pagar por uso, y lee tus archivos tal como son.' };
+  const gemini = { id: 'gemini', name: 'Gemini, gratis', how: 'Con una clave gratis de Google, en un minuto.', vendor: 'gemini',
+    why: reads ? 'Lee PDF y fotos, y para un enunciado de pocas páginas alcanza.' : 'Para un enunciado de texto alcanza, y no cuesta nada.' };
+  const claude = { id: 'anthropic', name: 'Claude', how: 'Con tu cuenta de Claude: el puente o, si la tienes, una clave.', vendor: 'anthropic', bridge: true,
+    why: 'Lee los PDF tal como son, con sus tablas y figuras.' };
+  if (heavy) return [bridge, claude, gemini];
+  if (reads && size > 8e6) return [claude, bridge, gemini];
+  return [gemini, claude, bridge];
+}
+const usable = (o) => (o.bridge ? ai.connected().some((w) => w.startsWith('bridge:')) : o.vendor === 'gemini' ? ai.connected().includes('gemini') : ai.connected().some((w) => w === o.vendor || w === (o.vendor === 'anthropic' ? 'bridge:claude' : 'bridge:codex')));
 function aiLine(task) {
-  if (!ai.ready()) return `<p class="tj-warn">${task === 'solution' ? 'Para escribir la guía necesitas conectar una IA potente (tu Claude o ChatGPT con el puente local).' : 'Para preguntarle a tu IA, conecta una: la clave gratis de Gemini sirve.'} <a href="#/ajustes">Conectar</a></p>`;
-  return `${task === 'solution' && !strongAI() ? '<p class="fine tj-note">Tu IA de ahora es rápida y gratis; para una guía completa, una más potente (Claude o ChatGPT con el puente local) lo hace mucho mejor.</p>' : ''}${ai.pickerHTML(task)}`;
+  if (!ai.ready()) return `<p class="fine">Todavía no conectaste una IA. <button type="button" class="link" data-tj="connect" data-vendor="${task === 'tutor' ? 'gemini' : 'anthropic'}" data-bridge="${task === 'tutor' ? '' : '1'}">Conectar ${task === 'tutor' ? 'Gemini, gratis' : 'tu Claude'}</button></p>`;
+  return ai.pickerHTML(task);
 }
 async function askAI(task, system, text, files = [], label = '') {
   return ai.run({ system, text, files, task, label, maxTokens: task === 'solution' ? ai.longest(ai.choice(task)) : 4000 });
 }
+// «Conectar» opens exactly the recommended option in the settings, and the answers given so far wait here.
+async function connectWay(vendor, bridge) {
+  try { localStorage.setItem('studium-ai-vendor', vendor); } catch { /* the settings open on their default */ }
+  location.hash = '#/ajustes';
+  for (let i = 0; i < 40 && !document.querySelector('#set-ai'); i += 1) await new Promise((r) => setTimeout(r, 100));
+  const target = bridge ? document.querySelector('#set-ai .ai-advanced') : document.querySelector('#set-ai .ai-panel');
+  if (!target) return;
+  if (bridge) target.open = true;
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  target.classList.add('tj-glow');
+  setTimeout(() => target.classList.remove('tj-glow'), 2600);
+  ctx.toast('Cuando termines, vuelve a «Trabajos»: tus respuestas siguen ahí.');
+}
 
 /* ---------- the list ---------- */
+const deadlineText = (d) => {
+  if (!d) return '';
+  const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?$/);
+  if (!m) return String(d);
+  const date = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4] ?? 0), Number(m[5] ?? 0));
+  return date.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' }) + (m[4] ? `, ${m[4]}:${m[5]}` : '');
+};
 async function renderList() {
   root.innerHTML = '<p class="status">Cargando…</p>';
   const ids = await myIds();
   const rows = (await Promise.all(ids.map((id) => getDoc(tRef(id)).then((s) => (s.exists() ? { id, ...s.data() } : null)).catch(() => null)))).filter(Boolean);
   root.innerHTML = `<div class="page-head"><h1>Trabajos</h1><button type="button" class="button primary" data-tj="new">Empezar un trabajo nuevo</button></div>
     <p class="lede-small tj-lede">Resuelve un trabajo en grupo con una guía, paso a paso, entendiendo cada línea.</p>
-    ${rows.length ? `<div class="tj-cards">${rows.map((r) => `<a class="tj-card glass" href="#/trabajos/${esc(r.id)}"><b>${esc(r.title)}</b><span class="fine">${esc(r.course ?? '')}${r.deadline ? ` · entrega ${esc(r.deadline)}` : ''}</span></a>`).join('')}</div>` : '<p class="fine">Todavía no tienes trabajos.</p>'}`;
+    ${rows.length ? `<div class="tj-cards">${rows.map((r) => `<a class="tj-card glass" href="#/trabajos/${esc(r.id)}"><b>${esc(r.title)}</b><span class="fine">${esc([r.course, r.group].filter(Boolean).join(' · '))}${r.deadline ? `<br>entrega: ${esc(deadlineText(r.deadline))}` : ''}</span></a>`).join('')}</div>` : '<p class="fine">Todavía no tienes trabajos.</p>'}`;
 }
 
 /* ---------- a new trabajo: one question at a time ---------- */
 const QUESTIONS = [
   { key: 'title', ask: '¿Cómo se llama el trabajo?', hint: 'Como aparece en el enunciado, o como lo llaman ustedes.', input: 'text', placeholder: 'Proyecto final de Machine Learning', required: true },
   { key: 'course', ask: '¿De qué materia es?', input: 'text', placeholder: 'Machine Learning', optional: true },
-  { key: 'statement', ask: 'Trae el enunciado', hint: 'Y la rúbrica, si la tienen. Arrastra los archivos o pega el texto.', input: 'files', required: true },
+  { key: 'statement', ask: 'Trae el enunciado', hint: 'Y todo lo que lo acompaña: la rúbrica, archivos de inicio, un ZIP. Puedes traer varios.', input: 'files', required: true },
+  { key: 'ai', ask: 'Tu IA para este trabajo', input: 'ai' },
   { key: 'parts', ask: '¿Cuántos son en el grupo?', hint: 'La guía se divide en una parte por persona.', input: 'count' },
-  { key: 'deadline', ask: '¿Cuándo es la entrega?', input: 'text', placeholder: 'inicios de diciembre', optional: true },
-  { key: 'name', ask: '¿Cómo te llamamos en el grupo?', hint: 'Es lo que verán tus compañeros.', input: 'text', required: true },
+  { key: 'group', ask: '¿Cómo se llama el grupo?', hint: 'Algunos trabajos lo piden en el informe.', input: 'text', placeholder: 'Grupo 4', optional: true },
+  { key: 'deadline', ask: '¿Cuándo es la entrega?', input: 'date', optional: true },
   { key: 'ready', ask: 'Todo listo', input: 'ready' },
 ];
-async function startDraft() {
-  const name = (await loadProfile(uid()).catch(() => null))?.nickname ?? '';
-  draft = { at: 0, title: '', course: '', text: '', files: [], parts: 3, deadline: '', name, pasting: false };
+async function myName() {
+  const p = await loadProfile(uid()).catch(() => null);
+  const u = auth.currentUser;
+  return String(p?.nickname || u?.displayName || (u?.email ?? '').split('@')[0] || 'Yo').slice(0, 40);
+}
+function startDraft() {
+  draft = { at: 0, title: '', course: '', text: '', files: [], parts: 3, group: '', date: '', time: '', pasting: false };
   renderDraft();
+}
+const sameFile = (a, b) => a.name === b.name && a.size === b.size && a.lastModified === b.lastModified;
+function addFiles(list) {
+  for (const f of list) if (!draft.files.some((g) => sameFile(f, g))) draft.files.push(f);
 }
 function renderDraft(error = '') {
   const q = QUESTIONS[draft.at];
   const dots = QUESTIONS.map((_, i) => `<i class="${i < draft.at ? 'done' : i === draft.at ? 'now' : ''}"></i>`).join('');
   let control = '';
-  if (q.input === 'text') control = `<input class="tj-input" name="v" value="${esc(draft[q.key])}" placeholder="${esc(q.placeholder ?? '')}" maxlength="${q.key === 'name' ? 40 : 160}" autocomplete="off">`;
+  let hint = q.hint ?? '';
+  if (q.input === 'text') control = `<input class="tj-input" name="v" value="${esc(draft[q.key])}" placeholder="${esc(q.placeholder ?? '')}" maxlength="${q.key === 'group' ? 80 : 160}" autocomplete="off">`;
   if (q.input === 'count') control = `<div class="tj-count">${[1, 2, 3, 4, 5, 6, 7, 8].map((n) => `<button type="button" class="button ${n === draft.parts ? 'primary' : 'ghost'}" data-tj="count" data-n="${n}">${n}</button>`).join('')}</div>`;
+  if (q.input === 'date') {
+    control = `<div class="tj-when"><label class="field"><span>Día</span><input type="date" name="date" value="${esc(draft.date)}"></label>
+      <label class="field"><span>Hora (si la sabes)</span><input type="time" name="time" value="${esc(draft.time)}"></label></div>`;
+  }
   if (q.input === 'files') {
     control = `<label class="tj-drop" data-tj-drop>
-        <input type="file" name="files" multiple accept=".pdf,.txt,.md,text/plain,application/pdf" hidden>
-        <b>${draft.files.length ? draft.files.map((f) => esc(f.name)).join(' · ') : 'Suelta aquí el enunciado y la rúbrica'}</b>
-        <span class="fine">${draft.files.length ? 'Pulsa para cambiarlos' : 'o pulsa para elegirlos · PDF, texto o Markdown'}</span>
+        <input type="file" name="files" multiple hidden>
+        <b>Suelta aquí tus archivos</b>
+        <span class="fine">o pulsa para elegirlos · puedes traer varios, de una vez o uno por uno</span>
       </label>
-      ${draft.pasting || draft.text ? `<textarea class="tj-paste plain" name="text" rows="6" placeholder="Pega aquí el enunciado y la rúbrica">${esc(draft.text)}</textarea>` : '<button type="button" class="link" data-tj="paste">Prefiero pegar el texto</button>'}`;
+      ${draft.files.length ? `<ul class="tj-files">${draft.files.map((f, i) => `<li><span>${esc(f.name)}</span><small>${sizeText(f.size)}</small><button type="button" class="link" data-tj="drop-file" data-i="${i}" aria-label="Quitar ${esc(f.name)}">quitar</button></li>`).join('')}</ul>` : ''}
+      ${draft.pasting || draft.text ? `<textarea class="tj-paste plain" name="text" rows="5" placeholder="Pega aquí el enunciado y la rúbrica">${esc(draft.text)}</textarea>` : '<button type="button" class="link" data-tj="paste">Prefiero pegar el texto</button>'}`;
+  }
+  if (q.input === 'ai') {
+    const an = analyze(draft.files, draft.text);
+    const opts = options(an);
+    const k = an.k;
+    const what = [k.pdf && `${k.pdf} PDF`, k.office && `${k.office} ${k.office === 1 ? 'documento' : 'documentos'} de Office`, k.image && `${k.image} ${k.image === 1 ? 'foto' : 'fotos'}`, k.archive && `${k.archive} ${k.archive === 1 ? 'archivo comprimido' : 'archivos comprimidos'}`, k.code && `${k.code} de código o notebooks`, (k.text + (draft.text ? 1 : 0)) && `${k.text + (draft.text ? 1 : 0)} de texto`, k.other && `${k.other} de otro tipo`].filter(Boolean);
+    hint = `Trajiste ${what.join(', ')} (${sizeText(an.size)}). Tu IA los lee y arma la guía; esto es lo que conviene para este caso:`;
+    const ready = opts.find(usable);
+    control = `<div class="tj-ways">${opts.map((o, i) => `<div class="tj-way glass ${i === 0 ? 'rec' : ''}">
+        <div><b>${esc(o.name)}</b>${i === 0 ? ' <span class="tag rec">Recomendado</span>' : ''}<p>${esc(o.why)}</p><p class="fine">${esc(o.how)}</p></div>
+        ${usable(o) ? '<span class="tj-ok">Conectada ✓</span>' : `<button type="button" class="button ${i === 0 ? 'primary' : 'ghost'} small" data-tj="connect" data-vendor="${o.vendor}" data-bridge="${o.bridge ? '1' : ''}">Conectar</button>`}</div>`).join('')}</div>
+      ${ready ? ai.pickerHTML('solution') : '<p class="fine">Puedes seguir sin conectar ninguna y escribir la guía después.</p>'}`;
   }
   if (q.input === 'ready') {
     control = `<p class="tj-sentence">Tu IA va a leer el enunciado de <b>${esc(draft.title)}</b> y escribir una guía de solución para <b>${draft.parts} ${draft.parts === 1 ? 'persona' : 'personas'}</b>, paso a paso, con cada línea explicada.</p>
-      ${aiLine('solution')}
-      ${ai.promptHTML(outlinePrompt({ parts: draft.parts, course: draft.course, deadline: draft.deadline }), '', 'el enunciado y la rúbrica')}
+      ${ai.ready() ? ai.pickerHTML('solution') : ''}
+      ${ai.promptHTML(outlinePrompt({ parts: draft.parts, course: draft.course, deadline: deadlineText(draftDeadline()) }), '', 'el enunciado y lo que trajiste')}
       <p class="fine">El trabajo es privado: solo entra quien tenga tu enlace de invitación.</p>`;
   }
   root.innerHTML = `<form class="tj-wizard panel glass" id="tj-wizard">
       <div class="tj-dots" aria-hidden="true">${dots}</div>
       <h1>${esc(q.ask)}</h1>
-      ${q.hint ? `<p class="lede-small">${esc(q.hint)}</p>` : ''}
+      ${hint ? `<p class="lede-small">${esc(hint)}</p>` : ''}
       ${control}
       ${error ? `<p class="tj-warn">${esc(error)}</p>` : ''}
       <div class="tj-wizard-nav">
         ${draft.at ? '<button type="button" class="link" data-tj="back">← Atrás</button>' : '<button type="button" class="link" data-tj="cancel">Cancelar</button>'}
         <span></span>
-        ${q.optional ? '<button type="button" class="link" data-tj="skip">Saltar</button>' : ''}
+        ${q.optional ? `<button type="button" class="link" data-tj="skip">${q.input === 'date' ? 'Todavía no sabemos' : 'Saltar'}</button>` : ''}
         ${q.input === 'ready'
-    ? `${ai.ready() ? '<button class="button primary big" type="submit">Escribir mi guía</button>' : '<button class="button ghost" type="submit" data-later="1">Crear sin la guía, por ahora</button>'}`
+    ? `${ai.ready() ? '<button class="button primary big" type="submit">Escribir mi guía</button>' : '<button class="button ghost" type="submit" data-later="1">Crear el trabajo y escribir la guía después</button>'}`
     : '<button class="button primary" type="submit">Siguiente →</button>'}
       </div>
     </form>`;
   root.querySelector('.tj-input, .tj-paste')?.focus();
 }
+const draftDeadline = () => (draft.date ? `${draft.date}${draft.time ? `T${draft.time}` : ''}` : '');
 function keepAnswer() {
   const q = QUESTIONS[draft.at];
   const form = $('#tj-wizard', root);
+  if (!form) return;
   if (q.input === 'text') draft[q.key] = String(form.v.value).trim();
   if (q.input === 'files' && form.text) draft.text = String(form.text.value).trim();
+  if (q.input === 'date') { draft.date = form.date.value; draft.time = form.time.value; }
 }
 function nextQuestion() {
   keepAnswer();
   const q = QUESTIONS[draft.at];
   if (q.required && q.input === 'text' && !draft[q.key]) return renderDraft('Escríbelo para seguir.');
-  if (q.input === 'files' && !draft.files.length && !draft.text) return renderDraft('Trae el enunciado para seguir: un archivo o el texto pegado.');
+  if (q.input === 'files' && !draft.files.length && !draft.text) return renderDraft('Trae el enunciado para seguir: uno o varios archivos, o el texto pegado.');
   draft.at = Math.min(QUESTIONS.length - 1, draft.at + 1);
   renderDraft();
 }
 
+// Everything brought, read in the browser as Studium reads any material (files.js): its text goes in the statement,
+// its PDFs and pictures go to the AI as they are.
+async function readAll(files) {
+  const texts = [];
+  const binaries = [];
+  const notes = [];
+  for (const file of files) {
+    const p = await prepare(file);
+    if (p.skipped) { notes.push(`${p.name}: ${p.skipped}`); continue; }
+    for (const u of p.units.filter((x) => x.selected !== false)) {
+      for (const part of await u.make()) {
+        if (part.text) texts.push(`# ${part.name}\n\n${part.text}`);
+        else binaries.push(part);
+      }
+    }
+    for (const n of p.notes ?? []) notes.push(n);
+  }
+  return { texts, binaries, notes };
+}
 async function createTrabajo() {
-  const read = await Promise.all(draft.files.map((file) => ai.readFile(file)));
-  const skipped = read.filter((r) => r.skipped);
-  if (skipped.length) throw new Error(`No se pudo leer: ${skipped.map((s) => `${s.name} (${s.skipped})`).join(', ')}.`);
-  const statement = [draft.text, ...read.filter((r) => r.text).map((r) => `# ${r.name}\n\n${r.text}`)].filter(Boolean).join('\n\n');
-  const pdfs = read.filter((r) => r.data);
+  const { texts, binaries, notes } = await readAll(draft.files);
+  const statement = [draft.text, ...texts].filter(Boolean).join('\n\n');
+  if (!statement && !binaries.length) throw new Error(`No se pudo leer lo que trajiste${notes.length ? `: ${notes.join('; ')}` : ''}.`);
   const ref = doc(collection(db, 'trabajos'));
   const code = newCode();
   const batch = writeBatch(db);
   batch.set(ref, {
-    title: draft.title.slice(0, 160), course: draft.course.slice(0, 120), deadline: draft.deadline.slice(0, 40),
-    parts: draft.parts, owner: uid(), code, statement: await pack(statement + (pdfs.length ? `\n\n(Archivos PDF entregados a la IA: ${pdfs.map((p) => p.name).join(', ')})` : '')),
+    title: draft.title.slice(0, 160), course: draft.course.slice(0, 120), group: draft.group.slice(0, 80), deadline: draftDeadline(),
+    parts: draft.parts, owner: uid(), code, statement: await pack((statement + (binaries.length ? `\n\n(Archivos entregados a la IA tal como son: ${binaries.map((p) => p.name).join(', ')})` : '')).slice(0, 2_000_000)),
     encoding: 'gzip', created: serverTimestamp(), updated: serverTimestamp(),
   });
-  batch.set(doc(db, 'trabajos', ref.id, 'miembros', uid()), { name: draft.name.slice(0, 40), code, joined: serverTimestamp() });
+  batch.set(doc(db, 'trabajos', ref.id, 'miembros', uid()), { name: await myName(), code, joined: serverTimestamp() });
   await batch.commit();
   await keepIds([...(await myIds()), ref.id]);
-  return { id: ref.id, pdfs };
+  return { id: ref.id, pdfs: binaries, notes };
 }
 function working(text) {
   root.innerHTML = `<div class="tj-wizard tj-working panel glass"><div class="tj-spinner" aria-hidden="true"></div><h1>${esc(text)}</h1><p class="lede-small">Puedes dejar esta pestaña abierta y volver en un rato.</p></div>`;
 }
 
 async function generateOutline(files = []) {
-  const system = outlinePrompt({ parts: T.parts, course: T.course, deadline: T.deadline });
-  const text = `El enunciado y la rúbrica del trabajo «${T.title}»:\n\n${T.statement}`;
+  const system = outlinePrompt({ parts: T.parts, course: T.course, deadline: deadlineText(T.deadline) });
+  const text = `El enunciado del trabajo «${T.title}»${T.group ? ` (grupo: ${T.group})` : ''} y lo que lo acompaña:\n\n${T.statement}`;
   const r = await askAI('solution', system, text, files, `Esquema de «${T.title}»`);
   const outline = cleanOutline(parseJSON(r.text), T.parts);
   await setDoc(tRef(T.id), { outline: await pack(outline), ai: madeBy(r), updated: serverTimestamp() }, { merge: true });
   T.outline = outline; T.ai = madeBy(r);
-  await logAI({ task: 'solution', step: 'esquema', model: r.model, provider: r.way, prompt: `${system}\n\n[el enunciado y la rúbrica: ${T.statement.length} caracteres]` });
+  await logAI({ task: 'solution', step: 'esquema', model: r.model, provider: r.way, prompt: `${system}\n\n[el enunciado y lo que lo acompaña: ${T.statement.length} caracteres]` });
 }
 async function generateMilestone(hid) {
   const milestone = T.outline.hitos.find((h) => h.id === hid);
@@ -234,22 +338,18 @@ async function generateMilestone(hid) {
   await logAI({ task: 'solution', step: hid, model: r.model, provider: r.way, prompt: `${system.split('El esquema de la guía:')[0]}[el esquema de la guía]` });
 }
 
-/* ---------- joining: one question ---------- */
+/* ---------- joining: one tap, with the person's own name ---------- */
 async function renderJoin(tid, code) {
-  const name = (await loadProfile(uid()).catch(() => null))?.nickname ?? '';
   root.innerHTML = `<form class="tj-wizard panel glass" id="tj-join" data-tid="${esc(tid)}" data-code="${esc(code)}">
       <h1>Te invitaron a un trabajo en grupo</h1>
-      <p class="lede-small">¿Cómo te llamamos en el grupo?</p>
-      <input class="tj-input" name="name" required maxlength="40" value="${esc(name)}" autocomplete="off">
-      <div class="tj-wizard-nav"><a class="link" href="#/trabajos">Ahora no</a><span></span><button class="button primary" type="submit">Entrar →</button></div>
+      <p class="lede-small">Al entrar, el grupo verá tu nombre, la parte que tomes y tu avance.</p>
+      <div class="tj-wizard-nav"><a class="link" href="#/trabajos">Ahora no</a><span></span><button class="button primary" type="submit">Entrar al trabajo</button></div>
       <p class="fine" id="tj-join-status" role="status"></p>
     </form>`;
-  root.querySelector('.tj-input')?.focus();
 }
 async function join(form) {
   const { tid, code } = form.dataset;
-  const name = String(new FormData(form).get('name')).trim().slice(0, 40);
-  await setDoc(tRef(tid, 'miembros', uid()), { name, code, joined: serverTimestamp() });
+  await setDoc(tRef(tid, 'miembros', uid()), { name: await myName(), code, joined: serverTimestamp() });
   await keepIds([...(await myIds()), tid]);
   T = null;
   location.hash = `#/trabajos/${tid}`;
@@ -299,7 +399,7 @@ function hero() {
   const all = steps();
   return `<header class="hero">
       <div><h1>${esc(T.title)}</h1>
-      <p>Guía de solución${T.course ? ` · ${esc(T.course)}` : ''}${T.deadline ? ` · entrega ${esc(T.deadline)}` : ''} · pasa el cursor sobre lo subrayado con puntos para ver su definición</p></div>
+      <p>Guía de solución${T.course ? ` · ${esc(T.course)}` : ''}${T.group ? ` · ${esc(T.group)}` : ''}${T.deadline ? ` · entrega: ${esc(deadlineText(T.deadline))}` : ''} · pasa el cursor sobre lo subrayado con puntos para ver su definición</p></div>
       <div class="team">${T.members.map((m) => {
         const L = partOf(m.uid);
         const own = all.filter((s) => s.parte === L);
@@ -322,8 +422,8 @@ function stepChecks(key, label, doneWord = 'Lo hice') {
 }
 
 function aiBlock(task) {
-  if (!ai.ready()) return `<p class="bad">${task === 'solution' ? 'Para escribir la guía necesitas conectar una IA potente (tu Claude o ChatGPT con el puente local).' : 'Para preguntarle a tu IA, conecta una: la clave gratis de Gemini sirve.'} <a href="#/ajustes">Conectar en Studium</a></p>`;
-  return `${task === 'solution' && !strongAI() ? '<p class="mut small">Tu IA de ahora es rápida y gratis; una guía completa sale mucho mejor con una más potente (Claude o ChatGPT con el puente local).</p>' : ''}<div class="pick">${ai.pickerHTML(task)}</div>`;
+  if (!ai.ready()) return `<p>Todavía no conectaste una IA en Studium. <button type="button" class="ask" data-tj="connect" data-vendor="${task === 'tutor' ? 'gemini' : 'anthropic'}" data-bridge="${task === 'tutor' ? '' : '1'}">Conectar ${task === 'tutor' ? 'Gemini, gratis' : 'tu Claude'}</button></p>`;
+  return `<div class="pick">${ai.pickerHTML(task)}</div>`;
 }
 
 function intro() {
@@ -583,7 +683,7 @@ function wire(root) {
     if (kind === 'u' || kind === 'd') {
       try { await toggle(kind, el.dataset.key, el.checked); repaint(); } catch (e) { el.checked = !el.checked; ctx.toast(ctx.explain(e)); }
     } else if (kind === 'mine') { onlyMine = el.checked; repaint(); }
-    else if (el.name === 'files' && draft) { draft.files = [...el.files]; keepAnswer(); renderDraft(); }
+    else if (el.name === 'files' && draft) { keepAnswer(); addFiles([...el.files]); renderDraft(); }
     else if (el.closest?.('[data-ai-pick]')) { const task = el.closest('[data-ai-pick]').dataset.aiPick; ai.setChoice(task, ai.picked(task, root)); }
   });
   // Files dropped on the question that asks for them.
@@ -593,18 +693,20 @@ function wire(root) {
     if (!ev.target.closest?.('[data-tj-drop]') || !draft) return;
     ev.preventDefault();
     keepAnswer();
-    draft.files = [...ev.dataTransfer.files].filter((f) => /\.(pdf|txt|md)$/i.test(f.name) || f.type.startsWith('text/'));
+    addFiles([...ev.dataTransfer.files]);
     renderDraft();
   });
   root.addEventListener('click', async (ev) => {
     const b = ev.target.closest('[data-tj]');
     if (!b || b.tagName === 'INPUT') return;
     const kind = b.dataset.tj;
-    if (kind === 'new') { await startDraft(); return; }
+    if (kind === 'new') { startDraft(); return; }
     if (kind === 'cancel') { draft = null; await renderList(); return; }
     if (kind === 'back') { keepAnswer(); draft.at = Math.max(0, draft.at - 1); renderDraft(); return; }
-    if (kind === 'skip') { draft[QUESTIONS[draft.at].key] = ''; draft.at += 1; renderDraft(); return; }
+    if (kind === 'skip') { const k = QUESTIONS[draft.at].key; if (k === 'deadline') { draft.date = ''; draft.time = ''; } else draft[k] = ''; draft.at += 1; renderDraft(); return; }
     if (kind === 'count') { draft.parts = Number(b.dataset.n); draft.at += 1; renderDraft(); return; }
+    if (kind === 'drop-file') { keepAnswer(); draft.files.splice(Number(b.dataset.i), 1); renderDraft(); return; }
+    if (kind === 'connect') { if (draft) keepAnswer(); await connectWay(b.dataset.vendor, !!b.dataset.bridge); return; }
     if (kind === 'paste') { draft.pasting = true; renderDraft(); return; }
     if (kind === 'jump') { ev.preventDefault(); const el = document.getElementById(b.getAttribute('href').slice(1)); if (el) scroller().scrollTo({ top: el.offsetTop - 56, behavior: 'smooth' }); return; }
     if (kind === 'theme') {
