@@ -8,6 +8,7 @@ const COMMON = `Eres el autor de una guía de solución dentro de Studium, una p
 
 Reglas:
 - Escribe en el idioma del enunciado (por defecto, español), claro y sin relleno.
+- Que se lea a simple vista: párrafos de 1 a 3 frases, listas cuando haya varias cosas, y **negrita** para la idea o el término que importa en cada párrafo (no para frases enteras).
 - Escribe como una buena guía de estudio, no como una lista de etiquetas: explica en prosa, como un profesor paciente, de lo simple a lo complejo, con ejemplos concretos; cada idea nueva se explica antes de usarse. Frases cortas; nada de jerga sin explicar.
 - Respeta exactamente lo que pide el enunciado y la rúbrica: requisitos, restricciones, prohibiciones (por ejemplo, privacidad de datos o no evadir CAPTCHA) y la guía del curso si se menciona.
 - No inventes datos, resultados ni números que no puedas saber: donde dependan de los datos reales, dilo ("aquí verás…").
@@ -15,12 +16,15 @@ Reglas:
 - Responde SOLO con un bloque \`\`\`json válido, sin texto antes ni después.`;
 
 // How the person wants the guide (the questions of a new trabajo), said to the AI in plain words.
+const GOAL = { solve: 'resolverlo completo desde cero, hasta el entregable final', complete: 'entender y completar lo que ya tienen hecho', review: 'revisar y corregir su solución: qué está bien, qué falta, qué cambiar', defend: 'prepararse para la defensa: entender cada parte y practicar las preguntas' };
 const TONE = { direct: 'directo a la respuesta: la solución y su porqué, sin rodeos', balanced: 'equilibrado: la solución con la explicación necesaria', didactic: 'muy didáctico: cada idea con su intuición, un ejemplo y la conexión con la anterior' };
 const LEVEL = { zero: 'empieza desde cero: no sabe programar ni conoce las librerías', basic: 'sabe lo básico de programación y del tema', advanced: 'tiene experiencia; no expliques lo elemental' };
 const LENGTH = { short: 'corta: lo esencial para entregar y defender', normal: 'de largo normal', full: 'completa y entera, como una guía de estudio de examen' };
 const TEXT = { little: 'poco texto en pantalla: frases cortas, listas y el código; nada de párrafos largos', some: 'el texto justo', much: 'explicaciones largas y detalladas' };
 export function prefsText(p = {}) {
   const lines = [
+    p.goal && `- Lo que el grupo quiere hacer con este trabajo: ${GOAL[p.goal] ?? p.goal}.`,
+    p.goalNote && `- En palabras del grupo: ${String(p.goalNote).slice(0, 800)}`,
     p.tone && `- Cómo explica: ${TONE[p.tone] ?? p.tone}.`,
     p.level && `- El grupo ${LEVEL[p.level] ?? p.level}.`,
     p.length && `- La guía es ${LENGTH[p.length] ?? p.length}.`,
@@ -71,7 +75,9 @@ export function milestonePrompt({ milestone, outline, prefs }) {
 
 Tarea: escribe COMPLETO el hito ${milestone.id} («${milestone.titulo}») de la guía, paso por paso. El esquema de toda la guía va abajo, para que el código de este hito encaje con el de los demás (mismos nombres de archivos, variables y semilla).
 Para cada paso:
+- "clave": la idea clave del paso en una sola frase (se muestra destacada, antes que todo).
 - "teoria": lo mínimo que hay que entender antes de escribir el código, con el porqué (2 a 6 párrafos cortos; \`código\` entre comillas invertidas).
+- "diagrama": si un diagrama ayuda a entender el paso (un flujo, una arquitectura, un pipeline, una secuencia), escríbelo en sintaxis Mermaid (flowchart, sequenceDiagram…), sin comillas invertidas; si no ayuda, vacío.
 - "codigo": el código del paso en piezas pequeñas. Cada pieza trae "lineas": UNA explicación por cada línea no vacía, con su número (desde 1 en esa pieza): qué hace, qué es cada función y argumento, de qué librería viene y por qué se usa así.
 - "librerias": cada librería o módulo que aparece por primera vez, con para qué sirve.
 - "esperado": qué debería ver el estudiante al ejecutarlo.
@@ -82,7 +88,7 @@ Si un paso no es de código (por ejemplo revisar los términos de uso de un siti
 
 Formato exacto:
 \`\`\`json
-{ "id": "${milestone.id}", "pasos": [{ "id": "…", "objetivo": "…", "teoria": "…",
+{ "id": "${milestone.id}", "pasos": [{ "id": "…", "objetivo": "…", "clave": "…", "teoria": "…", "diagrama": "",
   "codigo": [{ "lenguaje": "python", "codigo": "…", "lineas": [{ "n": 1, "explicacion": "…" }] }],
   "librerias": [{ "nombre": "…", "para_que": "…" }],
   "esperado": "…", "comprueba": [{ "pregunta": "…", "respuesta": "…" }],
@@ -136,7 +142,7 @@ export function cleanOutline(o, parts) {
 export function cleanMilestone(m, milestone) {
   const known = new Set(milestone.pasos.map((p) => p.id));
   const pasos = list(m?.pasos, 40).filter((p) => known.has(p?.id)).map((p) => ({
-    id: p.id, objetivo: str(p?.objetivo, 600), teoria: str(p?.teoria, 8000),
+    id: p.id, objetivo: str(p?.objetivo, 600), clave: str(p?.clave, 400), teoria: str(p?.teoria, 8000), diagrama: str(p?.diagrama, 4000).replace(/^```(?:mermaid)?\s*|```\s*$/g, '').trim(),
     codigo: list(p?.codigo, 12).map((c) => ({
       lenguaje: str(c?.lenguaje, 20) || 'python', codigo: str(c?.codigo, 12000),
       lineas: list(c?.lineas, 300).map((l) => ({ n: Number.isInteger(l?.n) ? l.n : 0, explicacion: str(l?.explicacion, 1200) })).filter((l) => l.n > 0),

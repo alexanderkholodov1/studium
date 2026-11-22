@@ -2687,6 +2687,8 @@ canvas.prop { display: block; }
 .tjg-app nav.top .mine { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--on-navy2); margin-right: 10px; }
 .tjg-app nav.top .pct { font: 800 14px var(--gm); margin-right: 10px; }
 .tjg-app nav.top button { font: 600 12.5px var(--gd); background: transparent; color: var(--on-navy2); border: 1px solid var(--navy2); border-radius: 5px; padding: 4px 10px; cursor: pointer; }
+.tjg-app nav.top select { width: auto; min-width: 0; margin: 0 6px 0 0; font: 600 12.5px var(--gd); background: transparent; color: var(--on-navy2); border: 1px solid var(--navy2); border-radius: 5px; padding: 4px 8px; cursor: pointer; box-shadow: none; }
+.tjg-app nav.top select option { color: #1c2233; background: #fff; }
 .tjg-app nav.top .prog { position: absolute; left: 0; bottom: -2px; height: 2px; background: var(--on-navy); transition: width .5s ease; }
 .tjg-app header.hero { padding: 40px 0 4px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
 .tjg-app header.hero h1 { margin: 0; font: 800 44px/1.05 var(--gd); font-stretch: 112%; letter-spacing: -.01em; color: var(--navy); text-wrap: balance; }
@@ -2831,6 +2833,8 @@ canvas.prop { display: block; }
 .tj-pick > label { flex-wrap: wrap; }
 .tj-pick small { min-width: 0; overflow-wrap: anywhere; white-space: normal !important; }
 .tj-pick > label small { flex-basis: 100%; overflow: visible; text-overflow: clip; }
+.tj-boxes .tj-pick { flex-wrap: nowrap; }
+.tj-boxes .tj-pick input { flex: none; }
 .tj-accounts { margin: 6px 0 0 18px; }
 .tjg-app .questions h4 { margin-top: 0; }
 .tjg-app .questions .qa { display: grid; gap: 4px; margin: 10px 0; }
@@ -2868,3 +2872,146 @@ canvas.prop { display: block; }
 @keyframes tj-pop { from { transform: scale(0); } to { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .tj-swarm .sat, .tj-swarm .core { animation: none; } }
 .tjg-app .tj-live { background: var(--panel2); box-shadow: inset 0 0 0 1px var(--line); }
+
+/* ---------- «Trabajos»: the guide's three templates (cuaderno, pizarra, revista) ----------
+   Less text at a glance: a reading column of about 70 characters, short paragraphs, the key idea of each step lit
+   first, bold for what matters. Depth everywhere it shows an object: cards and numbers lift with real shadows. */
+.tjg-app[data-template] { --gd: "Bricolage Grotesque", "Archivo", system-ui, sans-serif; --gb: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif; }
+.tjg-app[data-template] .wrap { max-width: 1180px; }
+.tjg-app[data-template] .prose, .tjg-app[data-template] .lead, .tjg-app[data-template] .prose p { max-width: 68ch; line-height: 1.72; }
+.tjg-app[data-template] .prose b, .tjg-app[data-template] .lead b { color: var(--strong, var(--ink)); }
+.tjg-app[data-template] p.key { margin: 4px 0 14px; padding: 12px 18px; border-radius: 14px; font-size: 18px; font-weight: 650; line-height: 1.5;
+  background: var(--key-bg); border-left: 5px solid var(--key-line); box-shadow: 0 10px 24px -18px rgba(0, 0, 0, .35); }
+.tjg-app[data-template] figure.diagram { margin: 16px 0; padding: 16px; border-radius: 16px; background: var(--panel); box-shadow: 0 14px 30px -20px rgba(0, 0, 0, .4), inset 0 0 0 1px var(--line); overflow-x: auto; }
+.tjg-app[data-template] figure.diagram pre.mermaid { margin: 0; background: none; font: 13px var(--gm); white-space: pre; }
+.tjg-app[data-template] figure.diagram.as-text pre.mermaid { white-space: pre-wrap; color: var(--muted); }
+.tjg-app[data-template] figure.diagram svg { max-width: 100%; height: auto; }
+/* The diagram's boxes with volume, in the template's colours (never flat). */
+.tjg-app[data-template] figure.diagram svg .node rect, .tjg-app[data-template] figure.diagram svg .node polygon,
+.tjg-app[data-template] figure.diagram svg .node circle, .tjg-app[data-template] figure.diagram svg .actor {
+  fill: color-mix(in oklab, var(--blue) 14%, var(--panel)) !important; stroke: color-mix(in oklab, var(--blue) 55%, transparent) !important; stroke-width: 1.2px !important;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .16)) drop-shadow(0 1px 1px rgba(0, 0, 0, .12)); }
+.tjg-app[data-template] figure.diagram svg .node rect { rx: 10px; ry: 10px; }
+.tjg-app[data-template] figure.diagram svg .nodeLabel, .tjg-app[data-template] figure.diagram svg .label, .tjg-app[data-template] figure.diagram svg text { color: var(--ink) !important; fill: var(--ink) !important; font-family: var(--gb) !important; font-weight: 600; }
+.tjg-app[data-template] figure.diagram svg .flowchart-link, .tjg-app[data-template] figure.diagram svg .messageLine0, .tjg-app[data-template] figure.diagram svg .messageLine1 { stroke: var(--muted) !important; stroke-width: 1.6px !important; }
+.tjg-app[data-template] figure.diagram svg marker path, .tjg-app[data-template] figure.diagram svg .arrowheadPath { fill: var(--muted) !important; stroke: var(--muted) !important; }
+
+/* Inline code reads on every template, light or dark. */
+.tjg-app[data-template] :not(pre) > code { padding: .08em .38em; border-radius: 6px; background: color-mix(in oklab, var(--blue) 10%, var(--panel)); color: color-mix(in oklab, var(--blue) 55%, var(--ink)); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--blue) 18%, transparent); }
+
+/* Cuaderno: warm paper, ink and highlighter, as Studium's own notes. */
+.tjg-app[data-template="cuaderno"] {
+  --bg: #f6f2e8; --grid: rgba(47, 91, 211, .07); --panel: #fffdf8; --panel2: #f3eee1; --ink: #1c2233; --ink2: #3b4258; --muted: #6d7286; --line: rgba(28, 34, 51, .12);
+  --navy: #1c2233; --navy2: #2b3350; --on-navy: #fffdf8; --on-navy2: #c9cbd6; --signal: #ffcf3f; --signal-s: #fff4c8;
+  --blue: #2f5bd3; --blue-s: #e5ecfd; --green: #13987f; --green-s: #dcf3ee; --orange: #e0742b; --orange-s: #fde8d8; --rose: #d9453a; --rose-s: #fde3df; --violet: #7a4fd0; --violet-s: #ece4fb; --brown: #8a5a3a; --brown-s: #f1e6dd; --okc: #13987f; --ok-s: #dcf3ee;
+  --key-bg: linear-gradient(transparent 0 6%, #fff1a8 6% 94%, transparent 94%), var(--panel); --key-line: #f2c200; --strong: #111829;
+  background-color: var(--bg); background-image: radial-gradient(circle, var(--grid) 1.2px, transparent 1.6px); background-size: 18px 18px;
+}
+.tjg-app[data-template="cuaderno"] nav.top, .tjg-app[data-template="revista"] nav.top { background: color-mix(in oklab, var(--panel) 92%, transparent); color: var(--ink); box-shadow: 0 8px 24px -16px rgba(0, 0, 0, .35), inset 0 -1px 0 var(--line); backdrop-filter: blur(10px); }
+.tjg-app[data-template="cuaderno"] nav.top a, .tjg-app[data-template="revista"] nav.top a { color: var(--ink2); }
+.tjg-app[data-template="cuaderno"] nav.top a:hover, .tjg-app[data-template="revista"] nav.top a:hover { background: var(--blue-s); color: var(--ink); }
+.tjg-app[data-template="cuaderno"] nav.top a.on { background: var(--blue); color: #fff; }
+.tjg-app[data-template="cuaderno"] nav.top .back, .tjg-app[data-template="revista"] nav.top .back { color: var(--blue); }
+.tjg-app[data-template="cuaderno"] nav.top button, .tjg-app[data-template="cuaderno"] nav.top select,
+.tjg-app[data-template="revista"] nav.top button, .tjg-app[data-template="revista"] nav.top select { color: var(--ink2); border-color: var(--line); background: var(--panel); }
+.tjg-app[data-template="cuaderno"] nav.top .prog, .tjg-app[data-template="revista"] nav.top .prog { background: var(--blue); height: 3px; }
+.tjg-app[data-template="cuaderno"] nav.top .mine, .tjg-app[data-template="revista"] nav.top .mine { color: var(--ink2); }
+.tjg-app[data-template="cuaderno"] header.hero h1 { color: var(--ink); font-stretch: normal; letter-spacing: -.03em; font-size: clamp(36px, 5vw, 58px);
+  background: linear-gradient(transparent 62%, #ffe68a 62% 90%, transparent 90%); display: inline; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.tjg-app[data-template="cuaderno"] section.sec > h2 { background: none; color: var(--ink); padding: 0; font-size: 30px; letter-spacing: -.02em; overflow: visible; }
+.tjg-app[data-template="cuaderno"] section.sec > h2::after { display: none; }
+.tjg-app[data-template="cuaderno"] section.sec > h2 .n { width: 54px; height: 54px; border-radius: 16px; font: 800 24px var(--gd);
+  background: radial-gradient(circle at 30% 25%, color-mix(in oklab, var(--c) 55%, #fff), var(--c) 70%); box-shadow: 0 12px 20px -10px var(--c), inset 0 -3px 0 rgba(0, 0, 0, .18), inset 0 2px 0 rgba(255, 255, 255, .35); }
+.tjg-app[data-template="cuaderno"] h3::before { width: 10px; height: 10px; border-radius: 50%; background: var(--c); box-shadow: none; }
+.tjg-app[data-template="cuaderno"] article.step { padding: 22px 26px; border-left: 0; border-radius: 22px; background: var(--panel);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .8) inset, 0 22px 40px -30px rgba(28, 34, 51, .45), 0 0 0 1px var(--line); position: relative; }
+.tjg-app[data-template="cuaderno"] article.step::before { content: ""; position: absolute; left: 0; top: 22px; bottom: 22px; width: 4px; border-radius: 0 4px 4px 0; background: var(--p); }
+.tjg-app[data-template="cuaderno"] .fig.code, .tjg-app[data-template="cuaderno"] details.q, .tjg-app[data-template="cuaderno"] .card, .tjg-app[data-template="cuaderno"] .def, .tjg-app[data-template="cuaderno"] .part {
+  border-radius: 14px; box-shadow: 0 14px 28px -24px rgba(28, 34, 51, .5); }
+.tjg-app[data-template="cuaderno"] .fig .fh { background: #232a3d; }
+.tjg-app[data-template="cuaderno"] .trap { border-radius: 14px; background: #fff4c8; border-left-color: #f2c200; }
+.tjg-app[data-template="cuaderno"] .av { border-radius: 50%; }
+
+/* Pizarra: a dark, calm board, chalk text and two warm accents. */
+.tjg-app[data-template="pizarra"] {
+  --bg: #0f141d; --grid: rgba(120, 170, 255, .05); --panel: #161d2a; --panel2: #1b2433; --ink: #e8edf5; --ink2: #c3ccda; --muted: #8b97ab; --line: rgba(255, 255, 255, .1);
+  --navy: #0b1018; --navy2: #1c2638; --on-navy: #e8edf5; --on-navy2: #9aa7bc; --signal: #f5b041; --signal-s: #3a2c12;
+  --blue: #6ea8ff; --blue-s: #172742; --green: #3fd0a5; --green-s: #10302a; --orange: #f5a35c; --orange-s: #3a2716; --rose: #ff7a85; --rose-s: #3d1b22; --violet: #b494ff; --violet-s: #2a2146; --brown: #d1a07e; --brown-s: #33251b; --okc: #3fd0a5; --ok-s: #10302a;
+  --key-bg: linear-gradient(90deg, rgba(245, 176, 65, .16), rgba(245, 176, 65, .04)); --key-line: #f5b041; --strong: #fff;
+  color-scheme: dark; background-color: var(--bg); background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 32px 32px;
+}
+.tjg-app[data-template="pizarra"] header.hero h1 { color: var(--ink); font-stretch: normal; letter-spacing: -.02em; text-shadow: 0 0 30px rgba(110, 168, 255, .25); }
+.tjg-app[data-template="pizarra"] section.sec > h2 { background: linear-gradient(90deg, var(--panel2), transparent); border-radius: 18px; box-shadow: inset 0 0 0 1px var(--line); }
+.tjg-app[data-template="pizarra"] section.sec > h2::after { opacity: .25; }
+.tjg-app[data-template="pizarra"] section.sec > h2 .n { border-radius: 12px; box-shadow: 0 0 24px -4px var(--c); }
+.tjg-app[data-template="pizarra"] article.step { padding: 20px 24px; border-radius: 20px; background: var(--panel); border-left: 0; box-shadow: 0 24px 50px -30px #000, inset 0 0 0 1px var(--line), inset 3px 0 0 var(--p); }
+.tjg-app[data-template="pizarra"] .fig.code, .tjg-app[data-template="pizarra"] details.q, .tjg-app[data-template="pizarra"] .card, .tjg-app[data-template="pizarra"] .def, .tjg-app[data-template="pizarra"] .part { border-radius: 14px; }
+
+/* Revista: editorial, airy, large serif titles and one strong colour. */
+.tjg-app[data-template="revista"] {
+  --bg: #fdfcf9; --grid: transparent; --panel: #ffffff; --panel2: #f6f3ee; --ink: #16151a; --ink2: #3e3b45; --muted: #77737f; --line: rgba(22, 21, 26, .1);
+  --navy: #16151a; --navy2: #2a2830; --on-navy: #fff; --on-navy2: #c8c5ce; --signal: #b8323f; --signal-s: #f8e4e6;
+  --blue: #2b4fb8; --blue-s: #e8edfb; --green: #1d7f62; --green-s: #e0f1ea; --orange: #c3611f; --orange-s: #fbe9dc; --rose: #b8323f; --rose-s: #f8e4e6; --violet: #6a44b8; --violet-s: #eee8f8; --brown: #8a5a3a; --brown-s: #f1e6dd; --okc: #1d7f62; --ok-s: #e0f1ea;
+  --key-bg: transparent; --key-line: #b8323f; --strong: #000;
+  --gd: "Fraunces", Georgia, serif; background: var(--bg);
+}
+.tjg-app[data-template="revista"] .wrap { max-width: 980px; }
+.tjg-app[data-template="revista"] nav.top a.on { background: var(--signal); color: #fff; }
+.tjg-app[data-template="revista"] header.hero { padding-top: 70px; }
+.tjg-app[data-template="revista"] header.hero h1 { color: var(--ink); font: 800 clamp(42px, 6vw, 72px)/1 var(--gd); letter-spacing: -.02em; }
+.tjg-app[data-template="revista"] section.sec { margin-top: 90px; }
+.tjg-app[data-template="revista"] section.sec > h2 { display: grid; grid-template-columns: auto 1fr; background: none; color: var(--ink); padding: 0 0 14px; border-bottom: 2px solid var(--ink); border-radius: 0; font: 700 34px/1.1 var(--gd); overflow: visible; }
+.tjg-app[data-template="revista"] section.sec > h2::after { display: none; }
+.tjg-app[data-template="revista"] section.sec > h2 .n { background: none; color: var(--signal); font: 800 64px/0.9 var(--gd); min-width: 0; height: auto; }
+.tjg-app[data-template="revista"] h3 { font-family: var(--gd); font-weight: 700; }
+.tjg-app[data-template="revista"] h3::before { display: none; }
+.tjg-app[data-template="revista"] article.step { border-left: 0; padding-left: 0; }
+.tjg-app[data-template="revista"] p.key { border-left: 0; border-top: 2px solid var(--key-line); border-bottom: 2px solid var(--key-line); border-radius: 0; box-shadow: none; padding: 14px 0; font: italic 600 22px/1.4 var(--gd); color: var(--ink); }
+.tjg-app[data-template="revista"] .fig.code, .tjg-app[data-template="revista"] figure.diagram { border-radius: 8px; box-shadow: 0 24px 50px -36px rgba(0, 0, 0, .45), inset 0 0 0 1px var(--line); }
+.tjg-app[data-template="revista"] .fig .fh { background: var(--ink); }
+
+/* The reader's dark mode keeps the template's shapes, with a dark palette. */
+.tjg-app[data-template="cuaderno"][data-theme="dark"], .tjg-app[data-template="revista"][data-theme="dark"] {
+  --bg: #12161f; --grid: rgba(255, 255, 255, .04); --panel: #1a2030; --panel2: #202839; --ink: #ebeef5; --ink2: #c7cdda; --muted: #8e97aa; --line: rgba(255, 255, 255, .1);
+  --key-bg: linear-gradient(90deg, rgba(255, 207, 63, .18), rgba(255, 207, 63, .05)); --strong: #fff; color-scheme: dark; }
+.tjg-app[data-template="cuaderno"][data-theme="dark"] header.hero h1 { background: none; }
+
+/* Choosing a template: a real sample, scaled down. */
+.tpl-pick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.tpl-card { display: grid; gap: 4px; padding: 10px; border-radius: 16px; cursor: pointer; box-shadow: inset 0 0 0 1px var(--line); }
+.tpl-card.on { box-shadow: inset 0 0 0 2px var(--blue), 0 12px 24px -18px var(--blue); }
+.tpl-card input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.tpl-card small { color: var(--muted); font-size: 12.5px; }
+.tpl-prev { display: block; height: 150px; overflow: hidden; border-radius: 10px; position: relative; pointer-events: none; }
+.tpl-prev .tpl-sample { position: absolute; left: 0; top: 0; width: 760px; transform: scale(.3); transform-origin: 0 0; min-height: 520px; }
+.tpl-prev .tpl-sample .wrap { padding: 0 24px 24px; }
+.tpl-prev .tpl-sample header.hero { padding-top: 20px; }
+.tpl-prev .tpl-sample section.sec { margin-top: 20px; }
+@media (max-width: 760px) { .tpl-pick { grid-template-columns: 1fr; } }
+
+/* «¿Qué quieres hacer?»: four answers in two columns, so the question fits on one screen. */
+.tj-goals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.tj-goals .tj-pick { margin: 0; display: flex; flex-wrap: nowrap; gap: 10px; align-items: flex-start; padding: 12px 14px; line-height: 1.35; }
+.tj-goals .tj-pick input { width: auto; margin: 3px 0 0; flex: none; }
+.tj-goals .tj-pick > span { flex: 1; min-width: 0; }
+@media (max-width: 640px) { .tj-goals { grid-template-columns: 1fr; } }
+
+/* The list: a menu on each trabajo. */
+.tj-card { position: relative; padding: 0; }
+.tj-card-main { display: grid; gap: 4px; padding: 18px 48px 18px 20px; color: var(--ink); text-decoration: none; }
+.tj-menu { position: absolute; top: 10px; right: 10px; }
+.tj-menu > summary { list-style: none; cursor: pointer; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px; font-weight: 800; color: var(--ink-2); }
+.tj-menu > summary::-webkit-details-marker { display: none; }
+.tj-menu > summary:hover, .tj-menu[open] > summary { background: color-mix(in oklab, var(--ink) 8%, transparent); }
+.tj-menu-list { position: absolute; right: 0; top: 38px; z-index: 5; min-width: 250px; display: grid; padding: 8px; gap: 2px; border-radius: 16px;
+  transform-origin: top right; animation: pop .45s var(--spring); }
+.tj-menu .tj-menu-list.glass { background: var(--card); background-image: none; -webkit-backdrop-filter: none; backdrop-filter: none;
+  box-shadow: 0 24px 48px -22px rgba(0, 0, 0, .45), 0 0 0 1px var(--line); }
+.tj-menu .tj-menu-list.glass::before, .tj-menu .tj-menu-list.glass::after { display: none; }
+.tj-card:has(.tj-menu[open]) { z-index: 6; }
+.tj-menu-list a, .tj-menu-list button { display: block; text-align: left; padding: 9px 12px; border: 0; border-radius: 10px; background: none; color: var(--ink); font: 600 15px var(--body); text-decoration: none; cursor: pointer; }
+.tj-menu-list a:hover, .tj-menu-list button:hover { background: color-mix(in oklab, var(--blue) 10%, transparent); }
+.tj-menu-list .danger { color: var(--red); }
+.tj-menu-note { padding: 8px 12px; font-size: 13.5px; color: var(--muted); }
+.tj-card-extra:not(:empty) { padding: 0 20px 18px; }
+.tj-edit { display: grid; gap: 10px; }

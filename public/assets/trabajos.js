@@ -43,11 +43,21 @@ let draft = null;
 let terms = [];
 function withTerms(html) {
   let out = html;
+  const low = html.toLowerCase();
   for (const g of terms) {
-    const re = new RegExp(`(^|[^\\wáéíóúñ])(${g.re})(?=[^\\wáéíóúñ]|$)`, 'i');
-    out = out.replace(re, (m, pre, word) => `${pre}<dfn title="${esc(g.definicion)}">${word}</dfn>`);
+    if (!low.includes(g.low)) continue;
+    out = out.replace(g.rx, (m, pre, word) => `${pre}<dfn title="${g.def}">${word}</dfn>`);
   }
   return out;
+}
+let termsOf = null;
+function prepareTerms() {
+  if (termsOf === T.outline) return;
+  termsOf = T.outline;
+  terms = (T.outline?.glosario ?? []).filter((g) => g.termino.length > 2).map((g) => ({
+    low: g.termino.toLowerCase(), def: esc(g.definicion),
+    rx: new RegExp(`(^|[^\\wáéíóúñ])(${g.termino.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})(?=[^\\wáéíóúñ]|$)`, 'i'),
+  }));
 }
 function inline(s) {
   return String(s).split('`').map((part, i) => (i % 2 ? `<code>${esc(part)}</code>` : withTerms(esc(part).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')))).join('');
@@ -243,7 +253,38 @@ async function renderList() {
   const rows = (await Promise.all(ids.map((id) => getDoc(tRef(id)).then((s) => (s.exists() ? { id, ...s.data() } : null)).catch(() => null)))).filter(Boolean);
   root.innerHTML = `<div class="page-head"><h1>Trabajos</h1><button type="button" class="button primary" data-tj="new">Empezar un trabajo nuevo</button></div>
     <p class="lede-small tj-lede">Resuelve un trabajo en grupo con una guía, paso a paso, entendiendo cada línea.</p>
-    ${rows.length ? `<div class="tj-cards">${rows.map((r) => `<a class="tj-card glass" href="#/trabajos/${esc(r.id)}"><b>${esc(r.title)}</b><span class="fine">${esc([r.course, r.group].filter(Boolean).join(' · '))}${r.deadline ? `<br>entrega: ${esc(deadlineText(r.deadline))}` : ''}</span></a>`).join('')}</div>` : '<p class="fine">Todavía no tienes trabajos.</p>'}`;
+    ${rows.length ? `<div class="tj-cards">${rows.map((r) => `<div class="tj-card glass" data-id="${esc(r.id)}">
+        <a class="tj-card-main" href="#/trabajos/${esc(r.id)}"><b class="no-i18n">${esc(r.title)}</b><span class="fine"><span class="no-i18n">${esc([r.course, r.group].filter(Boolean).join(' · '))}</span>${r.deadline ? `<br>entrega: ${esc(deadlineText(r.deadline))}` : ''}</span></a>
+        <details class="tj-menu"><summary aria-label="Más opciones de ${esc(r.title)}">⋯</summary><div class="tj-menu-list glass">
+          <a href="#/trabajos/${esc(r.id)}">Abrir la guía</a>
+          <button type="button" data-tj="share" data-id="${esc(r.id)}" data-code="${esc(r.code)}">Compartir con mi grupo</button>
+          ${r.owner === uid() ? `<button type="button" data-tj="edit-open" data-id="${esc(r.id)}">Editar los datos</button>` : ''}
+          <span class="tj-menu-note">Visibilidad: <b>solo el grupo</b>. <small>Con amigos o pública: pronto.</small></span>
+          ${r.owner === uid() ? `<button type="button" class="danger" data-tj="delete-ask" data-id="${esc(r.id)}">Eliminar…</button>` : `<button type="button" class="danger" data-tj="leave-ask" data-id="${esc(r.id)}">Salir del trabajo…</button>`}
+        </div></details>
+        <div class="tj-card-extra" data-extra></div></div>`).join('')}</div>` : '<p class="fine">Todavía no tienes trabajos.</p>'}`;
+  listRows = rows;
+}
+
+let listRows = [];
+function cardExtra(id, html) { const el = root.querySelector(`.tj-card[data-id="${CSS.escape(id)}"] [data-extra]`); if (el) el.innerHTML = html; root.querySelectorAll('.tj-menu[open]').forEach((m) => { m.open = false; }); }
+// Deleting a trabajo: its parts the owner may remove first (the rules let the owner clean them), then the trabajo.
+async function deleteTrabajo(id) {
+  for (const sub of ['hitos', 'partes', 'avance', 'ia', 'miembros']) {
+    const snap = await getDocs(collection(db, 'trabajos', id, sub)).catch(() => null);
+    for (const d of snap?.docs ?? []) if (sub !== 'miembros' || d.id !== uid()) await deleteDoc(d.ref).catch(() => {});
+  }
+  await deleteDoc(tRef(id));
+  await deleteDoc(tRef(id, 'miembros', uid())).catch(() => {});
+  await keepIds((await myIds()).filter((x) => x !== id));
+}
+async function leaveTrabajo(id) {
+  const r = listRows.find((x) => x.id === id);
+  const part = (await getDocs(collection(db, 'trabajos', id, 'partes')).catch(() => null))?.docs.find((d) => d.data().uid === uid());
+  if (part) await deleteDoc(part.ref).catch(() => {});
+  await deleteDoc(tRef(id, 'miembros', uid()));
+  await keepIds((await myIds()).filter((x) => x !== id));
+  return r;
 }
 
 /* ---------- a new trabajo: one question at a time ---------- */
@@ -251,6 +292,7 @@ const QUESTIONS = [
   { key: 'title', ask: '¿Cómo se llama el trabajo?', hint: 'Como aparece en el enunciado, o como lo llaman ustedes.', input: 'text', placeholder: 'Proyecto final de Machine Learning', required: true },
   { key: 'course', ask: '¿De qué materia es?', input: 'text', placeholder: 'Machine Learning', optional: true },
   { key: 'statement', ask: 'Trae el enunciado', hint: 'Y todo lo que lo acompaña: la rúbrica, archivos de inicio, un ZIP. Puedes traer varios.', input: 'files', required: true },
+  { key: 'goal', ask: '¿Qué quieres hacer con este trabajo?', hint: 'Así tu IA sabe desde dónde partir.', input: 'goal' },
   { key: 'ai', ask: 'Tu IA para este trabajo', input: 'ai' },
   { key: 'prefs', ask: '¿Cómo quieres la guía?', hint: 'Elige lo que prefieras; lo demás queda como viene.', input: 'prefs' },
   { key: 'parts', ask: '¿Cuántos son en el grupo?', hint: 'La guía se divide en una parte por persona.', input: 'count' },
@@ -258,7 +300,7 @@ const QUESTIONS = [
   { key: 'deadline', ask: '¿Cuándo es la entrega?', input: 'date', optional: true },
   { key: 'ready', ask: 'Todo listo', input: 'ready' },
 ];
-export const PREF_DEFAULT = { tone: 'balanced', level: 'zero', length: 'normal', text: 'some', cards: true, defense: true, practice: false, visuals: true, note: '' };
+export const PREF_DEFAULT = { goal: 'solve', goalNote: '', template: 'cuaderno', writeAll: 'all', tone: 'balanced', level: 'zero', length: 'normal', text: 'some', cards: true, defense: true, practice: false, visuals: true, note: '' };
 // Which Claude account writes (several may be signed in on this computer).
 function accountPick() {
   const b = ai.bridgeOf();
@@ -351,6 +393,11 @@ function renderDraft(error = '') {
         ${ready ? '' : '<p class="fine">Puedes seguir sin conectar ninguna y escribir la guía después.</p>'}</div>`;
     control = `${advice}${roles}`;
   }
+  if (q.input === 'goal') {
+    const goals = [['solve', 'Resolverlo desde cero', 'la solución completa, hasta el entregable'], ['complete', 'Entender y completar lo que ya tenemos', 'parte de lo que ya hicieron'], ['review', 'Revisar y corregir nuestra solución', 'qué está bien, qué falta, qué cambiar'], ['defend', 'Prepararme para la defensa', 'entender cada parte y practicar preguntas']];
+    control = `<div class="tj-goals">${goals.map(([v, label, why]) => `<label class="tj-pick ${draft.prefs.goal === v ? 'on' : ''}"><input type="radio" name="goal" value="${v}" data-tj-pref="goal" ${draft.prefs.goal === v ? 'checked' : ''}> <span><b>${esc(label)}</b><br><small>${esc(why)}</small></span></label>`).join('')}</div>
+      <label class="field"><span>Cuéntale más, si quieres <small>(opcional)</small></span><textarea class="tj-paste plain" name="goalNote" rows="2" maxlength="800" placeholder="Por ejemplo: ya tenemos el scraper; nos falta el modelado y la defensa.">${esc(draft.prefs.goalNote)}</textarea></label>`;
+  }
   if (q.input === 'prefs') {
     const seg = (key, choices) => `<div class="tj-seg" role="radiogroup">${choices.map(([v, label]) => `<label class="${draft.prefs[key] === v ? 'on' : ''}"><input type="radio" name="p-${key}" value="${v}" data-tj-pref="${key}" ${draft.prefs[key] === v ? 'checked' : ''}>${esc(label)}</label>`).join('')}</div>`;
     const box = (key, label) => `<label class="tj-pick ${draft.prefs[key] ? 'on' : ''}"><input type="checkbox" data-tj-pref="${key}" ${draft.prefs[key] ? 'checked' : ''}> ${esc(label)}</label>`;
@@ -360,6 +407,8 @@ function renderDraft(error = '') {
         <div><h3>Qué tan larga</h3>${seg('length', [['short', 'Corta'], ['normal', 'Normal'], ['full', 'Completa']])}</div>
         <div><h3>Texto en pantalla</h3>${seg('text', [['little', 'Poco, al grano'], ['some', 'Lo justo'], ['much', 'Explicaciones largas']])}</div>
         <div><h3>Qué incluye</h3><div class="tj-boxes">${box('cards', 'Tarjetas de términos al final')}${box('defense', 'Preguntas de defensa')}${box('practice', 'Ejercicios para practicar')}${box('visuals', 'Gráficas y diagramas, cuando ayuden')}</div></div>
+        <div><h3>Cómo se ve</h3><div class="tpl-pick">${Object.entries(TEMPLATES).map(([k, v]) => `<label class="tpl-card ${draft.prefs.template === k ? 'on' : ''}"><input type="radio" name="template" value="${k}" data-tj-pref="template" ${draft.prefs.template === k ? 'checked' : ''}><span class="tpl-prev">${templateSample(k)}</span><b>${esc(v.name)}</b><small>${esc(v.note)}</small></label>`).join('')}</div></div>
+        <div><h3>Al terminar el esquema</h3>${seg('writeAll', [['all', 'Escribir todos los capítulos de una vez'], ['outline', 'Primero el esquema, para revisarlo']])}</div>
         <div><h3>Algo más que tu IA deba saber <small>(opcional)</small></h3><textarea class="tj-paste plain" name="note" rows="3" maxlength="1500" placeholder="Por ejemplo: el profesor pide todo en inglés; ya tenemos el scraper hecho.">${esc(draft.prefs.note)}</textarea></div>
       </div>`;
   }
@@ -394,6 +443,7 @@ function keepAnswer() {
   if (q.input === 'text') draft[q.key] = String(form.v.value).trim();
   if (q.input === 'files' && form.text) draft.text = String(form.text.value).trim();
   if (q.input === 'prefs' && form.note) draft.prefs.note = String(form.note.value).trim().slice(0, 1500);
+  if (q.input === 'goal' && form.goalNote) draft.prefs.goalNote = String(form.goalNote.value).trim().slice(0, 800);
   if (q.input === 'date') { draft.date = form.date.value; draft.time = form.time.value; }
 }
 function nextQuestion() {
@@ -507,8 +557,31 @@ function fonts() {
   if (document.getElementById('tjg-fonts')) return;
   const link = document.createElement('link');
   link.id = 'tjg-fonts'; link.rel = 'stylesheet';
-  link.href = 'https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap';
+  link.href = 'https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&family=Fraunces:opsz,wght@9..144,500..800&display=swap';
   document.head.append(link);
+}
+// The guide's look: three templates, chosen when the guide is made and changeable by each reader (kept on their device).
+export const TEMPLATES = {
+  cuaderno: { name: 'Cuaderno', note: 'claro y cálido, con resaltador: como tus apuntes' },
+  pizarra: { name: 'Pizarra', note: 'oscuro y sereno, para concentrarse de noche' },
+  revista: { name: 'Revista', note: 'editorial, con aire y títulos grandes' },
+};
+const TPL = 'studium-tjg-template';
+function templateOf() {
+  try { const m = JSON.parse(localStorage.getItem(TPL) ?? '{}'); if (TEMPLATES[m[T.id]]) return m[T.id]; } catch { /* the trabajo's */ }
+  return TEMPLATES[T.prefs?.template] ? T.prefs.template : 'cuaderno';
+}
+function keepTemplate(id) { try { const m = JSON.parse(localStorage.getItem(TPL) ?? '{}'); m[T.id] = id; localStorage.setItem(TPL, JSON.stringify(m)); } catch { /* this time only */ } }
+// A small, real sample of a guide in a template, for choosing it.
+function templateSample(id) {
+  return `<div class="tjg-app tpl-sample" data-template="${id}" aria-hidden="true"><div class="wrap">
+    <header class="hero"><div><h1>Proyecto final</h1><p>Guía de solución · Machine Learning</p></div></header>
+    <section class="sec" style="--c:var(--blue);--cs:var(--blue-s)"><h2><span class="n">1</span>Preparar los datos</h2>
+      <article class="step" style="--p:var(--teal)"><h3><span class="num">1.1</span>Cargar el dataset</h3>
+        <p class="key">La idea: <b>separar el test antes de todo</b>, para que nada se filtre.</p>
+        <div class="prose"><p>Un <b>pipeline</b> encadena cada paso, así el preprocesamiento aprende solo del entrenamiento.</p></div>
+        <div class="fig code"><div class="fh"><span>python</span></div><table><tr><td class="ln">1</td><td class="cd">df = pd.read_csv("casas.csv")</td><td class="ex">Lee el archivo en una tabla.</td></tr></table></div>
+      </article></section></div></div>`;
 }
 
 function topbar() {
@@ -522,6 +595,7 @@ function topbar() {
       <span class="sp"></span>
       ${myPart() ? `<label class="mine"><input type="checkbox" data-tj="mine" ${onlyMine ? 'checked' : ''}> Solo mi parte</label>` : ''}
       <span class="pct" title="Pasos hechos por el grupo">${total}%</span>
+      <select data-tj-template aria-label="Plantilla de la guía">${Object.entries(TEMPLATES).map(([k, v]) => `<option value="${k}" ${templateOf() === k ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>
       <button type="button" data-tj="theme">Claro / oscuro</button>
     </div><div class="prog" style="width:${total}%"></div></nav>`;
 }
@@ -529,7 +603,7 @@ function topbar() {
 function hero() {
   const all = steps();
   return `<header class="hero">
-      <div><h1>${esc(T.title)}</h1>
+      <div><h1 class="no-i18n">${esc(T.title)}</h1>
       <p>Guía de solución${T.course ? ` · ${esc(T.course)}` : ''}${T.group ? ` · ${esc(T.group)}` : ''}${T.deadline ? ` · entrega: ${esc(deadlineText(T.deadline))}` : ''} · pasa el cursor sobre lo subrayado con puntos para ver su definición</p></div>
       <div class="team">${T.members.map((m) => {
         const L = partOf(m.uid);
@@ -565,7 +639,7 @@ function intro() {
   const missing = o.hitos.filter((h) => !T.hitos[h.id]).length;
   return `<section class="sec" id="cap-inicio" style="--c:var(--blue);--cs:var(--blue-s)">
       <h2><span class="n">0</span>El trabajo en pocas palabras</h2>
-      <div class="row"><div class="prose">${md(o.resumen)}
+      <div class="row"><div class="prose no-i18n">${md(o.resumen)}
           ${reqs.length ? `<h3>Lo que tienen que entregar</h3><ul class="tight">${reqs.map((r) => `<li>${inline(r.texto)}${r.peso ? ` <span class="wt">${esc(r.peso)}</span>` : ''}</li>`).join('')}</ul>` : ''}</div>
         <div>${o.avisos.length ? `<div class="trap"><b>Antes de empezar</b>${o.avisos.map((a) => `<p>${inline(a)}</p>`).join('')}</div>` : ''}
           <details class="q"><summary class="qh">Leer el enunciado original</summary><pre class="src">${esc(T.statement)}</pre></details></div></div>
@@ -595,10 +669,11 @@ function stepHTML(s, step) {
   }).join('');
   return `<article class="step" id="paso-${esc(s.id)}" style="--p:${colorOf(s.parte)}">
       <h3><span class="num">${esc(s.num)}</span>${esc(s.titulo)} ${avatar(s.parte, holder ? nameOf(holder) : `Persona ${s.parte}`)}</h3>
-      ${step ? `<div class="row"><div class="prose">${step.objetivo ? `<p class="lead">${inline(step.objetivo)}</p>` : ''}${md(step.teoria)}
+      ${step ? `${step.clave ? `<p class="key no-i18n">${inline(step.clave)}</p>` : ''}<div class="row"><div class="prose no-i18n">${step.objetivo ? `<p class="lead">${inline(step.objetivo)}</p>` : ''}${md(step.teoria)}
+          ${step.diagrama ? `<figure class="diagram"><pre class="mermaid">${esc(step.diagrama)}</pre></figure>` : ''}
           ${step.librerias.length ? `<p class="small mut">Usa ${step.librerias.map((l) => `<code title="${esc(l.para_que)}">${esc(l.nombre)}</code>`).join(', ')}.</p>` : ''}</div>
         <div>${step.esperado ? `<div class="def"><h4>Al correrlo verás</h4>${md(step.esperado)}</div>` : ''}
-          ${step.comprueba.map((q) => `<details class="q"><summary class="qh">${esc(q.pregunta)}</summary><div class="ans">${md(q.respuesta)}</div></details>`).join('')}
+          ${step.comprueba.map((q) => `<details class="q"><summary class="qh">${inline(q.pregunta)}</summary><div class="ans">${md(q.respuesta)}</div></details>`).join('')}
           ${step.commit ? `<p class="small mut">Al guardarlo en GitHub: <code>${esc(step.commit)}</code> <button type="button" class="ask" data-tj="copy" data-text="${esc(step.commit)}">copiar</button></p>` : ''}</div></div>
         ${code}${stepChecks(s.id, `el paso «${s.titulo}»${step.objetivo ? `: ${step.objetivo}` : ''}`)}` : ''}
     </article>`;
@@ -656,7 +731,7 @@ function closing() {
           <p class="small mut">Pronto: conectar en un clic, y trabajar desde tu computadora con el puente local.</p></div></details>
         ${repo ? '<p><button type="button" class="act" data-tj="check-gh">Revisar mis commits</button> <span class="mut" id="tj-gh-status" role="status"></span></p>' : ''}
       </div></div>
-      ${defense.length ? `<h3>Practicar la defensa</h3><p>Las preguntas que les podrían hacer. Respóndanlas en voz alta antes de abrir la respuesta.</p><div class="cols2">${defense.map((q) => `<details class="q"><summary class="qh">${esc(q.pregunta)}</summary><div class="ans">${md(q.respuesta)}</div></details>`).join('')}</div>` : ''}
+      ${defense.length ? `<h3>Practicar la defensa</h3><p>Las preguntas que les podrían hacer. Respóndanlas en voz alta antes de abrir la respuesta.</p><div class="cols2">${defense.map((q) => `<details class="q"><summary class="qh">${inline(q.pregunta)}</summary><div class="ans">${md(q.respuesta)}</div></details>`).join('')}</div>` : ''}
       ${T.outline.glosario.length ? (T.prefs?.cards === false
     ? `<h3>Términos</h3><dl class="gloss">${T.outline.glosario.map((g) => `<dt>${esc(g.termino)}</dt><dd>${esc(g.definicion)}</dd>`).join('')}</dl>`
     : `<h3>Tarjetas de términos</h3><p>Lee el término, di en voz alta qué significa y gira la tarjeta.</p><div class="flash">${T.outline.glosario.map((g) => `<details class="fc"><summary>${esc(g.termino)}</summary><p>${esc(g.definicion)}</p></details>`).join('')}</div>`) : ''}
@@ -671,10 +746,31 @@ function noOutline() {
 
 function paint() {
   if (!T) return;
-  terms = (T.outline?.glosario ?? []).filter((g) => g.termino.length > 2).map((g) => ({ ...g, re: g.termino.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }));
+  prepareTerms();
   const theme = localStorage.getItem(THEME) ?? '';
-  gRoot().innerHTML = `<div class="tjg-app" ${theme ? `data-theme="${theme}"` : ''}>${topbar()}<div class="wrap">${hero()}${T.outline ? intro() + T.outline.hitos.map(chapter).join('') + closing() : noOutline()}</div></div>`;
+  gRoot().innerHTML = `<div class="tjg-app" data-template="${templateOf()}" ${theme ? `data-theme="${theme}"` : ''}>${topbar()}<div class="wrap">${hero()}${T.outline ? intro() + T.outline.hitos.map(chapter).join('') + closing() : noOutline()}</div></div>`;
   markChapter();
+  drawDiagrams();
+}
+// Diagrams the AI wrote in Mermaid, drawn by Mermaid itself (jsDelivr, pinned), only when there are some. Each one is
+// drawn once and kept: the guide repaints whenever someone marks a step or takes a part, and redrawing every diagram
+// each time made the page feel slow.
+let mermaidLib = null;
+const drawn = new Map();
+async function drawDiagrams() {
+  const nodes = [];
+  for (const n of gRoot().querySelectorAll('pre.mermaid:not([data-processed])')) {
+    const svg = drawn.get(n.textContent);
+    if (svg) { n.innerHTML = svg; n.dataset.processed = 'true'; } else nodes.push(n);
+  }
+  if (!nodes.length) return;
+  const sources = nodes.map((n) => n.textContent);
+  try {
+    mermaidLib ??= import('https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs').then((m) => { m.default.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'neutral' }); return m.default; });
+    const mermaid = await mermaidLib;
+    await mermaid.run({ nodes, suppressErrors: true });
+    nodes.forEach((n, i) => { if (n.isConnected && n.querySelector('svg')) drawn.set(sources[i], n.innerHTML); });
+  } catch { for (const n of nodes) n.closest('figure')?.classList.add('as-text'); }
 }
 // The chapter being read is lit in the top bar.
 function markChapter() {
@@ -799,10 +895,26 @@ function wire(root) {
         draft = null;
         if (!later && ai.ready()) {
           const live = working('Tu IA está leyendo el enunciado y armando la guía', true);
-          try { await generateOutline(made.pdfs, live); } catch (e) { T.lastError = e.message; }
+          try {
+            await generateOutline(made.pdfs, live);
+            // Everything at once, unless the group wanted to review the outline first or the AI has questions.
+            if (T.prefs?.writeAll !== 'outline' && !(T.outline?.preguntas ?? []).length) {
+              for (const [i, h] of T.outline.hitos.entries()) {
+                const feed = working(`Capítulo ${i + 1} de ${T.outline.hitos.length}: ${h.titulo}`, true);
+                await generateMilestone(h.id, feed);
+              }
+            }
+          } catch (e) { T.lastError = e.message; }
         }
         location.hash = `#/trabajos/${made.id}`;
       } catch (e) { console.error(e); renderDraft(e.message); }
+    } else if (form.dataset.edit) {
+      const f = new FormData(form);
+      const date = String(f.get('date') ?? ''); const time = String(f.get('time') ?? '');
+      await busy(button, async () => {
+        await setDoc(tRef(form.dataset.edit), { title: String(f.get('title')).trim().slice(0, 160), course: String(f.get('course') ?? '').trim().slice(0, 120), group: String(f.get('group') ?? '').trim().slice(0, 80), deadline: date ? `${date}${time ? `T${time}` : ''}` : '', updated: serverTimestamp() }, { merge: true });
+        ctx.toast('Guardado.'); await renderList();
+      }).catch(() => {});
     } else if (form.id === 'tj-join') {
       await busy(button, () => join(form)).catch(() => say('#tj-join-status', 'No se pudo entrar: el enlace no es válido o ya no está vigente.'));
     } else if (form.id === 'tj-repo') {
@@ -826,6 +938,7 @@ function wire(root) {
     } else if (kind === 'mine') { onlyMine = el.checked; repaint(); }
     else if (el.name === 'files' && draft) { keepAnswer(); addFiles([...el.files]); renderDraft(); }
     else if (el.dataset?.tjUse) { ai.setChoice(el.dataset.tjUse, { provider: el.value, model: '', effort: '' }); keepAnswer(); renderDraft(); }
+    else if (el.dataset?.tjTemplate !== undefined) { keepTemplate(el.value); gRoot().querySelector('.tjg-app')?.setAttribute('data-template', el.value); }
     else if (el.dataset?.tjAccount !== undefined) { ai.setBridgeAccount(el.value); if (draft) { keepAnswer(); renderDraft(); } else repaint(); }
     else if (el.dataset?.tjWs !== undefined) { if (draft) { draft.workspace = el.value; renderDraft(); } else if (T) { keepFolder(T.id, el.value); repaint(); } }
     else if (el.dataset?.tjMode) {
@@ -874,6 +987,34 @@ function wire(root) {
       const s = b.closest('[data-live]')?.querySelector('[data-live-swarm]');
       if (s) s.remove(); else b.closest('[data-live]')?.querySelector('.tj-live-head')?.insertAdjacentHTML('afterend', '<div class="tj-swarm" data-live-swarm><i class="core"></i></div>');
       b.textContent = swarmOn() ? 'Ocultar la animación' : 'Mostrar la animación';
+      return;
+    }
+    if (kind === 'share') {
+      const link = `${location.origin}${location.pathname}#/trabajos/unirse/${b.dataset.id}/${b.dataset.code}`;
+      await navigator.clipboard.writeText(link).then(() => ctx.toast('Enlace copiado: compártelo solo con tu grupo.'), () => prompt('Enlace de invitación', link));
+      root.querySelectorAll('.tj-menu[open]').forEach((m) => { m.open = false; });
+      return;
+    }
+    if (kind === 'edit-open') {
+      const r = listRows.find((x) => x.id === b.dataset.id);
+      const [date, time] = String(r.deadline ?? '').split('T');
+      cardExtra(r.id, `<form class="tj-edit" data-edit="${esc(r.id)}"><label class="field"><span>Título</span><input name="title" maxlength="160" required value="${esc(r.title)}"></label>
+        <label class="field"><span>Materia</span><input name="course" maxlength="120" value="${esc(r.course ?? '')}"></label>
+        <label class="field"><span>Grupo</span><input name="group" maxlength="80" value="${esc(r.group ?? '')}"></label>
+        <div class="tj-when"><label class="field"><span>Entrega</span><input type="date" name="date" value="${esc(date ?? '')}"></label><label class="field"><span>Hora</span><input type="time" name="time" value="${esc(time ?? '')}"></label></div>
+        <div class="tj-wizard-nav"><button type="button" class="link" data-tj="extra-close">Cancelar</button><span></span><button class="button primary small" type="submit">Guardar</button></div></form>`);
+      return;
+    }
+    if (kind === 'delete-ask' || kind === 'leave-ask') {
+      const r = listRows.find((x) => x.id === b.dataset.id);
+      cardExtra(r.id, kind === 'delete-ask'
+        ? `<p><b>¿Eliminar «${esc(r.title)}» para todo el grupo?</b> Se borran su guía, el reparto, el avance y el registro de uso de IA. No se puede deshacer.</p><p><button type="button" class="button small red" data-tj="delete" data-id="${esc(r.id)}">Sí, eliminarlo</button> <button type="button" class="link" data-tj="extra-close">No</button></p>`
+        : `<p><b>¿Salir de «${esc(r.title)}»?</b> Tu parte queda libre; para volver necesitas otra vez el enlace.</p><p><button type="button" class="button small red" data-tj="leave-trabajo" data-id="${esc(r.id)}">Sí, salir</button> <button type="button" class="link" data-tj="extra-close">No</button></p>`);
+      return;
+    }
+    if (kind === 'extra-close') { b.closest('[data-extra]').innerHTML = ''; return; }
+    if (kind === 'delete' || kind === 'leave-trabajo') {
+      await busy(b, async () => { if (kind === 'delete') await deleteTrabajo(b.dataset.id); else await leaveTrabajo(b.dataset.id); ctx.toast(kind === 'delete' ? 'Trabajo eliminado.' : 'Saliste del trabajo.'); await renderList(); }).catch(() => {});
       return;
     }
     if (kind === 'bridge-recheck') {

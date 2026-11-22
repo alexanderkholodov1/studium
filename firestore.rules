@@ -516,14 +516,14 @@ service cloud.firestore {
         allow create, update: if member() && inTrabajo(tid) && uid == request.auth.uid
           && request.resource.data.keys().hasOnly(['steps', 'updated']) && request.resource.data.steps is map
           && request.resource.data.steps.size() <= 600 && request.resource.data.updated == request.time;
-        allow delete: if member() && uid == request.auth.uid;
+        allow delete: if member() && (uid == request.auth.uid || ownsTrabajo(tid));
       }
       match /ia/{uid} {
         allow get, list: if member() && inTrabajo(tid);
         allow create, update: if member() && inTrabajo(tid) && uid == request.auth.uid
           && request.resource.data.keys().hasOnly(['log', 'updated']) && request.resource.data.log is list
           && request.resource.data.log.size() <= 300 && request.resource.data.updated == request.time;
-        allow delete: if member() && uid == request.auth.uid;
+        allow delete: if member() && (uid == request.auth.uid || ownsTrabajo(tid));
       }
     }
     // Which trabajos a person belongs to, kept by that person only (so their list opens without searching).

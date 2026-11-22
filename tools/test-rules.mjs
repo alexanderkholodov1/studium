@@ -645,6 +645,9 @@ try {
     expect('classmate keeps their own log of AI use', await commit(c.token, [put(`trabajos/${tid}/ia/${c.uid}`, { log: [{ step: 'H1', prompt: 'x' }] })]), 200);
     expect('classmate keeps their list of trabajos', await commit(c.token, [put(`misTrabajos/${c.uid}`, { ids: [tid] })]), 200);
     expect('student cannot read the list of someone else', await status(s.token, 'GET', `/misTrabajos/${c.uid}`), 403);
+    expect('classmate cannot delete the progress of someone else', await commit(c.token, [remove(`trabajos/${tid}/avance/${s.uid}`)]), 403);
+    expect('the owner deletes a member\'s progress (deleting the trabajo)', await commit(s.token, [remove(`trabajos/${tid}/avance/${c.uid}`)]), 200);
+    expect('the owner deletes a member\'s AI log (deleting the trabajo)', await commit(s.token, [remove(`trabajos/${tid}/ia/${c.uid}`)]), 200);
     expect('the owner removes a member', await commit(s.token, [remove(`trabajos/${tid}/miembros/${c.uid}`)]), 200);
     expect('a removed member cannot read the trabajo', await status(c.token, 'GET', at('')), 403);
     expect('a removed member cannot write progress', await commit(c.token, [put(`trabajos/${tid}/avance/${c.uid}`, { steps: {} })]), 403);
