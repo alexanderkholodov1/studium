@@ -605,6 +605,18 @@ try {
     expect('otherDomain cannot count an egg', await commit(accounts.otherDomain.token, [put('eggs/portal', { count: 1 }, { stamp: false, create: true })]), 403);
     expect('student cannot read the counts', await status(s.token, 'GET', '/eggs/radio'), 403);
     expect('admin reads the counts', await list(A.token, 'eggs'), 200);
+    // The radio's stations: admins set them, members read them; an audio file goes in pieces of under 1 MB.
+    const st = { name: 'Prueba', freq10: 990, opens: 'radio', kind: 'audio', on: true, showCaption: false, audio: { pieces: 1, type: 'audio/mpeg', size: 4, name: 'a.mp3' } };
+    expect('admin sets a station', await commit(A.token, [put(`stations/t-${tag}`.toLowerCase(), st)]), 200);
+    expect('admin uploads a piece of its audio', await commit(A.token, [put(`stations/t-${tag}/audio/0`.toLowerCase(), { b: Buffer.from('abcd'), i: 0 }, { stamp: false })]), 200);
+    expect('a member reads the station', await status(s.token, 'GET', `/stations/t-${tag}`.toLowerCase()), 200);
+    expect('a member reads its audio', await status(s.token, 'GET', `/stations/t-${tag}/audio/0`.toLowerCase()), 200);
+    expect('a member cannot set a station', await commit(s.token, [put(`stations/m-${tag}`.toLowerCase(), st)]), 403);
+    expect('a member cannot upload audio', await commit(s.token, [put(`stations/t-${tag}/audio/1`.toLowerCase(), { b: Buffer.from('x'), i: 1 }, { stamp: false })]), 403);
+    expect('a station off the dial is refused', await commit(A.token, [put(`stations/t-${tag}`.toLowerCase(), { ...st, freq10: 1200 })]), 403);
+    expect('a station with an unknown field is refused', await commit(A.token, [put(`stations/t-${tag}`.toLowerCase(), { ...st, secret: 'x' })]), 403);
+    expect('a piece over 1 MB is refused', await commit(A.token, [put(`stations/t-${tag}/audio/2`.toLowerCase(), { b: Buffer.alloc(1000001), i: 2 }, { stamp: false })]), 403);
+    expect('otherDomain cannot read the stations', await status(accounts.otherDomain.token, 'GET', `/stations/t-${tag}`.toLowerCase()), 403);
   }
 
   expect('nobody writes elsewhere', await status(s.token, 'PATCH', `/other/${tag}`, write), 403);

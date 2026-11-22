@@ -2649,3 +2649,16 @@ canvas.prop { display: block; }
 .dash-grid [data-fit-hidden] { display: none !important; }
 .tile-more { justify-self: start; padding: 4px 12px; border: 0; border-radius: 999px; cursor: pointer; font: 700 13px var(--display); color: var(--blue); background: color-mix(in oklab, var(--blue) 12%, transparent); }
 .tile-more:hover { background: color-mix(in oklab, var(--blue) 20%, transparent); }
+
+/* ---------- the admin panel: the radio's stations ---------- */
+.stations-list { display: grid; gap: 14px; margin: 14px 0; }
+.st-card { display: grid; gap: 12px; padding: 16px 18px; border-radius: 20px; }
+.st-row { display: grid; grid-template-columns: minmax(0, 2fr) 110px minmax(0, 1.4fr) auto; gap: 12px; align-items: end; }
+.st-card .st-on { margin: 0 0 10px; white-space: nowrap; }
+.st-card .st-k { display: none; gap: 8px; }
+.st-card[data-kind="gen"] .k-gen, .st-card[data-kind="youtube"] .k-youtube, .st-card[data-kind="audio"] .k-audio { display: grid; }
+.st-card:not([data-kind="audio"]) .k-audio-btn, .st-card:not([data-kind="youtube"]) .k-yt-link { display: none; }
+.st-card .st-file { margin: 0; color: var(--ink-2); }
+.st-card .actions { align-items: center; }
+.st-card .st-msg { margin-left: auto; color: var(--muted); font-size: 14px; }
+@media (max-width: 760px) { .st-row { grid-template-columns: 1fr 1fr; } }

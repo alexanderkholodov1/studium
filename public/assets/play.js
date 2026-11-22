@@ -314,6 +314,50 @@ function droppedOnDecor(x, y) {
   nodo.place = nodo.grabbedFrom ?? nodo.place;
   return playAt(c, true) || true;
 }
+// When the radio plays, he comes to dance by it for a while: bouncing on the beat, swaying, hands up, notes; then back
+// to his place. While the music goes on, he comes back now and then.
+let music = { on: false, el: null, next: 0 };
+let dancing = 0;
+function danceBy() {
+  const el = music.el;
+  if (!music.on || !nodo || nodo.gone || away || drag || dancing || !el?.isConnected || !running()) return false;
+  const r = el.getBoundingClientRect();
+  if (!r.width || r.bottom < 80 || r.top > innerHeight - 40) return false;
+  const right = r.right + nodo.r * 1.2 < innerWidth;
+  const x = right ? r.right + nodo.r * 0.8 : r.left - nodo.r * 0.8;
+  const y = Math.min(innerHeight - nodo.r - 20, Math.max(90, r.top + r.height * 0.55));
+  stopRoutine();
+  if (nodo.place == null) nodo.place = nodo.home ?? nodo.x;
+  specter.visit(x, y);
+  const run = ++dancing;
+  const beats = 22; const beat = 380;
+  setTimeout(() => {
+    if (run !== dancing || !nodo?.fly) { dancing = 0; return; }
+    mood('glad', beats * beat, true); say(['¡A bailar!', '¡Esta me gusta!', '♪ ♫'][Math.floor(Math.random() * 3)], 1500);
+    for (let i = 0; i < beats; i += 1) {
+      setTimeout(() => {
+        if (run !== dancing || !nodo?.fly) return;
+        const up = i % 2 === 0;
+        pose({ y: up ? -14 : 0, rot: (i % 4 < 2 ? -1 : 1) * 10, scale: up ? 1.04 : 0.97, ms: beat * 0.9 });
+        nodo.face.dataset.hands = i % 8 < 4 ? 'up' : 'wave';
+        if (i % 6 === 0) notes(2);
+        if (i === Math.floor(beats / 2)) mood('love', beat * 4, true);
+      }, i * beat);
+    }
+    setTimeout(() => {
+      if (run !== dancing) return;
+      dancing = 0; pose({ ms: 300 }); nodo.face.dataset.hands = 'rest'; mood('wink', 900);
+      if (nodo?.fly) specter.home();
+      music.next = performance.now() + rand(60000, 120000);
+    }, beats * beat + 200);
+  }, 1100);
+  return true;
+}
+addEventListener('studium-radio', (e) => {
+  music.on = !!e.detail?.on; music.el = e.detail?.el ?? music.el;
+  if (music.on) setTimeout(danceBy, 1400);
+  else if (dancing) { dancing = 0; pose({ ms: 300 }); if (nodo) { nodo.face.dataset.hands = 'rest'; if (nodo.fly) specter.home(); } }
+});
 let routineRun = 0;
 function stopRoutine() {
   routineRun += 1;
@@ -322,6 +366,7 @@ function stopRoutine() {
 function routine() {
   const now = performance.now();
   if (now - lastVisit > rand(6, 12) * 60000 && decorVisit()) { lastVisit = now; return; }
+  if (music.on && now > music.next && danceBy()) return;
   const names = Object.keys(ROUTINES);
   const steps = ROUTINES[names[Math.floor(Math.random() * names.length)]];
   const run = ++routineRun;
@@ -424,7 +469,7 @@ function hit(x, y) {
 function grab(b, e) {
   drag = { body: b, id: e.pointerId, ox: e.clientX - b.x, oy: e.clientY - b.y, moved: 0 };
   root.classList.add('grabbing');
-  if (b.kind === 'nodo') { b.grabbedFrom = b.home ?? b.x; if (away && !b.gone) away = null; stopRoutine(); mood('surprised', 99999); b.fly = null; }
+  if (b.kind === 'nodo') { b.grabbedFrom = b.home ?? b.x; if (away && !b.gone) away = null; if (dancing) { dancing = 0; pose({ ms: 150 }); } stopRoutine(); mood('surprised', 99999); b.fly = null; }
   sfx.grab(b.r * 2);
   idleSince = performance.now();
   wake();

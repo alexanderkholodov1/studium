@@ -15,7 +15,9 @@ import { sfx } from './sfx.js';
 import { t } from './i18n.js';
 import { auth, countEgg } from './data.js';
 import { flag } from './settings.js';
-import { STATIONS, GENERATORS, stationOf } from './stations.js';
+import { GENERATORS } from './stations.js';
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+import { stations, loadStations, audioOf, onStations } from './radio.js';
 import { props, pokeProp } from './props3d.js';
 
 const FOUND = 'studium-eggs';
@@ -238,19 +240,20 @@ const BAR = 16;
 const radio = { audio: null, out: null, playing: false, step: 0, next: 0, timer: 0, gain: 0.6, stop: null, kit: null };
 function schedule() {
   const { ctx: a } = radio.audio;
-  const gen = GENERATORS[radio.station] ?? GENERATORS.bossa;
+  const gen = GENERATORS[radio.gen] ?? GENERATORS.bossa;
   const dur = 60 / gen.bpm / 4;
   if (radio.next < a.currentTime - 0.05) radio.next = a.currentTime + 0.02;
   while (radio.next < a.currentTime + 0.15) {
     const s = radio.step % BAR; const bar = Math.floor(radio.step / BAR);
-    const swing = radio.station === 'bossa' && s % 2 ? dur * 0.12 : 0;
+    const swing = radio.gen === 'bossa' && s % 2 ? dur * 0.12 : 0;
     gen.play(radio.kit, radio.next + swing, s, bar);
     radio.next += dur; radio.step += 1;
   }
 }
-function startMusic() {
+// The radio's speaker (a small radio's filter) and its volume, made once.
+function speaker() {
   const raw = sfx.raw();
-  if (!raw) return false;
+  if (!raw) return null;
   const a = raw.ctx;
   if (!radio.out) {
     radio.audio = raw;
@@ -266,15 +269,44 @@ function startMusic() {
     const d = radio.noise.getChannelData(0);
     for (let i = 0; i < d.length; i += 1) d[i] = Math.random() * 2 - 1;
   }
+  return a;
+}
+function startMusic() {
+  const a = speaker();
+  if (!a) return false;
   radio.kit = { a, dest: radio.out, noise: radio.noise };
   radio.playing = true;
   radio.step = 0;
   radio.next = a.currentTime + 0.08;
-  radio.stop = GENERATORS[radio.station]?.start?.(radio.kit) ?? null;
+  radio.stop = GENERATORS[radio.gen]?.start?.(radio.kit) ?? null;
   radio.timer = setInterval(schedule, 30);
   return true;
 }
-function stopMusic() { radio.playing = false; clearInterval(radio.timer); radio.stop?.(); radio.stop = null; }
+function stopMusic() { radio.playing = false; clearInterval(radio.timer); radio.stop?.(); radio.stop = null; try { radio.file?.stop(); } catch { /* ended */ } radio.file = null; }
+// A station of an uploaded file: decoded once, played in a seamless loop (no gap at the seam), at full quality
+// through the radio's volume, with no window or player.
+const decoded = new Map();
+async function startFile(el, s) {
+  const a = speaker();
+  if (!a) return;
+  status(el, 'Sintonizando…');
+  try {
+    if (!decoded.has(s.id)) decoded.set(s.id, audioOf(s.id).then((buf) => a.decodeAudioData(buf.slice(0))));
+    const buffer = await decoded.get(s.id);
+    if (current().id !== s.id || !radio.wantFile) return;
+    try { radio.file?.stop(); } catch { /* ended */ }
+    const src = a.createBufferSource();
+    src.buffer = buffer; src.loop = true;
+    src.connect(radio.level);
+    src.start();
+    radio.file = src; radio.playing = true;
+    status(el, ''); playingNow(el, true);
+  } catch {
+    decoded.delete(s.id);
+    status(el, 'No se pudo sintonizar esta estación. Prueba de nuevo en un momento.');
+    playingNow(el, false);
+  }
+}
 
 /* ---------- the radio, on screen: an old radio that is a box in 3D ---------- */
 // It goes with you to every tab (floating, wherever you drop it), or it stays on Inicio, in «Tus hallazgos». Either
@@ -315,8 +347,12 @@ const knob = (v) => `rotate(${Math.round(v * 270 - 135)}deg)`;
 /* ---------- the stations: each opens with a secret ---------- */
 const BASE = ['radio', 'portal', 'cake', 'medic', 'crit'];
 export function stationOpen(s) { const f = found(); return s.opens === 'radio' || (s.opens === 'all' ? BASE.every((x) => f.has(x)) : f.has(s.opens)); }
-export const openStations = () => STATIONS.filter(stationOpen);
-const current = () => { const s = stationOf(read(RADIO, {}).station); return stationOpen(s) ? s : STATIONS[0]; };
+export const openStations = () => stations().filter(stationOpen);
+const current = () => {
+  const list = stations();
+  const s = list.find((x) => x.id === read(RADIO, {}).station) ?? list[0];
+  return stationOpen(s) ? s : list.find(stationOpen) ?? list[0];
+};
 const needle = (s) => `${((s.freq - 88) / 20) * 100}%`;
 // An official upload plays in YouTube's own player (its official IFrame API), visible on the radio, with its credit
 // and a link to the original. The radio's own knobs play, pause and set its volume; what the player says (playing,
@@ -345,6 +381,8 @@ const YT_ERRORS = {
 function status(el, text) { const p = el.querySelector('.yt-status'); if (p) { p.textContent = t(text); p.hidden = !text; } }
 function playingNow(el, on) {
   radio.playing = on;
+  // Whoever wants to know that music is on (Specter comes to dance).
+  dispatchEvent(new CustomEvent('studium-radio', { detail: { on, el } }));
   el.classList.toggle('playing', on);
   el.querySelector('[data-radio-play]').setAttribute('aria-label', t(on ? 'Pausar' : 'Reproducir'));
 }
@@ -352,10 +390,16 @@ function tv(el, s) {
   const box = el.querySelector('.radio-tv');
   try { radio.yt?.destroy(); } catch { /* already gone */ }
   radio.yt = null;
+  // A station of a file: only its caption (if the admins chose to show one) and its status, no player.
+  if (s?.kind === 'audio') {
+    box.hidden = !s.credit;
+    box.innerHTML = `<p class="yt-status" role="status" hidden></p>${s.credit ? `<p class="credit">${esc(s.credit)}</p>` : ''}`;
+    return;
+  }
   if (!s?.video) { box.hidden = true; box.innerHTML = ''; return; }
   box.hidden = false;
   box.innerHTML = `<div class="yt"></div><p class="yt-status" role="status">${t('Abriendo el reproductor de YouTube…')}</p>
-    <p class="credit">${t(s.credit)} <a href="https://www.youtube.com/watch?v=${s.video}" target="_blank" rel="noopener">${t('Ver en YouTube')}</a></p>`;
+    ${s.credit ? `<p class="credit">${esc(s.credit)} <a href="https://www.youtube.com/watch?v=${s.video}" target="_blank" rel="noopener">${t('Ver en YouTube')}</a></p>` : ''}`;
   // Floating, the radio grows upward with its player and stays on screen.
   if (!el.classList.contains('docked')) setTimeout(() => toCorner(el, read(RADIO, {}).corner ?? 'bottom-right'), 0);
   youtube().then((YT) => {
@@ -383,9 +427,13 @@ function tv(el, s) {
 }
 function play(el, on) {
   const s = current();
-  radio.station = s.id;
+  radio.station = s.id; radio.gen = s.gen ?? s.id;
   stopMusic();
-  if (s.video) {
+  radio.wantFile = false;
+  if (s.kind === 'audio') {
+    tv(el, s);
+    if (on) { radio.wantFile = true; startFile(el, s); } else playingNow(el, false);
+  } else if (s.video) {
     if (!radio.yt && on) { tv(el, s); return; }
     try { if (on) radio.yt?.playVideo(); else radio.yt?.pauseVideo(); } catch { /* not ready yet */ }
     playingNow(el, on);
@@ -544,6 +592,9 @@ export function closeRadio() {
 export function mountEggs(options) {
   toast = options.toast;
   onFound = options.onFound ?? onFound;
+  // The stations as the admins set them, once signed in; the dial follows when they change.
+  auth.onAuthStateChanged?.((u) => { if (u) loadStations(); });
+  onStations(() => { const el = radioEl(); if (el) syncStation(el); });
   addEventListener('keydown', onKey);
   // The dot answers on its own: pressing it does not throw its letter, so it can be pressed again.
   document.addEventListener('pointerdown', (e) => {
