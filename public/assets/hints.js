@@ -5,6 +5,7 @@
 // Also what the person has already seen (first-time suggestions), kept in this browser.
 import { t } from './i18n.js';
 import { flag } from './settings.js';
+import { specter } from './play.js';
 
 const SEEN = 'studium-seen';
 const OFF = 'studium-hints';
@@ -71,6 +72,7 @@ function close(mark) {
   const el = bubble;
   bubble = null;
   el.classList.add('out');
+  if (el.classList.contains('by-specter')) specter.home();
   el.addEventListener('animationend', () => el.remove(), { once: true });
   setTimeout(() => el.remove(), 900);
   if (page() === 'horario') schedule();
@@ -95,13 +97,22 @@ function show() {
   const { hint, anchor } = found;
   shown += 1; lastShown = Date.now();
   bubble = document.createElement('aside');
-  bubble.className = `hint-bubble glass${ambience() === 'sereno' ? ' still' : ''}`;
+  // In the playful ambience, Specter brings the hint: he flies next to it and says it.
+  const by = ambience() === 'jugueton' && specter.here();
+  bubble.className = `hint-bubble glass${ambience() === 'sereno' ? ' still' : ''}${by ? ' by-specter' : ''}`;
   bubble.dataset.hint = hint.id;
   bubble.setAttribute('role', 'status');
-  bubble.innerHTML = `<p></p><div class="actions">${hint.more ? `<a class="button primary small" href="#/guia-estudiante/${hint.more}" data-hint-more>${t('Ver más')}</a>` : ''}<button class="button ghost small" data-hint-ok>${t('Entendido')}</button><button class="link quiet" data-hint-off>${t('Ocultar pistas')}</button></div>`;
+  bubble.innerHTML = `${by ? '<b class="hint-by">Specter</b>' : ''}<p></p><div class="actions">${hint.more ? `<a class="button primary small" href="#/guia-estudiante/${hint.more}" data-hint-more>${t('Ver más')}</a>` : ''}<button class="button ghost small" data-hint-ok>${t('Entendido')}</button><button class="link quiet" data-hint-off>${t('Ocultar pistas')}</button></div>`;
   bubble.querySelector('p').textContent = t(hint.text);
   document.body.append(bubble);
   place(bubble, anchor);
+  if (by) {
+    const r = bubble.getBoundingClientRect();
+    const left = r.left > 110;
+    bubble.classList.toggle('specter-right', !left);
+    specter.visit(left ? r.left - 44 : r.right + 44, r.top + Math.min(r.height / 2, 60));
+    specter.mood('glad', 2400);
+  }
   bubble.querySelector('[data-hint-ok]').addEventListener('click', () => close(true));
   // Turned off by mistake? The bubble says where to turn them on again before it leaves.
   bubble.querySelector('[data-hint-off]').addEventListener('click', () => {

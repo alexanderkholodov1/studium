@@ -6,6 +6,7 @@ import { props } from './props3d.js';
 import { specterSkin } from './specter.js';
 import { seen, markSeen } from './hints.js';
 import { sfx } from './sfx.js';
+import { specter } from './play.js';
 
 const GENERAL = [
   { sel: '#nav [data-tab="home"]', text: 'Hola, soy Specter. Te muestro Studium en un minuto. Inicio es tu espacio: lo que viene, tus pendientes, tu enfoque y lo que vas encontrando.' },
@@ -153,6 +154,9 @@ export function mountTour() {
   help.addEventListener('click', () => startTour('section'));
   document.body.append(help);
 }
+// The offer, once: Specter himself asks, outside any box. In the playful ambience the Specter of the page flies to
+// the card; elsewhere he floats beside it. «Ahora no»: he waves and flies off (in the playful ambience he comes back,
+// playfully, a while later); the card folds away.
 export function offerTour(tries = 0) {
   if (seen('tour-offered') || tour || document.querySelector('.tour-offer')) return;
   setTimeout(() => {
@@ -160,17 +164,30 @@ export function offerTour(tries = 0) {
     // One thing at a time: while another notice is open (the news of a version), the offer waits for it.
     if (document.querySelector('dialog[open]')) { if (tries < 20) offerTour(tries + 1); return; }
     markSeen('tour-offered');
+    const live = specter.here();
     const card = document.createElement('div');
-    card.className = 'tour-offer glass';
-    card.innerHTML = `<canvas class="prop tour-specter" data-prop="specter" data-skin="${specterSkin()}" aria-hidden="true"></canvas>
+    card.className = `tour-offer glass${live ? ' live' : ''}`;
+    card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-label', 'Specter');
+    card.innerHTML = `${live ? '' : `<canvas class="prop offer-specter" data-prop="specter" data-skin="${specterSkin()}" aria-hidden="true"></canvas>`}
       <p>Hola, soy Specter. ¿Te muestro Studium en un minuto?</p>
       <div class="tour-actions"><button type="button" class="button primary small" data-yes>Sí, muéstrame</button><button type="button" class="button ghost small" data-no>Ahora no</button></div>
       <small>Cuando quieras, el «?» de abajo te explica cada parte.</small>`;
     document.body.append(card);
     props(card);
+    if (live) {
+      const r = card.getBoundingClientRect();
+      specter.visit(r.left - 46, r.top + r.height / 2);
+    }
+    const fold = () => { card.classList.add('out'); setTimeout(() => card.remove(), 450); };
     card.addEventListener('click', (e) => {
-      if (e.target.closest('[data-yes]')) { card.remove(); startTour('general'); }
-      else if (e.target.closest('[data-no]')) card.remove();
+      if (e.target.closest('[data-yes]')) { card.remove(); if (live) specter.home(); startTour('general'); }
+      else if (e.target.closest('[data-no]')) {
+        sfx.tick();
+        if (live) { specter.say('¡Va! Aquí estaré.', 1400); setTimeout(() => specter.away(9000), 700); }
+        else card.querySelector('.offer-specter')?.classList.add('away');
+        fold();
+      }
     });
   }, 2500);
 }

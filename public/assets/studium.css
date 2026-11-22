@@ -2544,3 +2544,25 @@ canvas.prop { display: block; }
 .dash.editing .timer-set { display: none; }
 .dash-grid [data-tile="shelf"] .shelf { align-items: center; }
 .dash-grid [data-tile="shelf"] .radio-stand { order: -1; margin-right: 8px; }
+
+/* ---------- Specter's offer: he asks himself, outside any box; «Ahora no» folds the card and he flies off ---------- */
+.tour-offer { grid-template-columns: 1fr; overflow: visible; transform-origin: 90% 100%; animation: offer-in .5s var(--spring, ease) both; }
+.tour-offer:not(.live) { margin-left: 0; }
+.tour-offer .offer-specter { position: absolute; left: -104px; bottom: 6px; width: 96px; height: 108px; animation: offer-bob 3.2s ease-in-out infinite; pointer-events: none; }
+.tour-offer .offer-specter.away { animation: specter-away 1.1s cubic-bezier(.45, 0, .6, 1) forwards; }
+.tour-offer.out { animation: offer-out .42s cubic-bezier(.5, 0, .75, 0) forwards; }
+.tour-offer.live::before { content: ''; position: absolute; left: -9px; top: 50%; width: 18px; height: 18px; translate: 0 -50%; rotate: 45deg;
+  background: inherit; box-shadow: -1px 1px 0 0 var(--line); border-radius: 3px; }
+@keyframes offer-in { from { opacity: 0; transform: translateY(14px) scale(.92); } }
+@keyframes offer-out { to { opacity: 0; transform: translateY(10px) scale(.86) rotate(-2deg); } }
+@keyframes offer-bob { 50% { transform: translateY(-7px) rotate(-2deg); } }
+@keyframes specter-away {
+  0% { transform: none; opacity: 1; }
+  25% { transform: translate(-20px, 14px) rotate(-12deg) scale(1.05); }
+  55% { transform: translate(30px, -60px) rotate(200deg) scale(.95); }
+  100% { transform: translate(160px, -420px) rotate(380deg) scale(.6); opacity: 0; }
+}
+@media (max-width: 640px) { .tour-offer .offer-specter { left: auto; right: 8px; bottom: calc(100% - 6px); width: 70px; height: 80px; } }
+@media (prefers-reduced-motion: reduce) { .tour-offer, .tour-offer.out, .tour-offer .offer-specter, .tour-offer .offer-specter.away { animation: none; } }
+/* A hint Specter brings: «Specter» above it, and he floats beside it. */
+.hint-bubble .hint-by { display: block; margin-bottom: 4px; font: 800 11px var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--blue); }
