@@ -133,7 +133,7 @@ function countdownTile(span) {
   const next = agenda()[0];
   if (!next) {
     return tile('countdown', span, `<h2>Tu próximo examen</h2><p class="muted">No hay nada con fecha por venir. Agrega tus fechas en «Fechas y entregas», o crea la guía de tu próximo examen.</p>
-      <div class="actions"><button class="button ghost" data-tile-add="deadlines">Agregar fechas</button><a class="button primary" href="#/estudiar/guia">Crear una guía</a></div>`);
+      <div class="actions"><button class="button ghost" data-tile-add="deadlines">Agregar fechas</button><a class="button primary" href="#/estudiar">Hacer una guía</a></div>`);
   }
   const n = daysTo(next.date);
   const sub = next.own ? next.course ?? '' : [next.professor, next.term].filter(Boolean).join(' · ');
@@ -141,7 +141,7 @@ function countdownTile(span) {
     <p class="kicker d">${next.own ? 'Tu próxima fecha' : 'Tu próximo examen'} · ${esc(longDate(next.date))}</p>
     <div class="countdown d" style="--d:26"><span class="big">${n === 0 ? 'Hoy' : n}<small>${n === 0 ? '' : n === 1 ? ' día' : ' días'}</small></span>
       <h3>${next.own ? esc(next.text) : `${esc(next.course)}: ${esc(next.title)}`}</h3><p class="muted">${esc(sub)}</p></div>
-    <div class="actions d" style="--d:14">${next.own ? '<a class="button ghost" href="#/estudiar/guia">Crear su guía</a>'
+    <div class="actions d" style="--d:14">${next.own ? '<a class="button ghost" href="#/estudiar">Hacer su guía</a>'
       : `<a class="button primary" href="#/guia/${encodeURIComponent(next.id)}">Abrir la guía</a><button class="button ghost" data-goal-for="${esc(next.id)}">Ponérmelo como meta</button>`}</div>`, 'solid-blue', 'data-tilt="3"');
 }
 function deadlinesTile(span) {

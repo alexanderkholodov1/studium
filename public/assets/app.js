@@ -536,13 +536,13 @@ async function route() {
       '': ['home', 'Inicio', () => { renderHome(); newsOnce(!prefs.fresh); offerTour(); }],
     };
     // «Estudia»: drop anything, sorted in sight; the desk of each course; a guide or the graph from what was dropped.
-    // «Mis aportes» (what was published, to change who sees it or delete it) is reached from «Estudia».
+    // «Lo que subiste» (what was published, to change who sees it or delete it) is reached from «Estudiar».
     if (page === 'estudiar' || page === 'mis-aportes') {
       const mine = page === 'mis-aportes';
       const pane = mine ? 'mine' : arg[0] === 'guia' ? 'guide' : arg[0] === 'grafo' ? 'material' : arg[0] === 'materia' ? 'desk' : 'estudia';
-      const title = mine ? 'Mis aportes' : pane === 'desk' ? arg[1] : 'Estudiar';
+      const title = mine ? 'Lo que subiste' : pane === 'desk' ? arg[1] : 'Estudiar';
       document.title = `${mine ? t(title) : title === 'Estudiar' ? t('Estudiar') : title} · Studium`;
-      $('#c-title').textContent = mine ? t('Mis aportes') : t('Estudiar');
+      $('#c-title').textContent = mine ? t('Lo que subiste') : t('Estudiar');
       for (const a of document.querySelectorAll('#view-contribute .subtabs a')) a.setAttribute('aria-current', String(a.dataset.sub === ({ mine: 'mine', guide: 'guia' }[pane] ?? 'material')));
       $('#c-anon').hidden = pane !== 'estudia';
       show('contribute');

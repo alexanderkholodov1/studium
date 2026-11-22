@@ -11,6 +11,7 @@
 // Then the course, asked only when it cannot be deduced, and «¿Qué hacemos con esto?»: «Sumar al grafo de
 // conocimiento» (on by default; only the anonymous summary leaves) and «Generar una guía de estudio».
 // Everything dropped stays on this device (IndexedDB), on the desk of its course.
+import { startTour } from './tour.js';
 import { keyOf } from './themes.js';
 import { sfx } from './sfx.js';
 import * as ai from './ai.js';
@@ -190,7 +191,10 @@ function flip(el, first, { rotate = 0, scale = 1, duration = 600 } = {}) {
 export async function renderEstudia(el, deps) {
   api = deps;
   const items = await desk.all();
+  // What this place is, said once (his words, 2026-11-22: "que se entienda que engloba todo en un solo lugar, y puedes
+  // decidir que hacer con ciertos archivos mas adelante… una explicacion de eso y un tutorial tambien").
   el.innerHTML = `
+    <p class="es-intro">Todo lo de tus materias, en un solo lugar. Suelta lo que tengas: Studium lo ordena por materia, y después decides qué hacer con cada cosa. <button type="button" class="link" data-es-tour>Ver cómo funciona</button></p>
     <div class="es-drop glass" data-es-drop>
       <div class="es-drop-in">
         <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 14a4 4 0 0 1 4-4h8l4 4h12a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4Z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M24 20v12m-5-5 5 5 5-5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -202,7 +206,12 @@ export async function renderEstudia(el, deps) {
     </div>
     <section class="es-table" data-es-table hidden></section>
     ${deskHTML(items)}
-    <p class="fine es-mine"><a class="link" href="#/mis-aportes">Lo que publicaste</a>: cambia quién lo ve o bórralo.</p>`;
+    ${items.length ? '' : `<ol class="es-how">
+      <li class="glass"><i>1</i><b>Suelta</b><span>Archivos, carpetas enteras, fotos o enlaces, todo junto. No hay nada que llenar.</span></li>
+      <li class="glass"><i>2</i><b>Se ordena solo</b><span>Cada cosa va a su montón (sílabo, material del profe, apuntes, deberes, exámenes) y cada materia a su carpeta.</span></li>
+      <li class="glass"><i>3</i><b>Tú decides, ahora o después</b><span>Una guía de estudio para tu examen, sumarlo al grafo de la comunidad, o solo guardarlo aquí.</span></li>
+    </ol>`}
+    <p class="fine es-mine"><a class="link" href="#/mis-aportes">Lo que subiste</a>: cambia quién lo ve o bórralo.</p>`;
   wire(el);
 }
 
@@ -270,6 +279,7 @@ function wire(el) {
   // The pane is drawn again on every visit: its handlers are replaced, never added up.
   el.onchange = (e) => { if (e.target.matches('[data-es-files]')) { take(el, [...e.target.files]); e.target.value = ''; } };
   el.onclick = (e) => {
+    if (e.target.closest('[data-es-tour]')) { startTour('section'); return; }
     const end = e.target.closest('[data-end-term]');
     if (!end) return;
     if (end.dataset.sure) { endTerm(el); return; }

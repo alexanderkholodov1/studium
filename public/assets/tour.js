@@ -10,11 +10,11 @@ import { specter } from './play.js';
 
 const GENERAL = [
   { sel: '#nav [data-tab="home"]', text: 'Hola, soy Specter. Te muestro Studium en un minuto. Inicio es tu espacio: lo que viene, tus pendientes, tu enfoque y lo que vas encontrando.' },
-  { sel: '#nav [data-tab="contribute"]', text: 'Estudiar: guías hechas por tu IA con tu material, la Guía del estudiante, tu horario y tu malla.' },
+  { sel: '#nav [data-tab="contribute"]', text: 'Estudiar: todo lo de tus materias en un solo lugar, y las guías que tu IA hace con eso.' },
   { sel: '#nav [data-tab="map"]', text: 'El Grafo: lo que aportamos entre todos, unido por conceptos, materias y evaluaciones. Puedes buscar y seguir rutas.' },
   { sel: '#nav [data-tab="profes"]', text: 'Profes: lo que la comunidad sabe de cada profe, para que elijas sabiendo qué esperar.' },
   { sel: '#nav [data-tab="comunidad"]', text: 'Comunidad: lo que piden y ofrecen los demás.' },
-  { sel: '#account', text: 'Tu cuenta: Ajustes (tu IA, tu ambiente, tus secretos), Mis aportes y Acerca.' },
+  { sel: '#account', text: 'Tu cuenta: el modo de la página, tu horario, tu malla, lo que subiste, Ajustes (tu IA, tus secretos) y Acerca.' },
   { sel: '.fb-fab', text: 'Si algo falla o se te ocurre algo, cuéntalo aquí. Lo lee una persona.' },
   { sel: '.tour-help', text: 'Y si te pierdes en cualquier parte, pulsa este «?»: te explico esa parte.' },
 ];
@@ -53,9 +53,17 @@ const SECTIONS = {
   ],
   'view-comunidad': [{ sel: '#cm-body', text: 'Lo que piden y ofrecen los demás. Todo entre miembros, con buena onda.' }],
   'view-contribute': [
-    { sel: '#c-title', text: 'Estudiar: aquí preparas tus evaluaciones con tu propio material.' },
-    { sel: '#view-contribute .subtabs', text: 'Cada parte: estudiar, crear una guía, sumar material al grafo, y lo tuyo.' },
-    { sel: '#pane-estudia:not([hidden]), #pane-guide:not([hidden]), #pane-material:not([hidden]), #pane-mine:not([hidden])', text: 'Sigue los pasos de esta parte. Tu IA hace el trabajo largo; tú decides y revisas.' },
+    { sel: '#pane-estudia:not([hidden]) [data-es-drop]', text: 'Tu escritorio: todo lo de tus materias en un solo lugar. Suelta aquí lo que tengas, archivos, carpetas enteras o fotos del cuaderno, sin llenar nada.' },
+    { sel: '#pane-estudia:not([hidden]) [data-es-link]', text: 'Un enlace también vale: una página del profe o un repositorio de GitHub.' },
+    { sel: '#pane-estudia:not([hidden]) .es-how, #pane-estudia:not([hidden]) .es-workdesk', text: 'Yo lo ordeno: cada cosa a su montón y cada materia a su carpeta. Lo que no sepa de qué es, te lo pregunto una sola vez.' },
+    { sel: '#pane-estudia:not([hidden]) [data-es-table]:not([hidden])', text: 'Al final eliges qué hacemos: guardarlo, hacer una guía de estudio o sumarlo al grafo. Puedes volver a tus carpetas y decidir después.' },
+    { sel: '#pane-estudia:not([hidden]) .es-surface', text: 'Toca una carpeta para ver lo de esa materia y hacer una guía con eso cuando la necesites.' },
+    { sel: '#view-contribute .subtabs [data-sub="guias"]', text: 'Guías: las que hizo tu comunidad, para estudiar ya.' },
+    { sel: '#pane-estudia:not([hidden]) .es-mine', text: 'Lo que subiste: ahí cambias quién lo ve, o lo borras.' },
+    { sel: '#pane-guide:not([hidden]) .q-progress', text: 'Tu guía se arma con unas pocas preguntas, una a la vez. Esta barra es lo que falta.' },
+    { sel: '#pane-guide:not([hidden]) [data-q].now', text: 'Responde lo que sepas; lo opcional se salta. La última pregunta crea la guía con tu IA.' },
+    { sel: '#pane-mine:not([hidden]) .mine', text: 'Lo que subiste: tus guías y lo que sumaste al grafo. Cambia quién lo ve, o bórralo.' },
+    { sel: '#pane-mine:not([hidden]) [data-history]', text: 'Tu historial: cómo estaba cada cosa antes de cambiarla o borrarla. Puedes volver atrás.' },
   ],
   'view-settings': [
     { sel: '#settings', text: 'Tus ajustes: tu nombre, tu carrera, tu ambiente, los sonidos y más.' },
