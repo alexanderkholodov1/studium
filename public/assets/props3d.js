@@ -392,9 +392,15 @@ const PROPS = {
     const pe = [-0.08, 0.08].map((x) => { const sp = new T.Sprite(eyeMat()); sp.position.set(x, 0.08, 0.22); sp.scale.setScalar(0.13); sp.material.color.set(0xd6f3ff); peeker.add(sp); return sp; });
     peeker.visible = false; world.add(peeker);
     const peek = { next: 60 + Math.random() * 60, start: 0, tree: null, side: 1, out: 0, rustled: false };
+    // Left alone, the fire slowly burns down to embers (over about twenty minutes, counted across visits); poked, it
+    // flares up again.
+    const POKED = 'studium-campfire-poked';
+    let poked = Date.now();
+    try { poked = Number(localStorage.getItem(POKED)) || poked; } catch { /* burns from now */ }
+    const strength = () => Math.max(0.3, 1 - (Date.now() - poked) / (20 * 60000) * 0.7);
     let flare = 0; let lastT = 0;
     return {
-      scene, camera: camera(21, [0, 6.6, 16.5], [0, 0.55, -0.4]),
+      scene, camera: camera(21, [0, 5.4, 14.4], [0, -0.05, -0.3]),
       update(t) {
         const dt = Math.min(0.1, Math.max(0, t - lastT)); lastT = t;
         flare = Math.max(0, flare - dt * 0.5);
@@ -403,7 +409,7 @@ const PROPS = {
         for (const f of flames) {
           const w = Math.sin(t * 9 + f.userData.p) * 0.05;
           f.position.set(Math.cos(f.userData.a) * f.userData.r, 0.38 + w + flare * 0.15, Math.sin(f.userData.a) * f.userData.r);
-          const k = 1 + flare * 1.2;
+          const k = (0.35 + 0.65 * strength()) * (1 + flare * 1.2);
           f.scale.set(k * 0.9 + flare * 0.3, k * (1 + Math.sin(t * 13 + f.userData.p) * 0.18), k * 0.9 + flare * 0.3);
         }
         for (const s of sparks) {
@@ -411,8 +417,9 @@ const PROPS = {
           s.position.set(Math.sin(k * 9 + s.userData.p * 20) * 0.22, 0.35 + k * (1.6 + flare * 1.5), Math.cos(k * 7 + s.userData.p * 20) * 0.15);
           s.scale.setScalar(0.05 * (1 - k)); s.material.opacity = 1 - k;
         }
-        fireLight.intensity = 8 + Math.sin(t * 17) * 1.2 + Math.sin(t * 29) * 0.8 + flare * 18;
-        glow.material.opacity = 0.35 + flare * 0.5;
+        const st = strength();
+        fireLight.intensity = (2.5 + 5.5 * st) + Math.sin(t * 17) * 1.2 * st + Math.sin(t * 29) * 0.8 * st + flare * 18;
+        glow.material.opacity = 0.12 + 0.23 * st + flare * 0.5;
         glow.scale.setScalar(2.4 + flare * 1.6);
         const age = Date.now() - born;
         for (const tr of trees) {
@@ -458,7 +465,14 @@ const PROPS = {
           if ((k > 1 || peek.ducking) && peek.out < 0.02) { peeker.visible = false; peek.next = t + 90 + Math.random() * 90; }
         }
       },
-      poke() { flare = 1; sfx.whoosh(); return true; },
+      poke() {
+        // Brought back from the embers: the satisfying sound, once; while it burns, only a soft crackle now and then.
+        if (strength() < 0.75) sfx.revive(); else sfx.crackle();
+        poked = Date.now();
+        try { localStorage.setItem(POKED, String(poked)); } catch { /* not remembered */ }
+        flare = 1;
+        return true;
+      },
     };
   },
 

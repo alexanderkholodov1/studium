@@ -233,6 +233,21 @@ export const sfx = {
     sine(90, t, { gain: 0.04, attack: 0.05, decay: 0.5, glide: 0.7, room: 0.2 });
     for (let i = 0; i < 7; i += 1) hiss(t + 0.08 + Math.random() * 0.7, { gain: 0.03 + Math.random() * 0.03, decay: 0.02, freq: 2500 + Math.random() * 3000, q: 2, room: 0.15 });
   },
+  // The fire brought back from its embers: a deep breath of flame and a warm rising chord. Once, not on every click.
+  revive() {
+    if (!audio() || !limit('revive', 4000)) return;
+    const t = now();
+    hiss(t, { gain: 0.07, attack: 0.12, decay: 0.9, freq: 300, q: 0.5, sweep: 6, room: 0.35 });
+    sine(70, t, { gain: 0.05, attack: 0.1, decay: 0.9, glide: 1.4, room: 0.3 });
+    [0, 2, 4, 7].forEach((st, i) => body(note(st + 5, 220), t + 0.18 + i * 0.09, { gain: 0.028, decay: 1.4, bright: 0.3, room: 0.6 }));
+    for (let i = 0; i < 9; i += 1) hiss(t + 0.2 + Math.random() * 1.1, { gain: 0.025 + Math.random() * 0.025, decay: 0.02, freq: 2500 + Math.random() * 3000, q: 2, room: 0.15 });
+  },
+  // A poke while it burns: a soft crackle, now and then only.
+  crackle() {
+    if (!audio() || !limit('crackle', 1500)) return;
+    const t = now();
+    for (let i = 0; i < 4; i += 1) hiss(t + Math.random() * 0.3, { gain: 0.025, decay: 0.02, freq: 2600 + Math.random() * 2500, q: 2, room: 0.15 });
+  },
   rustle() {
     if (!audio() || !limit('rustle', 800)) return;
     const t = now();
