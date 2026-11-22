@@ -22,7 +22,7 @@ const LANG = /^en\b/i.test(globalThis.navigator?.language ?? '') ? 'en' : 'es';
 const DEFAULTS = { mode: 'examenes', ambience: 'vivo', sound: false, theme: 'auto', lang: LANG, avatar: 'blue', semester: 0, career: '', nickname: '', name: '', goals: [], progress: {},
   deadlines: [], todos: [], tiles: [], notes: '', links: [], focus: { study: 25, rest: 5 }, bubbles: false, courses: [], interests: [], known: [], malla: '', passed: [], plan: [] };
 // The tiles the home page can show (space.js draws them).
-const TILE_IDS = ['shelf', 'schedule', 'todos', 'countdown', 'deadlines', 'week', 'goals', 'timer', 'notes', 'links', 'recent', 'news', 'explore'];
+const TILE_IDS = ['shelf', 'decor', 'schedule', 'todos', 'countdown', 'deadlines', 'week', 'goals', 'timer', 'notes', 'links', 'recent', 'news', 'explore'];
 const rid = () => Math.random().toString(36).slice(2, 10);
 const range = (v, lo, hi, d) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d; };
 const KEYS = Object.keys(DEFAULTS);

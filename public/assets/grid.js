@@ -21,6 +21,7 @@ export const SIZES = {
   news: { min: [4, 2], add: [8, 3] },
   explore: { min: [3, 2], add: [4, 3] },
   shelf: { min: [4, 2], add: [12, 3] },
+  decor: { min: [3, 3], add: [4, 5] },
 };
 
 // What a person sees first: on the first screen what matters today (the next exam, what to do, today's classes,
@@ -31,7 +32,7 @@ export const DEFAULT = [
   ['week', 0, 7, 8, 3], ['deadlines', 8, 7, 4, 4],
   ['recent', 0, 10, 4, 3], ['news', 4, 10, 4, 3],
   ['notes', 0, 13, 4, 4], ['links', 4, 13, 4, 4], ['explore', 8, 11, 4, 4],
-  ['shelf', 0, 17, 12, 3],
+  ['shelf', 0, 17, 8, 5], ['decor', 8, 17, 4, 5],
 ].map(([id, x, y, w, h]) => ({ id, x, y, w, h }));
 
 const clampItem = (it) => {
