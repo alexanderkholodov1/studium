@@ -2833,7 +2833,9 @@ canvas.prop { display: block; }
 .tj-pick > label { flex-wrap: wrap; }
 .tj-pick small { min-width: 0; overflow-wrap: anywhere; white-space: normal !important; }
 .tj-pick > label small { flex-basis: 100%; overflow: visible; text-overflow: clip; }
-.tj-boxes .tj-pick { flex-wrap: nowrap; }
+.tj-boxes .tj-pick, .tj-pick:has(> span) { flex-wrap: nowrap; align-items: flex-start; }
+.tj-pick:has(> span) > input { margin-top: 3px; flex: none; }
+.tj-pick > span { flex: 1; min-width: 0; }
 .tj-boxes .tj-pick input { flex: none; }
 .tj-accounts { margin: 6px 0 0 18px; }
 .tjg-app .questions h4 { margin-top: 0; }
@@ -2995,6 +2997,45 @@ canvas.prop { display: block; }
 .tj-goals .tj-pick input { width: auto; margin: 3px 0 0; flex: none; }
 .tj-goals .tj-pick > span { flex: 1; min-width: 0; }
 @media (max-width: 640px) { .tj-goals { grid-template-columns: 1fr; } }
+
+/* Every way to connect an AI: the suggested one lifted, the connected ones marked. */
+.tj-ways { margin-top: 14px; }
+.tj-ways h3 { font-size: 15px; margin: 0 0 8px; }
+.tj-ways-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.tj-way { display: grid; gap: 4px; align-content: start; padding: 10px 12px; border-radius: 14px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line), 0 10px 20px -18px rgba(0, 0, 0, .4); }
+.tj-way b { font-size: 14px; } .tj-way small { color: var(--muted); font-size: 12.5px; line-height: 1.35; }
+.tj-way em { font-style: normal; font-size: 11px; font-weight: 700; color: #fff; background: var(--blue); padding: 1px 7px; border-radius: 99px; vertical-align: 1px; }
+.tj-way.sugg { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--blue) 65%, transparent), 0 14px 26px -18px var(--blue); }
+.tj-way .button { justify-self: start; margin-top: 2px; }
+@media (max-width: 760px) { .tj-ways-grid { grid-template-columns: 1fr 1fr; } }
+
+/* «Elige la carpeta en la ventana de tu computadora»: over the whole page while that window is open. */
+.tj-picking { position: fixed; inset: 0; z-index: 9000; display: grid; place-items: center; padding: 24px; background: rgba(12, 16, 28, .45); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); animation: tj-fade .25s ease both; }
+@keyframes tj-fade { from { opacity: 0; } }
+.tj-picking-card { max-width: 560px; padding: 28px 30px; border-radius: 24px; text-align: center; background: var(--card); box-shadow: 0 40px 80px -30px rgba(0, 0, 0, .55); }
+.tj-picking-card h2 { margin: 8px 0 10px; font-size: 26px; line-height: 1.15; }
+.tj-picking-card p { margin: 0 0 8px; }
+.tj-picking-icon { font-size: 46px; filter: drop-shadow(0 10px 12px rgba(0, 0, 0, .25)); animation: tj-bob 1.6s ease-in-out infinite; }
+@keyframes tj-bob { 50% { transform: translateY(-6px); } }
+
+/* «Más opciones» of the guide: closed by default, so the screen shows only what most people choose. */
+.tj-more { border-radius: 16px; box-shadow: inset 0 0 0 1px var(--line); padding: 4px 14px; }
+.tj-more > summary { cursor: pointer; padding: 10px 0; font-weight: 700; }
+.tj-more > summary small { display: block; font-weight: 500; color: var(--muted); }
+.tj-more[open] > summary { border-bottom: 1px solid var(--line); margin-bottom: 10px; }
+.tj-more > .tj-prefs { padding-bottom: 12px; }
+
+.tj-vis { margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: color-mix(in oklab, var(--blue) 6%, var(--card)); box-shadow: inset 0 0 0 1px var(--line); font-size: 14.5px; line-height: 1.5; }
+.tj-vis span { color: var(--ink-2); }
+
+/* When the AI fails: what happened, what to do, the exact error folded, a report. */
+.tjg-app .tj-error, .tj-error { margin: 14px 0; padding: 16px 18px; border-radius: 16px; background: color-mix(in oklab, #e0533d 8%, var(--panel, var(--card))); box-shadow: inset 0 0 0 1px color-mix(in oklab, #e0533d 35%, transparent), 0 16px 30px -24px rgba(0, 0, 0, .45); }
+.tj-error h4 { margin: 0 0 8px; font-size: 17px; color: color-mix(in oklab, #e0533d 75%, var(--ink)); }
+.tj-error p, .tj-error li { line-height: 1.5; }
+.tj-error ol { margin: 4px 0 10px; padding-left: 22px; }
+.tj-error details { margin: 6px 0 10px; }
+.tj-error pre { white-space: pre-wrap; font-size: 12.5px; max-height: 200px; overflow: auto; }
+.tj-error-act { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; }
 
 /* The list: a menu on each trabajo. */
 .tj-card { position: relative; padding: 0; }

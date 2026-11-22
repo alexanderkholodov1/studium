@@ -502,7 +502,12 @@ export async function findBridge(port = BRIDGE_PORT) {
   try { const r = await fetch(`http://127.0.0.1:${port}/v1/hello`); return r.ok ? await r.json() : null; } catch { return null; }
 }
 // The bridge's version this page expects (bridge.mjs, VERSION): an older one is downloaded again.
-export const BRIDGE_VERSION = '1.4.0';
+export const BRIDGE_VERSION = '1.5.0';
+// «Ver a mi IA en una terminal»: the bridge opens a window that shows the exact instructions and, live, what the AI
+// does. Chosen by the person, kept in this browser.
+const WATCH = 'studium-ai-watch';
+export const watchTerminal = () => { try { return localStorage.getItem(WATCH) === 'on'; } catch { return false; } };
+export function setWatchTerminal(on) { try { localStorage.setItem(WATCH, on ? 'on' : 'off'); } catch { /* this time only */ } }
 // Is the bridge that answered older than this page needs? (Compared number by number.)
 export function bridgeOld(version = load().bridge?.version) {
   const a = String(version ?? '0').split('.').map(Number);
@@ -932,7 +937,7 @@ async function send({ way, model, effort, system, text, files, maxTokens, onProg
   try {
     body = await bridgeFetch('/v1/run', {
       method: 'POST', signal, engine,
-      body: JSON.stringify({ runId, engine, account: engine === 'claude' ? load().bridge?.account ?? '' : '', folder: engine === 'claude' ? folder : '', model, effort, system, text, files: files.map((f) => (f.data ? { name: f.name, type: f.type, data: f.data } : { name: f.name, type: 'text/plain', text: f.text })) }),
+      body: JSON.stringify({ runId, watch: watchTerminal(), engine, account: engine === 'claude' ? load().bridge?.account ?? '' : '', folder: engine === 'claude' ? folder : '', model, effort, system, text, files: files.map((f) => (f.data ? { name: f.name, type: f.type, data: f.data } : { name: f.name, type: 'text/plain', text: f.text })) }),
     });
   } finally { if (watch) clearInterval(watch); }
   return { text: String(body.text ?? ''), resume: String(body.resume ?? '') };

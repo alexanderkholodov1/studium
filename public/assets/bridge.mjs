@@ -12,8 +12,9 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { homedir, platform, tmpdir } from 'node:os';
 import path from 'node:path';
+import { AsyncLocalStorage } from 'node:async_hooks';
 
-const VERSION = '1.4.0';
+const VERSION = '1.5.0';
 const NAME = 'studium-bridge';
 const DEFAULT_PORT = 41730;
 const MAX_BODY = 64 * 1024 * 1024;
@@ -101,14 +102,69 @@ const folders = () => (Array.isArray(readConfig().folders) ? readConfig().folder
 const HOURS = [1, 8, 24 * 7];
 const expired = (f) => !f.expires || Date.parse(f.expires) <= Date.now();
 const folderView = (f) => ({ id: f.id, name: path.basename(f.path), path: f.path, mode: f.mode, label: MODES[f.mode].label, exists: existsSync(f.path), expires: f.expires ?? '', expired: expired(f) });
-// This computer's own «choose a folder» dialog.
-// PowerShell 7 shows Windows' modern folder dialog; Windows PowerShell 5 only the old tree.
-let PWSH = null;
-if (WIN) execFile('where.exe', ['pwsh.exe'], { timeout: 8000, windowsHide: true }, (err, out) => { if (!err) PWSH = String(out).split(/\r?\n/).find((l) => /pwsh\.exe$/i.test(l.trim()))?.trim() ?? null; });
+// This computer's own «choose a folder» dialog, in front of the browser.
+// On Windows: Explorer's own «Seleccionar carpeta» (IFileOpenDialog, the dialog every program uses), on any
+// PowerShell. Windows keeps a program in the background from coming to the front, so the dialog is owned by a window
+// that stays on top and asks for the foreground by joining the input of the window that has it (the browser).
+const WIN_PICKER = String.raw`
+using System; using System.Runtime.InteropServices; using System.Windows.Forms;
+public static class StudiumPicker {
+  [ComImport, Guid("DC1C5A9C-E88A-4dde-A5A1-60F82A20AEF7")] class FileOpenDialog {}
+  [ComImport, Guid("43826D1E-E718-42EE-BC55-A1E261C37BFE"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+  interface IShellItem { void BindToHandler(IntPtr a, IntPtr b, IntPtr c, out IntPtr d); void GetParent(out IShellItem p);
+    void GetDisplayName(uint sigdn, [MarshalAs(UnmanagedType.LPWStr)] out string name); void GetAttributes(uint m, out uint a); void Compare(IShellItem i, uint h, out int o); }
+  [ComImport, Guid("42f85136-db7e-439c-85f1-e4075d135fc8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+  interface IFileDialog { [PreserveSig] int Show(IntPtr owner); void SetFileTypes(uint c, IntPtr s); void SetFileTypeIndex(uint i); void GetFileTypeIndex(out uint i);
+    void Advise(IntPtr e, out uint c); void Unadvise(uint c); void SetOptions(uint o); void GetOptions(out uint o); void SetDefaultFolder(IShellItem i); void SetFolder(IShellItem i);
+    void GetFolder(out IShellItem i); void GetCurrentSelection(out IShellItem i); void SetFileName([MarshalAs(UnmanagedType.LPWStr)] string n); void GetFileName([MarshalAs(UnmanagedType.LPWStr)] out string n);
+    void SetTitle([MarshalAs(UnmanagedType.LPWStr)] string t); void SetOkButtonLabel([MarshalAs(UnmanagedType.LPWStr)] string t); void SetFileNameLabel([MarshalAs(UnmanagedType.LPWStr)] string t); void GetResult(out IShellItem i); }
+  [DllImport("shell32.dll", CharSet = CharSet.Unicode)] static extern int SHCreateItemFromParsingName(string p, IntPtr b, ref Guid r, out IShellItem i);
+  [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, IntPtr p);
+  [DllImport("kernel32.dll")] static extern uint GetCurrentThreadId();
+  [DllImport("user32.dll")] static extern bool AttachThreadInput(uint a, uint b, bool on);
+  [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr h);
+  [DllImport("user32.dll")] static extern bool BringWindowToTop(IntPtr h);
+  [DllImport("user32.dll")] static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
+  // Windows draws a program's dialogs with today's look only when the program asks for Common Controls 6 (a manifest);
+  // PowerShell 5 does not, so its dialogs look like Windows 7. The same request is made here, for this dialog only.
+  [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] struct ACTCTX { public int cbSize; public uint dwFlags; public string lpSource; public ushort wProcessorArchitecture;
+    public ushort wLangId; public string lpAssemblyDirectory; public string lpResourceName; public string lpApplicationName; public IntPtr hModule; }
+  [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] static extern IntPtr CreateActCtx(ref ACTCTX a);
+  [DllImport("kernel32.dll")] static extern bool ActivateActCtx(IntPtr h, out IntPtr cookie);
+  [DllImport("kernel32.dll")] static extern bool DeactivateActCtx(uint flags, IntPtr cookie);
+  [DllImport("user32.dll")] static extern bool SetProcessDPIAware();
+  public static string Pick(string title, string start) {
+    SetProcessDPIAware(); // sharp on screens with scaling, not blurry
+    string manifest = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "studium-picker.manifest");
+    System.IO.File.WriteAllText(manifest, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><assembly xmlns=\"urn:schemas-microsoft-com:asm.v1\" manifestVersion=\"1.0\"><dependency><dependentAssembly><assemblyIdentity type=\"win32\" name=\"Microsoft.Windows.Common-Controls\" version=\"6.0.0.0\" processorArchitecture=\"*\" publicKeyToken=\"6595b64144ccf1df\" language=\"*\"/></dependentAssembly></dependency></assembly>");
+    var ctx = new ACTCTX { cbSize = Marshal.SizeOf(typeof(ACTCTX)), lpSource = manifest };
+    IntPtr h = CreateActCtx(ref ctx), cookie = IntPtr.Zero;
+    bool active = h != new IntPtr(-1) && ActivateActCtx(h, out cookie);
+    try { return Show(title, start); } finally { if (active) DeactivateActCtx(0, cookie); }
+  }
+  static string Show(string title, string start) {
+    var owner = new Form { TopMost = true, ShowInTaskbar = true, Text = title, Opacity = 0, FormBorderStyle = FormBorderStyle.None, StartPosition = FormStartPosition.CenterScreen, Width = 1, Height = 1 };
+    owner.Show();
+    uint them = GetWindowThreadProcessId(GetForegroundWindow(), IntPtr.Zero), me = GetCurrentThreadId();
+    keybd_event(0x87, 0, 0, UIntPtr.Zero); keybd_event(0x87, 0, 2, UIntPtr.Zero); // F24, a key no program uses: Windows lets the program that had the last input come to the front
+    if (them != me) AttachThreadInput(them, me, true);
+    SetForegroundWindow(owner.Handle); BringWindowToTop(owner.Handle); owner.Activate();
+    if (them != me) AttachThreadInput(them, me, false);
+    var d = (IFileDialog)new FileOpenDialog();
+    d.SetOptions(0x20 | 0x40 | 0x800); // pick folders, file system only, the path must exist
+    d.SetTitle(title); d.SetOkButtonLabel("Elegir esta carpeta");
+    if (!string.IsNullOrEmpty(start)) { var g = new Guid("43826D1E-E718-42EE-BC55-A1E261C37BFE"); IShellItem f; if (SHCreateItemFromParsingName(start, IntPtr.Zero, ref g, out f) == 0) d.SetFolder(f); }
+    string path = "";
+    if (d.Show(owner.Handle) == 0) { IShellItem r; d.GetResult(out r); r.GetDisplayName(0x80058000, out path); }
+    owner.Close();
+    return path;
+  }
+}`;
+const WIN_SCRIPT = `Add-Type -ReferencedAssemblies System.Windows.Forms -TypeDefinition @'\n${WIN_PICKER}\n'@\n[Console]::OutputEncoding = [Text.Encoding]::UTF8\n$p = [StudiumPicker]::Pick('Studium: elige la carpeta donde trabajará tu IA', $env:STUDIUM_START)\nif ($p) { Write-Output $p }`;
 function pickFolder(start = '') {
-  const script = "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Application]::EnableVisualStyles(); $d = New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description = 'Studium: elige la carpeta donde trabajará tu IA'; try { $d.UseDescriptionForTitle = $true } catch {}; $d.ShowNewFolderButton = $true; if ($env:STUDIUM_START -and (Test-Path -LiteralPath $env:STUDIUM_START)) { $d.SelectedPath = $env:STUDIUM_START }; $f = New-Object System.Windows.Forms.Form; $f.TopMost = $true; $f.ShowInTaskbar = $false; $f.Opacity = 0; $f.StartPosition = 'CenterScreen'; $f.Show(); $f.Activate(); $r = $d.ShowDialog($f); $f.Close(); if ($r -eq 'OK') { [Console]::OutputEncoding = [Text.Encoding]::UTF8; Write-Output $d.SelectedPath }";
   const [cmd, args] = WIN
-    ? [PWSH ?? 'powershell.exe', ['-NoProfile', '-STA', '-Command', script]]
+    ? ['powershell.exe', ['-NoProfile', '-STA', '-EncodedCommand', Buffer.from(WIN_SCRIPT, 'utf16le').toString('base64')]]
     : platform() === 'darwin' ? ['osascript', ['-e', 'POSIX path of (choose folder with prompt "Studium: elige la carpeta donde trabajará tu IA")']]
       : ['zenity', ['--file-selection', '--directory', '--title=Studium: elige la carpeta donde trabajará tu IA']];
   return new Promise((resolve) => execFile(cmd, args, { timeout: 10 * 60_000, windowsHide: false, encoding: 'utf8', env: { ...process.env, STUDIUM_START: start } }, (err, out) => {
@@ -120,7 +176,7 @@ async function addFolder(body) {
   const old = body?.renew ? folders().find((x) => x.id === body.renew) : null;
   const mode = MODES[body?.mode] ? body.mode : old?.mode ?? 'read';
   const hours = HOURS.includes(Number(body?.hours)) ? Number(body.hours) : 8;
-  console.log(old ? `\nStudium pidió renovar el acceso a ${old.path}: confírmalo en la ventana que se abrió (o ciérrala para no renovarlo).` : '\nStudium pidió agregar una carpeta: elige una en la ventana que se abrió (o ciérrala para no agregar ninguna).');
+  console.log(old ? `\nStudium pidió elegir otra vez la carpeta ${old.path}: elígela en la ventana que se abrió encima del navegador (o ciérrala).` : '\nStudium pidió agregar una carpeta: elige una en la ventana que se abrió encima del navegador (o ciérrala para no agregar ninguna).');
   const chosen = await pickFolder(old?.path ?? '');
   if (!chosen) { console.log('  No se agregó ninguna carpeta.'); throw new Failure(400, 'no-folder', 'No elegiste ninguna carpeta.'); }
   let real = chosen;
@@ -223,7 +279,11 @@ function killTree(child) {
   } catch { /* already gone */ }
 }
 // Runs a CLI without a shell. Resolves with its exit code and output; a timeout kills its whole process tree.
+// The page that asked may cancel or close: then the AI stops too, instead of working (and spending) for no one.
+const asking = new AsyncLocalStorage();
 function runCli(b, args, { cwd, input = null, timeoutMs = DEFAULT_TIMEOUT, env = null, onLine = null } = {}) {
+  const signal = asking.getStore();
+  if (signal?.aborted) return Promise.reject(new Failure(499, 'cancelled', 'Studium canceló el pedido.'));
   return new Promise((resolve, reject) => {
     const child = spawn(b.cmd, [...b.pre, ...args], { cwd, shell: false, windowsHide: true, detached: !WIN, ...(env ? { env: { ...process.env, ...env } } : {}), stdio: [input == null ? 'ignore' : 'pipe', 'pipe', 'pipe'] });
     let out = ''; let err = '';
@@ -249,6 +309,14 @@ function runCli(b, args, { cwd, input = null, timeoutMs = DEFAULT_TIMEOUT, env =
     child.on('error', (e) => { if (done) return; done = true; clearTimeout(timer); reject(new Failure(502, 'failed', `No se pudo abrir la IA: ${e.message}`)); });
     child.on('close', (code) => { if (done) return; done = true; clearTimeout(timer); resolve({ code, out, err }); });
     if (input != null) { child.stdin.on('error', () => {}); child.stdin.end(input); }
+    signal?.addEventListener('abort', () => {
+      if (done) return; done = true; clearTimeout(timer);
+      console.log('  Studium canceló el pedido (se cerró o se canceló la página): tu IA se detuvo.');
+      const stopped = () => reject(new Failure(499, 'cancelled', 'Studium canceló el pedido.'));
+      const grace = setTimeout(stopped, 5000);
+      child.once('close', () => { clearTimeout(grace); stopped(); });
+      killTree(child);
+    }, { once: true });
   });
 }
 const lastLine = (text) => String(text ?? '').trim().split(/\r?\n/).filter(Boolean).pop()?.slice(0, 300) ?? '';
@@ -332,6 +400,7 @@ function showStep(line, run = null) {
   let e; try { e = JSON.parse(line); } catch { return; }
   if (e.type !== 'assistant') return;
   for (const c of e.message?.content ?? []) {
+    if (run?.watch) { const w = watchLine(c); if (w) run.watch(w); }
     if (c.type === 'text' && run) { run.chars += String(c.text ?? '').length; run.events.push({ at: Date.now(), kind: 'write', target: '' }); continue; }
     if (c.type === 'thinking' && run) { run.events.push({ at: Date.now(), kind: 'think', target: '' }); continue; }
     if (c.type !== 'tool_use') continue;
@@ -341,6 +410,44 @@ function showStep(line, run = null) {
     run?.events.push({ at: Date.now(), kind: c.name, target: String(target).split(/[\\/]/).slice(-2).join('/').slice(0, 120) });
   }
   if (run && run.events.length > 400) run.events.splice(0, run.events.length - 400);
+}
+
+/* ---------- «Ver a tu IA en una terminal» ---------- */
+// When the person asks for it, a terminal window of its own shows the exact instructions the AI got and then, live,
+// what it thinks, reads, changes and writes, until it ends. It only shows: it reads a file the bridge writes in the
+// temporary folder, and closing it changes nothing.
+function openWatch(body, place) {
+  const file = path.join(tmpdir(), `studium-tu-ia-${body.runId || randomBytes(4).toString('hex')}.txt`);
+  const name = { claude: 'Claude Code', codex: 'Codex', antigravity: 'Antigravity' }[body.engine] ?? body.engine;
+  const rule = '─'.repeat(72);
+  const text = String(body.text ?? '');
+  writeFileSync(file, [`Studium · tu IA trabajando: ${name}${body.model ? `, ${body.model}` : ''}${body.effort ? `, esfuerzo ${body.effort}` : ''}`,
+    `Dónde: ${place ? `${place.path} (puede ${MODES[place.mode].label})` : 'una carpeta temporal, solo lectura'}`, '', rule, 'LAS INSTRUCCIONES EXACTAS QUE RECIBE (INSTRUCCIONES.md)', rule, String(body.system ?? ''), '',
+    rule, 'LO QUE PIDE STUDIUM', rule, text.length > 6000 ? `${text.slice(0, 6000)}\n[… ${text.length - 6000} caracteres más del mismo pedido]` : text,
+    ...(Array.isArray(body.files) && body.files.length ? ['', `Archivos que lee: ${body.files.map((f) => f.name).join(', ')}`] : []), '', rule, 'LO QUE HACE, EN VIVO', rule, ''].join('\n'), 'utf8');
+  const write = (line) => { try { writeFileSync(file, `${line}\n`, { flag: 'a' }); } catch { /* the window shows what it got */ } };
+  try {
+    if (process.env.STUDIUM_BRIDGE_NO_WINDOW === '1') { /* the tests read the file instead */ } else if (WIN) {
+      const ps = `$host.UI.RawUI.WindowTitle = 'Studium · tu IA trabajando'; [Console]::OutputEncoding = [Text.Encoding]::UTF8; Get-Content -LiteralPath $env:STUDIUM_WATCH -Wait -Encoding UTF8`;
+      spawn('cmd.exe', ['/d', '/c', 'start', '', 'powershell.exe', '-NoProfile', '-NoExit', '-EncodedCommand', Buffer.from(ps, 'utf16le').toString('base64')],
+        { detached: true, stdio: 'ignore', windowsHide: false, env: { ...process.env, STUDIUM_WATCH: file } }).unref();
+    } else if (platform() === 'darwin') {
+      spawn('osascript', ['-e', `tell application "Terminal" to do script "tail -n +1 -f " & quoted form of "${file.replace(/"/g, '')}"`, '-e', 'tell application "Terminal" to activate'], { detached: true, stdio: 'ignore' }).unref();
+    } else {
+      spawn('x-terminal-emulator', ['-e', 'tail', '-n', '+1', '-f', file], { detached: true, stdio: 'ignore' }).on('error', () => {}).unref();
+    }
+    console.log(`  Se abrió una terminal para ver a tu IA trabajar (${file}).`);
+  } catch (e) { console.log(`  No se pudo abrir la terminal para verla: ${e.message}`); }
+  return { file, write };
+}
+function watchLine(c) {
+  const clip = (t, n) => { const x = String(t ?? '').trim(); return x.length > n ? `${x.slice(0, n)}…` : x; };
+  if (c.type === 'thinking') return `\n💭 Piensa:\n${clip(c.thinking, 3000)}\n`;
+  if (c.type === 'text') return `\n✍️  Escribe:\n${clip(c.text, 6000)}\n`;
+  if (c.type !== 'tool_use') return '';
+  const target = c.input?.file_path ?? c.input?.path ?? c.input?.pattern ?? c.input?.command ?? '';
+  const what = { Read: '📖 Lee', Glob: '🔎 Busca archivos', Grep: '🔎 Busca en los archivos', Edit: '✏️  Edita', Write: '📝 Escribe el archivo', MultiEdit: '✏️  Edita', NotebookEdit: '✏️  Edita el notebook', Bash: '⚙️  Ejecuta' }[c.name] ?? `· ${c.name}`;
+  return `${what} ${clip(target, 200)}`;
 }
 
 /* ---------- Claude's accounts on this computer ---------- */
@@ -662,7 +769,7 @@ async function handleRun(body) {
     const f = folders().find((x) => x.id === body.folder);
     if (!f) throw new Failure(404, 'no-folder', 'Esa carpeta ya no está en el puente. Elígela otra vez en Studium.');
     if (!existsSync(f.path)) throw new Failure(404, 'no-folder', `La carpeta ${f.path} ya no existe en esta computadora.`);
-    if (expired(f)) throw new Failure(403, 'expired', `El acceso de tu IA a ${f.path} venció. Renuévalo en Studium (se te pedirá confirmarlo en tu computadora), o usa la carpeta temporal.`);
+    if (expired(f)) throw new Failure(403, 'expired', `El acceso de tu IA a ${f.path} venció. Elígela otra vez en Studium («Elegir la carpeta otra vez»), o usa la carpeta temporal.`);
     if (body.engine !== 'claude') throw new Failure(400, 'bad-request', 'Por ahora solo Claude Code trabaja en tus carpetas.');
     place = { ...f, rel: `.studium/run-${randomBytes(4).toString('hex')}` };
   }
@@ -673,8 +780,22 @@ async function handleRun(body) {
   try {
     const names = writeRun(dir, body);
     if (typeof body.runId !== 'string' || !/^[\w-]{6,40}$/.test(body.runId)) body.runId = '';
-    const got = await engine.run(await bin(body.engine === 'antigravity' ? 'agy' : body.engine), dir, { ...body, place }, names, timeoutMs);
+    const watch = body.watch === true ? openWatch(body, place) : null;
+    const live = watch ? progressOf(body.runId) : null;
+    if (live) live.watch = watch.write;
+    let got;
+    try { got = await engine.run(await bin(body.engine === 'antigravity' ? 'agy' : body.engine), dir, { ...body, place }, names, timeoutMs); } catch (e) {
+      watch?.write(`
+✖ No terminó: ${e.message}
+Studium te muestra qué hacer. Puedes cerrar esta ventana.`);
+      throw e;
+    }
     const text = typeof got === 'string' ? got : got.text;
+    watch?.write(`
+✔ Listo: Studium recibió la respuesta (${Math.round((Date.now() - started) / 1000)} s).${got?.resume ? `
+Para seguir hablando con tu IA sobre este pedido, en tu terminal:
+    ${got.resume}` : ''}
+Puedes cerrar esta ventana.`);
     return { text, session: got?.session ?? '', resume: got?.resume ?? '', engine: body.engine, model: String(body.model ?? ''), effort: String(body.effort ?? ''), ms: Date.now() - started, folder: place ? place.path : '' };
   } finally {
     removeFolder(dir);
@@ -726,7 +847,9 @@ const server = createServer(async (req, res) => {
       let body;
       try { body = JSON.parse((await readBody(req)).toString('utf8')); } catch (e) { throw e instanceof Failure ? e : new Failure(400, 'bad-request', 'El pedido no es JSON.'); }
       if (!body || typeof body.engine !== 'string' || !ENGINES[body.engine]) throw new Failure(400, 'bad-request', 'Falta la IA que debe responder, o no existe en el puente.');
-      return send(res, 200, await inLane(body.engine, () => handleRun(body)), ok);
+      const stop = new AbortController();
+      res.on('close', () => { if (!res.writableEnded) stop.abort(); });
+      return send(res, 200, await asking.run(stop.signal, () => inLane(body.engine, () => handleRun(body))), ok);
     }
     throw new Failure(404, 'not-found', 'Esa dirección no existe en el puente.');
   } catch (e) {

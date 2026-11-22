@@ -35,6 +35,7 @@ record();
 if (s.sleep) { setTimeout(() => {}, s.sleep); } else {
   if (s.error) { out({ type: 'result', subtype: 'success', is_error: true, result: s.error }); process.exit(1); }
   if (s.limit) { out({ type: 'result', subtype: 'success', is_error: true, result: 'Claude AI usage limit reached|1894614400' }); process.exit(1); }
+  if (s.steps) { out({ type: 'assistant', message: { content: [{ type: 'thinking', thinking: 'Primero leo el enunciado.' }, { type: 'tool_use', name: 'Read', input: { file_path: 'enunciado.txt' } }, { type: 'text', text: 'La guía.' }] } }); out('\\n'); }
   out({ type: 'result', subtype: 'success', is_error: false, result: s.answer ?? 'respuesta de claude' }); process.exit(0);
 }`,
   codex: `const CLI = 'codex';${common}
@@ -70,7 +71,7 @@ const home = mkdtempSync(path.join(tmpdir(), 'bridge-home-'));
 const temp = mkdtempSync(path.join(tmpdir(), 'bridge-temp-'));
 // Only the fakes on the PATH (plus the folder of node itself), so a real CLI can never be called.
 const PATH = [fakes, path.dirname(process.execPath), ...(WIN ? [path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32')] : ['/usr/bin', '/bin'])].join(path.delimiter);
-const env = { ...process.env, PATH, Path: PATH, HOME: home, USERPROFILE: home, TMPDIR: temp, TEMP: temp, TMP: temp };
+const env = { ...process.env, PATH, Path: PATH, HOME: home, USERPROFILE: home, TMPDIR: temp, TEMP: temp, TMP: temp, STUDIUM_BRIDGE_NO_WINDOW: '1' };
 let printed = '';
 const bridge = spawn(process.execPath, [BRIDGE, '--port', String(PORT)], { env, stdio: ['ignore', 'pipe', 'pipe'] });
 bridge.stdout.on('data', (d) => { printed += d; });
@@ -297,6 +298,33 @@ await test('a timeout ends the CLI and answers 504', async () => {
   scenario({ claude: { sleep: 60000 } });
   const r = await run({ engine: 'claude', model: 'claude-sonnet-5-5', timeoutMs: 5000 });
   check(r.status === 504 && r.data.error.code === 'timeout', `status ${r.status}`);
+  check(leftovers().length === 0, 'folder left behind');
+});
+await test('«ver a tu IA en una terminal» shows the exact instructions, each step live, and the end', async () => {
+  scenario({ claude: { steps: true, answer: 'hecho' } });
+  const r = await run({ engine: 'claude', model: 'claude-sonnet-5-5', runId: 'mirar-123', watch: true, system: 'INSTRUCCIONES DE PRUEBA' });
+  const file = path.join(temp, 'studium-tu-ia-mirar-123.txt');
+  const shown = existsSync(file) ? readFileSync(file, 'utf8') : '';
+  check(r.status === 200, `status ${r.status}`);
+  check(shown.includes('INSTRUCCIONES DE PRUEBA') && shown.includes('Piensa') && shown.includes('Lee enunciado.txt') && shown.includes('Listo'), shown.slice(-400));
+  scenario({ claude: { answer: 'hecho' } });
+  await run({ engine: 'claude', model: 'claude-sonnet-5-5', runId: 'sin-mirar-1' });
+  check(!existsSync(path.join(temp, 'studium-tu-ia-sin-mirar-1.txt')), 'a window without asking');
+});
+await test('when the page cancels or closes, the AI stops and the next request does not wait', async () => {
+  scenario({ claude: { sleep: 60000 } });
+  const body = JSON.stringify({ engine: 'claude', model: 'claude-sonnet-5-5', system: 'x', text: 'y', files: [] });
+  const req = http.request({ host: '127.0.0.1', port: PORT, path: '/v1/run', method: 'POST', headers: { authorization: `Bearer ${token}`, origin: SITE, 'content-type': 'application/json' } });
+  req.on('error', () => {});
+  req.end(body);
+  await new Promise((r) => setTimeout(r, 2500));
+  req.destroy();
+  await new Promise((r) => setTimeout(r, 2500));
+  check(/canceló el pedido/.test(printed), 'the bridge did not say it stopped');
+  scenario({ claude: { answer: 'después' } });
+  const t0 = Date.now();
+  const next = await run({ engine: 'claude', model: 'claude-sonnet-5-5' });
+  check(next.status === 200 && Date.now() - t0 < 15000, `next ${next.status} after ${Date.now() - t0} ms`);
   check(leftovers().length === 0, 'folder left behind');
 });
 await test('two runs at once take turns', async () => {

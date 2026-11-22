@@ -154,6 +154,25 @@ function options(an) {
   if (reads && size > 8e6) return [claude, bridge, gemini];
   return [gemini, claude, bridge];
 }
+// Every way to connect an AI, as the settings offer them: the suggested one is marked, the connected ones say so.
+const ALL_WAYS = [
+  { key: 'bridge', name: 'Tu computadora, por el puente', note: 'Claude Code, Codex o Antigravity, con tu suscripción', vendor: 'anthropic', bridge: true, is: (w) => w.startsWith('bridge:') },
+  { key: 'gemini', name: 'Gemini', note: 'gratis, con una clave de Google', vendor: 'gemini', is: (w) => w === 'gemini' },
+  { key: 'anthropic', name: 'Claude, con clave', note: 'pagas por uso en tu cuenta de Anthropic', vendor: 'anthropic', is: (w) => w === 'anthropic' },
+  { key: 'openai', name: 'ChatGPT, con clave', note: 'pagas por uso en tu cuenta de OpenAI', vendor: 'openai', is: (w) => w === 'openai' },
+  { key: 'openrouter', name: 'OpenRouter', note: 'modelos gratis de varias empresas', vendor: 'otras', is: (w) => w === 'openrouter' },
+  { key: 'puter', name: 'Puter', note: 'con tu cuenta de Puter', vendor: 'otras', is: (w) => w === 'puter' },
+];
+function allWays(best) {
+  const now = ai.connected();
+  const sugg = best.id === 'bridge' ? 'bridge' : best.id;
+  return `<div class="tj-ways" id="tj-ways"><h3>Todas las formas de conectar tu IA</h3><div class="tj-ways-grid">${ALL_WAYS.map((w) => {
+    const on = now.some(w.is);
+    const btn = on ? '<span class="tj-ok">Conectada ✓</span>' : w.bridge ? '<button type="button" class="button ghost small" data-tj="pair-here">Conectar</button>'
+      : `<button type="button" class="button ghost small" data-tj="connect" data-vendor="${w.vendor}">Conectar</button>`;
+    return `<div class="tj-way ${w.key === sugg ? 'sugg' : ''} ${on ? 'on' : ''}"><b>${esc(w.name)}${w.key === sugg ? ' <em>sugerida</em>' : ''}</b><small>${esc(w.note)}</small>${btn}</div>`;
+  }).join('')}</div></div>`;
+}
 const usable = (o) => (o.bridge ? ai.connected().some((w) => w.startsWith('bridge:')) : o.vendor === 'gemini' ? ai.connected().includes('gemini') : ai.connected().some((w) => w === o.vendor || w === (o.vendor === 'anthropic' ? 'bridge:claude' : 'bridge:codex')));
 function aiLine(task) {
   if (!ai.ready()) return `<p class="fine">Todavía no conectaste una IA. <button type="button" class="link" data-tj="connect" data-vendor="${task === 'tutor' ? 'gemini' : 'anthropic'}" data-bridge="${task === 'tutor' ? '' : '1'}">Conectar ${task === 'tutor' ? 'Gemini, gratis' : 'tu Claude'}</button></p>`;
@@ -179,6 +198,56 @@ async function connectWay(vendor, bridge) {
   target.classList.add('tj-glow');
   setTimeout(() => target.classList.remove('tj-glow'), 2600);
   ctx.toast('Cuando termines, vuelve a «Trabajos»: tus respuestas siguen ahí.');
+}
+
+// While the computer's own folder window is open, the page says so in large, for everyone to see at once.
+function pickingNotice() {
+  const el = document.createElement('div');
+  el.className = 'tj-picking'; el.setAttribute('role', 'alertdialog'); el.setAttribute('aria-live', 'assertive');
+  el.innerHTML = `<div class="tj-picking-card glass"><div class="tj-picking-icon" aria-hidden="true">📁</div>
+    <h2>Elige la carpeta en la ventana de tu computadora</h2>
+    <p>Se abrió encima de esta página una ventana de Windows: <b>«Studium: elige la carpeta donde trabajará tu IA»</b>. Busca la carpeta del trabajo y pulsa <b>«Elegir esta carpeta»</b>.</p>
+    <p class="fine">¿No la ves? Está en la barra de tareas, con ese mismo nombre. Para no elegir ninguna, ciérrala.</p></div>`;
+  document.body.append(el);
+  return () => el.remove();
+}
+
+// «Ver a mi IA en una terminal», wherever the bridge writes.
+const watchBox = () => `<label class="tj-pick ${ai.watchTerminal() ? 'on' : ''}"><input type="checkbox" data-tj-watch ${ai.watchTerminal() ? 'checked' : ''}> <span><b>Ver a mi IA trabajar en una terminal</b><br><small>Se abre una ventana en tu computadora con las instrucciones exactas que recibe y, en vivo, lo que piensa, lee, cambia y escribe. Al terminar te deja el comando para seguir hablándole.</small></span></label>`;
+
+/* ---------- when the AI fails: what happened, what to do, and a report ---------- */
+// His words: never an error with no explanation, no help and no way to tell Studium. Each failure says which AI it
+// was, what it means in plain words, what to try for that AI, the exact text folded, and sends a report (with the
+// AI's log of that request) to Studium's feedback, where the admins see it.
+const failed = new Map();
+const errInfo = (e, what) => ({ what, message: String(e?.message || e || 'sin detalle'), kind: e?.kind ?? '', way: e?.way || ai.choice('solution').provider, at: Date.now() });
+const MEANS = {
+  account: 'Studium no pudo usar esa IA: falta conectarla, su sesión venció, o su clave ya no sirve.',
+  transient: 'Fue un problema pasajero de esa IA o de la conexión. Suele arreglarse solo.',
+  rate: 'Esa IA pidió una pausa: recibió muchos pedidos seguidos.',
+  daily: 'Esa IA llegó a su límite de uso por ahora. No se cobró nada.',
+  model: 'El modelo elegido no sirve con esa cuenta.',
+  cancel: 'Lo detuviste tú.',
+};
+function tryThis(way) {
+  if (way.startsWith('bridge:')) return ['Mira la ventana del puente en tu computadora: ahí está, línea por línea, lo que hizo tu IA y dónde falló.', `Si dice que no hay sesión, abre una terminal, escribe <code>${way === 'bridge:codex' ? 'codex' : 'claude'}</code> e inicia sesión; luego vuelve aquí.`, 'Inténtalo otra vez. Si falla igual, elige otra IA para escribir la guía, aquí abajo.'];
+  if (way === 'gemini') return ['En Ajustes → Tu IA, pulsa «Probar» junto a Gemini: dice si tu clave sigue activa.', 'Elige un modelo «flash», que tiene uso gratis.', 'Inténtalo otra vez, o elige otra IA aquí abajo.'];
+  if (way === 'puter') return ['Vuelve a conectar Puter en Ajustes: su sesión a veces vence sin avisar.', 'Inténtalo otra vez, o elige otra IA aquí abajo.'];
+  if (way === 'openrouter') return ['Elige otro modelo gratis de OpenRouter: algunos se caen o cambian.', 'Inténtalo otra vez, o elige otra IA aquí abajo.'];
+  return ['Inténtalo otra vez en un momento.', 'Si falla igual, elige otra IA aquí abajo o revísala en Ajustes → Tu IA.'];
+}
+function errorBox(info, retry = '') {
+  if (!info) return '';
+  const who = ai.WAYS[info.way]?.name ?? 'tu IA';
+  const means = MEANS[info.kind] ?? `${who} recibió el pedido, pero devolvió un error en vez de la guía.`;
+  const report = `${info.what} en «${T?.title ?? ''}», con ${who}. Studium mostró: ${info.message}`;
+  return `<div class="tj-error" role="alert">
+      <h4>${esc(info.what)}: no se pudo</h4>
+      <p><b>Qué pasó.</b> ${esc(means)} <span class="mut">(IA: ${esc(who)})</span></p>
+      <p><b>Qué puedes hacer:</b></p><ol>${tryThis(info.way).map((t) => `<li>${t}</li>`).join('')}</ol>
+      <details><summary>El error exacto</summary><pre class="src">${esc(info.message)}\n\nIA: ${esc(info.way)} · ${esc(new Date(info.at).toLocaleString('es'))}</pre></details>
+      <p class="tj-error-act">${retry ? `<button type="button" class="act" data-tj="${esc(retry)}">Intentarlo otra vez</button> ` : ''}<button type="button" class="ask" data-feedback="ia" data-feedback-text="${esc(report.slice(0, 300))}">Enviar reporte a Studium</button> <span class="mut small">Va con el registro de ese pedido; los admins lo ven y te responden.</span></p>
+    </div>`;
 }
 
 /* ---------- live: what the AI is doing, while it works ---------- */
@@ -324,7 +393,7 @@ function placeHTML(now) {
   const modeSel = (f) => `<select data-tj-mode="${esc(f.id)}" aria-label="Permiso en ${esc(f.name)}">${Object.entries(MODE_TEXT).map(([k, v]) => `<option value="${k}" ${f.mode === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
   return `<label class="tj-pick ${now === 'temp' || !now ? 'on' : ''}"><input type="radio" name="workspace" value="temp" data-tj-ws ${now === 'temp' || !now ? 'checked' : ''}> Una carpeta temporal <small>se crea en cada pedido y se borra al terminar; tu IA solo lee lo que trajiste</small></label>
     ${folders.map((f) => `<div class="tj-pick ${now === f.id ? 'on' : ''} ${f.exists === false || f.expired ? 'off' : ''}"><label><input type="radio" name="workspace" value="${esc(f.id)}" data-tj-ws ${now === f.id ? 'checked' : ''} ${f.exists === false || f.expired ? 'disabled' : ''}> ${esc(f.name)} <small>${esc(f.path)}${f.exists === false ? ' · ya no existe' : f.expired ? ' · el acceso venció' : f.expires ? ` · acceso hasta el ${esc(new Date(f.expires).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))}` : ''}</small></label>
-      ${f.expired ? `<button type="button" class="button primary small" data-tj="folder-renew" data-id="${esc(f.id)}">Renovar el acceso</button>` : `<span class="tj-mode">${modeSel(f)}<small>${esc(MODE_WHY[f.mode] ?? '')}</small></span>`}<button type="button" class="link" data-tj="folder-remove" data-id="${esc(f.id)}">quitar</button></div>`).join('')}
+      ${f.expired ? `<button type="button" class="button primary small" data-tj="folder-renew" data-id="${esc(f.id)}">Elegir la carpeta otra vez</button>` : `<span class="tj-mode">${modeSel(f)}<small>${esc(MODE_WHY[f.mode] ?? '')}</small></span>`}<button type="button" class="link" data-tj="folder-remove" data-id="${esc(f.id)}">quitar</button></div>`).join('')}
     ${ai.bridgeOld() ? `<p class="tj-warn">Tu puente abierto es la versión ${esc(ai.bridgeOf()?.version || 'anterior')}; para trabajar en tus carpetas necesitas la ${ai.BRIDGE_VERSION}. Ciérralo (Ctrl+C), <a href="${esc(ai.BRIDGE_URL)}" download="studium-bridge.mjs">descárgalo de nuevo</a> y ábrelo con <code>${esc(ai.bridgeCommand())}</code>. Después pulsa <button type="button" class="link" data-tj="bridge-recheck">Ya lo abrí</button>.</p>` : `<div class="tj-addfolder"><button type="button" class="button ghost small" data-tj="folder-pick">Elegir una carpeta de mi computadora…</button>
       <select data-tj-newmode aria-label="Permiso para la carpeta nueva">${Object.entries(MODE_TEXT).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('')}</select>
       <select data-tj-hours aria-label="Cuánto dura el acceso"><option value="1">por 1 hora</option><option value="8" selected>por 8 horas</option><option value="168">por 7 días</option></select>
@@ -379,17 +448,19 @@ function renderDraft(error = '') {
     const bridgeWrites = writer.startsWith('bridge:');
     const roles = ways.length ? `<div class="tj-roles">
         <div><h3>Quién escribe la guía</h3>${wayRadio('solution', writer)}${writer === 'bridge:claude' ? accountPick() : ''}</div>
-        <div><h3>Quién responde tus dudas al instante</h3><p class="fine">Cuando pulses «No lo entiendo». Conviene una rápida.</p>${wayRadio('tutor', tutor)}</div>
+        <div><h3>Quién responde tus dudas al instante</h3><p class="fine">Cuando pulses «No lo entiendo». Conviene una rápida.</p>${wayRadio('tutor', tutor)}${ways.includes('gemini') ? '' : '<p><button type="button" class="link" data-tj="connect" data-vendor="gemini">+ Conectar Gemini: gratis y rápida, ideal para esto</button></p>'}<p><button type="button" class="link" data-tj="all-ways">+ Conectar otra IA</button></p></div>
         ${bridgeWrites ? `<div><h3>Dónde trabaja tu IA</h3>${placeHTML(draft.workspace)}
           ${draft.workspace && draft.workspace !== 'temp' ? `<label class="tj-pick ${draft.prefs.useFolder !== false ? 'on' : ''}"><input type="checkbox" data-tj-pref="useFolder" ${draft.prefs.useFolder !== false ? 'checked' : ''}> Usar lo que ya hay en esta carpeta para escribir la guía <small>por ejemplo, una solución que ya tienen: tu IA la revisa, la explica y la completa</small></label>` : ''}
-          <p class="fine">Mientras trabaja, la ventana del puente muestra cada archivo que lee o cambia; al terminar te da el comando para seguir hablándole en tu terminal.</p></div>` : ''}
+          ${watchBox()}</div>` : ''}
       </div>` : '';
     const best = opts[0];
     const connectBtn = (o, primary) => (o.id === 'bridge' ? `<button type="button" class="button ${primary ? 'primary' : 'ghost'} small" data-tj="pair-here">Conectar ${esc(o.name.toLowerCase())}</button>` : `<button type="button" class="button ${primary ? 'primary' : 'ghost'} small" data-tj="connect" data-vendor="${o.vendor}" data-bridge="${o.bridge ? '1' : ''}">Conectar ${esc(o.name)}</button>`);
-    // What is advised for this case: a sentence. A button appears only for what is missing.
-    const advice = `<div class="tj-advice"><p><b>Para lo que trajiste, conviene: ${esc(best.name.toLowerCase())}.</b> ${esc(best.why)}</p>
-        ${usable(best) ? '<p class="tj-ok">Ya lo tienes conectado ✓</p>' : `<p>${connectBtn(best, true)} ${ready ? '' : `<span class="fine">o también: ${opts.slice(1).filter((o) => !usable(o)).map((o) => (o.id === 'bridge' ? `<button type="button" class="link" data-tj="pair-here">${esc(o.name.toLowerCase())}</button>` : `<button type="button" class="link" data-tj="connect" data-vendor="${o.vendor}" data-bridge="${o.bridge ? '1' : ''}">${esc(o.name)}</button>`)).join(' · ')}</span>`}</p>`}
+    // What is advised for this case, first; then every way there is, each with its own button (his words: the
+    // suggested one, but all the options, not only one).
+    const advice = `<div class="tj-advice"><p><b>Sugerida para lo que trajiste: ${esc(best.name.toLowerCase())}.</b> ${esc(best.why)}</p>
+        ${usable(best) ? '<p class="tj-ok">Ya la tienes conectada ✓</p>' : `<p>${connectBtn(best, true)}</p>`}
         ${best.id === 'bridge' && draft.pairing && !usable(best) ? `<div class="tj-bridge ai-bridge">${bridgeSteps().replace('data-ai-pair>', 'data-tj="pair-code">')}</div>` : ''}
+        ${allWays(best)}
         ${ready ? '' : '<p class="fine">Puedes seguir sin conectar ninguna y escribir la guía después.</p>'}</div>`;
     control = `${advice}${roles}`;
   }
@@ -402,21 +473,23 @@ function renderDraft(error = '') {
     const seg = (key, choices) => `<div class="tj-seg" role="radiogroup">${choices.map(([v, label]) => `<label class="${draft.prefs[key] === v ? 'on' : ''}"><input type="radio" name="p-${key}" value="${v}" data-tj-pref="${key}" ${draft.prefs[key] === v ? 'checked' : ''}>${esc(label)}</label>`).join('')}</div>`;
     const box = (key, label) => `<label class="tj-pick ${draft.prefs[key] ? 'on' : ''}"><input type="checkbox" data-tj-pref="${key}" ${draft.prefs[key] ? 'checked' : ''}> ${esc(label)}</label>`;
     control = `<div class="tj-prefs">
+        <div><h3>Cómo se ve</h3><div class="tpl-pick">${Object.entries(TEMPLATES).map(([k, v]) => `<label class="tpl-card ${draft.prefs.template === k ? 'on' : ''}"><input type="radio" name="template" value="${k}" data-tj-pref="template" ${draft.prefs.template === k ? 'checked' : ''}><span class="tpl-prev">${templateSample(k)}</span><b>${esc(v.name)}</b><small>${esc(v.note)}</small></label>`).join('')}</div></div>
+        <div><h3>Al terminar el esquema</h3>${seg('writeAll', [['all', 'Escribir todos los capítulos de una vez'], ['outline', 'Primero el esquema, para revisarlo']])}</div>
+        <div><h3>Algo más que tu IA deba saber <small>(opcional)</small></h3><textarea class="tj-paste plain" name="note" rows="3" maxlength="1500" placeholder="Por ejemplo: el profesor pide todo en inglés; ya tenemos el scraper hecho.">${esc(draft.prefs.note)}</textarea></div>
+        <details class="tj-more" data-tj-more ${draft.moreOpen ? 'open' : ''}><summary>Más opciones <small>cómo explica, desde dónde parte, qué tan larga, cuánto texto y qué incluye</small></summary><div class="tj-prefs">
         <div><h3>Cómo explica</h3>${seg('tone', [['direct', 'Directo a la respuesta'], ['balanced', 'Equilibrado'], ['didactic', 'Muy didáctico']])}</div>
         <div><h3>Desde dónde parte</h3>${seg('level', [['zero', 'Desde cero'], ['basic', 'Sé lo básico'], ['advanced', 'Tengo experiencia']])}</div>
         <div><h3>Qué tan larga</h3>${seg('length', [['short', 'Corta'], ['normal', 'Normal'], ['full', 'Completa']])}</div>
         <div><h3>Texto en pantalla</h3>${seg('text', [['little', 'Poco, al grano'], ['some', 'Lo justo'], ['much', 'Explicaciones largas']])}</div>
         <div><h3>Qué incluye</h3><div class="tj-boxes">${box('cards', 'Tarjetas de términos al final')}${box('defense', 'Preguntas de defensa')}${box('practice', 'Ejercicios para practicar')}${box('visuals', 'Gráficas y diagramas, cuando ayuden')}</div></div>
-        <div><h3>Cómo se ve</h3><div class="tpl-pick">${Object.entries(TEMPLATES).map(([k, v]) => `<label class="tpl-card ${draft.prefs.template === k ? 'on' : ''}"><input type="radio" name="template" value="${k}" data-tj-pref="template" ${draft.prefs.template === k ? 'checked' : ''}><span class="tpl-prev">${templateSample(k)}</span><b>${esc(v.name)}</b><small>${esc(v.note)}</small></label>`).join('')}</div></div>
-        <div><h3>Al terminar el esquema</h3>${seg('writeAll', [['all', 'Escribir todos los capítulos de una vez'], ['outline', 'Primero el esquema, para revisarlo']])}</div>
-        <div><h3>Algo más que tu IA deba saber <small>(opcional)</small></h3><textarea class="tj-paste plain" name="note" rows="3" maxlength="1500" placeholder="Por ejemplo: el profesor pide todo en inglés; ya tenemos el scraper hecho.">${esc(draft.prefs.note)}</textarea></div>
+        </div></details>
       </div>`;
   }
   if (q.input === 'ready') {
     control = `<p class="tj-sentence">Tu IA va a leer el enunciado de <b>${esc(draft.title)}</b> y escribir una guía de solución para <b>${draft.parts} ${draft.parts === 1 ? 'persona' : 'personas'}</b>, paso a paso, con cada línea explicada.</p>
       ${ai.ready() ? ai.pickerHTML('solution') : ''}
       ${ai.promptHTML(outlinePrompt({ parts: draft.parts, course: draft.course, deadline: deadlineText(draftDeadline()), prefs: draft.prefs }), '', 'el enunciado y lo que trajiste')}
-      <p class="fine">El trabajo es privado: solo entra quien tenga tu enlace de invitación.</p>`;
+      <div class="tj-vis"><b>🔒 Empieza privado, solo para ti.</b> <span>Cuando la guía esté lista decides quién la ve: invitas a tu grupo con un enlace, y desde el menú ⋯ del trabajo podrás compartirla con amigos de Studium o hacerla pública para que otros estudien el mismo tema (con aviso de plagio, y escondiendo las respuestas si quieres). Amigos y pública llegan pronto.</span></div>`;
   }
   root.innerHTML = `<form class="tj-wizard panel glass" id="tj-wizard">
       <div class="tj-dots" aria-hidden="true">${dots}</div>
@@ -501,7 +574,7 @@ async function generateOutline(files = [], live = null) {
   const system = outlinePrompt({ parts: T.parts, course: T.course, deadline: deadlineText(T.deadline), prefs: T.prefs });
   const text = `El enunciado del trabajo «${T.title}»${T.group ? ` (grupo: ${T.group})` : ''} y lo que lo acompaña:\n\n${T.statement}`;
   let r;
-  try { r = await askAI('solution', system, text, files, `Esquema de «${T.title}»`, live); T.lastError = ''; } catch (e) { T.lastError = e.message; throw e; }
+  try { r = await askAI('solution', system, text, files, `Esquema de «${T.title}»`, live); T.lastError = null; failed.delete(T.id); } catch (e) { T.lastError = errInfo(e, 'Escribir la guía'); failed.set(T.id, T.lastError); throw e; }
   keepResume(T.id, r.resume);
   const outline = cleanOutline(parseJSON(r.text), T.parts);
   await setDoc(tRef(T.id), { outline: await pack(outline), ai: madeBy(r), updated: serverTimestamp() }, { merge: true });
@@ -628,7 +701,7 @@ function stepChecks(key, label, doneWord = 'Lo hice') {
 
 function aiBlock(task) {
   if (!ai.ready()) return `<p>Todavía no conectaste una IA en Studium. <button type="button" class="ask" data-tj="connect" data-vendor="${task === 'tutor' ? 'gemini' : 'anthropic'}" data-bridge="${task === 'tutor' ? '' : '1'}">Conectar ${task === 'tutor' ? 'Gemini, gratis' : 'tu Claude'}</button></p>`;
-  return `<div class="pick">${ai.pickerHTML(task)}</div>`;
+  return `<div class="pick">${ai.pickerHTML(task)}</div>${task === 'solution' && ai.choice(task).provider.startsWith('bridge:') ? watchBox() : ''}`;
 }
 
 function intro() {
@@ -740,7 +813,7 @@ function closing() {
 
 function noOutline() {
   return `<section class="sec" id="cap-inicio" style="--c:var(--blue);--cs:var(--blue-s)"><h2><span class="n">0</span>La guía todavía no está escrita</h2><div class="card soft">${T.owner === uid()
-    ? `${T.lastError ? `<div class="trap"><b>Tu IA no pudo escribir la guía.</b><p>${esc(T.lastError)}</p></div>` : ''}<p>Tu IA lee el enunciado y arma los capítulos: qué pide el trabajo, cómo se reparten y cada paso explicado.</p>${aiBlock('solution')}${ai.choice('solution').provider === 'bridge:claude' ? accountPick() : ''}<p><button type="button" class="act" data-tj="outline">${T.lastError ? 'Intentarlo otra vez' : 'Escribir la guía'}</button> <span class="mut" id="tj-gen-status" role="status"></span></p>`
+    ? `${errorBox(T.lastError ?? failed.get(T.id))}<p>Tu IA lee el enunciado y arma los capítulos: qué pide el trabajo, cómo se reparten y cada paso explicado.</p>${aiBlock('solution')}${ai.choice('solution').provider === 'bridge:claude' ? accountPick() : ''}<p><button type="button" class="act" data-tj="outline">${(T.lastError ?? failed.get(T.id)) ? 'Intentarlo otra vez' : 'Escribir la guía'}</button> <span class="mut" id="tj-gen-status" role="status"></span></p>`
     : '<p>Quien creó el trabajo todavía no escribió la guía.</p>'}</div></section>`;
 }
 
@@ -881,6 +954,7 @@ function download(name, text) {
 }
 
 function wire(root) {
+  root.addEventListener('toggle', (ev) => { if (draft && ev.target.matches?.('[data-tj-more]')) draft.moreOpen = ev.target.open; }, true);
   root.addEventListener('submit', async (ev) => {
     const form = ev.target;
     ev.preventDefault();
@@ -904,7 +978,7 @@ function wire(root) {
                 await generateMilestone(h.id, feed);
               }
             }
-          } catch (e) { T.lastError = e.message; }
+          } catch (e) { const info = T.lastError?.message === e.message ? T.lastError : errInfo(e, 'Escribir la guía'); failed.set(made.id, info); }
         }
         location.hash = `#/trabajos/${made.id}`;
       } catch (e) { console.error(e); renderDraft(e.message); }
@@ -938,6 +1012,7 @@ function wire(root) {
     } else if (kind === 'mine') { onlyMine = el.checked; repaint(); }
     else if (el.name === 'files' && draft) { keepAnswer(); addFiles([...el.files]); renderDraft(); }
     else if (el.dataset?.tjUse) { ai.setChoice(el.dataset.tjUse, { provider: el.value, model: '', effort: '' }); keepAnswer(); renderDraft(); }
+    else if (el.dataset?.tjWatch !== undefined) { ai.setWatchTerminal(el.checked); el.closest(".tj-pick")?.classList.toggle("on", el.checked); }
     else if (el.dataset?.tjTemplate !== undefined) { keepTemplate(el.value); gRoot().querySelector('.tjg-app')?.setAttribute('data-template', el.value); }
     else if (el.dataset?.tjAccount !== undefined) { ai.setBridgeAccount(el.value); if (draft) { keepAnswer(); renderDraft(); } else repaint(); }
     else if (el.dataset?.tjWs !== undefined) { if (draft) { draft.workspace = el.value; renderDraft(); } else if (T) { keepFolder(T.id, el.value); repaint(); } }
@@ -1024,20 +1099,22 @@ function wire(root) {
     if (kind === 'folder-pick') {
       const mode = b.parentElement.querySelector('[data-tj-newmode]')?.value ?? 'read';
       const hours = Number(b.parentElement.querySelector('[data-tj-hours]')?.value ?? 8);
-      say('#tj-folder-status', 'Elige la carpeta en la ventana que se abrió en tu computadora…');
+      say('#tj-folder-status', '');
+      const close = pickingNotice();
       await busy(b, async () => {
-        const f = await ai.pickBridgeFolder(mode, { hours });
+        const f = await ai.pickBridgeFolder(mode, { hours }).finally(close);
         if (draft) { keepAnswer(); draft.workspace = f.id; renderDraft(); } else if (T) { keepFolder(T.id, f.id); repaint(); }
         ctx.toast(`Carpeta lista: ${f.name} (${MODE_TEXT[f.mode]}).`);
       }).catch((e) => say('#tj-folder-status', e.message));
       return;
     }
     if (kind === 'folder-renew') {
-      say('#tj-folder-status', 'Confirma la carpeta en la ventana que se abrió en tu computadora…');
+      say('#tj-folder-status', '');
+      const close = pickingNotice();
       await busy(b, async () => {
-        const f = await ai.pickBridgeFolder('', { renew: b.dataset.id });
+        const f = await ai.pickBridgeFolder('', { renew: b.dataset.id }).finally(close);
         if (draft) { keepAnswer(); draft.workspace = f.id; renderDraft(); } else repaint();
-        ctx.toast(`Acceso renovado: ${f.name}.`);
+        ctx.toast(`Carpeta lista otra vez: ${f.name}.`);
       }).catch((e) => say('#tj-folder-status', e.message));
       return;
     }
@@ -1045,6 +1122,7 @@ function wire(root) {
       await busy(b, async () => { await ai.changeBridgeFolder(b.dataset.id, { remove: true }); if (draft) { if (draft.workspace === b.dataset.id) draft.workspace = 'temp'; keepAnswer(); renderDraft(); } else repaint(); }).catch(() => {});
       return;
     }
+    if (kind === 'all-ways') { document.getElementById('tj-ways')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
     if (kind === 'pair-here') { keepAnswer(); draft.pairing = true; renderDraft(); return; }
     if (kind === 'drop-file') { keepAnswer(); draft.files.splice(Number(b.dataset.i), 1); renderDraft(); return; }
     if (kind === 'connect') { if (draft) keepAnswer(); await connectWay(b.dataset.vendor, !!b.dataset.bridge); return; }
@@ -1069,15 +1147,15 @@ function wire(root) {
     if (kind === 'outline') {
       const box = b.closest('.card') ?? gRoot();
       box.insertAdjacentHTML('beforeend', liveHTML('Tu IA está armando la guía'));
-      await busy(b, async () => { await generateOutline([], liveFeed(box)); repaint(); }).catch((e) => { say('#tj-gen-status', e.message); repaint(); });
+      await busy(b, async () => { await generateOutline([], liveFeed(box)); repaint(); }).catch(() => repaint());
       return;
     }
-    if (kind === 'gen-all') { await busy(b, () => writeAll(b)).catch((e) => say('#tj-gen-status', e.message)); return; }
+    if (kind === 'gen-all') { await busy(b, () => writeAll(b)).catch((e) => { const box = b.closest('.card') ?? gRoot(); box.querySelector('[data-live]')?.remove(); box.querySelector('.tj-error')?.remove(); box.insertAdjacentHTML('beforeend', errorBox(errInfo(e, 'Escribir los capítulos'), 'gen-all')); }); return; }
     if (kind === 'gen') {
       const status = (t) => { const el = gRoot().querySelector(`[data-status="${b.dataset.hito}"]`); if (el) el.textContent = t; };
       const box = b.closest('.card, section') ?? gRoot();
       box.insertAdjacentHTML('beforeend', liveHTML('Tu IA escribe este capítulo, con cada línea explicada'));
-      await busy(b, async () => { await generateMilestone(b.dataset.hito, liveFeed(box)); repaint(); }).catch((e) => { status(e.message); box.querySelector('[data-live]')?.remove(); });
+      await busy(b, async () => { await generateMilestone(b.dataset.hito, liveFeed(box)); repaint(); }).catch((e) => { status(''); box.querySelector('[data-live]')?.remove(); box.querySelector('.tj-error')?.remove(); box.insertAdjacentHTML('beforeend', errorBox(errInfo(e, 'Escribir este capítulo'))); });
       return;
     }
     if (kind === 'check-gh') { await busy(b, checkGitHub).catch((e) => say('#tj-gh-status', e.message)); return; }
