@@ -18,6 +18,7 @@ import { props } from './props3d.js';
 import { SKINS, skinOpen, specterSkin, setSpecterSkin } from './specter.js';
 import { renderHomeSchedule } from './schedule.js';
 import * as grid from './grid.js';
+import * as decor from './decor.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -92,7 +93,7 @@ export function remember(id) {
 export const TILE_NAMES = {
   todos: 'Pendientes', countdown: 'Tu próximo examen', schedule: 'Hoy en tu horario', deadlines: 'Fechas y entregas', week: 'Tu semana', goals: 'Metas', timer: 'Enfoque',
   notes: 'Bloc de notas', links: 'Accesos rápidos', recent: 'Sigue donde quedaste', news: 'Lo nuevo en tu comunidad', explore: 'Un concepto al azar',
-  shelf: 'Easter eggs',
+  shelf: 'Easter eggs', decor: 'Decoración',
 };
 let editing = false;
 // The Easter eggs join the home page by themselves once a secret is found (and can be removed like any tile).
@@ -286,7 +287,17 @@ function shelfTile(span) {
 }
 // Today's classes (schedule.js fills it): what is on now and what comes next; wide, the whole week.
 const scheduleTile = (span) => tile('schedule', span, '<div class="home-schedule" data-home-schedule></div>', 'glass sched-tile');
-const RENDER = { schedule: scheduleTile, shelf: shelfTile, todos: todosTile, countdown: countdownTile, deadlines: deadlinesTile, week: weekTile, goals: goalsTile, timer: timerTile, notes: notesTile, links: linksTile, recent: recentTile, news: newsTile, explore: exploreTile };
+// «Decoración»: the 3D objects the Easter eggs unlocked, placed on a shelf; each one is pressed like in the Easter
+// eggs, and «+» adds another one.
+function decorTile(span) {
+  const here = decor.placed();
+  const free = decor.unlocked().filter((k) => !here.includes(k));
+  const POKE = { cake: 'cake', monitor: 'medic', portals: 'portal' };
+  return tile('decor', span, `<h2>Decoración ${free.length ? `<details class="decor-add"><summary title="Agregar una decoración">+</summary><div class="decor-menu">${free.map((k) => `<button type="button" data-decor-add="${k}">${prop3d(k)}<span>${esc(decor.DECOR[k].name)}</span></button>`).join('')}</div></details>` : ''}</h2>
+    ${here.length ? `<div class="decor-shelf">${here.map((k) => `<div class="decor-item"><button type="button" class="decor-obj" ${POKE[k] ? `data-trinket="${POKE[k]}"` : 'data-decor-spin'} aria-label="${esc(decor.DECOR[k].name)}" title="${esc(decor.DECOR[k].name)}">${prop3d(k)}</button><button type="button" class="icon x" data-decor-remove="${k}" aria-label="Quitar ${esc(decor.DECOR[k].name)}"><svg><use href="#i-x"/></svg></button></div>`).join('')}</div>`
+    : `<p class="muted">${free.length ? 'Tienes decoraciones desbloqueadas: ponlas aquí con el «+».' : 'Los Easter eggs desbloquean objetos en 3D para decorar tu inicio: una fogata, un fonógrafo, una torta… Búscalos.'}</p>`}`, 'glass decor-tile');
+}
+const RENDER = { decor: decorTile, schedule: scheduleTile, shelf: shelfTile, todos: todosTile, countdown: countdownTile, deadlines: deadlinesTile, week: weekTile, goals: goalsTile, timer: timerTile, notes: notesTile, links: linksTile, recent: recentTile, news: newsTile, explore: exploreTile };
 
 function onboardTile() {
   const p = prefs.get();
@@ -772,6 +783,16 @@ let savedTimer = 0;
 export function mountSpace(context) {
   ctx = context;
   bindAmbiences();
+  // A decoration added: into its tile; if the person's own layout has no «Decoración», it joins it.
+  addEventListener('studium-decor', () => {
+    if (document.querySelector('#dash [data-tile="decor"]')) { refreshTile('decor'); return; }
+    const items = layout();
+    if (prefs.get().tiles.length && !items.some((it) => it.id === 'decor') && decor.placed().length) {
+      items.push(grid.place(items, 'decor'));
+      prefs.set({ tiles: grid.serialize(items) });
+      if (document.querySelector('#dash-grid')) renderHome();
+    }
+  });
   grid.bindGrid($('#dash'), { get: layout, save: (items, focus) => { sfx.tick(); setTiles(items, focus); }, editing: () => editing });
   prefs.on((p, patch) => {
     if (patch.saved) { const el = $('#saved'); el.classList.add('on'); clearTimeout(savedTimer); savedTimer = setTimeout(() => el.classList.remove('on'), 1600); }
@@ -839,6 +860,9 @@ export function mountSpace(context) {
     if (t.dataset.tileReset !== undefined) setTiles([]);
     if (t.dataset.radioAdd !== undefined) { const home = !!t.closest('#dash'); openRadio(false, home ? true : undefined); if (home) refreshTile('shelf'); else renderSettings(); }
     if (t.dataset.trinket) poke(t.dataset.trinket, t);
+    if (t.dataset.decorAdd) { decor.add(t.dataset.decorAdd); sfx.tick(); }
+    if (t.dataset.decorRemove) { decor.remove(t.dataset.decorRemove); }
+    if (t.dataset.decorSpin !== undefined) { t.classList.remove('spun'); void t.offsetWidth; t.classList.add('spun'); sfx.tick(); }
     if (t.dataset.deadlineRemove) { prefs.set({ deadlines: prefs.get().deadlines.filter((d) => d.id !== t.dataset.deadlineRemove) }); renderHome(); }
     if (t.dataset.deadlineClear !== undefined) { prefs.set({ deadlines: prefs.get().deadlines.filter((d) => daysTo(d.date) >= 0) }); renderHome(); }
     if (t.dataset.linkRemove) { prefs.set({ links: prefs.get().links.filter((l) => l.id !== t.dataset.linkRemove) }); renderHome(); }

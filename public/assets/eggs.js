@@ -10,6 +10,7 @@
 //     on Inicio, and the look opens for him;
 //   · type «café» or «hambre»: a study desk behind the page, or night with a campfire, each with its station;
 //   · now and then, a goal checked off is a lucky hit; Inicio counts them with a trophy.
+import { offerDecor } from './decor.js';
 import { sfx } from './sfx.js';
 import { t } from './i18n.js';
 import { auth, countEgg } from './data.js';
@@ -52,6 +53,8 @@ function discover(id, message) {
   }
   toast(fresh ? `${t(message)} ${t('Secreto')} ${s.size} de ${ALL.length}, en tu Inicio.` : t(message));
   onFound(id, fresh);
+  // What it unlocked for Inicio, offered with «Agregar al inicio».
+  if (fresh) setTimeout(() => offerDecor(id), 2600);
 }
 const layer = (cls, html = '') => { const el = document.createElement('div'); el.className = cls; el.innerHTML = html; el.setAttribute('aria-hidden', 'true'); document.body.append(el); return el; };
 

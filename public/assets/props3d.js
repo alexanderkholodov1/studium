@@ -292,7 +292,8 @@ const PROPS = {
       m.userData = { a: (i / 7) * Math.PI * 2, r: i ? 0.14 : 0, p: Math.random() * 10 }; scene.add(m); return m;
     });
     const sparks = Array.from({ length: 24 }, () => { const s = new T.Sprite(new T.SpriteMaterial({ map: soft(), color: 0xffa23a, transparent: true, blending: T.AdditiveBlending, depthWrite: false })); s.userData.p = Math.random(); scene.add(s); return s; });
-    const light = new T.PointLight(0xff8a2a, 6, 6, 1.6); light.position.y = 0.6; light.castShadow = true; scene.add(light);
+    // Its light warms the logs and stones; it casts no shadow (a point light's shadow greys the whole floor square).
+    const light = new T.PointLight(0xff8a2a, 6, 6, 1.6); light.position.y = 0.6; scene.add(light);
     return {
       scene, camera: camera(36, [0, 1.9, 3.4], [0, 0.4, 0]),
       update(t) {

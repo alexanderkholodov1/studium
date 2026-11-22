@@ -2571,3 +2571,39 @@ canvas.prop { display: block; }
   background: radial-gradient(closest-side, rgba(20, 28, 70, .28), transparent); animation: specter-shadow 3.4s ease-in-out infinite; }
 @keyframes specter-shadow { 50% { transform: scaleX(.82); opacity: .7; } }
 @media (prefers-reduced-motion: reduce) { .nodo::after { animation: none; } }
+/* ---------- «Decoración»: the 3D objects of the Easter eggs, on a wooden shelf ---------- */
+.decor-tile > .tile-body { grid-template-rows: auto 1fr; }
+.decor-tile h2 { position: relative; }
+.decor-add { margin-left: auto; position: relative; }
+.decor-add summary { list-style: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font: 800 20px/1 var(--display); color: var(--on-accent); background: var(--blue); }
+.decor-add summary::-webkit-details-marker { display: none; }
+.decor-menu { position: absolute; z-index: 6; right: 0; top: 40px; width: 260px; max-height: 300px; overflow: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px; border-radius: 18px;
+  background: var(--bg); box-shadow: 0 20px 44px -18px rgba(0, 0, 0, .45), inset 0 0 0 1px var(--line); }
+.decor-menu button { display: grid; justify-items: center; gap: 2px; padding: 6px; border: 0; border-radius: 12px; background: var(--well); color: var(--ink); font: 650 12px var(--display); cursor: pointer; }
+.decor-menu button:hover { background: color-mix(in oklab, var(--blue) 14%, var(--well)); }
+.decor-menu canvas.prop { width: 96px; height: 80px; }
+.dash-grid > .tile.decor-tile, .dash-grid > .tile.decor-tile > .tile-body { overflow: visible; }
+.decor-shelf { position: relative; display: flex; flex-wrap: wrap; align-items: end; justify-content: center; gap: 4px 10px; padding: 0 8px 18px; align-self: end; }
+.decor-shelf::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 16px; border-radius: 6px;
+  background: linear-gradient(180deg, #a56a3c, #7a4523 60%, #5c3218); box-shadow: 0 12px 20px -10px rgba(60, 30, 10, .6), inset 0 1px 0 rgba(255, 220, 180, .4); }
+.decor-item { position: relative; z-index: 1; }
+.decor-obj { display: block; padding: 0; border: 0; background: none; cursor: pointer; transition: transform .4s var(--spring, ease); }
+.decor-obj:hover { transform: translateY(-4px); }
+.decor-obj.spun { animation: decor-spin .7s var(--spring, ease); }
+@keyframes decor-spin { 40% { transform: translateY(-14px) rotate(-6deg) scale(1.06); } }
+.decor-obj canvas.prop { width: 120px; height: 104px; display: block; }
+.decor-item .x { position: absolute; top: -4px; right: -4px; width: 26px; height: 26px; opacity: 0; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); }
+.decor-item:hover .x, .decor-item .x:focus-visible { opacity: 1; }
+.decor-item .x svg { width: 12px; height: 12px; }
+/* The card that offers a new decoration. */
+.decor-offer { position: fixed; z-index: 72; left: 50%; bottom: 28px; translate: -50% 0; width: min(420px, calc(100vw - 32px)); padding: 14px 18px; border-radius: 22px; display: grid; gap: 8px; animation: offer-in .5s var(--spring, ease) both; }
+.decor-offer.out { animation: offer-out .42s cubic-bezier(.5, 0, .75, 0) forwards; }
+.decor-offer .kicker { margin: 0; }
+.decor-offer-items { display: flex; gap: 10px; justify-content: center; }
+.decor-pick { display: grid; justify-items: center; gap: 2px; padding: 6px 8px; border-radius: 16px; cursor: pointer; font: 650 13px var(--display); background: var(--well); }
+.decor-pick:has(input:checked) { box-shadow: inset 0 0 0 2px var(--blue); background: color-mix(in oklab, var(--blue) 10%, var(--well)); }
+.decor-pick input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.decor-pick canvas.prop { width: 120px; height: 100px; }
+@media (prefers-reduced-motion: reduce) { .decor-offer, .decor-offer.out, .decor-obj.spun { animation: none; } }
+.dash-grid [data-tile="shelf"] .trinket.locked { width: 62px; min-width: 0; height: 84px; font-size: 26px; }
+.dash-grid [data-tile="shelf"] .shelf { gap: 10px; flex-wrap: nowrap; }
