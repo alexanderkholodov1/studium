@@ -8,6 +8,7 @@ const COMMON = `Eres el autor de una guía de solución dentro de Studium, una p
 
 Reglas:
 - Escribe en el idioma del enunciado (por defecto, español), claro y sin relleno.
+- Escribe como una buena guía de estudio, no como una lista de etiquetas: explica en prosa, como un profesor paciente, de lo simple a lo complejo, con ejemplos concretos; cada idea nueva se explica antes de usarse. Frases cortas; nada de jerga sin explicar.
 - Respeta exactamente lo que pide el enunciado y la rúbrica: requisitos, restricciones, prohibiciones (por ejemplo, privacidad de datos o no evadir CAPTCHA) y la guía del curso si se menciona.
 - No inventes datos, resultados ni números que no puedas saber: donde dependan de los datos reales, dilo ("aquí verás…").
 - El código debe ser correcto, moderno y ejecutable en el entorno que pide el trabajo (por ejemplo Google Colab).
