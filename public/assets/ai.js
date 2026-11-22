@@ -502,7 +502,7 @@ export async function findBridge(port = BRIDGE_PORT) {
   try { const r = await fetch(`http://127.0.0.1:${port}/v1/hello`); return r.ok ? await r.json() : null; } catch { return null; }
 }
 // The bridge's version this page expects (bridge.mjs, VERSION): an older one is downloaded again.
-export const BRIDGE_VERSION = '1.1.0';
+export const BRIDGE_VERSION = '1.2.0';
 // The addresses the bridge answers without --origin (bridge.mjs, ORIGINS and PREVIEW).
 export function bridgeKnowsThisPage() {
   const o = location.origin;
@@ -546,7 +546,24 @@ export async function bridgeStatus() {
     const signed = (claude?.accounts ?? []).filter((a) => a.ready);
     if (!signed.some((a) => a.id === s.bridge.account)) s.bridge.account = signed[0]?.id ?? '';
   });
+  await bridgeFolders().catch(() => {});
   return engines;
+}
+// The person's own folders where the bridge may work, each with its permission (bridge.mjs, «the person's own
+// folders»). A folder is added only through the computer's own dialog; the page never names a path.
+export async function bridgeFolders() {
+  const body = await bridgeFetch('/v1/folders');
+  patch((s) => { if (s.bridge) { s.bridge.folders = body.folders ?? []; s.bridge.modes = body.modes ?? {}; } });
+  return body.folders ?? [];
+}
+export async function pickBridgeFolder(mode = 'read') {
+  const body = await bridgeFetch('/v1/folders/pick', { method: 'POST', body: JSON.stringify({ mode }) });
+  await bridgeFolders();
+  return body.folder;
+}
+export async function changeBridgeFolder(id, change) {
+  await bridgeFetch('/v1/folders/change', { method: 'POST', body: JSON.stringify({ id, ...change }) });
+  return bridgeFolders();
 }
 
 /* ---------- models an account can use ---------- */
@@ -645,7 +662,7 @@ const TIMEOUT = 120_000;
 // A whole milestone of a solution guide, every line explained, takes a strong model several minutes.
 const TIMEOUT_OF = { solution: 15 * 60_000 };
 export const longest = (c) => (c.provider === 'anthropic' || c.provider === 'bridge:claude' ? 64000 : 32000);
-export async function run({ system, text, files = [], maxTokens = 32000, onProgress, signal, task = 'guide', use = null, label = '', entry = null } = {}) {
+export async function run({ system, text, files = [], maxTokens = 32000, onProgress, signal, task = 'guide', use = null, label = '', entry = null, folder = '' } = {}) {
   // Keys and passwords never reach the AI: whatever text goes, from a file or typed, is filtered here first.
   if (text) text = redact(text).text;
   files = files.map((f) => (f?.text ? { ...f, text: redact(f.text).text } : f));
@@ -674,7 +691,7 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
     // Adapters report a count of characters written (or -1: «waiting, nothing yet»).
     const watched = (n) => { if (typeof n === 'number' && n >= 0) { rec.received = n; rec.phase = 'receiving'; } tell(rec); onProgress?.(n); };
     const out = await Promise.race([
-      send({ way, model, effort, system, text, files: usable, maxTokens, onProgress: watched, signal }),
+      send({ way, model, effort, system, text, files: usable, maxTokens, onProgress: watched, signal, folder }),
       new Promise((_, reject) => { const limit = TIMEOUT_OF[task] ?? TIMEOUT; timer = setTimeout(() => reject(new AIError(`${model} no respondió en ${limit / 60000} minutos: Studium cortó el pedido.`, { kind: 'transient', way })), limit); }),
     ]).finally(() => clearTimeout(timer));
     rec.phase = 'done'; rec.ms = Date.now() - rec.started; rec.response = String(out.text ?? '').slice(0, 60000);
@@ -797,7 +814,7 @@ function geminiThinking(model, effort, maxTokens) {
   const budget = { low: 1024, medium: 4096, high: 12288, xhigh: 24576 }[effort] ?? 4096;
   return { thinkingConfig: { thinkingBudget: Math.min(budget, Math.floor(maxTokens / 2)) } };
 }
-async function send({ way, model, effort, system, text, files, maxTokens, onProgress, signal }) {
+async function send({ way, model, effort, system, text, files, maxTokens, onProgress, signal, folder = '' }) {
   if (way === 'anthropic') {
     const client = await claude(keyOf(way));
     // Pictures carry their name in a line before them, so the AI knows their order («hoja 1», «hoja 2»).
@@ -892,7 +909,7 @@ async function send({ way, model, effort, system, text, files, maxTokens, onProg
   const engine = WAYS[way].engine;
   const body = await bridgeFetch('/v1/run', {
     method: 'POST', signal, engine,
-    body: JSON.stringify({ engine, account: engine === 'claude' ? load().bridge?.account ?? '' : '', model, effort, system, text, files: files.map((f) => (f.data ? { name: f.name, type: f.type, data: f.data } : { name: f.name, type: 'text/plain', text: f.text })) }),
+    body: JSON.stringify({ engine, account: engine === 'claude' ? load().bridge?.account ?? '' : '', folder: engine === 'claude' ? folder : '', model, effort, system, text, files: files.map((f) => (f.data ? { name: f.name, type: f.type, data: f.data } : { name: f.name, type: 'text/plain', text: f.text })) }),
   });
   return { text: String(body.text ?? '') };
 }

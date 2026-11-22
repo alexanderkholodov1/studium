@@ -150,7 +150,9 @@ function aiLine(task) {
   return ai.pickerHTML(task);
 }
 async function askAI(task, system, text, files = [], label = '') {
-  return ai.run({ system, text, files, task, label, maxTokens: task === 'solution' ? ai.longest(ai.choice(task)) : 4000 });
+  // The trabajo's own folder, when its writer is Claude through the bridge.
+  const folder = task === 'solution' && T && ai.choice(task).provider === 'bridge:claude' ? folderOf(T.id) : '';
+  return ai.run({ system, text, files, task, label, folder, maxTokens: task === 'solution' ? ai.longest(ai.choice(task)) : 4000 });
 }
 // «Conectar» opens exactly the recommended option in the settings, and the answers given so far wait here.
 async function connectWay(vendor, bridge) {
@@ -197,7 +199,24 @@ const QUESTIONS = [
   { key: 'ready', ask: 'Todo listo', input: 'ready' },
 ];
 export const PREF_DEFAULT = { tone: 'balanced', level: 'zero', length: 'normal', text: 'some', cards: true, defense: true, practice: false, visuals: true, note: '' };
-const bridgeCwd = () => ai.bridgeOf()?.cwd ?? '';
+const FOLDERS = 'studium-tj-folders';
+const folderOf = (tid) => { try { return JSON.parse(localStorage.getItem(FOLDERS) ?? '{}')[tid] ?? ''; } catch { return ''; } };
+function keepFolder(tid, id) {
+  try { const m = JSON.parse(localStorage.getItem(FOLDERS) ?? '{}'); if (id && id !== 'temp') m[tid] = id; else delete m[tid]; localStorage.setItem(FOLDERS, JSON.stringify(m)); } catch { /* this device only */ }
+}
+const MODE_TEXT = { read: 'Solo leer', write: 'Leer y escribir archivos', git: 'Leer, escribir y usar git' };
+const MODE_WHY = { read: 'lee tus archivos; no cambia nada', write: 'también crea y edita archivos de esta carpeta, nunca fuera de ella; no ejecuta comandos', git: 'también usa git aquí (commits y push a tu nombre); nada más' };
+// The choice of where the AI works: a temporary folder, or one of the person's folders with its permission.
+function placeHTML(now) {
+  const folders = ai.bridgeOf()?.folders ?? [];
+  const modeSel = (f) => `<select data-tj-mode="${esc(f.id)}" aria-label="Permiso en ${esc(f.name)}">${Object.entries(MODE_TEXT).map(([k, v]) => `<option value="${k}" ${f.mode === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
+  return `<label class="tj-pick ${now === 'temp' || !now ? 'on' : ''}"><input type="radio" name="workspace" value="temp" data-tj-ws ${now === 'temp' || !now ? 'checked' : ''}> Una carpeta temporal <small>se crea en cada pedido y se borra al terminar; tu IA solo lee lo que trajiste</small></label>
+    ${folders.map((f) => `<div class="tj-pick ${now === f.id ? 'on' : ''} ${f.exists === false ? 'off' : ''}"><label><input type="radio" name="workspace" value="${esc(f.id)}" data-tj-ws ${now === f.id ? 'checked' : ''} ${f.exists === false ? 'disabled' : ''}> ${esc(f.name)} <small>${esc(f.path)}${f.exists === false ? ' · ya no existe' : ''}</small></label>
+      <span class="tj-mode">${modeSel(f)}<small>${esc(MODE_WHY[f.mode] ?? '')}</small></span><button type="button" class="link" data-tj="folder-remove" data-id="${esc(f.id)}">quitar</button></div>`).join('')}
+    <div class="tj-addfolder"><button type="button" class="button ghost small" data-tj="folder-pick">Elegir una carpeta de mi computadora…</button>
+      <select data-tj-newmode aria-label="Permiso para la carpeta nueva">${Object.entries(MODE_TEXT).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('')}</select>
+      <span class="fine" id="tj-folder-status" role="status">Se abre la ventana de tu computadora para elegirla. Cada trabajo puede tener la suya, sin cerrar el puente.</span></div>`;
+}
 async function myName() {
   const p = await loadProfile(uid()).catch(() => null);
   const u = auth.currentUser;
@@ -232,6 +251,8 @@ function renderDraft(error = '') {
       ${draft.pasting || draft.text ? `<textarea class="tj-paste plain" name="text" rows="5" placeholder="Pega aquí el enunciado y la rúbrica">${esc(draft.text)}</textarea>` : '<button type="button" class="link" data-tj="paste">Prefiero pegar el texto</button>'}`;
   }
   if (q.input === 'ai') {
+    // The bridge's folders, read once when this question opens (they live on this computer).
+    if (!draft.foldersRead && ai.connected().some((w) => w.startsWith('bridge:'))) { draft.foldersRead = true; ai.bridgeFolders().then(() => { if (draft && QUESTIONS[draft.at].input === 'ai') renderDraft(); }).catch(() => {}); }
     const an = analyze(draft.files, draft.text);
     const opts = options(an);
     const k = an.k;
@@ -246,10 +267,7 @@ function renderDraft(error = '') {
     const roles = ways.length ? `<div class="tj-roles">
         <div><h3>Quién escribe la guía</h3>${wayRadio('solution', writer)}</div>
         <div><h3>Quién responde tus dudas al instante</h3><p class="fine">Cuando pulses «No lo entiendo». Conviene una rápida.</p>${wayRadio('tutor', tutor)}</div>
-        ${bridgeWrites ? `<div><h3>Dónde trabaja tu IA</h3>
-          <label class="tj-pick ${draft.workspace === 'temp' ? 'on' : ''}"><input type="radio" name="workspace" value="temp" data-tj-ws ${draft.workspace === 'temp' ? 'checked' : ''}> En una carpeta temporal <small>se crea para cada pedido y se borra al terminar; tu IA solo lee lo que trajiste</small></label>
-          <label class="tj-pick off"><input type="radio" name="workspace" value="folder" disabled> En la carpeta donde abriste el puente${bridgeCwd() ? ` <small>${esc(bridgeCwd())}</small>` : ''} <span class="tag">Pronto</span></label>
-          <p class="fine">Trabajar en tu propia carpeta le da a tu IA un permiso nuevo en tu computadora: primero te muestro cómo funciona y qué puede y no puede hacer.</p></div>` : ''}
+        ${bridgeWrites ? `<div><h3>Dónde trabaja tu IA</h3>${placeHTML(draft.workspace)}</div>` : ''}
       </div>` : '';
     control = `${roles}<h3 class="tj-ways-title">${ways.length ? 'Otras formas, según lo que trajiste' : 'Lo que conviene, según lo que trajiste'}</h3><div class="tj-ways">${opts.map((o, i) => `<div class="tj-way glass ${i === 0 ? 'rec' : ''}">
         <div><b>${esc(o.name)}</b>${i === 0 ? ' <span class="tag rec">Recomendado</span>' : ''}<p>${esc(o.why)}</p><p class="fine">${esc(o.how)}</p></div>
@@ -345,6 +363,7 @@ async function createTrabajo() {
   batch.set(doc(db, 'trabajos', ref.id, 'miembros', uid()), { name: await myName(), code, joined: serverTimestamp() });
   await batch.commit();
   await keepIds([...(await myIds()), ref.id]);
+  keepFolder(ref.id, draft.workspace);
   return { id: ref.id, pdfs: binaries, notes };
 }
 function working(text) {
@@ -541,6 +560,7 @@ function closing() {
         <p><button type="button" class="act" data-tj="cite">Descargar la cita</button></p>
         ${used ? `<details class="q"><summary class="qh">Ver lo que se usó</summary><div class="ans">${T.members.flatMap((m) => (T.ia[m.uid] ?? []).map((e) => `<details class="q"><summary class="qh">${esc(m.name)} · ${esc(e.task === 'tutor' ? 'explicación' : 'guía')} · ${esc(e.model)}</summary><pre class="src">${esc(e.prompt)}</pre></details>`)).join('')}</div></details>` : ''}
       </div><div>
+        ${ai.connected().includes('bridge:claude') ? `<h3>Dónde trabaja tu IA</h3><p class="small mut">En esta computadora, para este trabajo.</p><div class="place">${placeHTML(folderOf(T.id) || 'temp')}</div>` : ''}
         <h3>GitHub</h3>
         <p>Si el commit empieza con el número del paso entre corchetes, Studium lo encuentra y marca ese paso como hecho para ti.</p>
         ${T.owner === uid() ? `<form class="inline" id="tj-repo"><input name="repo" value="${esc(repo)}" placeholder="usuario/repositorio" pattern="[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+" aria-label="Repositorio"><button class="act" type="submit">Guardar</button></form>` : repo ? `<p><a href="https://github.com/${esc(repo)}" target="_blank" rel="noopener">${esc(repo)}</a></p>` : ''}
@@ -591,6 +611,7 @@ async function openTrabajo(tid) {
   }
   paint();
   scroller()?.scrollTo({ top: 0 });
+  if (ai.connected().includes('bridge:claude')) ai.bridgeFolders().then(() => { if (T?.id === tid) repaint(); }).catch(() => {});
 }
 
 /* ---------- what the buttons do ---------- */
@@ -719,7 +740,11 @@ function wire(root) {
     } else if (kind === 'mine') { onlyMine = el.checked; repaint(); }
     else if (el.name === 'files' && draft) { keepAnswer(); addFiles([...el.files]); renderDraft(); }
     else if (el.dataset?.tjUse) { ai.setChoice(el.dataset.tjUse, { provider: el.value, model: '', effort: '' }); keepAnswer(); renderDraft(); }
-    else if (el.dataset?.tjWs !== undefined) { draft.workspace = el.value; renderDraft(); }
+    else if (el.dataset?.tjWs !== undefined) { if (draft) { draft.workspace = el.value; renderDraft(); } else if (T) { keepFolder(T.id, el.value); repaint(); } }
+    else if (el.dataset?.tjMode) {
+      try { await ai.changeBridgeFolder(el.dataset.tjMode, { mode: el.value }); ctx.toast(`Permiso cambiado: ${MODE_TEXT[el.value]}.`); } catch (e) { ctx.toast(e.message); }
+      if (draft) { keepAnswer(); renderDraft(); } else repaint();
+    }
     else if (el.dataset?.tjPref) { keepAnswer(); draft.prefs[el.dataset.tjPref] = el.type === 'checkbox' ? el.checked : el.value; renderDraft(); }
     else if (el.closest?.('[data-ai-pick]')) { const task = el.closest('[data-ai-pick]').dataset.aiPick; ai.setChoice(task, ai.picked(task, root)); }
   });
@@ -745,6 +770,20 @@ function wire(root) {
     if (kind === 'pair-code') {
       const code = b.closest('.tj-bridge')?.querySelector('[data-ai-pair-code]')?.value;
       await busy(b, async () => { if (await pairBridge(code)) { draft.pairing = false; renderDraft(); } }).catch(() => {});
+      return;
+    }
+    if (kind === 'folder-pick') {
+      const mode = b.parentElement.querySelector('[data-tj-newmode]')?.value ?? 'read';
+      say('#tj-folder-status', 'Elige la carpeta en la ventana que se abrió en tu computadora (puede quedar detrás del navegador)…');
+      await busy(b, async () => {
+        const f = await ai.pickBridgeFolder(mode);
+        if (draft) { keepAnswer(); draft.workspace = f.id; renderDraft(); } else if (T) { keepFolder(T.id, f.id); repaint(); }
+        ctx.toast(`Carpeta lista: ${f.name} (${MODE_TEXT[f.mode]}).`);
+      }).catch((e) => say('#tj-folder-status', e.message));
+      return;
+    }
+    if (kind === 'folder-remove') {
+      await busy(b, async () => { await ai.changeBridgeFolder(b.dataset.id, { remove: true }); if (draft) { if (draft.workspace === b.dataset.id) draft.workspace = 'temp'; keepAnswer(); renderDraft(); } else repaint(); }).catch(() => {});
       return;
     }
     if (kind === 'pair-here') { keepAnswer(); draft.pairing = true; renderDraft(); return; }

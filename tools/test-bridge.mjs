@@ -165,6 +165,39 @@ await test('claude runs read-only in a folder with the material and the instruct
   check(!c.args.includes('--bare'), '--bare breaks macOS sign-in');
   check(leftovers().length === 0, 'folder left behind');
 });
+await test('claude works in a folder of the person, with the tools of its permission, and leaves nothing there', async () => {
+  const work = mkdtempSync(path.join(tmpdir(), 'bridge-work-'));
+  writeFileSync(path.join(work, 'notebook.ipynb'), '{}');
+  const cfg = path.join(home, '.studium-bridge.json');
+  const before = JSON.parse(readFileSync(cfg, 'utf8'));
+  writeFileSync(cfg, JSON.stringify({ ...before, folders: [{ id: 'leer', path: work, mode: 'read' }, { id: 'git', path: work, mode: 'git' }] }));
+  try {
+    scenario({ claude: { answer: 'hecho' } });
+    const r = await run({ engine: 'claude', model: 'claude-haiku-5-5', folder: 'leer', files: [{ name: 'notas.txt', type: 'text/plain', text: 'hola' }] });
+    check(r.status === 200 && r.data.text === 'hecho', JSON.stringify(r.data));
+    const [c] = calls();
+    const same = (a, b) => path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase();
+    check(same(c.cwd, work) || c.cwd.toLowerCase().endsWith(path.basename(work).toLowerCase()), `ran in ${c.cwd}`);
+    check(c.files.includes('notebook.ipynb'), 'sees the folder');
+    const allowed = c.args.slice(c.args.indexOf('--allowedTools') + 1, c.args.indexOf('--disallowedTools'));
+    check(allowed.includes('Read(./**)') && !allowed.some((t) => /^(Edit|Write|Bash)/.test(t)), `read mode allowed ${allowed.join(' ')}`);
+    for (const tool of ['Bash', 'Edit', 'Write', 'WebFetch']) check(c.args.includes(tool), `${tool} not disallowed`);
+    check(!readdirSync(work).includes('.studium'), '.studium left in the folder');
+    scenario({ claude: { answer: 'hecho' } });
+    await run({ engine: 'claude', model: 'claude-haiku-5-5', folder: 'git' });
+    const [g] = calls();
+    const gAllowed = g.args.slice(g.args.indexOf('--allowedTools') + 1, g.args.indexOf('--disallowedTools'));
+    check(gAllowed.includes('Edit(./**)') && gAllowed.includes('Bash(git commit:*)') && !gAllowed.includes('Bash'), `git mode allowed ${gAllowed.join(' ')}`);
+    check(g.args.includes('WebFetch'), 'git mode still has no web');
+    const gone = await run({ engine: 'claude', model: 'claude-haiku-5-5', folder: 'nope' });
+    check(gone.status === 404, `unknown folder: ${gone.status}`);
+    const list = await call('GET', '/v1/folders');
+    check(list.status === 200 && list.data.folders.length === 2 && list.data.folders[0].label === 'solo leer', JSON.stringify(list.data));
+  } finally {
+    writeFileSync(cfg, JSON.stringify(before));
+    rmSync(work, { recursive: true, force: true });
+  }
+});
 await test('an answer that talks about limits is an answer, not a usage limit', async () => {
   scenario({ claude: { answer: 'El límite de una función: usage limit reached en la nota del profe' } });
   const r = await run({ engine: 'claude', model: 'claude-sonnet-5-5' });

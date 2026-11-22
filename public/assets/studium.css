@@ -2812,3 +2812,12 @@ canvas.prop { display: block; }
 .tjg-app .fc > summary::-webkit-details-marker { display: none; }
 .tjg-app .fc[open] { background: var(--cs); }
 .tjg-app .fc[open] > summary { font-size: 14px; padding: 0 0 6px; color: var(--muted); }
+/* «Trabajos»: where the AI works, and its permission in each folder. */
+.tj-pick > label { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; cursor: pointer; }
+.tj-pick > label small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tj-mode { display: grid; gap: 2px; min-width: 210px; }
+.tj-mode select { padding: 6px 30px 6px 10px; font-size: 14px; }
+.tj-mode small { color: var(--muted); font-weight: 500; font-size: 12.5px; }
+.tj-addfolder { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; }
+.tj-addfolder select { width: auto; padding: 6px 30px 6px 10px; font-size: 14px; }
+.tjg-app .place .tj-pick { background: var(--panel); }

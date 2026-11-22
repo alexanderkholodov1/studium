@@ -9,11 +9,11 @@
 import { createServer } from 'node:http';
 import { execFile, spawn } from 'node:child_process';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
-import { chmodSync, existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { homedir, platform, tmpdir } from 'node:os';
 import path from 'node:path';
 
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 const NAME = 'studium-bridge';
 const DEFAULT_PORT = 41730;
 const MAX_BODY = 64 * 1024 * 1024;
@@ -45,12 +45,17 @@ const originAllowed = (origin) => !!origin && (ORIGINS.has(origin) || PREVIEW.te
 /* ---------- the pairing code ---------- */
 // Kept in the home folder, so a restart keeps the pairing; --reset makes a new one.
 const CONFIG = path.join(homedir(), '.studium-bridge.json');
+function readConfig() { try { return JSON.parse(readFileSync(CONFIG, 'utf8')) ?? {}; } catch { return {}; } }
+function writeConfig(patch) {
+  writeFileSync(CONFIG, `${JSON.stringify({ ...readConfig(), ...patch }, null, 2)}\n`, { mode: 0o600 });
+  try { chmodSync(CONFIG, 0o600); } catch { /* Windows keeps its own permissions */ }
+}
 function pairingCode() {
   if (!reset) {
     try { const { token } = JSON.parse(readFileSync(CONFIG, 'utf8')); if (typeof token === 'string' && token.length >= 32) return token; } catch { /* a new one */ }
   }
   const token = randomBytes(32).toString('base64url');
-  writeFileSync(CONFIG, `${JSON.stringify({ token }, null, 2)}\n`, { mode: 0o600 });
+  writeFileSync(CONFIG, `${JSON.stringify({ ...readConfig(), token }, null, 2)}\n`, { mode: 0o600 });
   try { chmodSync(CONFIG, 0o600); } catch { /* Windows keeps its own permissions */ }
   return token;
 }
@@ -77,6 +82,62 @@ class Failure extends Error {
   constructor(status, code, message, resetsAt = null) { super(message); Object.assign(this, { status, code, resetsAt }); }
 }
 const fail = (res, f, origin) => send(res, f.status, { error: { code: f.code, message: f.message, ...(f.resetsAt ? { resetsAt: f.resetsAt } : {}) } }, origin);
+
+/* ---------- the person's own folders ---------- */
+// Besides the temporary folder of each run, the person may let their AI work in folders of their own, one per trabajo
+// if they like, each with its permission. A folder is added only by choosing it in this computer's own folder dialog
+// (a page cannot name a path), and the list lives here, in the home folder, with the pairing code.
+//   read:  it reads the files of the folder and its subfolders; it changes nothing.
+//   write: it may also create and edit files there (never outside), and run no command.
+//   git:   it may also use git there (status, diff, log, add, commit, push, pull), in the person's own name.
+const MODES = {
+  read: { label: 'solo leer', allow: ['Read(./**)', 'Glob', 'Grep'], deny: ['Bash', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit'] },
+  write: { label: 'leer y escribir archivos', allow: ['Read(./**)', 'Glob', 'Grep', 'Edit(./**)', 'Write(./**)', 'MultiEdit(./**)', 'NotebookEdit(./**)'], deny: ['Bash'] },
+  git: { label: 'leer, escribir y usar git', allow: ['Read(./**)', 'Glob', 'Grep', 'Edit(./**)', 'Write(./**)', 'MultiEdit(./**)', 'NotebookEdit(./**)',
+    'Bash(git status:*)', 'Bash(git diff:*)', 'Bash(git log:*)', 'Bash(git add:*)', 'Bash(git commit:*)', 'Bash(git push:*)', 'Bash(git pull:*)', 'Bash(git switch:*)', 'Bash(git branch:*)'], deny: [] },
+};
+const NEVER = ['WebFetch', 'WebSearch', 'Task', 'Agent'];
+const folders = () => (Array.isArray(readConfig().folders) ? readConfig().folders : []).filter((f) => f && typeof f.path === 'string' && MODES[f.mode]);
+const folderView = (f) => ({ id: f.id, name: path.basename(f.path), path: f.path, mode: f.mode, label: MODES[f.mode].label, exists: existsSync(f.path) });
+// This computer's own «choose a folder» dialog.
+function pickFolder() {
+  const [cmd, args] = WIN
+    ? ['powershell.exe', ['-NoProfile', '-STA', '-Command', "Add-Type -AssemblyName System.Windows.Forms; $d = New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description = 'Studium: elige la carpeta donde trabajará tu IA'; $d.ShowNewFolderButton = $true; $f = New-Object System.Windows.Forms.Form; $f.TopMost = $true; if ($d.ShowDialog($f) -eq 'OK') { [Console]::OutputEncoding = [Text.Encoding]::UTF8; Write-Output $d.SelectedPath }"]]
+    : platform() === 'darwin' ? ['osascript', ['-e', 'POSIX path of (choose folder with prompt "Studium: elige la carpeta donde trabajará tu IA")']]
+      : ['zenity', ['--file-selection', '--directory', '--title=Studium: elige la carpeta donde trabajará tu IA']];
+  return new Promise((resolve) => execFile(cmd, args, { timeout: 10 * 60_000, windowsHide: false, encoding: 'utf8' }, (err, out) => {
+    const chosen = String(out ?? '').trim().split(/\r?\n/).pop()?.replace(/[\\/]$/, '') ?? '';
+    resolve(!err && chosen && existsSync(chosen) && statSync(chosen).isDirectory() ? chosen : '');
+  }));
+}
+async function addFolder(body) {
+  const mode = MODES[body?.mode] ? body.mode : 'read';
+  console.log('\nStudium pidió agregar una carpeta: elige una en la ventana que se abrió (o ciérrala para no agregar ninguna).');
+  const chosen = await pickFolder();
+  if (!chosen) { console.log('  No se agregó ninguna carpeta.'); throw new Failure(400, 'no-folder', 'No elegiste ninguna carpeta.'); }
+  let real = chosen;
+  try { real = realpathSync.native(chosen); } catch { /* as chosen */ }
+  if (path.resolve(real) === path.resolve(homedir()) || path.parse(real).root === real) {
+    console.log(`  No se agregó ${real}: es demasiado amplia.`);
+    throw new Failure(400, 'too-wide', 'Esa carpeta es demasiado amplia (tu carpeta personal o un disco entero). Elige la carpeta del trabajo.');
+  }
+  const list = folders().filter((f) => path.resolve(f.path) !== path.resolve(real));
+  const f = { id: randomBytes(6).toString('base64url'), path: real, mode };
+  writeConfig({ folders: [...list, f] });
+  console.log(`  Carpeta agregada: ${real} (tu IA puede ${MODES[mode].label}).`);
+  return folderView(f);
+}
+function changeFolder(body) {
+  const list = folders();
+  const f = list.find((x) => x.id === body?.id);
+  if (!f) throw new Failure(404, 'no-folder', 'Esa carpeta ya no está en el puente.');
+  if (body.remove) { writeConfig({ folders: list.filter((x) => x !== f) }); console.log(`\nCarpeta quitada del puente: ${f.path}`); return { removed: f.id }; }
+  if (!MODES[body.mode]) throw new Failure(400, 'bad-request', 'Ese permiso no existe.');
+  f.mode = body.mode;
+  writeConfig({ folders: list });
+  console.log(`\nCarpeta ${f.path}: ahora tu IA puede ${MODES[f.mode].label}.`);
+  return folderView(f);
+}
 
 /* ---------- folders of one run ---------- */
 // Folders left by a crash of an earlier run are removed on start.
@@ -118,6 +179,7 @@ function writeRun(dir, body) {
   writeFileSync(path.join(dir, 'INSTRUCCIONES.md'), `${String(body.system ?? '')}\n\n---\n\n${String(body.text ?? '')}\n`, 'utf8');
   return names;
 }
+const placePrompt = (names, place) => `Trabajas en la carpeta de este trabajo, la carpeta actual; puedes ${MODES[place.mode].label}, solo dentro de ella. Sigue las instrucciones de ${place.rel}/INSTRUCCIONES.md.${names.length ? ` Lo que Studium te mandó está en ${place.rel}: ${names.join(', ')}. Léelo todo.` : ''} No toques la carpeta .studium. Responde solo con el resultado final que piden las instrucciones, sin comentarios antes ni después.`;
 const prompt = (names) => `Sigue las instrucciones de INSTRUCCIONES.md, en esta carpeta.${names.length ? ` El material está en estos archivos de la misma carpeta, en este orden: ${names.join(', ')}. Léelos todos, completos.` : ''} Responde solo con el resultado final que piden las instrucciones, sin comentarios antes ni después.`;
 
 /* ---------- finding and running a CLI ---------- */
@@ -292,11 +354,14 @@ const ENGINES = {
       if (!CLAUDE_INCLUDED.has(String(body.model ?? '')) || fam === 'fable' || !allowed.families.has(fam)) {
         throw new Failure(400, 'paid', `El puente solo usa modelos de Claude incluidos en tu plan, nombrados uno por uno (según ${allowed.source}). Elige uno en Studium.`);
       }
-      const args = ['-p', prompt(names), '--output-format', 'json', '--allowedTools', 'Read(./**)',
-        '--disallowedTools', 'Bash', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'WebFetch', 'WebSearch', 'Task', 'Agent',
-        '--model', String(body.model)];
+      const mode = body.place ? MODES[body.place.mode] : null;
+      const args = mode
+        ? ['-p', placePrompt(names, body.place), '--output-format', 'json', '--allowedTools', ...mode.allow, '--disallowedTools', ...mode.deny, ...NEVER, '--model', String(body.model)]
+        : ['-p', prompt(names), '--output-format', 'json', '--allowedTools', 'Read(./**)',
+          '--disallowedTools', 'Bash', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit', ...NEVER,
+          '--model', String(body.model)];
       if (body.effort) args.push('--effort', String(body.effort));
-      const r = await runCli(b, args, { cwd: dir, timeoutMs, env: account.env });
+      const r = await runCli(b, args, { cwd: body.place ? body.place.path : dir, timeoutMs, env: account.env });
       let result = null;
       try { result = JSON.parse(r.out.trim()); } catch { /* not the JSON result */ }
       if (result && !result.is_error && result.subtype !== 'error' && typeof result.result === 'string') return result.result;
@@ -533,14 +598,27 @@ async function handleRun(body) {
   const started = Date.now();
   // The folder by its real, long path: Windows may give the temporary folder as a short 8.3 name («ALEXAM~1»), and
   // Claude Code refuses to read in a path written that way (measured 2026-11-13).
-  const made = mkdtempSync(path.join(tmpdir(), TEMP_PREFIX));
+  // A folder of the person's (by its id in the bridge's own list), or a temporary one.
+  let place = null;
+  if (body.folder) {
+    const f = folders().find((x) => x.id === body.folder);
+    if (!f) throw new Failure(404, 'no-folder', 'Esa carpeta ya no está en el puente. Elígela otra vez en Studium.');
+    if (!existsSync(f.path)) throw new Failure(404, 'no-folder', `La carpeta ${f.path} ya no existe en esta computadora.`);
+    if (body.engine !== 'claude') throw new Failure(400, 'bad-request', 'Por ahora solo Claude Code trabaja en tus carpetas.');
+    place = { ...f, rel: `.studium/run-${randomBytes(4).toString('hex')}` };
+  }
+  const made = place ? path.join(place.path, place.rel) : mkdtempSync(path.join(tmpdir(), TEMP_PREFIX));
+  if (place) mkdirSync(made, { recursive: true });
   let dir = made;
   try { dir = realpathSync.native(made); } catch { /* keep the path as made */ }
   try {
     const names = writeRun(dir, body);
-    const text = await engine.run(await bin(body.engine === 'antigravity' ? 'agy' : body.engine), dir, body, names, timeoutMs);
-    return { text, engine: body.engine, model: String(body.model ?? ''), effort: String(body.effort ?? ''), ms: Date.now() - started };
-  } finally { removeFolder(dir); }
+    const text = await engine.run(await bin(body.engine === 'antigravity' ? 'agy' : body.engine), dir, { ...body, place }, names, timeoutMs);
+    return { text, engine: body.engine, model: String(body.model ?? ''), effort: String(body.effort ?? ''), ms: Date.now() - started, folder: place ? place.path : '' };
+  } finally {
+    removeFolder(dir);
+    if (place) { try { rmSync(path.join(place.path, '.studium'), { recursive: false }); } catch { /* not empty, or gone */ } try { const left = readdirSync(path.join(place.path, '.studium')); if (!left.length) rmSync(path.join(place.path, '.studium'), { recursive: true, force: true }); } catch { /* gone */ } }
+  }
 }
 
 /* ---------- the server ---------- */
@@ -566,6 +644,12 @@ const server = createServer(async (req, res) => {
   if (!tokenValid(req.headers.authorization)) return fail(res, new Failure(401, 'token', 'El código de enlace no coincide. Vuelve a enlazar el puente en Ajustes.'), ok);
   try {
     if (req.method === 'GET' && pathname === '/v1/status') return send(res, 200, { name: NAME, version: VERSION, cwd: process.cwd(), engines: (await detectAll()).map((e) => ({ ...e, accounts: e.accounts?.map(({ env, ...a }) => a) })) }, ok);
+    if (req.method === 'GET' && pathname === '/v1/folders') return send(res, 200, { folders: folders().map(folderView), modes: Object.fromEntries(Object.entries(MODES).map(([k, m]) => [k, m.label])) }, ok);
+    if (req.method === 'POST' && (pathname === '/v1/folders/pick' || pathname === '/v1/folders/change')) {
+      let body = {};
+      try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}'); } catch { /* defaults */ }
+      return send(res, 200, pathname.endsWith('pick') ? { folder: await inLane('picker', () => addFolder(body)) } : changeFolder(body), ok);
+    }
     if (req.method === 'POST' && pathname === '/v1/verify') {
       let body = {};
       try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}'); } catch { /* the whole check */ }
