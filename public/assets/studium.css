@@ -2610,6 +2610,12 @@ canvas.prop { display: block; }
 .specter-note { position: absolute; z-index: 3; font: 800 20px var(--display); color: var(--blue); pointer-events: none; animation: specter-note 1.8s ease-out forwards; }
 @keyframes specter-note { from { opacity: 0; transform: translate(0, 0) scale(.6); } 15% { opacity: 1; } to { opacity: 0; transform: translate(18px, -70px) rotate(14deg) scale(1.1); } }
 @media (prefers-reduced-motion: reduce) { .specter-note { display: none; } }
+/* Specter going into a decoration, and coming back: a spin that shrinks him to nothing, and its reverse. */
+.nodo.spin-out canvas.specter { animation: specter-spin-out .55s cubic-bezier(.5, 0, .9, .4) forwards; }
+.nodo.spin-in canvas.specter { animation: specter-spin-out .55s cubic-bezier(.1, .6, .5, 1) reverse both; }
+@keyframes specter-spin-out { from { transform: none; opacity: 1; } 60% { opacity: 1; } to { transform: rotate(720deg) scale(0); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .nodo.spin-out canvas.specter, .nodo.spin-in canvas.specter { animation-duration: .01s; } }
+
 
 
 /* ---------- «Trabajos» (trabajos.js) ---------- */

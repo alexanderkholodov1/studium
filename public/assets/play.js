@@ -3,7 +3,7 @@
 // watches the pointer and hops) and bubbles to pop. Also the confetti of a met goal and the springy letters of the
 // wordmark. Everything is DOM moved with transforms; nothing runs when the person prefers reduced motion or focus.
 import { sfx } from './sfx.js';
-import { props } from './props3d.js';
+import { props, actProp } from './props3d.js';
 import { specterSkin } from './specter.js';
 
 const root = document.documentElement;
@@ -180,12 +180,134 @@ const ROUTINES = {
   bounce: [[0, () => hopUp(nodo, 240)], [650, () => hopUp(nodo, 280)], [1300, () => hopUp(nodo, 340)], [2200, () => mood('dizzy', 1500)], [3700, () => mood('glad', 900, true)]],
   boo: [[0, () => { mood('wink', 1200); pose({ alpha: 0.12, scale: 0.9, ms: 900 }); }], [2400, () => { pose({ alpha: 1, scale: 1.12, ms: 160 }); mood('surprised', 900); say('¡Boo!', 1200); nodo.sq = -0.14; wake(); }], [2700, () => pose({ ms: 300 })], [3400, () => mood('glad', 1000, true)]],
 };
+// The decoration of Inicio: very rarely Specter goes into it by himself (only when it is on screen, wherever it sits
+// in the grid and whatever its size), and dropped on it he goes in too. He flies to the edge of its tile, vanishes in
+// a spin, and his double, dressed for the place (an apron for the cake, a backpack for the campfire), lives a story
+// inside the 3D scene itself (props3d.js); then he spins back out by the tile and flies home. A story he has done
+// waits ten minutes; with none left he says he has had enough.
+const DECOR_COOL = 10 * 60000;
+const decorDone = {};
+const STORY_IDS = { campfire: ['mallow', 'warm', 'story', 'song'], cake: ['cherry', 'wish', 'taste', 'dance'] };
+const ENOUGH = { cake: ['Ya no quiero más torta…', 'Estoy lleno. Ni una cereza más.'], campfire: ['Ya me calenté bastante.', 'Ni un malvavisco más, por hoy.'] };
+let lastVisit = performance.now();
+let away = null; // { canvas, door: { x, y }, timer }
+const placedDecor = () => {
+  const c = document.querySelector('#dash [data-tile="decor"] .decor-obj canvas[data-prop]');
+  return c && STORY_IDS[c.dataset.prop] && c._prop ? c : null;
+};
+// How much of it is on screen (0 to 1), below the navigation bar.
+function onScreen(el) {
+  const r = el.getBoundingClientRect();
+  if (!r.width || !r.height) return 0;
+  const w = Math.max(0, Math.min(r.right, innerWidth) - Math.max(r.left, 0));
+  const h = Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 64));
+  return (w * h) / (r.width * r.height);
+}
+function decorCanvas() { const c = placedDecor(); return c && onScreen(c) >= 0.6 ? c : null; }
+// His words and notes, where his double is in the scene.
+function sceneSpeech(text, x, y, ms = 1600) {
+  if (!front) return;
+  const el = document.createElement('div');
+  el.className = 'speech';
+  el.textContent = text;
+  el.style.transform = `translate3d(${x.toFixed(1)}px, ${(y - 8).toFixed(1)}px, 0) translate(-50%, -100%)`;
+  front.append(el);
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 300); }, ms);
+}
+function notesAt(x, y, n = 3) {
+  if (!front) return;
+  for (let i = 0; i < n; i += 1) {
+    setTimeout(() => {
+      const el = document.createElement('span');
+      el.className = 'specter-note';
+      el.textContent = ['♪', '♫', '♩'][i % 3];
+      el.style.left = `${x + rand(-10, 18)}px`; el.style.top = `${y}px`;
+      front.append(el);
+      setTimeout(() => el.remove(), 1800);
+    }, i * 420);
+  }
+}
+// The spin that hides him (out) or brings him back (in), with a puff of sparkles.
+function spin(dir) {
+  if (!nodo) return;
+  nodo.el.classList.remove('spin-in', 'spin-out');
+  void nodo.el.offsetWidth;
+  nodo.el.classList.add(`spin-${dir}`);
+  burst(nodo.x, nodo.y, 14);
+  sfx.voice(dir === 'out' ? 'wink' : 'glad');
+}
+function comeBack() {
+  if (!away || !nodo) return;
+  const { door, timer } = away;
+  clearTimeout(timer);
+  away = null;
+  nodo.x = door.x; nodo.y = door.y; nodo.vx = 0; nodo.vy = 0;
+  nodo.gone = false; nodo.el.style.visibility = '';
+  spin('in');
+  render();
+  setTimeout(() => { if (!nodo) return; nodo.el.classList.remove('spin-in'); mood('glad', 1200, true); specter.home(); }, 600);
+  wake();
+}
+function playAt(c, asked = false) {
+  if (!nodo || !c || away || nodo.gone) return false;
+  const kind = c.dataset.prop;
+  const now = performance.now();
+  const free = STORY_IDS[kind].filter((id) => now - (decorDone[`${kind}:${id}`] ?? -Infinity) > DECOR_COOL);
+  if (!free.length) {
+    if (asked) { mood(kind === 'cake' ? 'dizzy' : 'shut', 1600); say(ENOUGH[kind][Math.floor(Math.random() * ENOUGH[kind].length)], 2000); }
+    return false;
+  }
+  const story = free[Math.floor(Math.random() * free.length)];
+  stopRoutine();
+  if (nodo.place == null) nodo.place = asked ? nodo.grabbedFrom ?? nodo.x : nodo.home ?? nodo.x;
+  // The door: the edge of the tile nearest to him.
+  const r = c.getBoundingClientRect();
+  const door = nodo.x < r.left ? { x: r.left - nodo.r * 0.4, y: r.top + r.height * 0.45 }
+    : nodo.x > r.right ? { x: r.right + nodo.r * 0.4, y: r.top + r.height * 0.45 }
+      : { x: Math.max(r.left + 30, Math.min(r.right - 30, nodo.x)), y: Math.max(90, r.top - nodo.r * 0.4) };
+  away = { canvas: c, door, timer: 0 };
+  specter.visit(door.x, door.y);
+  mood('glad', 1200, true);
+  setTimeout(() => {
+    if (!away || drag || !nodo) return;
+    spin('out');
+    setTimeout(() => {
+      if (!away || !nodo) return;
+      nodo.el.classList.remove('spin-out');
+      nodo.fly = null; nodo.gone = true; nodo.el.style.visibility = 'hidden';
+      front.querySelector('.speech')?.remove();
+      const started = actProp(c, 'story', { story, on: (ev) => {
+        if (ev.say && ev.x !== undefined) sceneSpeech(ev.say, ev.x, ev.y, ev.ms);
+        if (ev.notes && ev.x !== undefined) notesAt(ev.x, ev.y, ev.notes);
+        if (ev.end) comeBack();
+      } });
+      if (!started) { comeBack(); return; }
+      decorDone[`${kind}:${story}`] = performance.now();
+      // Never lost in there: if the scene goes away (another page, the tile removed), he comes back anyway.
+      away.timer = setTimeout(() => { actProp(c, 'stop'); comeBack(); }, 45000);
+      const watchIt = setInterval(() => { if (!away) { clearInterval(watchIt); return; } if (!c.isConnected) { clearInterval(watchIt); comeBack(); } }, 1000);
+    }, 550);
+  }, 1100);
+  return true;
+}
+function decorVisit() { return playAt(decorCanvas()); }
+// Dropped on the decoration: he goes in.
+function droppedOnDecor(x, y) {
+  const c = placedDecor();
+  if (!c) return false;
+  const r = c.getBoundingClientRect();
+  if (x < r.left || x > r.right || y < r.top || y > r.bottom) return false;
+  nodo.place = nodo.grabbedFrom ?? nodo.place;
+  return playAt(c, true) || true;
+}
 let routineRun = 0;
 function stopRoutine() {
   routineRun += 1;
   if (nodo) { pose({ ms: 200 }); nodo.face.dataset.talk = ''; }
 }
 function routine() {
+  const now = performance.now();
+  if (now - lastVisit > rand(6, 12) * 60000 && decorVisit()) { lastVisit = now; return; }
   const names = Object.keys(ROUTINES);
   const steps = ROUTINES[names[Math.floor(Math.random() * names.length)]];
   const run = ++routineRun;
@@ -288,7 +410,7 @@ function hit(x, y) {
 function grab(b, e) {
   drag = { body: b, id: e.pointerId, ox: e.clientX - b.x, oy: e.clientY - b.y, moved: 0 };
   root.classList.add('grabbing');
-  if (b.kind === 'nodo') { stopRoutine(); mood('surprised', 99999); b.fly = null; }
+  if (b.kind === 'nodo') { b.grabbedFrom = b.home ?? b.x; if (away && !b.gone) away = null; stopRoutine(); mood('surprised', 99999); b.fly = null; }
   sfx.grab(b.r * 2);
   idleSince = performance.now();
   wake();
@@ -302,6 +424,7 @@ function release() {
   b.va += (pointer.vx / b.r) * 0.004;
   // Thrown hard he gets dizzy; let go gently, glad.
   if (b.kind === 'nodo') b.home = null;
+  if (b.kind === 'nodo' && drag.moved >= 4 && speed < 900 && droppedOnDecor(b.x, b.y)) { drag = null; root.classList.remove('grabbing'); return; }
   if (b.kind === 'nodo') { if (drag.moved < 4) poked(b); else if (speed > 900) { mood('dizzy', 2200); say(['¡Wiii!', 'Mareado…', '¡Otra vez!'][Math.floor(Math.random() * 3)], 1500); } else mood('glad', 900); }
   else if (drag.moved < 4) { b.vy -= 160; b.va += rand(-1, 1); }
   sfx.release(drag.moved < 4 ? 600 : speed, b.r * 2);
@@ -442,15 +565,15 @@ function step(h, now) {
   }
   if (nodo) {
     // He stays where he is; where he was dropped becomes his place once he stops.
-    if (nodo.home == null && Math.abs(nodo.vx) < 20 && !drag) nodo.home = nodo.x;
-    if (!drag && !nodo.fly && now > nodo.hop && nodo.mood !== 'sleep' && !nodo.gone) {
+    if (nodo.home == null && Math.abs(nodo.vx) < 20 && !drag && !nodo.gone) nodo.home = nodo.x;
+    if (!drag && !nodo.fly && !away && now > nodo.hop && nodo.mood !== 'sleep' && !nodo.gone) {
       routine();
       nodo.hop = now + rand(14000, 28000);
     }
     // A hop ends with a squash where he lands.
     if (nodo.hopping && nodo.vy > 0 && nodo.y >= H - nodo.r - 40) { nodo.hopping = false; nodo.sq = 0.14; nodo.sqa = 0; }
     if (nodo.mood && nodo.mood !== 'sleep' && now > nodo.moodUntil) { nodo.mood = ''; nodo.el.dataset.mood = ''; nodo.face.dataset.mood = ''; }
-    if (!drag && !nodo.mood && now - idleSince > 45000) { mood('sleep', 0); say('zzz…', 3000); }
+    if (!drag && !nodo.mood && !nodo.gone && !away && now - idleSince > 45000) { mood('sleep', 0); say('zzz…', 3000); }
   }
 }
 
@@ -517,7 +640,7 @@ function flyTo(x, y, { ms = 900, stay = 0, loops = 0, arc = 60, out = false, the
 }
 export const specter = {
   // Is he on screen (the playful ambience, moving)?
-  here: () => !!nodo && running() && !nodo.gone,
+  here: () => !!nodo && running() && !nodo.gone && !away,
   // Where he is, on the screen.
   at: () => (nodo ? { x: nodo.x, y: nodo.y, r: nodo.r } : null),
   visit(x, y, stay = 0) { if (nodo && !nodo.fly) nodo.place = nodo.home ?? nodo.x; return flyTo(Math.max(nodo?.r ?? 40, Math.min(W - (nodo?.r ?? 40), x)), Math.max(70, Math.min(H - (nodo?.r ?? 40), y)), { ms: 900, stay, arc: 40 }); },
@@ -540,6 +663,8 @@ export const specter = {
     nodo.home = home;
     flyTo(home, H - nodo.r - 34, { ms: 1600, loops: 1, arc: 110, stay: 1, then: () => { mood('glad', 1600); say(['¡Volví!', '¡Aquí estoy!', 'Boo. ¿Me extrañaste?'][Math.floor(Math.random() * 3)], 1800); sfx.boing(2); } });
   },
+  // Into the decoration of Inicio now (its stories still wait their turn).
+  decor: () => playAt(placedDecor(), true),
   say: (text, ms) => say(text, ms),
   mood: (name, ms) => mood(name, ms),
 };
