@@ -301,6 +301,21 @@ export const sfx = {
     const t = now();
     for (let i = 0; i < 4; i += 1) hiss(t + i * 0.06, { gain: 0.012, attack: 0.01, decay: 0.05, freq: 700, q: 0.6, type: 'lowpass', room: 0.15 });
   },
+  // Specter talking: soft syllables, one for every few letters of what he says, a little melody that rises at a
+  // question or an exclamation (a voice with no words).
+  babble(text = '') {
+    if (!audio() || !limit('babble', 120)) return;
+    const t = now();
+    const words = String(text).replace(/[^\p{L}\p{N}\s]/gu, '').trim();
+    const n = Math.max(1, Math.min(9, Math.round(words.length / 3.2)));
+    const lift = /[!¡]/.test(text) ? 1.25 : /[?¿]/.test(text) ? 1.15 : 1;
+    let f = vary(560, 0.06);
+    for (let i = 0; i < n; i += 1) {
+      const last = i === n - 1;
+      f = Math.max(380, Math.min(900, f * vary(1, 0.12) * (last ? lift : 1)));
+      sine(f, t + i * 0.085, { gain: 0.016, type: 'triangle', attack: 0.008, decay: last ? 0.12 : 0.06, glide: last && lift > 1 ? 1.12 : vary(1, 0.05), room: 0.2 });
+    }
+  },
   // Specter's voice: a small sound of his own for each emotion, soft and short, never words.
   voice(mood = 'glad') {
     if (!audio() || !limit('voice', 260)) return;

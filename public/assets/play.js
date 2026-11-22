@@ -289,7 +289,7 @@ function playAt(c, asked = false) {
       nodo.fly = null; nodo.gone = true; nodo.el.style.visibility = 'hidden';
       front.querySelector('.speech')?.remove();
       const started = actProp(c, 'story', { story, skin: specterSkin(), on: (ev) => {
-        if (ev.say && ev.x !== undefined) sceneSpeech(ev.say, ev.x, ev.y, ev.ms);
+        if (ev.say && ev.x !== undefined) { sceneSpeech(ev.say, ev.x, ev.y, ev.ms); sfx.babble(ev.say); }
         if (ev.notes && ev.x !== undefined) notesAt(ev.x, ev.y, ev.notes);
         if (ev.mark && ev.x !== undefined) markAt(ev.x, ev.y, ev.mark);
         if (ev.poof && ev.x !== undefined) burst(ev.x, ev.y, 10);
@@ -493,6 +493,8 @@ export function say(text, ms = 2600) {
   el.textContent = text;
   front.append(el);
   nodo.speech = el;
+  // He says it out loud, in his voice with no words.
+  sfx.babble(text);
   // He moves his mouth while the words are on screen (about the time it takes to say them).
   nodo.face.dataset.talk = '1';
   clearTimeout(nodo.talking);

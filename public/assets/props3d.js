@@ -116,6 +116,18 @@ vec2 map(vec3 w){
   float hem = -.62 + .085*sin(ang*5. + uT*2.4) + .03*sin(ang*9. - uT*1.6);
   float skirt = max(-smin(-(length(q.xz) - r), -(q.y - .05), .3), hem - q.y);
   vec2 res = vec2(smin(head, skirt, .28) * .8, 0.);
+  // the medic's hair: short, dark, slicked back, with real volume: a shell over the top of his head, from a hairline
+  // at his forehead down to the back, a soft swoop up front, and comb grooves that catch the light
+  if (uDoctor > .5){
+    vec3 hq = q - vec3(0., .24, 0.);
+    float groove = .006 * sin(q.x * 46.) * smoothstep(.45, .7, q.y);
+    float shell = length(hq * vec3(1., 1., .96)) - .655 + groove;
+    float line = .5 + .05 * smoothstep(.0, .35, abs(q.x)) - .22 * smoothstep(.15, -.45, q.z);
+    shell = max(shell, line - q.y);
+    float swoop = length((q - vec3(.05, .74, .44)) / vec3(1.6, .55, .9)) - .11;
+    float hair = smin(shell, max(swoop, line + .04 - q.y), .06);
+    if (hair < res.x) res = vec2(hair, 6.);
+  }
   // the medic's pack on his back: a metal case with a red cross
   if (uDoctor > .5){
     vec3 mq = q - vec3(0., .0, -.5);
@@ -269,7 +281,11 @@ void main(){
   float fres = pow(1. - clamp(dot(n, v), 0., 1.), 2.6);
   float ao = clamp(map(p + n*.08).x / .08, .35, 1.);
   vec3 col;
-  if (h.y > 4.5) {
+  if (h.y > 5.5) {
+    // the hair: dark brown, a broad soft sheen along the grooves, a little light at the rim
+    float comb = .5 + .5 * sin(q.x * 46.);
+    col = vec3(.16,.11,.09) * (.45 + .6*dif) + vec3(.55,.45,.4) * pow(spec, .5) * (.35 + .4*comb) + vec3(.2,.16,.2) * fres * .5;
+  } else if (h.y > 4.5) {
     // the medic's pack: grey metal, a red cross on its back
     col = vec3(.55,.58,.62) * (.4 + .75*dif) + spec*.8;
     vec2 cq = vec2(q.x, q.y - .02);
