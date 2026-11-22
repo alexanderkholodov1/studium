@@ -682,7 +682,12 @@ const tell = (entry) => { for (const fn of hearers) { try { fn(entry); } catch {
 function logLine(entry, text) { entry.lines.push({ at: Date.now(), text }); tell(entry); }
 const TIMEOUT = 120_000;
 // A whole milestone of a solution guide, every line explained, takes a strong model several minutes.
+// Through the bridge, a whole guide may take Claude Code longer: the page waits as long as it asks the bridge to (an
+// hour) plus a margin, so the bridge's own limit, with its own message, comes first. Cutting at 15 minutes left a guide
+// written on the computer that never reached Studium (2026-11-22).
 const TIMEOUT_OF = { solution: 15 * 60_000 };
+const BRIDGE_SOLUTION = 60 * 60_000;
+const limitOf = (task, way) => (task === 'solution' && way.startsWith('bridge:') ? BRIDGE_SOLUTION + 2 * 60_000 : TIMEOUT_OF[task] ?? TIMEOUT);
 export const longest = (c) => (c.provider === 'anthropic' || c.provider === 'bridge:claude' ? 64000 : 32000);
 export async function run({ system, text, files = [], maxTokens = 32000, onProgress, onEvent = null, signal, task = 'guide', use = null, label = '', entry = null, folder = '' } = {}) {
   // Keys and passwords never reach the AI: whatever text goes, from a file or typed, is filtered here first.
@@ -713,8 +718,8 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
     // Adapters report a count of characters written (or -1: «waiting, nothing yet»).
     const watched = (n) => { if (typeof n === 'number' && n >= 0) { rec.received = n; rec.phase = 'receiving'; } tell(rec); onProgress?.(n); };
     const out = await Promise.race([
-      send({ way, model, effort, system, text, files: usable, maxTokens, onProgress: watched, signal, folder, onEvent, timeoutMs: task === 'solution' ? 60 * 60_000 : undefined }),
-      new Promise((_, reject) => { const limit = TIMEOUT_OF[task] ?? TIMEOUT; timer = setTimeout(() => reject(new AIError(`${model} no respondió en ${limit / 60000} minutos: Studium cortó el pedido.`, { kind: 'transient', way })), limit); }),
+      send({ way, model, effort, system, text, files: usable, maxTokens, onProgress: watched, signal, folder, onEvent, timeoutMs: task === 'solution' ? BRIDGE_SOLUTION : undefined }),
+      new Promise((_, reject) => { const limit = limitOf(task, way); timer = setTimeout(() => reject(new AIError(`${model} no respondió en ${limit / 60000} minutos: Studium cortó el pedido.`, { kind: 'transient', way })), limit); }),
     ]).finally(() => clearTimeout(timer));
     rec.phase = 'done'; rec.ms = Date.now() - rec.started; rec.response = String(out.text ?? '').slice(0, 60000);
     logLine(rec, `Respondió en ${Math.round(rec.ms / 1000)} s: ${String(out.text ?? '').length} caracteres${out.truncated ? ' (cortado por el límite de largo)' : ''}.`);

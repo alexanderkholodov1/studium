@@ -1406,7 +1406,8 @@ function noOutline() {
   return `<section class="sec" id="cap-inicio" style="--c:var(--blue);--cs:var(--blue-s)"><h2><span class="n">0</span>La guía todavía no está escrita</h2><div class="card soft">${T.owner === uid()
     ? `${gone ? `<div class="tj-gone"><p><b>Tu carpeta se desconectó del puente.</b> Se cerró o reinició el puente, o pasó el tiempo que la prestaste. Sin ella, tu IA no puede trabajar ahí.</p>
         <p><button type="button" class="act" data-tj="folder-pick">Elegir la carpeta otra vez</button> <button type="button" class="ask" data-tj="folder-forget">Seguir sin ella</button> <button type="button" class="ask" data-tj="edit-questions" data-at="ai">Volver a las preguntas</button></p><p class="fine" id="tj-folder-status" role="status"></p></div>` : ''}
-      ${errorBox(T.lastError ?? failed.get(T.id))}<p>Tu IA lee el enunciado y arma los capítulos: qué pide el trabajo, cómo se reparten y cada paso explicado.</p>${aiBlock('solution')}${ai.ready() ? `${ai.choice('solution').provider === 'bridge:claude' ? accountPick() : ''}<p><button type="button" class="act" data-tj="outline">${(T.lastError ?? failed.get(T.id)) ? 'Intentarlo otra vez' : 'Escribir la guía'}</button> <span class="mut" id="tj-gen-status" role="status"></span></p>` : ''}
+      ${errorBox(T.lastError ?? failed.get(T.id))}<p>Tu IA lee el enunciado y arma los capítulos: qué pide el trabajo, cómo se reparten y cada paso explicado.</p>${aiBlock('solution')}
+      ${usesFolder() ? `<div class="tj-where"><h3>Dónde trabaja y qué puede hacer</h3>${placeHTML(folderOf(T.id) || 'temp')}<p class="fine">El modelo y cuánto piensa se cambian arriba, en «Con Claude Code…».</p></div>` : ''}${ai.ready() ? `${ai.choice('solution').provider === 'bridge:claude' ? accountPick() : ''}<p><button type="button" class="act" data-tj="outline">${(T.lastError ?? failed.get(T.id)) ? 'Intentarlo otra vez' : 'Escribir la guía'}</button> <span class="mut" id="tj-gen-status" role="status"></span></p>` : ''}
       <p class="small"><button type="button" class="ask" data-tj="edit-questions">← Volver a las preguntas</button> <span class="mut">cambia lo que elegiste (la IA, la carpeta, cómo quieres la guía…) antes de escribirla</span></p>`
     : '<p>Quien creó el trabajo todavía no escribió la guía.</p>'}</div></section>`;
 }
@@ -1415,8 +1416,8 @@ function paint() {
   if (!T) return;
   prepareTerms();
   const theme = localStorage.getItem(THEME) ?? '';
-  const meet = reunionSection(T, { repaint, ref: tRef, people: () => T?.members ?? [] });
-  gRoot().innerHTML = `<div class="tjg-app" data-template="${templateOf()}" ${theme ? `data-theme="${theme}"` : ''}>${topbar()}<div class="wrap">${hero()}${T.outline ? intro() + meet + T.outline.hitos.map(chapter).join('') + closing() : noOutline() + meet}</div></div>`;
+  const meet = T.outline ? reunionSection(T, { repaint, ref: tRef, people: () => T?.members ?? [] }) : '';
+  gRoot().innerHTML = `<div class="tjg-app" data-template="${templateOf()}" ${theme ? `data-theme="${theme}"` : ''}>${topbar()}<div class="wrap">${hero()}${T.outline ? intro() + meet + T.outline.hitos.map(chapter).join('') + closing() : noOutline()}</div></div>`;
   markChapter();
   drawDiagrams();
   paintTray();
