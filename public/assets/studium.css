@@ -2684,7 +2684,7 @@ canvas.prop { display: block; }
 .tjg-app nav.top .back { color: var(--on-navy); font-weight: 700; }
 .tjg-app nav.top .brand { font-weight: 800; font-stretch: 115%; letter-spacing: .06em; margin: 0 14px 0 6px; font-size: 14px; }
 .tjg-app nav.top .sp { flex: 1; }
-.tjg-app nav.top .mine { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--on-navy2); margin-right: 10px; }
+.tjg-app nav.top .mine { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--on-navy2); margin-right: 10px; }
 .tjg-app nav.top .pct { font: 800 14px var(--gm); margin-right: 10px; }
 .tjg-app nav.top button { font: 600 12.5px var(--gd); background: transparent; color: var(--on-navy2); border: 1px solid var(--navy2); border-radius: 5px; padding: 4px 10px; cursor: pointer; }
 .tjg-app nav.top select { width: auto; min-width: 0; margin: 0 6px 0 0; font: 600 12.5px var(--gd); background: transparent; color: var(--on-navy2); border: 1px solid var(--navy2); border-radius: 5px; padding: 4px 8px; cursor: pointer; box-shadow: none; }

@@ -196,7 +196,7 @@ export const EN = {
   'Sin cuentas regresivas: el grafo y las guías para explorar a tu ritmo.': 'No countdowns: the map and the guides to explore at your pace.',
   'Temporizador de enfoque al frente, y lo justo alrededor.': 'The focus timer up front, and just what you need around it.',
   'Metas pequeñas, tu progreso a la vista y un sonido cada vez que cumples una.': 'Small goals, your progress in sight and a sound each time you meet one.',
-  'Abrir la guía': 'Open the guide', 'Ponérmelo como meta': 'Make it a goal', 'Tu próximo examen': 'Your next exam',
+  'Abrir la guía': 'Open the guide', 'Solo mi parte': 'Only my part', 'Ponérmelo como meta': 'Make it a goal', 'Tu próximo examen': 'Your next exam',
   'No hay guías con una fecha por venir. Cuando alguien publique la guía de tu próximo examen, aquí verás cuánto falta.': 'No guides with an upcoming date. When someone publishes the guide for your next exam, you’ll see the countdown here.',
   'Ver todas las guías': 'See all the guides', 'Crear una guía': 'Create a guide', 'Metas': 'Goals', 'Nueva meta': 'New goal',
   'Marca cada una cuando la cumplas.': 'Check each one off when you meet it.', 'Cumpliste todas. Pon la siguiente.': 'You met them all. Set the next one.',
