@@ -100,43 +100,51 @@ const PROPS = {
   // A chocolate cake on a porcelain plate: glossy ganache, a ring of cream dollops with a cherry on each, shavings on
   // the side, and one striped candle with a living flame that lights the top.
   cake() {
-    const scene = new T.Scene(); stage(scene, { key: [2.5, 5, 3] });
+    const scene = new T.Scene(); stage(scene, { key: [2.5, 5, 3.5], intensity: 2 });
     const g = new T.Group(); scene.add(g);
-    g.add(mesh(new T.CylinderGeometry(1.42, 1.32, 0.07, 72), phys(0xf4f1ec, { roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.1 }), { y: 0.035 }));
-    g.add(mesh(new T.CylinderGeometry(1, 1, 0.82, 72), std(0x3b1d12, 0.85), { y: 0.48 }));
-    g.add(mesh(new T.CylinderGeometry(1.02, 1.02, 0.08, 72), phys(0x24100a, { roughness: 0.28, clearcoat: 0.8 }), { y: 0.92 }));
-    const shav = std(0x2a140b, 0.7);
-    for (let i = 0; i < 90; i += 1) {
-      const a = Math.random() * Math.PI * 2; const y = 0.15 + Math.random() * 0.68;
-      g.add(mesh(new T.BoxGeometry(0.07, 0.025, 0.02), shav, { x: Math.cos(a) * 1.01, y, z: Math.sin(a) * 1.01, ry: -a, rz: Math.random() * 3, receive: false }));
+    // A porcelain plate, a chocolate sponge, a glossy ganache that drips over the edge, a ring of cream at the foot,
+    // rosettes of cream on top and a few small cherries.
+    g.add(mesh(new T.CylinderGeometry(1.45, 1.35, 0.06, 72), phys(0xf6f3ee, { roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.08 }), { y: 0.03 }));
+    g.add(mesh(new T.CylinderGeometry(1, 1, 0.8, 72), std(0x5a2e1c, 0.8), { y: 0.46 }));
+    const ganache = phys(0x3a1a0d, { roughness: 0.32, clearcoat: 0.55, clearcoatRoughness: 0.2, envMapIntensity: 0.45 });
+    g.add(mesh(new T.CylinderGeometry(1.025, 1.025, 0.1, 72), ganache, { y: 0.88 }));
+    g.add(mesh(new T.TorusGeometry(1.0, 0.05, 12, 72), ganache, { y: 0.88, rx: Math.PI / 2 }));
+    for (let i = 0; i < 26; i += 1) {
+      const a = (i / 26) * Math.PI * 2 + Math.sin(i * 7.1) * 0.05;
+      const len = 0.12 + ((i * 37) % 11) / 11 * 0.26;
+      g.add(mesh(new T.CapsuleGeometry(0.045, len, 6, 10), ganache, { x: Math.cos(a) * 1.02, y: 0.86 - len / 2, z: Math.sin(a) * 1.02, cast: false }));
     }
-    const cream = phys(0xfbf7f0, { roughness: 0.42, sheen: 0.6, sheenColor: new T.Color(0xffffff) });
-    const cherry = phys(0xa80d1a, { roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.05 });
+    const cream = phys(0xfbf7f0, { roughness: 0.45, sheen: 0.6, sheenColor: new T.Color(0xffffff) });
+    g.add(mesh(new T.TorusGeometry(1.0, 0.075, 14, 90), cream, { y: 0.1, rx: Math.PI / 2 }));
+    const cherry = phys(0xb3101f, { roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.04 });
     const stem = std(0x4a6a2a, 0.6);
     for (let i = 0; i < 10; i += 1) {
-      const a = (i / 10) * Math.PI * 2; const x = Math.cos(a) * 0.78; const z = Math.sin(a) * 0.78;
-      g.add(mesh(new T.SphereGeometry(0.16, 24, 16), cream, { x, y: 1.0, z, s: [1, 0.75, 1] }));
-      g.add(mesh(new T.ConeGeometry(0.12, 0.2, 18), cream, { x, y: 1.16, z, ry: a }));
-      g.add(mesh(new T.SphereGeometry(0.085, 24, 16), cherry, { x, y: 1.3, z }));
-      g.add(mesh(new T.CylinderGeometry(0.008, 0.008, 0.16, 6), stem, { x: x + 0.03, y: 1.42, z, rz: -0.4, cast: false }));
+      const a = (i / 10) * Math.PI * 2; const x = Math.cos(a) * 0.76; const z = Math.sin(a) * 0.76;
+      // A rosette: three rings of cream, each smaller, twisted, and a tip.
+      for (let k = 0; k < 3; k += 1) g.add(mesh(new T.TorusGeometry(0.1 - k * 0.028, 0.045 - k * 0.008, 10, 24), cream, { x, y: 0.97 + k * 0.055, z, rx: Math.PI / 2, rz: k * 0.6 }));
+      g.add(mesh(new T.ConeGeometry(0.035, 0.08, 12), cream, { x, y: 1.14, z }));
+      if (i % 2 === 0) {
+        g.add(mesh(new T.SphereGeometry(0.06, 20, 14), cherry, { x, y: 1.21, z }));
+        g.add(mesh(new T.CylinderGeometry(0.006, 0.006, 0.12, 6), stem, { x: x + 0.02, y: 1.3, z, rz: -0.35, cast: false }));
+      }
     }
     // The candle: a striped wax stick (a painted texture), a black wick, and the flame.
     const stripes = document.createElement('canvas'); stripes.width = 64; stripes.height = 256;
     const sx = stripes.getContext('2d'); sx.fillStyle = '#f6f1e8'; sx.fillRect(0, 0, 64, 256);
     sx.fillStyle = '#c8102e'; for (let k = -64; k < 256; k += 40) { sx.beginPath(); sx.moveTo(0, k); sx.lineTo(64, k + 30); sx.lineTo(64, k + 44); sx.lineTo(0, k + 14); sx.fill(); }
     const st = new T.CanvasTexture(stripes); st.colorSpace = T.SRGBColorSpace;
-    g.add(mesh(new T.CylinderGeometry(0.05, 0.05, 0.62, 24), std(0xffffff, 0.5, 0, { map: st }), { y: 1.27 }));
-    g.add(mesh(new T.CylinderGeometry(0.008, 0.008, 0.06, 6), std(0x111111), { y: 1.61, cast: false }));
-    const flame = new T.Group(); flame.position.set(0, 1.7, 0); g.add(flame);
+    g.add(mesh(new T.CylinderGeometry(0.04, 0.04, 0.5, 24), std(0xffffff, 0.5, 0, { map: st }), { y: 1.18 }));
+    g.add(mesh(new T.CylinderGeometry(0.007, 0.007, 0.05, 6), std(0x111111), { y: 1.455, cast: false }));
+    const flame = new T.Group(); flame.position.set(0, 1.53, 0); g.add(flame);
     const outer = mesh(new T.SphereGeometry(0.06, 20, 16), new T.MeshBasicMaterial({ color: 0xff9a2a, transparent: true, opacity: 0.85 }), { s: [1, 2.1, 1], cast: false, receive: false });
     const inner = mesh(new T.SphereGeometry(0.035, 16, 12), new T.MeshBasicMaterial({ color: 0xfff3c0 }), { y: -0.02, s: [1, 1.8, 1], cast: false, receive: false });
     const glow = new T.Sprite(new T.SpriteMaterial({ map: soft(), color: 0xffb04a, transparent: true, opacity: 0.55, blending: T.AdditiveBlending, depthWrite: false }));
-    glow.scale.setScalar(0.6);
+    glow.scale.setScalar(0.32);
     const light = new T.PointLight(0xffa040, 1.6, 3, 2); light.castShadow = false;
     flame.add(outer, inner, glow, light);
     let lit = true;
     return {
-      scene, camera: camera(32, [0, 2.4, 4.2], [0, 0.75, 0]),
+      scene, camera: camera(20, [0, 3.0, 7.4], [0, 0.6, 0]),
       update(t) {
         g.rotation.y = Math.sin(t * 0.25) * 0.5;
         const f = 1 + Math.sin(t * 23) * 0.06 + Math.sin(t * 37) * 0.04;

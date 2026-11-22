@@ -12,7 +12,6 @@ const found = () => { try { return new Set(JSON.parse(localStorage.getItem(FOUND
 // Each decoration: its name, the secret that unlocks it, and its 3D scene (props3d.js; its own id when not given).
 export const DECOR = {
   fire: { name: 'La fogata', opens: 'starve', scene: 'campfire' },
-  gramophone: { name: 'El fonógrafo', opens: 'starve' },
   cake: { name: 'La torta', opens: 'cake' },
   monitor: { name: 'El monitor', opens: 'medic' },
   portals: { name: 'Los portales', opens: 'portal' },
