@@ -67,6 +67,11 @@ if (args[0] === 'models') { process.stderr.write('Fetching available models...\\
 record();
 if (s.quota) { out({ status: 'ERROR', response: '', error: 'Individual quota reached. Please upgrade your subscription to increase your limits. Resets in 68h22m9s.' }); process.exit(3); }
 out({ status: 'SUCCESS', response: s.answer ?? 'respuesta de antigravity' }); process.exit(0);`,
+  gh: `const CLI = 'gh';${common}
+record();
+if (s.loggedOut) { process.stderr.write('To get started with GitHub CLI, please run:  gh auth login\\n'); process.exit(4); }
+if (s.exists) { process.stderr.write('GraphQL: Name already exists on this account (createRepository)\\n'); process.exit(1); }
+out('https://github.com/fake-user/' + args[2] + '\\n'); process.exit(0);`,
 };
 for (const [name, body] of Object.entries(scripts)) {
   const impl = path.join(fakes, `${name}-impl.mjs`);
@@ -363,6 +368,21 @@ await test('when the page cancels or closes, the AI stops and the next request d
   const next = await run({ engine: 'claude', model: 'claude-sonnet-5-5' });
   check(next.status === 200 && Date.now() - t0 < 15000, `next ${next.status} after ${Date.now() - t0} ms`);
   check(leftovers().length <= before, 'folder left behind');
+});
+await test('a new private repository is created with gh, and its problems are said plainly', async () => {
+  scenario({});
+  const ok = await call('POST', '/v1/repo', { body: { name: 'trabajo-redes', description: 'Lab 3' } });
+  check(ok.status === 200 && ok.data.url === 'https://github.com/fake-user/trabajo-redes', JSON.stringify(ok.data));
+  const c = calls().find((x) => x.cli === 'gh');
+  check(c && c.args.join(' ') === 'repo create trabajo-redes --private --add-readme --description Lab 3', c?.args.join(' '));
+  check((await call('POST', '/v1/repo', { body: { name: 'mal nombre; rm' } })).status === 400, 'bad name');
+  scenario({ gh: { loggedOut: true } });
+  const out = await call('POST', '/v1/repo', { body: { name: 'x' } });
+  check(out.status === 424 && /gh auth login/.test(out.data.error.message), JSON.stringify(out.data));
+  scenario({ gh: { exists: true } });
+  const dup = await call('POST', '/v1/repo', { body: { name: 'x' } });
+  check(dup.status === 424 && /Ya tienes/.test(dup.data.error.message), JSON.stringify(dup.data));
+  check((await call('POST', '/v1/repo', { body: { name: 'x' }, auth: 'mal' })).status === 401, 'needs the code');
 });
 await test('two runs at once take turns', async () => {
   scenario({});

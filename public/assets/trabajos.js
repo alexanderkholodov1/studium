@@ -553,7 +553,7 @@ function renderDraft(error = '') {
     control = `<h3>Entender o hacer</h3>${seg('balance', [['understand', 'Sobre todo entender'], ['both', 'Los dos'], ['do', 'Sobre todo hacer']])}
       <h3>Dónde comparten el trabajo</h3><div class="tj-goals">${shares.map(([v, label]) => `<label class="tj-pick ${draft.prefs.share === v ? 'on' : ''}"><input type="radio" name="share" value="${v}" data-tj-pref="share" ${draft.prefs.share === v ? 'checked' : ''}> <span>${esc(label)}</span></label>`).join('')}</div>
       ${draft.prefs.share === 'repo' ? `<label class="field"><span>El enlace del repo</span><input class="tj-input" name="repoUrl" value="${esc(draft.prefs.repoUrl)}" placeholder="https://github.com/usuario/repo" autocomplete="off"></label><p class="fine">En la guía puedes conectar tu GitHub (solo lectura) para que cada commit marque su paso como hecho.</p>` : ''}
-      ${draft.prefs.share === 'newrepo' ? '<p class="fine">La guía empieza con cómo crearlo, hacerlo privado e invitar al grupo.</p>' : ''}
+      ${draft.prefs.share === 'newrepo' ? newRepoHTML() : ''}
       ${draft.prefs.share === 'drive' ? '<p class="fine">La guía dice qué subir y con qué nombre. Conectar Drive u OneDrive a Studium llega después.</p>' : ''}`;
   }
   if (q.input === 'goal') {
@@ -610,6 +610,8 @@ function keepAnswer() {
   if (q.input === 'files' && form.text) draft.text = String(form.text.value).trim();
   if (q.input === 'prefs' && form.note) draft.prefs.note = String(form.note.value).trim().slice(0, 1500);
   if (q.input === 'work' && form.repoUrl) draft.prefs.repoUrl = String(form.repoUrl.value).trim().slice(0, 200);
+  if (q.input === 'work' && form.repoName) draft.prefs.repoName = String(form.repoName.value).trim().slice(0, 100);
+  if (q.input === 'work' && form.ghCreate?.value.trim()) { ai.setKey(GH_CREATE, form.ghCreate.value.trim()); form.ghCreate.value = ''; }
   if (q.input === 'goal' && form.goalNote) draft.prefs.goalNote = String(form.goalNote.value).trim().slice(0, 800);
   if (q.input === 'date') { draft.date = form.date.value; draft.time = form.time.value; }
 }
@@ -640,6 +642,52 @@ async function readAll(files) {
     for (const n of p.notes ?? []) notes.push(n);
   }
   return { texts, binaries, notes };
+}
+// «Un repo nuevo de GitHub»: who creates it, chosen by the person. The guide can explain it; Studium can create it with
+// a GitHub key that may create repositories; or the bridge can, with GitHub CLI (gh) signed in on the computer.
+const slug = (t) => String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'trabajo';
+const GH_CREATE = 'github-create';
+function newRepoHTML() {
+  const by = draft.prefs.repoBy || 'guide';
+  const has = !!ai.keyOf(GH_CREATE);
+  const opt = (v, label, note) => `<label class="tj-pick ${by === v ? 'on' : ''}"><input type="radio" name="repoBy" value="${v}" data-tj-pref="repoBy" ${by === v ? 'checked' : ''}> <span><b>${label}</b><br><small>${note}</small></span></label>`;
+  return `<label class="field"><span>Nombre del repo</span><input class="tj-input" name="repoName" value="${esc(draft.prefs.repoName || slug(draft.title))}" maxlength="100" autocomplete="off" spellcheck="false"></label>
+    <h3>Quién lo crea</h3>
+    ${opt('guide', 'La guía me explica cómo', 'el primer paso: crearlo privado e invitar al grupo')}
+    ${opt('token', 'Studium, con mi clave de GitHub', has ? 'ya guardaste una clave que puede crear repos' : 'pegas una clave que pueda crear repos; se guarda cifrada')}
+    ${opt('bridge', 'Mi computadora, con el puente', 'GitHub CLI (gh) lo crea a tu nombre; necesitas gh con tu sesión iniciada')}
+    ${by === 'token' && !has ? `<div class="tj-ghkey"><ol class="tight"><li>Abre <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">una clave nueva en GitHub</a>.</li>
+      <li>En «Repository access», <b>All repositories</b>; en «Permissions», <b>Administration: Read and write</b>. Es amplia: puede administrar todos tus repos. Puedes borrarla al terminar.</li>
+      <li>Genérala y pégala aquí.</li></ol><input class="tj-input" name="ghCreate" type="password" autocomplete="off" placeholder="github_pat_…" aria-label="Clave de GitHub que puede crear repos"></div>` : ''}
+    ${by === 'bridge' && !ai.connected().some((w) => w.startsWith('bridge:')) ? '<p class="tj-warn">Primero conecta el puente (en «Tu IA», la pregunta siguiente).</p>' : ''}
+    <p class="fine">Se crea <b>privado</b> al crear el trabajo, y la guía usa sus comandos.</p>`;
+}
+// Creates the repository when the trabajo is created; on success the trabajo uses it as «a repo we already have».
+async function makeRepo(p) {
+  if (p.share !== 'newrepo' || !p.repoBy || p.repoBy === 'guide') return;
+  const name = String(p.repoName || slug(draft.title)).trim();
+  if (!/^[A-Za-z0-9._-]{1,100}$/.test(name)) throw new Error('El nombre del repo solo puede tener letras, números, puntos, guiones y guiones bajos (sin espacios).');
+  let url = '';
+  if (p.repoBy === 'bridge') {
+    url = (await ai.bridgeCreateRepo({ name, description: draft.title })).url;
+  } else {
+    const key = ai.keyOf(GH_CREATE);
+    if (!key) throw new Error('Pega la clave de GitHub que puede crear repos, o elige otra forma.');
+    const res = await fetch('https://api.github.com/user/repos', { method: 'POST', headers: { accept: 'application/vnd.github+json', authorization: `Bearer ${key}`, 'content-type': 'application/json' }, body: JSON.stringify({ name, private: true, auto_init: true, description: draft.title.slice(0, 300) }) });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(res.status === 401 ? 'GitHub no aceptó la clave: revisa que esté bien copiada y no haya vencido.'
+        : res.status === 403 ? 'La clave no tiene permiso para crear repos: en GitHub, dale «Administration: Read and write» con «All repositories».'
+          : res.status === 422 ? `Ya tienes un repo llamado «${name}», o el nombre no es válido. Elige otro.`
+            : `GitHub respondió ${res.status}: ${body.message ?? 'sin detalle'}.`);
+    }
+    url = body.html_url;
+  }
+  if (!url) throw new Error('El repo se pidió, pero no llegó su dirección. Revísalo en tu GitHub.');
+  draft.prefs.share = 'repo';
+  draft.prefs.repoUrl = url;
+  draft.prefs.repoCreated = true;
+  saveDraft();
 }
 // «https://github.com/usuario/repo» → the trabajo's repository, for «Comprobar en GitHub».
 function repoOf(p) {
@@ -1161,6 +1209,7 @@ function wire(root) {
       if (QUESTIONS[draft.at].input !== 'ready') { nextQuestion(); return; }
       const later = !!ev.submitter?.dataset.later;
       try {
+        if (draft.prefs.share === 'newrepo' && draft.prefs.repoBy && draft.prefs.repoBy !== 'guide') { working('Creando el repo en tu GitHub…'); await makeRepo(draft.prefs); }
         working('Creando el trabajo…');
         const made = await createTrabajo();
         T = await loadTrabajo(made.id);

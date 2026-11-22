@@ -211,6 +211,32 @@ function changeFolder(body) {
   return folderView(f);
 }
 
+/* ---------- a new GitHub repository, in the person's own name ---------- */
+// «Crea un repo nuevo para este trabajo»: GitHub's own CLI (gh), signed in on this computer, creates it private. One
+// fixed command, no AI involved, shown in this window. Nothing else of GitHub is touched.
+async function createRepo(body) {
+  const name = String(body?.name ?? '').trim();
+  if (!/^[A-Za-z0-9._-]{1,100}$/.test(name)) throw new Failure(400, 'bad-request', 'El nombre del repositorio solo puede tener letras, números, puntos, guiones y guiones bajos.');
+  const description = String(body?.description ?? '').replace(/[\r\n]+/g, ' ').slice(0, 300);
+  console.log(`\nStudium pidió crear el repositorio privado «${name}» en tu GitHub (con gh, a tu nombre)…`);
+  const gh = await bin('gh');
+  if (!gh) { console.log('  No está GitHub CLI (gh) en esta computadora.'); throw new Failure(424, 'gh-missing', 'Para crearlo desde tu computadora necesitas GitHub CLI: instálalo desde cli.github.com, inicia sesión con «gh auth login» y vuelve a intentarlo.'); }
+  return new Promise((resolve, reject) => execFile(gh.cmd, [...gh.pre, 'repo', 'create', name, '--private', '--add-readme', ...(description ? ['--description', description] : [])], { timeout: 60_000, windowsHide: true, encoding: 'utf8' }, (err, out, errOut) => {
+    if (err?.code === 'ENOENT') { console.log('  No está GitHub CLI (gh) en esta computadora.'); reject(new Failure(424, 'gh-missing', 'Para crearlo desde tu computadora necesitas GitHub CLI: instálalo desde cli.github.com, inicia sesión con «gh auth login» y vuelve a intentarlo.')); return; }
+    const said = `${errOut ?? ''}\n${out ?? ''}`;
+    if (err) {
+      const why = /auth login|not logged|authentication/i.test(said) ? 'GitHub CLI no tiene tu sesión iniciada: escribe «gh auth login» en una terminal y vuelve a intentarlo.'
+        : /already exists|Name already exists/i.test(said) ? `Ya tienes un repositorio llamado «${name}». Elige otro nombre.`
+          : `GitHub CLI no pudo crearlo: ${lastLine(said) || 'sin detalle'}`;
+      console.log(`  No se creó: ${why}`);
+      reject(new Failure(424, 'gh-failed', why)); return;
+    }
+    const url = said.match(/https:\/\/github\.com\/[\w.-]+\/[\w.-]+/)?.[0] ?? '';
+    console.log(`  Creado: ${url || name}`);
+    resolve({ url, name });
+  }));
+}
+
 /* ---------- folders of one run ---------- */
 // Folders left by a crash of an earlier run are removed on start.
 function cleanOldFolders() {
@@ -870,6 +896,11 @@ const server = createServer(async (req, res) => {
       return send(res, 200, p ? { started: p.started, ms: Date.now() - p.started, done: p.done, chars: p.chars, total: p.events.length, events: p.events.slice(since) } : { unknown: true }, ok);
     }
     if (req.method === 'GET' && pathname === '/v1/folders') return send(res, 200, { folders: folders().map(folderView), modes: Object.fromEntries(Object.entries(MODES).map(([k, m]) => [k, m.label])) }, ok);
+    if (req.method === 'POST' && pathname === '/v1/repo') {
+      let body;
+      try { body = JSON.parse((await readBody(req)).toString('utf8')); } catch { throw new Failure(400, 'bad-request', 'El pedido no es JSON.'); }
+      return send(res, 200, await createRepo(body), ok);
+    }
     if (req.method === 'POST' && (pathname === '/v1/folders/pick' || pathname === '/v1/folders/change')) {
       let body = {};
       try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}'); } catch { /* defaults */ }

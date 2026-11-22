@@ -576,6 +576,13 @@ export async function pickBridgeFolder(mode = 'read', { hours = 8, renew = '' } 
   await bridgeFolders();
   return body.folder;
 }
+// «Un repo nuevo de GitHub», created by the bridge with GitHub CLI in the person's name (POST /v1/repo).
+export async function bridgeCreateRepo({ name, description = '' }) {
+  const hello = await findBridge(bridgeOf()?.port);
+  if (!hello) throw new AIError('El puente no está abierto. Ábrelo en tu computadora y vuelve a intentarlo.', { kind: 'account', way: 'bridge:claude' });
+  if (bridgeOld(hello.version)) throw new AIError(`Tu puente abierto es la versión ${hello.version ?? 'anterior'}: para crear repos necesitas la ${BRIDGE_VERSION}. Ciérralo, descárgalo de nuevo desde Studium y ábrelo otra vez.`, { kind: 'account', way: 'bridge:claude' });
+  return bridgeFetch('/v1/repo', { method: 'POST', body: JSON.stringify({ name, description }) });
+}
 export async function changeBridgeFolder(id, change) {
   await bridgeFetch('/v1/folders/change', { method: 'POST', body: JSON.stringify({ id, ...change }) });
   return bridgeFolders();
@@ -706,7 +713,7 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
     // Adapters report a count of characters written (or -1: «waiting, nothing yet»).
     const watched = (n) => { if (typeof n === 'number' && n >= 0) { rec.received = n; rec.phase = 'receiving'; } tell(rec); onProgress?.(n); };
     const out = await Promise.race([
-      send({ way, model, effort, system, text, files: usable, maxTokens, onProgress: watched, signal, folder, onEvent }),
+      send({ way, model, effort, system, text, files: usable, maxTokens, onProgress: watched, signal, folder, onEvent, timeoutMs: task === 'solution' ? 60 * 60_000 : undefined }),
       new Promise((_, reject) => { const limit = TIMEOUT_OF[task] ?? TIMEOUT; timer = setTimeout(() => reject(new AIError(`${model} no respondió en ${limit / 60000} minutos: Studium cortó el pedido.`, { kind: 'transient', way })), limit); }),
     ]).finally(() => clearTimeout(timer));
     rec.phase = 'done'; rec.ms = Date.now() - rec.started; rec.response = String(out.text ?? '').slice(0, 60000);
@@ -829,7 +836,7 @@ function geminiThinking(model, effort, maxTokens) {
   const budget = { low: 1024, medium: 4096, high: 12288, xhigh: 24576 }[effort] ?? 4096;
   return { thinkingConfig: { thinkingBudget: Math.min(budget, Math.floor(maxTokens / 2)) } };
 }
-async function send({ way, model, effort, system, text, files, maxTokens, onProgress, signal, folder = '', onEvent = null }) {
+async function send({ way, model, effort, system, text, files, maxTokens, onProgress, signal, folder = '', onEvent = null, timeoutMs = undefined }) {
   if (way === 'anthropic') {
     const client = await claude(keyOf(way));
     // Pictures carry their name in a line before them, so the AI knows their order («hoja 1», «hoja 2»).
@@ -937,7 +944,7 @@ async function send({ way, model, effort, system, text, files, maxTokens, onProg
   try {
     body = await bridgeFetch('/v1/run', {
       method: 'POST', signal, engine,
-      body: JSON.stringify({ runId, watch: watchTerminal(), engine, account: engine === 'claude' ? load().bridge?.account ?? '' : '', folder: engine === 'claude' ? folder : '', model, effort, system, text, files: files.map((f) => (f.data ? { name: f.name, type: f.type, data: f.data } : { name: f.name, type: 'text/plain', text: f.text })) }),
+      body: JSON.stringify({ runId, watch: watchTerminal(), timeoutMs, engine, account: engine === 'claude' ? load().bridge?.account ?? '' : '', folder: engine === 'claude' ? folder : '', model, effort, system, text, files: files.map((f) => (f.data ? { name: f.name, type: f.type, data: f.data } : { name: f.name, type: 'text/plain', text: f.text })) }),
     });
   } finally { if (watch) clearInterval(watch); }
   return { text: String(body.text ?? ''), resume: String(body.resume ?? ''), outputs: body.outputs && typeof body.outputs === 'object' ? body.outputs : {} };

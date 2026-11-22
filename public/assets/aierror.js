@@ -81,6 +81,7 @@ export function classify({ way = '', status = 0, message = '', body = null, head
         : new AIError(said || 'Tu suscripción llegó a su límite de uso por ahora.', opts('rate', now + 5 * MINUTE));
     }
     if (status === 413) return new AIError('Esta parte es demasiado grande para el puente.', opts('job'));
+    if (status === 499) return new AIError(said || 'Se detuvo antes de terminar.', opts('cancel'));
     if (status === 504 || status >= 500) return new AIError(said || 'Tu IA tardó demasiado o falló en tu computadora.', opts('transient'));
     return new AIError(said || `El puente respondió con un error (${status}).`, opts('job'));
   }

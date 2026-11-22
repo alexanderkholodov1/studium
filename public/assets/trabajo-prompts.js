@@ -115,7 +115,7 @@ Formato exacto:
 \`\`\`
 
 El esquema de la guía:
-${JSON.stringify(outline)}`;
+${JSON.stringify(outline && { ...outline, enunciado_textual: undefined, razonamiento: undefined })}`;
 }
 
 // The whole guide in one go, for an AI that works in a folder (the bridge): it reads the material once and writes the
