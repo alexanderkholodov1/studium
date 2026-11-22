@@ -120,8 +120,8 @@ document.addEventListener('click', (e) => {
 });
 
 /* ---------- views ---------- */
-const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'horario', 'malla', 'student', 'catalog', 'map', 'library', 'profes', 'contribute', 'comunidad', 'trabajos', 'settings', 'about', 'news', 'sources', 'guide', 'admin'];
-const TABS = { home: 'home', horario: 'home', malla: 'home', catalog: 'contribute', comunidad: 'comunidad', trabajos: 'trabajos', map: 'map', library: 'map', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', news: 'about', admin: 'admin' };
+const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'horario', 'malla', 'student', 'catalog', 'map', 'library', 'profes', 'contribute', 'comunidad', 'trabajos', 'trabajo', 'settings', 'about', 'news', 'sources', 'guide', 'admin'];
+const TABS = { home: 'home', horario: 'home', malla: 'home', catalog: 'contribute', comunidad: 'comunidad', trabajos: 'trabajos', trabajo: 'trabajos', map: 'map', library: 'map', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', news: 'about', admin: 'admin' };
 const PUBLIC = ['landing', 'auth', 'about', 'news', 'denied', 'verify'];
 let current = 'boot';
 function show(view) {
@@ -130,10 +130,10 @@ function show(view) {
     const member = isMember(auth.currentUser);
     const nav = $('#nav');
     nav.dataset.mode = member ? 'member' : 'public';
-    nav.hidden = view === 'boot' || view === 'guide';
-    $('#tabbar').hidden = !member || PUBLIC.includes(view) && !['about', 'news'].includes(view) || view === 'guide' || view === 'boot';
-    $('#foot').hidden = ['guide', 'map', 'boot'].includes(view);
-    const quiet = view === 'map' || view === 'guide';
+    nav.hidden = view === 'boot' || view === 'guide' || view === 'trabajo';
+    $('#tabbar').hidden = !member || PUBLIC.includes(view) && !['about', 'news'].includes(view) || view === 'guide' || view === 'trabajo' || view === 'boot';
+    $('#foot').hidden = ['guide', 'trabajo', 'map', 'boot'].includes(view);
+    const quiet = view === 'map' || view === 'guide' || view === 'trabajo';
     root.classList.toggle('quiet', quiet);
     play.setQuiet(quiet);
     for (const a of document.querySelectorAll('[data-tab]')) a.setAttribute('aria-current', String(a.dataset.tab === TABS[view]));
@@ -532,7 +532,8 @@ async function route() {
       novedades: ['news', 'Novedades', () => renderNews($('#news'))],
       guias: ['catalog', 'Guías', renderCatalog],
       comunidad: ['comunidad', 'Comunidad', renderComunidad],
-      trabajos: ['trabajos', 'Trabajos', () => renderTrabajos(arg)],
+      // A trabajo's guide opens apart from Studium's page, as a guide does; the list and a new one stay inside.
+      trabajos: [arg[0] && arg[0] !== 'unirse' ? 'trabajo' : 'trabajos', 'Trabajos', () => renderTrabajos(arg)],
       // The logo: the public page, also for members, who reach their own space from «Inicio».
       bienvenida: ['landing', 'Qué es', null],
       admin: ['admin', 'Admin', () => renderAdmin(arg[0])],
