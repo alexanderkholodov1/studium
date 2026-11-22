@@ -107,3 +107,50 @@ function toDoc(s) {
   if (s.kind === 'audio') { if (s.audio) d.audio = s.audio; d.caption = String(s.caption ?? '').slice(0, 400); d.showCaption = !!s.showCaption; }
   return d;
 }
+
+/* ---------- the secrets' sounds (sounds/{id}): an audio file the admins upload replaces the page's own sound ---------- */
+// Which sounds can be replaced: the shout of «¡Médico!» (by default, the browser's own voice).
+export const SOUND_SLOTS = { medic: { name: 'El grito de «¡Médico!»', fallback: 'la voz del navegador diciendo «¡Médico!»' } };
+const SOUNDS = 'studium-sounds';
+let soundList = (() => { try { return JSON.parse(localStorage.getItem(SOUNDS) ?? '{}'); } catch { return {}; } })();
+export const sounds = () => soundList;
+export async function loadSounds() {
+  try {
+    const snap = await getDocs(collection(db, 'sounds'));
+    soundList = Object.fromEntries(snap.docs.map((d) => [d.id, d.data()]).filter(([id]) => id in SOUND_SLOTS).map(([id, d]) => [id, { name: d.name, size: d.size, pieces: d.pieces, type: d.type }]));
+    try { localStorage.setItem(SOUNDS, JSON.stringify(soundList)); } catch { /* not kept */ }
+  } catch { /* offline or not a member: the ones kept here */ }
+  return soundList;
+}
+const soundCache = new Map();
+export function soundBytes(id) {
+  if (soundCache.has(id)) return soundCache.get(id);
+  const job = (async () => {
+    const snap = await getDocs(query(collection(db, 'sounds', id, 'audio'), orderBy('i')));
+    const parts = snap.docs.map((d) => d.data().b.toUint8Array());
+    const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+    let at = 0; for (const p of parts) { out.set(p, at); at += p.length; }
+    return out.buffer;
+  })();
+  soundCache.set(id, job);
+  job.catch(() => soundCache.delete(id));
+  return job;
+}
+export async function saveSound(id, file, onProgress = () => {}) {
+  if (!(id in SOUND_SLOTS)) throw new Error('Ese sonido no existe.');
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (bytes.length > 3 * PIECE) throw new Error(`El archivo pesa ${(bytes.length / 1e6).toFixed(1)} MB; para un efecto, el máximo es ${(3 * PIECE / 1e6).toFixed(1)} MB.`);
+  const pieces = Math.ceil(bytes.length / PIECE);
+  const old = soundList[id]?.pieces ?? 0;
+  for (let i = 0; i < pieces; i += 1) { onProgress(i / pieces); await setDoc(doc(db, 'sounds', id, 'audio', String(i)), { b: Bytes.fromUint8Array(bytes.subarray(i * PIECE, (i + 1) * PIECE)), i }); }
+  for (let i = pieces; i < old; i += 1) await deleteDoc(doc(db, 'sounds', id, 'audio', String(i))).catch(() => {});
+  await setDoc(doc(db, 'sounds', id), { name: file.name.slice(0, 120), type: (file.type || 'audio/mpeg').slice(0, 40), size: bytes.length, pieces, updated: serverTimestamp() });
+  soundCache.delete(id); onProgress(1);
+  await loadSounds();
+}
+export async function deleteSound(id) {
+  for (let i = 0; i < (soundList[id]?.pieces ?? 0); i += 1) await deleteDoc(doc(db, 'sounds', id, 'audio', String(i))).catch(() => {});
+  await deleteDoc(doc(db, 'sounds', id));
+  soundCache.delete(id);
+  await loadSounds();
+}

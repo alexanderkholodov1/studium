@@ -2682,3 +2682,8 @@ canvas.prop { display: block; }
 @keyframes tour-nod { 40% { transform: translateY(-6px) rotate(-4deg) scale(1.05); } }
 @keyframes tour-step { from { opacity: 0; transform: translateX(10px); } }
 @media (prefers-reduced-motion: reduce) { .tour, .tour.out, .tour-hole, .tour-card, .tour.out .tour-card, .tour-specter, .tour-specter.nod, .tour-body.step-in > * { animation: none; } }
+
+/* A costume of the Easter eggs, dragged onto Specter. */
+.trinket.costume { cursor: grab; touch-action: none; }
+.trinket.costume.dragging-costume { position: relative; z-index: 60; cursor: grabbing; transition: none; scale: 1.06; box-shadow: 0 20px 40px -16px rgba(0, 0, 0, .5); }
+.trinket.costume.over-specter { scale: 1.14; box-shadow: 0 0 0 3px var(--blue), 0 20px 40px -16px rgba(0, 0, 0, .5); }

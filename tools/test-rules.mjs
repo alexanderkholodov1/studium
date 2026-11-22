@@ -617,6 +617,13 @@ try {
     expect('a station with an unknown field is refused', await commit(A.token, [put(`stations/t-${tag}`.toLowerCase(), { ...st, secret: 'x' })]), 403);
     expect('a piece over 1 MB is refused', await commit(A.token, [put(`stations/t-${tag}/audio/2`.toLowerCase(), { b: Buffer.alloc(1000001), i: 2 }, { stamp: false })]), 403);
     expect('otherDomain cannot read the stations', await status(accounts.otherDomain.token, 'GET', `/stations/t-${tag}`.toLowerCase()), 403);
+    // A secret's sound: admins upload it, members read it.
+    const snd = { name: 'grito.mp3', type: 'audio/mpeg', size: 4, pieces: 1 };
+    expect('admin sets the shout of the medic', await commit(A.token, [put('sounds/medic', snd)]), 200);
+    expect('admin uploads its audio', await commit(A.token, [put('sounds/medic/audio/0', { b: Buffer.from('abcd'), i: 0 }, { stamp: false })]), 200);
+    expect('a member reads it', await status(s.token, 'GET', '/sounds/medic/audio/0'), 200);
+    expect('a member cannot change it', await commit(s.token, [put('sounds/medic', snd)]), 403);
+    expect('an unknown sound is refused', await commit(A.token, [put(`sounds/${tag}`, snd)]), 403);
   }
 
   expect('nobody writes elsewhere', await status(s.token, 'PATCH', `/other/${tag}`, write), 403);

@@ -6,7 +6,7 @@
 //     stay on Inicio or go with you to every tab;
 //   · press the red dot of «studium» three times: two portals and a glass marble, which then stay on Inicio;
 //   · type «torta» or «cake»: a cake falls on the screen, and stays on Inicio with its candle;
-//   · type «medico» or «medic»: Specter jumps up in his doctor's look and shouts, with the pulse; a heart monitor stays
+//   · type «medico» or «medic»: Specter jumps up in his doctor's look and shouts, with the pulse; his costume stays
 //     on Inicio, and the look opens for him;
 //   · type «café» or «hambre»: a study desk behind the page, or night with a campfire, each with its station;
 //   · now and then, a goal checked off is a lucky hit; Inicio counts them with a trophy.
@@ -17,7 +17,8 @@ import { auth, countEgg } from './data.js';
 import { flag } from './settings.js';
 import { GENERATORS } from './stations.js';
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-import { stations, loadStations, audioOf, onStations } from './radio.js';
+import { stations, loadStations, audioOf, onStations, sounds, loadSounds, soundBytes } from './radio.js';
+import { specter, wearCostume } from './play.js';
 import { props, pokeProp } from './props3d.js';
 
 const FOUND = 'studium-eggs';
@@ -30,7 +31,7 @@ export const EGGS = [
   { id: 'portal', name: 'Portales', how: 'Pulsar tres veces seguidas el punto rojo de «studium» en la portada.',
     what: 'Un portal azul y uno naranja, y una canica de vidrio que entra por uno y sale por el otro. Los portales se quedan en Inicio.' },
   { id: 'cake', name: 'La torta', how: 'Escribir «torta» o «cake».', what: 'Cae una torta con su vela en la pantalla, y se queda en Inicio: se sopla y se vuelve a encender.' },
-  { id: 'medic', name: '¡Médico!', how: 'Escribir «medico» o «medic».', what: 'Specter salta vestido de doctor y grita «¡Médico!», con el pulso. En Inicio queda un monitor de ritmo cardíaco, y Specter puede vestirse de doctor.' },
+  { id: 'medic', name: '¡Médico!', how: 'Escribir «medico» o «medic».', what: 'Specter salta vestido de médico y grita «¡Médico!», con el pulso. En Inicio queda su disfraz: arrástralo sobre Specter para vestirlo (otra vez, para quitárselo).' },
   { id: 'crit', name: 'Golpe crítico', how: 'Marcar una meta como cumplida: una de cada diez veces.', what: '«¡CRÍTICO!» en verde y una celebración doble; en Inicio, un trofeo los cuenta. Abre la estación «8 bits».' },
   { id: 'cafe', name: 'Noche de estudio', how: 'Escribir «café» o «cafe».', what: 'Un fondo de lámpara cálida con una taza humeante, que se enciende y se apaga desde Inicio. Abre la estación «Lluvia y lo-fi».' },
   { id: 'starve', name: 'No te mueras de hambre', how: 'Escribir «hambre» o «starve».', what: 'Cae la noche sobre la página y se enciende una fogata. Deja un fonógrafo en Inicio y abre la estación «El fonógrafo».' },
@@ -141,6 +142,19 @@ function confetti(x, y, n = 40) {
 // Specter jumps up from the bottom of the screen in his doctor's look and shouts; a pulse line crosses the screen
 // with its beeps, and +25. Finding it also opens that look for him (specter.js).
 function shout(text) {
+  // The admins' own audio for it, if they set one (admin panel, «Sonidos de los secretos»); else the browser's voice.
+  if (sounds().medic && sfx.on) { playSound('medic').catch(() => voice(text)); return; }
+  voice(text);
+}
+async function playSound(id) {
+  const raw = sfx.raw();
+  if (!raw) throw new Error('no audio');
+  const buffer = await raw.ctx.decodeAudioData((await soundBytes(id)).slice(0));
+  const src = raw.ctx.createBufferSource(); src.buffer = buffer;
+  const g = raw.ctx.createGain(); g.gain.value = 0.9;
+  src.connect(g).connect(raw.out); src.start();
+}
+function voice(text) {
   // The browser's own voice, on this device: nothing is sent anywhere. Only with the page's sound on.
   try {
     if (!sfx.on || !('speechSynthesis' in window)) return;
@@ -151,6 +165,9 @@ function shout(text) {
 }
 function medic() {
   if (still()) { heal(); return; }
+  // Only one Specter: the one of the page steps out while the doctor jumps in, and comes back after.
+  specter.leave();
+  setTimeout(() => specter.comeBack(), 3700);
   moment('egg-medic', `${prop3d('specter', 'specter', 'data-skin="doctor" data-mood="glad" data-fixed')}<b class="bubble">${t('¡MÉDICO!')}</b>`, 2600).then(() => {
     setTimeout(() => shout(t('¡Médico!')), 380);
     const line = layer('egg-pulse', '<svg viewBox="0 0 1200 160" preserveAspectRatio="none"><path d="M0 80H380l30-10 20 10h40l18-66 26 132 22-90 14 24h50l26-14 24 14H1200"/></svg>');
@@ -219,7 +236,8 @@ export function poke(id, el) {
     if (lit === false) sfx.blow(); else { sfx.tick(); const r = el.getBoundingClientRect(); if (!still()) confetti(r.left + r.width / 2, r.top + 10, 18); }
     el.setAttribute('aria-pressed', String(lit === false));
   } else if (id === 'medic') {
-    sfx.heartbeat(); setTimeout(() => sfx.beep(), 260); pokeProp(canvas);
+    // His doctor's costume: pressed, Specter puts it on (or takes it off); it can be dragged onto him too.
+    wearCostume('doctor');
   } else if (id === 'portal') {
     sfx.portal(); pokeProp(canvas);
   } else if (id === 'cafe') {
@@ -594,7 +612,7 @@ export function mountEggs(options) {
   toast = options.toast;
   onFound = options.onFound ?? onFound;
   // The stations as the admins set them, once signed in; the dial follows when they change.
-  auth.onAuthStateChanged?.((u) => { if (u) loadStations(); });
+  auth.onAuthStateChanged?.((u) => { if (u) { loadStations(); loadSounds(); } });
   onStations(() => { const el = radioEl(); if (el) syncStation(el); });
   addEventListener('keydown', onKey);
   // The dot answers on its own: pressing it does not throw its letter, so it can be pressed again.

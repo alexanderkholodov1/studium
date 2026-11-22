@@ -274,7 +274,7 @@ function shelfTile(span) {
   const crits = critCount();
   const items = [
     f.has('cake') ? `<button type="button" class="trinket" data-trinket="cake" aria-label="La torta: sopla la vela" title="Sopla la vela">${prop3d('cake')}<small>La torta</small></button>` : '',
-    f.has('medic') ? `<button type="button" class="trinket" data-trinket="medic" aria-label="El monitor: tómate el pulso" title="Tómate el pulso">${prop3d('monitor')}<small>El monitor</small></button>` : '',
+    f.has('medic') ? `<button type="button" class="trinket costume" data-trinket="medic" data-costume="doctor" aria-label="El disfraz de médico: arrástralo sobre Specter" title="Arrástralo sobre Specter para vestirlo; otra vez, para quitárselo">${prop3d('specter', '', 'data-skin="doctor" data-mood="glad" data-fixed')}<small>Disfraz de médico</small></button>` : '',
     f.has('portal') ? `<button type="button" class="trinket" data-trinket="portal" aria-label="Los portales: suelta una canica" title="Suelta una canica">${prop3d('portals')}<small>Portales</small></button>` : '',
     f.has('crit') ? `<button type="button" class="trinket" data-trinket="crit" aria-label="Golpes críticos: ${crits}" title="Golpes críticos">${prop3d('trophy')}<small>× ${crits} crítico${crits === 1 ? '' : 's'}</small></button>` : '',
     f.has('cafe') ? `<button type="button" class="trinket" data-trinket="cafe" aria-pressed="${backdrop() === 'cafe'}" title="Enciende o apaga la «Noche de estudio»">${prop3d('cup')}<small>Noche de estudio</small></button>` : '',
@@ -292,7 +292,7 @@ const scheduleTile = (span) => tile('schedule', span, '<div class="home-schedule
 function decorTile(span) {
   const k = decor.current();
   const all = decor.unlocked();
-  const POKE = { cake: 'cake', monitor: 'medic', portals: 'portal' };
+  const POKE = { cake: 'cake', portals: 'portal' };
   const menu = all.length ? `<details class="decor-add"><summary title="Elegir la decoración">${k ? 'Cambiar' : 'Elegir'}</summary><div class="decor-menu">${all.map((x) => `<button type="button" data-decor-add="${x}" aria-pressed="${x === k}">${prop3d(decor.sceneOf(x))}<span>${esc(decor.DECOR[x].name)}</span></button>`).join('')}${k ? '<button type="button" class="decor-none" data-decor-remove>Sin decoración</button>' : ''}</div></details>` : '';
   return tile('decor', span, `${menu}${k ? `<button type="button" class="decor-obj" ${POKE[k] ? `data-trinket="${POKE[k]}"` : 'data-decor-poke'} aria-label="${esc(decor.DECOR[k].name)}" title="${esc(decor.DECOR[k].name)}">${prop3d(decor.sceneOf(k))}</button>`
     : `<p class="decor-empty">${all.length ? 'Elige una decoración para este espacio.' : 'Los Easter eggs desbloquean escenas en 3D para este espacio: una fogata en la noche, un fonógrafo, una torta… Búscalos.'}</p>`}`, 'decor-tile');

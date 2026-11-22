@@ -1,6 +1,6 @@
 // Sounds, synthesized on the spot with the Web Audio API (no audio files), quiet and alive:
-// - every gesture has its own sound and follows what the hand does: grabbing, dragging (soft notes of a pentatonic
-//   scale as the thing travels, higher when faster), throwing (a warm rising «fwoop»), impacts (by size and speed), shaking,
+// - every gesture has its own sound and follows what the hand does: grabbing, dragging (a deep, soft rub of brown
+//   noise that swells with the speed), throwing (a warm rising «fwoop»), impacts (by size and speed), shaking,
 //   setting down, pressing;
 // - nothing is ever the same sound twice: partials, filters, envelopes and stereo position vary on every hit, not
 //   only the pitch;
@@ -112,12 +112,42 @@ const pick = (xs) => xs[Math.floor(Math.random() * xs.length)];
 // Bigger things sound lower.
 const sizeToFreq = (size) => Math.max(140, Math.min(900, 1400 / Math.sqrt(Math.max(8, size))));
 
-/* ---------- a drag: no continuous noise (it was unpleasant); soft notes as the thing travels ---------- */
-// While something is dragged, every stretch it travels plays one soft note of a pentatonic scale, higher the faster
-// it goes, like a wind chime touched by the hand. Nothing sounds while it is held still.
-const glide = { on: false, travelled: 0, step: 0 };
-function rubStart() { glide.on = true; glide.travelled = 0; glide.step = Math.floor(Math.random() * 5); }
-function rubStop() { glide.on = false; }
+/* ---------- the voice of a drag: a deep, soft rub, like cloth or air (brown noise, low-passed), with the speed ---------- */
+// Brown noise is white noise integrated: its energy is in the lows, so it sounds deep and soft, never hissy. Under it,
+// a very quiet low rumble. Both rise and fall smoothly with the speed of the hand; held still, they fade away.
+let brown = null;
+function brownNoise() {
+  if (brown) return brown;
+  const len = ctx.sampleRate * 2;
+  brown = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = brown.getChannelData(0);
+  let last = 0;
+  for (let i = 0; i < len; i += 1) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3.5; }
+  // The loop's seam: fade both ends into each other.
+  const f = 2000; for (let i = 0; i < f; i += 1) { const k = i / f; d[i] *= k; d[len - 1 - i] *= k; }
+  return brown;
+}
+let rub = null; // { src, filter, gain, hum, humGain }
+function rubStart() {
+  if (rub) return;
+  const s = ctx.createBufferSource();
+  s.buffer = brownNoise(); s.loop = true;
+  const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.Q.value = 0.4; f.frequency.value = 180;
+  const g = ctx.createGain(); g.gain.value = 0.0001;
+  out(s.connect(f).connect(g), 0.12, 0);
+  const hum = ctx.createOscillator(); hum.type = 'sine'; hum.frequency.value = 55;
+  const hg = ctx.createGain(); hg.gain.value = 0.0001;
+  out(hum.connect(hg), 0.05, 0);
+  s.start(now(), Math.random() * 1.5); hum.start();
+  rub = { src: s, filter: f, gain: g, hum, humGain: hg };
+}
+function rubStop() {
+  if (!rub) return;
+  const r = rub; rub = null;
+  const t = now();
+  for (const p of [r.gain.gain, r.humGain.gain]) { p.cancelScheduledValues(t); p.setTargetAtTime(0.0001, t, 0.09); }
+  r.src.stop(t + 0.6); r.hum.stop(t + 0.6);
+}
 let shakeDir = 0;
 
 export const sfx = {
@@ -169,19 +199,19 @@ export const sfx = {
     rubStart();
     shakeDir = 0;
   },
-  // While dragging: a soft note every stretch travelled, higher when faster; quick reversals are a shake.
+  // While dragging: a deep, soft rub that swells and settles with the speed (and nothing else: no knocks, no taps).
   drag(speed = 0, vx = 0) {
-    if (!audio() || !glide.on) return;
-    // About every 140 px travelled (pointer events come ~60 a second), one soft note; faster, a higher one.
-    glide.travelled += speed / 60;
-    if (glide.travelled > 140 && speed > 120 && limit('glide', 110)) {
-      glide.travelled = 0;
-      const s = Math.min(1, speed / 1800);
-      glide.step = (glide.step + 1 + (s > 0.5 ? 1 : 0)) % 10;
-      body(note(glide.step + Math.round(s * 4), 330), now(), { gain: 0.012 + s * 0.01, decay: 0.35, bright: 0.2, room: 0.45, pan: Math.max(-0.6, Math.min(0.6, vx / 2500)) });
+    if (!audio() || !rub) return;
+    if (rub) {
+      const s = Math.min(1, speed / 1600);
+      const t = now();
+      // Smooth on purpose (a slow time constant): it swells and settles with the hand, without jitter.
+      rub.gain.gain.setTargetAtTime(0.0001 + s * 0.11, t, 0.12);
+      rub.filter.frequency.setTargetAtTime(160 + s * 520, t, 0.15);
+      rub.humGain.gain.setTargetAtTime(0.0001 + s * 0.012, t, 0.15);
+      rub.hum.frequency.setTargetAtTime(48 + s * 22, t, 0.2);
     }
     const dir = Math.sign(vx);
-    if (dir && shakeDir && dir !== shakeDir && Math.abs(vx) > 500 && limit('shake', 70)) this.shake(Math.min(1, Math.abs(vx) / 2500));
     if (dir) shakeDir = dir;
   },
   // Letting go: a soft set-down when slow, air that grows with the speed when thrown.

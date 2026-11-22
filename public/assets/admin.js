@@ -544,7 +544,21 @@ async function radioSection() {
     <p>Cada estación se abre con un secreto. Las de archivo suenan en loop continuo y sin ninguna ventana; las de YouTube se ven en la radio, con su texto si lo pones.</p>
     ${radioData.isConfigured() ? '' : '<p class="fine">Por ahora suenan las estaciones de siempre. Al guardar cualquier cambio, todas quedan guardadas aquí.</p>'}
     <div class="stations-list">${list.map((st) => stationCard(st)).join('')}</div>
-    <div class="actions"><button type="button" class="button primary" data-st-new>Agregar una estación</button></div></section>`;
+    <div class="actions"><button type="button" class="button primary" data-st-new>Agregar una estación</button></div></section>
+    ${await soundsSection()}`;
+}
+// The secrets' sounds: an audio file replaces the page's own sound (the shout of «¡Médico!»); «Quitar» goes back to it.
+async function soundsSection() {
+  const have = await radioData.loadSounds();
+  return `<section class="set glass adm-radio"><h2>Sonidos de los secretos</h2>
+    <p>Si subes un audio, suena en lugar del sonido de la página. Sin audio, suena el de siempre.</p>
+    <div class="stations-list">${Object.entries(radioData.SOUND_SLOTS).map(([id, slot]) => `<form class="st-card glass" data-sound="${esc(id)}" data-kind="audio">
+      <h3>${esc(slot.name)}</h3>
+      <p class="st-file">${have[id] ? `Ahora: <strong>${esc(have[id].name)}</strong> · ${mb(have[id].size)}` : `Ahora: ${esc(slot.fallback)}.`}</p>
+      <label class="field"><span>${have[id] ? 'Cambiar el audio' : 'Subir un audio'} <small>(hasta 2.7 MB)</small></span><input name="file" type="file" accept="audio/*"></label>
+      <div class="actions"><button type="button" class="button ghost small" data-st-try>Probar</button><span class="st-msg" role="status"></span>
+        ${have[id] ? '<button type="button" class="link danger" data-snd-delete>Quitar (volver al de siempre)</button>' : ''}<button type="submit" class="button primary small">Guardar</button></div>
+    </form>`).join('')}</div></section>`;
 }
 // «Probar»: the chosen file (or the one saved) in a loop, right here; pressed again, it stops.
 const trial = { ctx: null, src: null, form: null };
@@ -554,15 +568,17 @@ async function tryStation(form) {
   stopTrial();
   const msg = form.querySelector('.st-msg');
   const file = form.querySelector('input[name="file"]').files[0];
+  const isSound = form.dataset.sound !== undefined;
   try {
     msg.textContent = 'Cargando…';
-    const bytes = file ? await file.arrayBuffer() : await radioData.audioOf(form.dataset.station);
+    const bytes = file ? await file.arrayBuffer() : isSound ? await radioData.soundBytes(form.dataset.sound) : await radioData.audioOf(form.dataset.station);
     trial.ctx ??= new AudioContext();
     const buffer = await trial.ctx.decodeAudioData(bytes.slice(0));
-    const src = trial.ctx.createBufferSource(); src.buffer = buffer; src.loop = true; src.connect(trial.ctx.destination); src.start();
+    const src = trial.ctx.createBufferSource(); src.buffer = buffer; src.loop = !isSound; src.connect(trial.ctx.destination); src.start();
     Object.assign(trial, { src, form });
     form.querySelector('[data-st-try]').textContent = 'Detener';
-    msg.textContent = `${buffer.duration.toFixed(1)} s en loop`;
+    msg.textContent = isSound ? `${buffer.duration.toFixed(1)} s` : `${buffer.duration.toFixed(1)} s en loop`;
+    if (isSound) src.onended = () => { if (trial.src === src) stopTrial(); };
   } catch { msg.textContent = file ? 'Este archivo no se pudo leer como audio.' : 'Todavía no hay un archivo guardado.'; }
 }
 async function saveStationForm(form) {
@@ -594,16 +610,29 @@ function bindRadio(view) {
     if (e.target.name === 'kind') form.dataset.kind = e.target.value;
     if (e.target.name === 'file' && trial.form === form) stopTrial();
   });
-  view.addEventListener('submit', (e) => {
+  view.addEventListener('submit', async (e) => {
     const form = e.target.closest('.st-card');
     if (!form) return;
     e.preventDefault();
-    saveStationForm(form);
+    if (form.dataset.sound === undefined) { saveStationForm(form); return; }
+    const file = form.querySelector('input[name="file"]').files[0];
+    const msg = form.querySelector('.st-msg');
+    if (!file) { msg.textContent = 'Elige un audio.'; return; }
+    try {
+      await radioData.saveSound(form.dataset.sound, file, (k) => { msg.textContent = `Subiendo… ${Math.round(k * 100)} %`; });
+      await audit('Sonidos', `${radioData.SOUND_SLOTS[form.dataset.sound].name}: ${file.name}`);
+      ctx.toast('Sonido guardado.'); renderAdmin('radio');
+    } catch (err) { msg.textContent = err.message || 'No se pudo guardar.'; }
   });
   view.addEventListener('click', async (e) => {
     const b = e.target.closest('button');
     if (!b) return;
     if (b.dataset.stTry !== undefined) tryStation(b.closest('.st-card'));
+    if (b.dataset.sndDelete !== undefined) {
+      if (!armed(b, '¿Seguro? Pulsa otra vez')) return;
+      const id = b.closest('.st-card').dataset.sound;
+      try { await radioData.deleteSound(id); await audit('Sonidos', `${radioData.SOUND_SLOTS[id].name}: de vuelta al de siempre`); ctx.toast('Volvió el sonido de siempre.'); renderAdmin('radio'); } catch (err) { b.closest('.st-card').querySelector('.st-msg').textContent = err.message || 'No se pudo quitar.'; }
+    }
     if (b.dataset.stNew !== undefined) {
       const used = new Set(radioData.allStations().map((x) => Math.round(x.freq * 10)));
       let f = 999; while (used.has(f) && f < 1080) f += 4;

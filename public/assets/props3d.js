@@ -116,13 +116,12 @@ vec2 map(vec3 w){
   float hem = -.62 + .085*sin(ang*5. + uT*2.4) + .03*sin(ang*9. - uT*1.6);
   float skirt = max(-smin(-(length(q.xz) - r), -(q.y - .05), .3), hem - q.y);
   vec2 res = vec2(smin(head, skirt, .28) * .8, 0.);
+  // the medic's pack on his back: a metal case with a red cross
   if (uDoctor > .5){
-    vec3 b = rX(.35) * (q - vec3(0., .5, -.02));
-    float band = sdTorus(b, vec2(.56, .028));
-    if (band < res.x) res = vec2(band, 1.);
-    vec3 m = rX(-1.25) * (q - vec3(-.17, .62, .44));
-    float mirror = max(length(m.xz) - .13, abs(m.y) - .022);
-    if (mirror < res.x) res = vec2(mirror, 2.);
+    vec3 mq = q - vec3(0., .0, -.5);
+    vec3 md = abs(mq) - vec3(.28, .32, .13);
+    float pack = length(max(md, 0.)) + min(max(md.x, max(md.y, md.z)), 0.) - .07;
+    if (pack < res.x) res = vec2(pack, 5.);
   }
   // the backpack (camping): a rounded bag on his back, with a rolled blanket on top
   if (uOutfit > 2.5){
@@ -182,6 +181,14 @@ vec3 face(vec3 col, vec2 f, float dif){
       float sp = abs(fract(rr*28. - a/6.2832 - uT*.8) - .5);
       if (rr < .095*k && sp < .16) col = ink;
     }
+  }
+  // the medic's round glasses: thin dark rims over his eyes and a bridge, the lenses a touch lighter
+  if (uDoctor > .5){
+    vec2 gp = vec2(abs(f.x), f.y) - vec2(.205, .3);
+    float rim = abs(length(gp) - .14);
+    if (length(gp) < .13) col = mix(col, vec3(1.), .08);
+    if (rim < .016) col = vec3(.12,.12,.14);
+    if (abs(f.y - .31) < .012 && abs(f.x) < .066) col = vec3(.12,.12,.14);
   }
   // brows, only when they say something: up in the middle when worried or sad, down when angry
   float bw = abs(uBrow);
@@ -257,10 +264,15 @@ void main(){
   float fres = pow(1. - clamp(dot(n, v), 0., 1.), 2.6);
   float ao = clamp(map(p + n*.08).x / .08, .35, 1.);
   vec3 col;
-  if (h.y > 3.5) {
-    // his hands: the same soft body
-    vec3 base = vec3(.86,.89,1.);
-    col = base * (.4 + .7*dif) + vec3(.55,.5,1.)*fres*.7 + spec*.4;
+  if (h.y > 4.5) {
+    // the medic's pack: grey metal, a red cross on its back
+    col = vec3(.55,.58,.62) * (.4 + .75*dif) + spec*.8;
+    vec2 cq = vec2(q.x, q.y - .02);
+    if (q.z < -.6 && ((abs(cq.x) < .045 && abs(cq.y) < .14) || (abs(cq.y) < .045 && abs(cq.x) < .14))) col = vec3(.78,.12,.12) * (.5 + .6*dif);
+  } else if (h.y > 3.5) {
+    // his hands: the same soft body; as a medic, dark rubber gloves
+    vec3 base = uDoctor > .5 ? vec3(.2,.21,.24) : vec3(.86,.89,1.);
+    col = base * (.4 + .7*dif) + (uDoctor > .5 ? vec3(.3) * spec : vec3(.55,.5,1.)*fres*.7 + spec*.4);
   } else if (h.y > 2.5) {
     // the backpack: canvas green-brown, a lighter flap, a pocket, the blanket roll red
     col = mix(vec3(.36,.4,.26), vec3(.46,.5,.32), smoothstep(.12, .3, q.y)) * (.45 + .7*dif) + spec*.1;
@@ -274,12 +286,28 @@ void main(){
     vec3 base = mix(vec3(.72,.77,1.), vec3(1.,1.,1.), smoothstep(-.65, .8, q.y));
     col = base * (.36 + .72*dif) * mix(.72, 1., ao) + vec3(.55,.5,1.)*fres*.8 + spec*.4;
     col += vec3(.35,.4,1.) * .16 * smoothstep(-.2, -.6, q.y);
-    // the doctor's coat: white over his lower body, open in front, with a collar
+    // the medic: a white coat with a high collar, open in front over a grey vest and a red tie; a red cross on his
+    // chest; dark hair slicked back
     if (uDoctor > .5){
-      float a = atan(q.x, q.z);
-      float coat = smoothstep(.14, .02, q.y) * smoothstep(.34, .46, abs(a));
-      col = mix(col, vec3(.98,.98,1.) * (.48 + .62*dif) * mix(.8, 1., ao) + spec*.25 + vec3(.5,.5,.8)*fres*.25, coat * .92);
-      if (abs(abs(a) - .42) < .035 && q.y < .1) col *= .86;
+      vec3 white = vec3(.97,.97,.95) * (.45 + .65*dif) * mix(.8, 1., ao) + spec*.2;
+      float coat = smoothstep(.03, -.02, q.y);
+      float open = q.z > 0. ? step(abs(q.x), .03 + max(0., .02 - q.y) * .22) : 0.;
+      col = mix(col, white, coat * (1. - open));
+      // the vest and the tie in the opening
+      if (coat > .5 && open > .5) col = abs(q.x) < .035 + max(0., -q.y) * .02 && q.y > -.45 ? vec3(.62,.1,.1) * (.5 + .6*dif) : vec3(.3,.31,.33) * (.45 + .6*dif);
+      // the lapels' edge
+      if (coat > .5 && q.z > 0. && abs(abs(q.x) - (.03 + max(0., .02 - q.y) * .22)) < .016) col *= .78;
+      // the high collar, up the sides of his neck
+      if (q.y > -.04 && q.y < .1 && abs(q.x) > .34) col = white * .96;
+      // a red cross on the left of his chest
+      vec2 cr = vec2(q.x + .26, q.y + .16);
+      if (q.z > .2 && ((abs(cr.x) < .022 && abs(cr.y) < .06) || (abs(cr.y) < .022 && abs(cr.x) < .06))) col = vec3(.8,.12,.12) * (.5 + .6*dif);
+      // dark hair, slicked back: from the forehead over the top to the back, with comb lines and shine
+      float line = .6 - .3 * smoothstep(.1, -.45, q.z);
+      if (q.y > line) {
+        float comb = .5 + .5 * sin(q.x * 70.);
+        col = vec3(.14,.11,.1) * (.5 + .6*dif) + vec3(.35,.3,.28) * spec * (.6 + .4*comb) + vec3(.05) * comb;
+      }
     }
     // the apron (the cake): pink with a white frill and a heart, over his lower body
     if (uOutfit > 1.5 && uOutfit < 2.5 && q.z > 0.){
@@ -737,41 +765,6 @@ const PROPS = {
     return {
       scene, camera: camera(32, [2.6, 2.6, 3.6], [0, 0.9, 0]),
       update(t) { record.rotation.y = -t * 2.4; g.rotation.y = Math.sin(t * 0.2) * 0.3 - 0.2; },
-    };
-  },
-
-  // A small heart monitor: a plastic case, a glass screen that glows with the beating trace, and two knobs.
-  monitor() {
-    const scene = new T.Scene(); stage(scene, { key: [2, 4, 4] });
-    const g = new T.Group(); scene.add(g);
-    g.add(mesh(new T.BoxGeometry(2.2, 1.35, 0.6), phys(0xd9dde3, { roughness: 0.45, clearcoat: 0.3 }), { y: 0.72 }));
-    const c = document.createElement('canvas'); c.width = 256; c.height = 128;
-    const x = c.getContext('2d');
-    const tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace;
-    g.add(mesh(new T.PlaneGeometry(1.6, 0.85), new T.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveMap: tex, roughness: 0.1 }), { x: -0.18, y: 0.78, z: 0.301, cast: false }));
-    g.add(mesh(new T.PlaneGeometry(1.7, 0.95), phys(0xffffff, { transmission: 1, roughness: 0.05, thickness: 0.05, transparent: true, opacity: 0.25 }), { x: -0.18, y: 0.78, z: 0.31, cast: false }));
-    for (const y of [1.0, 0.55]) g.add(mesh(new T.CylinderGeometry(0.1, 0.1, 0.1, 24), std(0x2a2e36, 0.4), { x: 0.86, y, z: 0.33, rx: Math.PI / 2 }));
-    const led = mesh(new T.SphereGeometry(0.04, 16, 12), new T.MeshBasicMaterial({ color: 0x3ddc97 }), { x: 0.86, y: 0.28, z: 0.31, cast: false });
-    g.add(led);
-    let fast = 0;
-    const beat = (k) => { const p = k % 1; if (p < 0.08) return Math.sin(p / 0.08 * Math.PI) * 0.15; if (p > 0.3 && p < 0.34) return -0.2; if (p > 0.34 && p < 0.4) return 1; if (p > 0.4 && p < 0.46) return -0.45; if (p > 0.6 && p < 0.75) return Math.sin((p - 0.6) / 0.15 * Math.PI) * 0.25; return 0; };
-    return {
-      scene, camera: camera(30, [0.8, 1.6, 4.4], [0, 0.7, 0]),
-      update(t, dt) {
-        fast = Math.max(0, fast - dt);
-        const speed = fast > 0 ? 2.6 : 1.1;
-        x.fillStyle = '#04110b'; x.fillRect(0, 0, 256, 128);
-        x.strokeStyle = 'rgba(61,220,151,.12)'; x.lineWidth = 1;
-        for (let k = 0; k < 256; k += 16) { x.beginPath(); x.moveTo(k, 0); x.lineTo(k, 128); x.stroke(); }
-        x.strokeStyle = '#3ddc97'; x.lineWidth = 3; x.shadowColor = '#3ddc97'; x.shadowBlur = 8; x.beginPath();
-        for (let px = 0; px < 256; px += 2) { const y = 70 - beat(t * speed - (256 - px) / 160) * 50; if (px) x.lineTo(px, y); else x.moveTo(px, y); }
-        x.stroke(); x.shadowBlur = 0;
-        x.fillStyle = '#3ddc97'; x.font = 'bold 22px monospace'; x.fillText(`♥ ${fast > 0 ? 140 : 72}`, 168, 28);
-        tex.needsUpdate = true;
-        led.visible = beat(t * speed) > 0.5;
-        g.rotation.y = Math.sin(t * 0.3) * 0.25 - 0.2;
-      },
-      poke() { fast = 3; },
     };
   },
 

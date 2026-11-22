@@ -4,7 +4,7 @@
 // wordmark. Everything is DOM moved with transforms; nothing runs when the person prefers reduced motion or focus.
 import { sfx } from './sfx.js';
 import { props, actProp } from './props3d.js';
-import { specterSkin } from './specter.js';
+import { specterSkin, setSpecterSkin, skinOpen } from './specter.js';
 
 const root = document.documentElement;
 const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -515,7 +515,7 @@ function release() {
   // Thrown hard he gets dizzy; let go gently, glad.
   if (b.kind === 'nodo') b.home = null;
   // Dropped on the decoration: he goes in (the grab's rubbing sound ends here too, or it would go on).
-  if (b.kind === 'nodo' && drag.moved >= 4 && speed < 900 && (droppedOnRadio(b.x, b.y) || droppedOnDecor(b.x, b.y))) { sfx.release(0, b.r * 2); drag = null; root.classList.remove('grabbing'); return; }
+  if (b.kind === 'nodo' && drag.moved >= 4 && speed < 900 && (droppedOnCostume(b.x, b.y) || droppedOnRadio(b.x, b.y) || droppedOnDecor(b.x, b.y))) { sfx.release(0, b.r * 2); drag = null; root.classList.remove('grabbing'); return; }
   if (b.kind === 'nodo') { if (drag.moved < 4) poked(b); else if (speed > 900) { mood('dizzy', 2200); say(['¡Wiii!', 'Mareado…', '¡Otra vez!'][Math.floor(Math.random() * 3)], 1500); } else mood('glad', 900); }
   else if (drag.moved < 4) { b.vy -= 160; b.va += rand(-1, 1); }
   sfx.release(drag.moved < 4 ? 600 : speed, b.r * 2);
@@ -729,6 +729,57 @@ function flyTo(x, y, { ms = 900, stay = 0, loops = 0, arc = 60, out = false, the
   wake();
   return true;
 }
+/* ---------- his costumes: dragged onto him (or he onto them), he puts one on; again, he takes it off ---------- */
+export function wearCostume(id) {
+  if (!skinOpen(id)) return;
+  const off = specterSkin() === id;
+  setSpecterSkin(off ? '' : id);
+  if (!nodo || nodo.gone) return;
+  stopRoutine();
+  spin('in');
+  setTimeout(() => nodo?.el.classList.remove('spin-in'), 600);
+  sfx.voice(off ? 'wink' : 'glad');
+  mood(off ? 'wink' : 'love', 1600, true);
+  say(off ? 'Mejor así.' : id === 'doctor' ? '¡Listo para curar!' : '¡Me queda bien!', 1700);
+  wake();
+}
+// Specter dropped on a costume of the Easter eggs.
+function droppedOnCostume(x, y) {
+  for (const el of document.querySelectorAll('[data-costume]')) {
+    const r = el.getBoundingClientRect();
+    if (r.width && x >= r.left - 6 && x <= r.right + 6 && y >= r.top - 6 && y <= r.bottom + 6) { wearCostume(el.dataset.costume); return true; }
+  }
+  return false;
+}
+// A costume dragged onto him: it follows the hand; let go over him, he wears it; elsewhere, it goes back.
+function costumeDrag(e) {
+  const item = e.target.closest?.('[data-costume]');
+  if (!item || e.button !== 0) return;
+  const start = { x: e.clientX, y: e.clientY };
+  let moved = false;
+  const move = (ev) => {
+    const dx = ev.clientX - start.x; const dy = ev.clientY - start.y;
+    if (!moved && Math.hypot(dx, dy) < 6) return;
+    if (!moved) { moved = true; item.classList.add('dragging-costume'); }
+    item.style.translate = `${dx}px ${dy}px`;
+    const r = nodo?.el.getBoundingClientRect();
+    item.classList.toggle('over-specter', !!r && !nodo.gone && ev.clientX > r.left && ev.clientX < r.right && ev.clientY > r.top && ev.clientY < r.bottom);
+  };
+  const up = (ev) => {
+    removeEventListener('pointermove', move); removeEventListener('pointerup', up);
+    if (!moved) return;
+    const r = nodo?.el.getBoundingClientRect();
+    const onHim = !!r && !nodo.gone && ev.clientX > r.left - 10 && ev.clientX < r.right + 10 && ev.clientY > r.top - 10 && ev.clientY < r.bottom + 10;
+    item.classList.remove('dragging-costume', 'over-specter');
+    item.style.translate = '';
+    if (onHim) wearCostume(item.dataset.costume);
+    // A drag is not a press: the click that follows does nothing.
+    item.addEventListener('click', (c) => { c.stopPropagation(); c.preventDefault(); }, { capture: true, once: true });
+  };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+}
+document.addEventListener('pointerdown', costumeDrag);
+
 // Only one Specter on screen: when something else shows him (the tour), the one of the page spins away, and comes
 // back to his place when it ends. Nested callers are counted.
 let held = 0;

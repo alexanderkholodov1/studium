@@ -20,6 +20,7 @@ rules_version = '2';
 // - presence/{uid}: when an account was last seen, written on real events (never on a timer); admins count them.
 // - eggs/{id}: how many people found each easter egg, as a counter that only goes up by one.
 // - stations/{id} (+ audio/{n}): the radio's stations as the admins set them; members read them.
+// - sounds/{id} (+ audio/{n}): the audio the admins chose for a secret's sound; members read it.
 // - packs/index + packs/{build}-{i}: every public contribution in a few documents, compiled by an admin on demand, so
 //   a visit reads a handful of documents. removed/{id}: when a contribution stopped being public (deleted or made
 //   private by its owner, or hidden by an admin), so every map drops it from its pack.
@@ -472,6 +473,21 @@ service cloud.firestore {
           && d.audio.pieces is int && d.audio.pieces >= 1 && d.audio.pieces <= 12 && d.audio.type is string && d.audio.type.size() <= 40
           && d.audio['size'] is int && d.audio['size'] <= 12000000 && d.audio['name'] is string && d.audio['name'].size() <= 120))
         && d.updated == request.time;
+    }
+    // sounds/{id}: the audio the admins chose for a secret's sound (the shout of «¡Médico!»), in pieces like a station's.
+    match /sounds/{id} {
+      allow read: if member();
+      allow create, update: if admin() && id in ['medic'] && request.resource.data.keys().hasOnly(['name', 'type', 'size', 'pieces', 'updated'])
+        && request.resource.data['name'] is string && request.resource.data['name'].size() <= 120 && request.resource.data.type is string && request.resource.data.type.size() <= 40
+        && request.resource.data['size'] is int && request.resource.data['size'] <= 3000000 && request.resource.data.pieces is int && request.resource.data.pieces >= 1 && request.resource.data.pieces <= 4
+        && request.resource.data.updated == request.time;
+      allow delete: if admin();
+      match /audio/{n} {
+        allow read: if member();
+        allow create, update: if admin() && n.matches('^[0-9]$') && request.resource.data.keys().hasOnly(['b', 'i'])
+          && request.resource.data.b is bytes && request.resource.data.b.size() <= 1000000 && request.resource.data.i is int;
+        allow delete: if admin();
+      }
     }
     match /stations/{id} {
       allow read: if member();
