@@ -3064,8 +3064,8 @@ canvas.prop { display: block; }
 .tjg-app h2:hover .adj, .tjg-app h3:hover .adj, .tjg-app .adj:focus-visible { opacity: 1; }
 .tjg-app .adj:hover { color: var(--blue); border-color: var(--blue); opacity: 1; }
 .tjg-app .tj-selbtn { position: fixed; z-index: 60; padding: 7px 14px; border: 0; border-radius: 99px; background: var(--ink); color: var(--panel); font: 700 13.5px var(--gb); cursor: pointer;
-  box-shadow: 0 12px 26px -10px rgba(0, 0, 0, .55); animation: tj-pop .25s cubic-bezier(.2, 1.5, .4, 1) both; }
-@keyframes tj-pop { from { transform: translateY(6px) scale(.9); opacity: 0; } }
+  box-shadow: 0 12px 26px -10px rgba(0, 0, 0, .55); animation: tj-selpop .25s cubic-bezier(.2, 1.5, .4, 1) both; }
+@keyframes tj-selpop { from { transform: translateY(6px) scale(.9); opacity: 0; } }
 .tjg-app .tj-adjpop { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 20px; background: rgba(10, 14, 24, .35); animation: tj-fade .2s ease both; }
 .tjg-app .tj-adjcard { width: min(560px, 100%); display: grid; gap: 10px; padding: 20px 22px; border-radius: 22px; background: var(--panel); color: var(--ink);
   box-shadow: 0 40px 80px -30px rgba(0, 0, 0, .6), inset 0 0 0 1px var(--line); }
