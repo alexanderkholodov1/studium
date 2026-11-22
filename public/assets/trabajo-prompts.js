@@ -99,6 +99,29 @@ El esquema de la guía:
 ${JSON.stringify(outline)}`;
 }
 
+// The whole guide in one go, for an AI that works in a folder (the bridge): it reads the material once and writes the
+// outline and then each chapter as its own file in «salida», in order, so the page shows each one as it lands. Much
+// faster than one request per chapter, which read everything again each time.
+export function wholePrompt({ parts, course, deadline, prefs }) {
+  const outline = outlinePrompt({ parts, course, deadline, prefs });
+  const chapter = milestonePrompt({ milestone: { id: 'H1', titulo: 'cada hito' }, outline: null, prefs: {} });
+  const A = outline.slice(outline.indexOf('Tarea:') + 'Tarea:'.length).replace('lee el enunciado y la rúbrica y devuelve el ESQUEMA de la guía (todavía sin el código de cada paso).', '').trim();
+  const B = chapter.slice(chapter.indexOf('Para cada paso:'), chapter.indexOf('\n\nEl esquema de la guía:'));
+  return `${COMMON.replace(/\n- Responde SOLO con un bloque [^\n]*$/, '')}
+
+Tarea: escribe la guía COMPLETA, de una vez, en archivos JSON dentro de la carpeta «salida» (la que te indica Studium):
+1. Lee el enunciado y todo lo que lo acompaña, completo.
+2. Escribe salida/esquema.json con el esquema de la guía (formato A).
+3. Después, en orden, escribe cada hito completo en su propio archivo: salida/H0.json, salida/H1.json… (formato B), con el id de ese hito. Escribe cada archivo apenas lo termines: así el grupo ve el avance.
+Cada archivo es JSON válido, sin \`\`\` ni texto alrededor. No hagas preguntas: si algo del enunciado es ambiguo, decide lo más razonable y dilo en "avisos". El código de todos los hitos debe encajar entre sí (mismos nombres de archivos, variables y semilla).
+
+FORMATO A, el esquema (salida/esquema.json):
+${A}
+
+FORMATO B, cada hito (salida/<id>.json):
+${B}`;
+}
+
 // «No lo entiendo»: a short explanation from the person's quick AI, about one requirement, step or line.
 export const TUTOR = `Eres un tutor paciente dentro de Studium. Un estudiante que está aprendiendo a programar no entiende una parte de su trabajo de curso. Explícasela de forma breve y concreta (máximo 200 palabras), con un ejemplo si ayuda, en el idioma del estudiante. No cambies la solución: ayúdale a entenderla. Termina con una pregunta corta para que compruebe que lo entendió. Texto simple; \`código\` entre comillas invertidas.`;
 

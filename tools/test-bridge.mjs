@@ -32,11 +32,24 @@ const scripts = {
   claude: `const CLI = 'claude';${common}
 if (args[0] === 'auth') { out({ loggedIn: s.signedIn !== false, authMethod: 'claude.ai', ...(s.plan ? { subscriptionType: s.plan } : {}) }); process.exit(0); }
 record();
+if (!args.includes('-p')) {
+  // The official CLI in its own window: it keeps its transcript, writes its answer to «salida» and says LISTO.
+  const { mkdirSync, writeFileSync } = await import('node:fs');
+  const { join } = await import('node:path');
+  const sid = args[args.indexOf('--session-id') + 1];
+  const tdir = join(process.env.CLAUDE_CONFIG_DIR ?? join(process.env.USERPROFILE ?? process.env.HOME, '.claude'), 'projects', process.cwd().replace(/[^A-Za-z0-9]/g, '-'));
+  mkdirSync(tdir, { recursive: true });
+  writeFileSync(join(tdir, sid + '.jsonl'), JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Read', input: { file_path: 'enunciado.txt' } }] } }) + '\\n');
+  if (!s.neverDone) { mkdirSync('salida', { recursive: true }); writeFileSync(join('salida', 'RESPUESTA.md'), 'desde la ventana'); writeFileSync(join('salida', 'LISTO'), ''); }
+  setTimeout(() => process.exit(0), s.windowOpen ?? 3000);
+} else {
+if (s.writes) { const { mkdirSync, writeFileSync } = await import('node:fs'); mkdirSync('salida', { recursive: true }); for (const [n, t] of Object.entries(s.writes)) writeFileSync('salida/' + n, t); }
 if (s.sleep) { setTimeout(() => {}, s.sleep); } else {
   if (s.error) { out({ type: 'result', subtype: 'success', is_error: true, result: s.error }); process.exit(1); }
   if (s.limit) { out({ type: 'result', subtype: 'success', is_error: true, result: 'Claude AI usage limit reached|1894614400' }); process.exit(1); }
   if (s.steps) { out({ type: 'assistant', message: { content: [{ type: 'thinking', thinking: 'Primero leo el enunciado.' }, { type: 'tool_use', name: 'Read', input: { file_path: 'enunciado.txt' } }, { type: 'text', text: 'La guía.' }] } }); out('\\n'); }
   out({ type: 'result', subtype: 'success', is_error: false, result: s.answer ?? 'respuesta de claude' }); process.exit(0);
+}
 }`,
   codex: `const CLI = 'codex';${common}
 if (args[0] === 'login') { process.stderr.write(s.signedIn === false ? 'Not logged in\\n' : 'Logged in using ChatGPT\\n'); process.exit(s.signedIn === false ? 1 : 0); }
@@ -71,7 +84,9 @@ const home = mkdtempSync(path.join(tmpdir(), 'bridge-home-'));
 const temp = mkdtempSync(path.join(tmpdir(), 'bridge-temp-'));
 // Only the fakes on the PATH (plus the folder of node itself), so a real CLI can never be called.
 const PATH = [fakes, path.dirname(process.execPath), ...(WIN ? [path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32')] : ['/usr/bin', '/bin'])].join(path.delimiter);
-const env = { ...process.env, PATH, Path: PATH, HOME: home, USERPROFILE: home, TMPDIR: temp, TEMP: temp, TMP: temp, STUDIUM_BRIDGE_NO_WINDOW: '1' };
+// Never the person's own Claude Code settings (CLAUDE_CONFIG_DIR): the tests have a home of their own.
+const { CLAUDE_CONFIG_DIR: _own, ...outside } = process.env;
+const env = { ...outside, PATH, Path: PATH, HOME: home, USERPROFILE: home, TMPDIR: temp, TEMP: temp, TMP: temp, STUDIUM_BRIDGE_NO_WINDOW: '1' };
 let printed = '';
 const bridge = spawn(process.execPath, [BRIDGE, '--port', String(PORT)], { env, stdio: ['ignore', 'pipe', 'pipe'] });
 bridge.stdout.on('data', (d) => { printed += d; });
@@ -161,7 +176,8 @@ await test('claude runs read-only in a folder with the material and the instruct
   check(c.files.includes('examen.pdf') && c.files.includes('notas.txt') && c.files.includes('INSTRUCCIONES.md'), c.files.join());
   check(c.instructions.includes('Instrucciones de Studium') && c.instructions.includes('Procesa el material'), 'instructions');
   check(c.args.includes('--allowedTools') && c.args[c.args.indexOf('--allowedTools') + 1] === 'Read(./**)', 'Read only, and only its own folder');
-  for (const tool of ['Bash', 'Edit', 'Write', 'WebFetch']) check(c.args.includes(tool), `${tool} not disallowed`);
+  for (const tool of ['Bash', 'WebFetch']) check(c.args.includes(tool), `${tool} not disallowed`);
+  { const allowed = c.args.slice(c.args.indexOf('--allowedTools') + 1, c.args.indexOf('--disallowedTools')); check(allowed.every((t) => t === 'Read(./**)' || /^(Write|Edit)\(\.\/salida\/\*\*\)$/.test(t)), `writes only in salida: ${allowed.join(' ')}`); }
   check(c.args.includes('claude-haiku-5-5') && c.args.includes('low'), 'model or effort');
   check(!c.args.includes('--bare'), '--bare breaks macOS sign-in');
   check(leftovers().length === 0, 'folder left behind');
@@ -182,7 +198,7 @@ await test('claude works in a folder of the person, with the tools of its permis
     check(same(c.cwd, work) || c.cwd.toLowerCase().endsWith(path.basename(work).toLowerCase()), `ran in ${c.cwd}`);
     check(c.files.includes('notebook.ipynb'), 'sees the folder');
     const allowed = c.args.slice(c.args.indexOf('--allowedTools') + 1, c.args.indexOf('--disallowedTools'));
-    check(allowed.includes('Read(./**)') && !allowed.some((t) => /^(Edit|Write|Bash)/.test(t)), `read mode allowed ${allowed.join(' ')}`);
+    check(allowed.includes('Read(./**)') && !allowed.some((t) => /^(Edit|Write|Bash)/.test(t) && !/\/salida\/\*\*\)$/.test(t)), `read mode allowed ${allowed.join(' ')}`);
     for (const tool of ['Bash', 'Edit', 'Write', 'WebFetch']) check(c.args.includes(tool), `${tool} not disallowed`);
     check(!readdirSync(work).includes('.studium'), '.studium left in the folder');
     scenario({ claude: { answer: 'hecho' } });
@@ -289,7 +305,7 @@ await test('a hostile file name stays inside the folder', async () => {
   const r = await run({ engine: 'claude', model: 'claude-sonnet-5-5', files: names.map((name) => ({ name, type: 'text/plain', text: 'x' })) });
   check(r.status === 200, `status ${r.status}`);
   const [c] = calls();
-  check(c.files.length === names.length + 1, `files ${c.files.join(' | ')}`);
+  check(c.files.filter((f) => f !== 'salida').length === names.length + 1, `files ${c.files.join(' | ')}`);
   check(c.files.every((f) => !f.includes('..') && !/[\\/:?]/.test(f)), c.files.join(' | '));
   check(c.instructions.includes('Instrucciones de Studium'), 'a file overwrote the instructions');
   check(!existsSync(path.join(temp, 'escape.txt')) && !existsSync(path.join(path.dirname(temp), 'escape.txt')), 'escaped');
@@ -300,18 +316,39 @@ await test('a timeout ends the CLI and answers 504', async () => {
   check(r.status === 504 && r.data.error.code === 'timeout', `status ${r.status}`);
   check(leftovers().length === 0, 'folder left behind');
 });
-await test('«ver a tu IA en una terminal» shows the exact instructions, each step live, and the end', async () => {
-  scenario({ claude: { steps: true, answer: 'hecho' } });
-  const r = await run({ engine: 'claude', model: 'claude-sonnet-5-5', runId: 'mirar-123', watch: true, system: 'INSTRUCCIONES DE PRUEBA' });
-  const file = path.join(temp, 'studium-tu-ia-mirar-123.txt');
-  const shown = existsSync(file) ? readFileSync(file, 'utf8') : '';
-  check(r.status === 200, `status ${r.status}`);
-  check(shown.includes('INSTRUCCIONES DE PRUEBA') && shown.includes('Piensa') && shown.includes('Lee enunciado.txt') && shown.includes('Listo'), shown.slice(-400));
-  scenario({ claude: { answer: 'hecho' } });
-  await run({ engine: 'claude', model: 'claude-sonnet-5-5', runId: 'sin-mirar-1' });
-  check(!existsSync(path.join(temp, 'studium-tu-ia-sin-mirar-1.txt')), 'a window without asking');
+await test('what the AI writes in «salida» comes back to Studium', async () => {
+  scenario({ claude: { writes: { 'esquema.json': '{"a":1}', 'H1.json': '{"b":2}' }, answer: 'listo' } });
+  const r = await run({ engine: 'claude', model: 'claude-sonnet-5-5' });
+  check(r.status === 200 && r.data.outputs?.['esquema.json'] === '{"a":1}' && r.data.outputs?.['H1.json'] === '{"b":2}', JSON.stringify(r.data.outputs));
+  const allowed = calls()[0].args.slice(calls()[0].args.indexOf('--allowedTools') + 1, calls()[0].args.indexOf('--disallowedTools'));
+  check(allowed.includes('Write(./salida/**)') && !allowed.includes('Write') && !allowed.includes('Bash'), `allowed ${allowed.join(' ')}`);
+});
+await test('«ver a Claude Code trabajando» opens the official CLI with the request, follows it live, and gets its answer', async () => {
+  scenario({ claude: {} });
+  const r = await run({ engine: 'claude', model: 'claude-sonnet-5-5', runId: 'ventana-123', watch: true });
+  const prog = await call('GET', '/v1/progress?id=ventana-123');
+  const c = calls()[0];
+  check(r.status === 200 && r.data.text === 'desde la ventana', `${r.status} ${JSON.stringify(r.data).slice(0, 200)}`);
+  check(!c.args.includes('-p') && c.args.includes('--session-id') && /LISTO/.test(c.args[0]), `args ${c.args.slice(0, 3).join(' | ')}`);
+  check(prog.data.events?.some((e) => e.kind === 'Read'), `progress ${JSON.stringify(prog.data)}`);
+  check(/claude --resume/.test(r.data.resume), 'resume');
+});
+await test('Studium\'s «Detener» closes the Claude Code window', async () => {
+  scenario({ claude: { neverDone: true, windowOpen: 60000 } });
+  const body = JSON.stringify({ engine: 'claude', model: 'claude-sonnet-5-5', system: 'x', text: 'y', files: [], watch: true });
+  const req = http.request({ host: '127.0.0.1', port: PORT, path: '/v1/run', method: 'POST', headers: { authorization: `Bearer ${token}`, origin: SITE, 'content-type': 'application/json' } });
+  req.on('error', () => {});
+  req.end(body);
+  await new Promise((r) => setTimeout(r, 3000));
+  req.destroy();
+  await new Promise((r) => setTimeout(r, 2000));
+  check(/se cerró la ventana de Claude Code/.test(printed), 'the bridge did not close it');
+  scenario({ claude: { answer: 'después' } });
+  const next = await run({ engine: 'claude', model: 'claude-sonnet-5-5' });
+  check(next.status === 200, `next ${next.status}`);
 });
 await test('when the page cancels or closes, the AI stops and the next request does not wait', async () => {
+  const before = leftovers().length;
   scenario({ claude: { sleep: 60000 } });
   const body = JSON.stringify({ engine: 'claude', model: 'claude-sonnet-5-5', system: 'x', text: 'y', files: [] });
   const req = http.request({ host: '127.0.0.1', port: PORT, path: '/v1/run', method: 'POST', headers: { authorization: `Bearer ${token}`, origin: SITE, 'content-type': 'application/json' } });
@@ -325,7 +362,7 @@ await test('when the page cancels or closes, the AI stops and the next request d
   const t0 = Date.now();
   const next = await run({ engine: 'claude', model: 'claude-sonnet-5-5' });
   check(next.status === 200 && Date.now() - t0 < 15000, `next ${next.status} after ${Date.now() - t0} ms`);
-  check(leftovers().length === 0, 'folder left behind');
+  check(leftovers().length <= before, 'folder left behind');
 });
 await test('two runs at once take turns', async () => {
   scenario({});

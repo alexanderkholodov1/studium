@@ -3037,6 +3037,23 @@ canvas.prop { display: block; }
 .tj-error pre { white-space: pre-wrap; font-size: 12.5px; max-height: 200px; overflow: auto; }
 .tj-error-act { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; }
 
+/* Drafts of a new trabajo, on this device. */
+.tj-sub { font-size: 18px; margin: 22px 0 10px; }
+.tj-draft { border: 1.5px dashed color-mix(in oklab, var(--blue) 40%, transparent); }
+.tj-draft-act { display: flex; gap: 12px; align-items: center; padding: 0 20px 16px; margin: 0; }
+
+/* «Tu IA para este trabajo», short: two selects, where it works, the rest folded. */
+.tj-sugg { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 12px; }
+.tj-roles2 { display: grid; gap: 8px; margin-bottom: 12px; }
+.tj-roles2 > label { display: grid; grid-template-columns: 150px 1fr; align-items: center; gap: 10px; }
+.tj-roles2 > label > span { font-weight: 700; font-size: 14.5px; }
+.tj-roles2 select { width: 100%; }
+.tj-where h3 { font-size: 14.5px; margin: 10px 0 6px; }
+.tj-folder-now { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.tj-folder-now select { width: auto; }
+.tj-folderpick { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
+.tj-folderpick label { cursor: pointer; }
+
 /* The list: a menu on each trabajo. */
 .tj-card { position: relative; padding: 0; }
 .tj-card-main { display: grid; gap: 4px; padding: 18px 48px 18px 20px; color: var(--ink); text-decoration: none; }

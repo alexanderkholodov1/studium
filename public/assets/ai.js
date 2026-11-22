@@ -502,7 +502,7 @@ export async function findBridge(port = BRIDGE_PORT) {
   try { const r = await fetch(`http://127.0.0.1:${port}/v1/hello`); return r.ok ? await r.json() : null; } catch { return null; }
 }
 // The bridge's version this page expects (bridge.mjs, VERSION): an older one is downloaded again.
-export const BRIDGE_VERSION = '1.5.0';
+export const BRIDGE_VERSION = '1.6.0';
 // «Ver a mi IA en una terminal»: the bridge opens a window that shows the exact instructions and, live, what the AI
 // does. Chosen by the person, kept in this browser.
 const WATCH = 'studium-ai-watch';
@@ -712,7 +712,7 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
     rec.phase = 'done'; rec.ms = Date.now() - rec.started; rec.response = String(out.text ?? '').slice(0, 60000);
     logLine(rec, `Respondió en ${Math.round(rec.ms / 1000)} s: ${String(out.text ?? '').length} caracteres${out.truncated ? ' (cortado por el límite de largo)' : ''}.`);
     // An empty answer is a failure of the AI, never a result to review: it is tried again.
-    if (!String(out.text ?? '').trim()) throw new AIError('Tu IA devolvió una respuesta vacía. Studium vuelve a probar.', { kind: 'transient', way });
+    if (!String(out.text ?? '').trim() && !Object.keys(out.outputs ?? {}).length) throw new AIError('Tu IA devolvió una respuesta vacía. Studium vuelve a probar.', { kind: 'transient', way });
     return { ...out, ...meta, truncated: !!out.truncated };
   } catch (e) {
     if (signal?.aborted) { rec.phase = 'error'; logLine(rec, 'Cancelado por ti.'); throw new AIError('Cancelado.', { kind: 'cancel', way }); }
@@ -940,7 +940,7 @@ async function send({ way, model, effort, system, text, files, maxTokens, onProg
       body: JSON.stringify({ runId, watch: watchTerminal(), engine, account: engine === 'claude' ? load().bridge?.account ?? '' : '', folder: engine === 'claude' ? folder : '', model, effort, system, text, files: files.map((f) => (f.data ? { name: f.name, type: f.type, data: f.data } : { name: f.name, type: 'text/plain', text: f.text })) }),
     });
   } finally { if (watch) clearInterval(watch); }
-  return { text: String(body.text ?? ''), resume: String(body.resume ?? '') };
+  return { text: String(body.text ?? ''), resume: String(body.resume ?? ''), outputs: body.outputs && typeof body.outputs === 'object' ? body.outputs : {} };
 }
 
 // The HTML page inside an answer: tolerant of code fences and text around it.

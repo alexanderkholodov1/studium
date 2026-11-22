@@ -599,7 +599,7 @@ function wayStatus(way) {
   return `<div class="ai-status">
     <span class="badge ok">conectada</span>
     <span class="muted">Hoy: ${count(ai.usageToday(way), 'pedido', 'pedidos')} desde Studium.</span>${reset ? ` <span class="muted">${reset}</span>` : ''}
-    ${isDefault ? '<span class="badge">la que usa Studium</span>' : `<button class="button ghost small" data-ai-default="${way}">Usar esta</button>`}
+    ${isDefault ? '<span class="badge">la principal</span>' : `<button class="button ghost small" data-ai-default="${way}" title="Studium la usa primero para todo; ya está conectada aunque no la elijas">Hacerla la principal</button>`}
     ${taskModels(way)}
   </div>`;
 }
@@ -708,7 +708,7 @@ function bridgeAdvanced() {
           <span>${esc(e.ready && e.paused ? e.paused : e.ready ? `lista · ${count((e.models ?? []).length, 'modelo', 'modelos')}` : e.detail || 'no está lista')}</span>
           ${usable ? `<label class="check"><input type="checkbox" data-ai-bridge-use="${esc(e.id)}" ${on ? 'checked' : ''}> Usar en Studium</label>` : ''}
           ${on && accounts.length ? `<div class="bridge-accounts" role="radiogroup" aria-label="Cuenta de ${esc(names[e.id] ?? e.name)}">${accounts.map((a) => `<label class="check"><input type="radio" name="bridge-account" data-ai-bridge-account="${esc(a.id)}" ${a.id === b.account ? 'checked' : ''}> ${esc(a.email || a.id)}${a.plan ? ` <small>plan ${esc(a.plan)}</small>` : ''} <small>· carpeta ${esc(a.id)}</small></label>`).join('')}</div>` : ''}
-          ${on ? (ai.defaultWay() === `bridge:${e.id}` ? '<span class="badge">la que usa Studium</span>' : `<button class="button ghost small" data-ai-default="bridge:${e.id}">Usar esta para todo</button>`) : ''}</li>`;
+          ${on ? (ai.defaultWay() === `bridge:${e.id}` ? '<span class="badge">la principal</span>' : `<button class="button ghost small" data-ai-default="bridge:${e.id}" title="Studium la usa primero para todo; ya está conectada aunque no la elijas">Hacerla la principal</button>`) : ''}</li>`;
         }).join('') : '<li>Pulsa «Revisar» con el puente abierto.</li>'}</ul>
         <div class="actions"><button class="button ghost small" data-ai-bridge-check>Revisar</button><button class="link" data-ai-forget="bridge">Desenlazar</button></div>
         <div class="bridge-version ${ai.bridgeOld() ? 'old' : ''}">
@@ -812,7 +812,8 @@ async function testAI(way) {
   try {
     const list = await ai.models(way);
     msg.classList.add('ok');
-    msg.textContent = `Conectada: ${count(list.length, 'modelo', 'modelos')}. Para crear guías se recomienda ${ai.recommend('guide', way) || list[0] || 'el de tu cuenta'}.`;
+    // Said plainly: it is connected, and what Studium can do with it now.
+    msg.textContent = `✓ ¡Conectada! Studium ya puede usarla para crear guías, leer tus archivos y tu horario, responder dudas y escribir tus trabajos (${count(list.length, 'modelo', 'modelos')}; para guías, ${ai.recommend('guide', way) || list[0] || 'el de tu cuenta'}).${ai.defaultWay() === way ? '' : ' Para que la use primero, pulsa «Hacerla la principal».'}`;
     sfx.chime();
   } catch (error) { msg.textContent = error.message; }
 }

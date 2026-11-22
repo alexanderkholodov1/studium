@@ -8,13 +8,13 @@
 // time per CLI. The material never leaves this computer except toward the student's own AI.
 import { createServer } from 'node:http';
 import { execFile, spawn } from 'node:child_process';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import { chmodSync, closeSync, openSync, readSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { homedir, platform, tmpdir } from 'node:os';
 import path from 'node:path';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
-const VERSION = '1.5.0';
+const VERSION = '1.6.0';
 const NAME = 'studium-bridge';
 const DEFAULT_PORT = 41730;
 const MAX_BODY = 64 * 1024 * 1024;
@@ -98,7 +98,15 @@ const MODES = {
     'Bash(git status:*)', 'Bash(git diff:*)', 'Bash(git log:*)', 'Bash(git add:*)', 'Bash(git commit:*)', 'Bash(git push:*)', 'Bash(git pull:*)', 'Bash(git switch:*)', 'Bash(git branch:*)'], deny: [] },
 };
 const NEVER = ['WebFetch', 'WebSearch', 'Task', 'Agent'];
-const folders = () => (Array.isArray(readConfig().folders) ? readConfig().folders : []).filter((f) => f && typeof f.path === 'string' && MODES[f.mode]);
+// The folders the person chose live only in memory, while the bridge is open: access is for one task (his words: «que
+// sea algo de acceso único»), never stored on the computer. Folders an older bridge stored are forgotten on start.
+let FOLDERS = [];
+// The tests (tools/test-bridge.mjs) set folders by writing them where an older bridge kept them.
+const TESTING = process.env.STUDIUM_BRIDGE_NO_WINDOW === '1';
+const folders = () => (TESTING && Array.isArray(readConfig().folders) ? readConfig().folders : FOLDERS).filter((f) => f && typeof f.path === 'string' && MODES[f.mode]);
+const keepFolders = (list) => { if (TESTING) writeConfig({ folders: list }); else FOLDERS = list; };
+if (!TESTING && Array.isArray(readConfig().folders)) { const { folders: _old, ...rest } = readConfig(); writeFileSync(CONFIG, `${JSON.stringify(rest, null, 2)}
+`, { mode: 0o600 }); }
 const HOURS = [1, 8, 24 * 7];
 const expired = (f) => !f.expires || Date.parse(f.expires) <= Date.now();
 const folderView = (f) => ({ id: f.id, name: path.basename(f.path), path: f.path, mode: f.mode, label: MODES[f.mode].label, exists: existsSync(f.path), expires: f.expires ?? '', expired: expired(f) });
@@ -187,7 +195,7 @@ async function addFolder(body) {
   }
   const list = folders().filter((f) => path.resolve(f.path) !== path.resolve(real) && f.id !== old?.id);
   const f = { id: old?.id ?? randomBytes(6).toString('base64url'), path: real, mode, expires: new Date(Date.now() + hours * 3600_000).toISOString() };
-  writeConfig({ folders: [...list, f] });
+  keepFolders([...list, f]);
   console.log(`  Carpeta ${old ? 'renovada' : 'agregada'}: ${real} (tu IA puede ${MODES[mode].label}, hasta el ${new Date(f.expires).toLocaleString('es')}).`);
   return folderView(f);
 }
@@ -195,10 +203,10 @@ function changeFolder(body) {
   const list = folders();
   const f = list.find((x) => x.id === body?.id);
   if (!f) throw new Failure(404, 'no-folder', 'Esa carpeta ya no está en el puente.');
-  if (body.remove) { writeConfig({ folders: list.filter((x) => x !== f) }); console.log(`\nCarpeta quitada del puente: ${f.path}`); return { removed: f.id }; }
+  if (body.remove) { keepFolders(list.filter((x) => x !== f)); console.log(`\nCarpeta quitada del puente: ${f.path}`); return { removed: f.id }; }
   if (!MODES[body.mode]) throw new Failure(400, 'bad-request', 'Ese permiso no existe.');
   f.mode = body.mode;
-  writeConfig({ folders: list });
+  keepFolders(list);
   console.log(`\nCarpeta ${f.path}: ahora tu IA puede ${MODES[f.mode].label}.`);
   return folderView(f);
 }
@@ -215,6 +223,23 @@ function cleanOldFolders() {
   } catch { /* nothing to clean */ }
 }
 // Windows keeps a folder busy for a moment after a process in it ends: a few retries.
+// What the AI left in «salida» (text files, up to 20 MB in all), for Studium.
+function readOutputs(dir) {
+  const out = {};
+  let total = 0;
+  try {
+    for (const name of readdirSync(dir)) {
+      if (name === 'LISTO' || !/^[\w.-]{1,80}$/.test(name)) continue;
+      const full = path.join(dir, name);
+      if (!statSync(full).isFile()) continue;
+      const text = readFileSync(full, 'utf8');
+      total += text.length;
+      if (total > 20_000_000) break;
+      out[name] = text;
+    }
+  } catch { /* no outputs */ }
+  return out;
+}
 const removeFolder = (dir) => { try { rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); } catch { /* best effort; removed on the next start */ } };
 // A file name that is valid on every OS and stays inside the folder.
 function safeName(name, taken) {
@@ -244,6 +269,11 @@ function writeRun(dir, body) {
   return names;
 }
 const placePrompt = (names, place) => `Trabajas en la carpeta de este trabajo, la carpeta actual; puedes ${MODES[place.mode].label}, solo dentro de ella. Sigue las instrucciones de ${place.rel}/INSTRUCCIONES.md.${names.length ? ` Lo que Studium te mandó está en ${place.rel}: ${names.join(', ')}. Léelo todo.` : ''} No toques la carpeta .studium. Responde solo con el resultado final que piden las instrucciones, sin comentarios antes ni después.`;
+// Where the AI leaves what it makes: «salida», inside the run's folder. Studium gets back every file in it.
+const OUT = (place) => (place ? `${place.rel}/salida` : 'salida');
+const outNote = (place) => ` Si las instrucciones piden archivos, escríbelos en ${OUT(place)}/ (y en ningún otro lugar).`;
+// In the official CLI the answer cannot be read from its output: the AI writes it to a file and then says it is done.
+const windowNote = (place) => ` Tu respuesta final va en ${OUT(place)}/RESPUESTA.md (si las instrucciones no piden otros archivos). Cuando hayas terminado TODO, crea el archivo vacío ${OUT(place)}/LISTO: así Studium sabe que terminaste. Después puedes seguir conversando aquí con la persona.`;
 const prompt = (names) => `Sigue las instrucciones de INSTRUCCIONES.md, en esta carpeta.${names.length ? ` El material está en estos archivos de la misma carpeta, en este orden: ${names.join(', ')}. Léelos todos, completos.` : ''} Responde solo con el resultado final que piden las instrucciones, sin comentarios antes ni después.`;
 
 /* ---------- finding and running a CLI ---------- */
@@ -400,7 +430,6 @@ function showStep(line, run = null) {
   let e; try { e = JSON.parse(line); } catch { return; }
   if (e.type !== 'assistant') return;
   for (const c of e.message?.content ?? []) {
-    if (run?.watch) { const w = watchLine(c); if (w) run.watch(w); }
     if (c.type === 'text' && run) { run.chars += String(c.text ?? '').length; run.events.push({ at: Date.now(), kind: 'write', target: '' }); continue; }
     if (c.type === 'thinking' && run) { run.events.push({ at: Date.now(), kind: 'think', target: '' }); continue; }
     if (c.type !== 'tool_use') continue;
@@ -410,44 +439,6 @@ function showStep(line, run = null) {
     run?.events.push({ at: Date.now(), kind: c.name, target: String(target).split(/[\\/]/).slice(-2).join('/').slice(0, 120) });
   }
   if (run && run.events.length > 400) run.events.splice(0, run.events.length - 400);
-}
-
-/* ---------- «Ver a tu IA en una terminal» ---------- */
-// When the person asks for it, a terminal window of its own shows the exact instructions the AI got and then, live,
-// what it thinks, reads, changes and writes, until it ends. It only shows: it reads a file the bridge writes in the
-// temporary folder, and closing it changes nothing.
-function openWatch(body, place) {
-  const file = path.join(tmpdir(), `studium-tu-ia-${body.runId || randomBytes(4).toString('hex')}.txt`);
-  const name = { claude: 'Claude Code', codex: 'Codex', antigravity: 'Antigravity' }[body.engine] ?? body.engine;
-  const rule = '─'.repeat(72);
-  const text = String(body.text ?? '');
-  writeFileSync(file, [`Studium · tu IA trabajando: ${name}${body.model ? `, ${body.model}` : ''}${body.effort ? `, esfuerzo ${body.effort}` : ''}`,
-    `Dónde: ${place ? `${place.path} (puede ${MODES[place.mode].label})` : 'una carpeta temporal, solo lectura'}`, '', rule, 'LAS INSTRUCCIONES EXACTAS QUE RECIBE (INSTRUCCIONES.md)', rule, String(body.system ?? ''), '',
-    rule, 'LO QUE PIDE STUDIUM', rule, text.length > 6000 ? `${text.slice(0, 6000)}\n[… ${text.length - 6000} caracteres más del mismo pedido]` : text,
-    ...(Array.isArray(body.files) && body.files.length ? ['', `Archivos que lee: ${body.files.map((f) => f.name).join(', ')}`] : []), '', rule, 'LO QUE HACE, EN VIVO', rule, ''].join('\n'), 'utf8');
-  const write = (line) => { try { writeFileSync(file, `${line}\n`, { flag: 'a' }); } catch { /* the window shows what it got */ } };
-  try {
-    if (process.env.STUDIUM_BRIDGE_NO_WINDOW === '1') { /* the tests read the file instead */ } else if (WIN) {
-      const ps = `$host.UI.RawUI.WindowTitle = 'Studium · tu IA trabajando'; [Console]::OutputEncoding = [Text.Encoding]::UTF8; Get-Content -LiteralPath $env:STUDIUM_WATCH -Wait -Encoding UTF8`;
-      spawn('cmd.exe', ['/d', '/c', 'start', '', 'powershell.exe', '-NoProfile', '-NoExit', '-EncodedCommand', Buffer.from(ps, 'utf16le').toString('base64')],
-        { detached: true, stdio: 'ignore', windowsHide: false, env: { ...process.env, STUDIUM_WATCH: file } }).unref();
-    } else if (platform() === 'darwin') {
-      spawn('osascript', ['-e', `tell application "Terminal" to do script "tail -n +1 -f " & quoted form of "${file.replace(/"/g, '')}"`, '-e', 'tell application "Terminal" to activate'], { detached: true, stdio: 'ignore' }).unref();
-    } else {
-      spawn('x-terminal-emulator', ['-e', 'tail', '-n', '+1', '-f', file], { detached: true, stdio: 'ignore' }).on('error', () => {}).unref();
-    }
-    console.log(`  Se abrió una terminal para ver a tu IA trabajar (${file}).`);
-  } catch (e) { console.log(`  No se pudo abrir la terminal para verla: ${e.message}`); }
-  return { file, write };
-}
-function watchLine(c) {
-  const clip = (t, n) => { const x = String(t ?? '').trim(); return x.length > n ? `${x.slice(0, n)}…` : x; };
-  if (c.type === 'thinking') return `\n💭 Piensa:\n${clip(c.thinking, 3000)}\n`;
-  if (c.type === 'text') return `\n✍️  Escribe:\n${clip(c.text, 6000)}\n`;
-  if (c.type !== 'tool_use') return '';
-  const target = c.input?.file_path ?? c.input?.path ?? c.input?.pattern ?? c.input?.command ?? '';
-  const what = { Read: '📖 Lee', Glob: '🔎 Busca archivos', Grep: '🔎 Busca en los archivos', Edit: '✏️  Edita', Write: '📝 Escribe el archivo', MultiEdit: '✏️  Edita', NotebookEdit: '✏️  Edita el notebook', Bash: '⚙️  Ejecuta' }[c.name] ?? `· ${c.name}`;
-  return `${what} ${clip(target, 200)}`;
 }
 
 /* ---------- Claude's accounts on this computer ---------- */
@@ -465,6 +456,62 @@ async function claudeAccounts(b) {
     return { id, env, ready, email: String(info?.email ?? ''), plan: String(info?.subscriptionType ?? '') };
   }));
   return found.filter(Boolean).filter((a) => a.ready || a.id === '.claude');
+}
+
+const resumeCommand = (account, session) => `${account.env ? `${WIN ? `set CLAUDE_CONFIG_DIR=${account.env.CLAUDE_CONFIG_DIR}&& ` : `CLAUDE_CONFIG_DIR="${account.env.CLAUDE_CONFIG_DIR}" `}` : ''}claude --resume ${session}`;
+
+/* ---------- Claude Code itself, in a window of its own ---------- */
+// «Ver a Claude Code trabajando»: the official CLI opens in its own terminal window with Studium's request already
+// typed, so the person sees exactly what it was asked and what it does, can stop it there (Esc) and keep talking to it
+// afterwards. It writes its answer to «salida» and then the file LISTO; the bridge waits for that. What it does is
+// read, live, from Claude Code's own record of the session (its transcript), for the page. Studium's «Detener» closes
+// the window.
+function claudeInWindow(b, { body, account, ask, allow, deny, cwd, dir, live, timeoutMs }) {
+  const session = randomUUID();
+  const args = [ask, '--model', String(body.model), '--allowedTools', ...allow, '--disallowedTools', ...deny, '--session-id', session];
+  if (body.effort) args.push('--effort', String(body.effort));
+  const child = spawn(b.cmd, [...b.pre, ...args], { cwd, detached: true, windowsHide: process.env.STUDIUM_BRIDGE_NO_WINDOW === '1' /* the tests */, stdio: 'ignore', shell: false, ...(account.env ? { env: { ...process.env, ...account.env } } : {}) });
+  const home = account.env?.CLAUDE_CONFIG_DIR ?? process.env.CLAUDE_CONFIG_DIR ?? path.join(homedir(), '.claude');
+  const transcript = path.join(home, 'projects', cwd.replace(/[^A-Za-z0-9]/g, '-'), `${session}.jsonl`);
+  const done = path.join(dir, 'salida', 'LISTO');
+  const again = resumeCommand(account, session);
+  console.log(`  Se abrió Claude Code en su propia ventana (sesión ${session}). Ahí lo ves trabajar; Esc lo detiene.`);
+  const signal = asking.getStore();
+  return new Promise((resolve, reject) => {
+    let offset = 0; let rest = ''; let exited = false; let finished = false;
+    let poll = null; let timer = null;
+    const stop = () => { console.log('  Studium detuvo el pedido: se cerró la ventana de Claude Code.'); killTree(child); end(() => reject(new Failure(499, 'cancelled', 'Studium canceló el pedido.'))); };
+    const end = (then) => { if (finished) return; finished = true; clearInterval(poll); clearTimeout(timer); signal?.removeEventListener('abort', stop); if (live) live.done = true; then(); };
+    child.on('exit', () => { exited = true; });
+    child.on('error', (e) => end(() => reject(new Failure(502, 'failed', `No se pudo abrir Claude Code: ${e.message}`))));
+    const readNew = () => {
+      let fd;
+      try { fd = openSync(transcript, 'r'); } catch { return; }
+      try {
+        const size = statSync(transcript).size;
+        if (size <= offset) return;
+        const buf = Buffer.alloc(size - offset);
+        readSync(fd, buf, 0, buf.length, offset);
+        offset = size;
+        const lines = (rest + buf.toString('utf8')).split(/\r?\n/);
+        rest = lines.pop();
+        for (const l of lines) showStep(l, live);
+      } finally { closeSync(fd); }
+    };
+    poll = setInterval(() => {
+      readNew();
+      if (existsSync(done)) {
+        const outputs = readOutputs(path.join(dir, 'salida'));
+        console.log(`  Claude Code terminó. Su ventana sigue abierta para que sigas hablándole.\n      (otra vez, más tarde: ${again})`);
+        body.keepFolder = true; // Claude Code is still open in it
+        end(() => resolve({ text: outputs['RESPUESTA.md'] || 'Listo.', session, resume: again }));
+      } else if (exited) {
+        end(() => reject(new Failure(499, 'cancelled', 'Se cerró la ventana de Claude Code antes de que terminara.')));
+      }
+    }, 1000);
+    timer = setTimeout(() => { killTree(child); end(() => reject(new Failure(504, 'timeout', 'Tu IA tardó demasiado en responder.'))); }, timeoutMs);
+    if (signal?.aborted) stop(); else signal?.addEventListener('abort', stop, { once: true });
+  });
 }
 
 /* ---------- the three CLIs ---------- */
@@ -507,24 +554,25 @@ const ENGINES = {
         throw new Failure(400, 'paid', `El puente solo usa modelos de Claude incluidos en tu plan, nombrados uno por uno (según ${allowed.source}). Elige uno en Studium.`);
       }
       const mode = body.place ? MODES[body.place.mode] : null;
-      const args = mode
-        ? ['-p', placePrompt(names, body.place), '--output-format', 'json', '--allowedTools', ...mode.allow, '--disallowedTools', ...mode.deny, ...NEVER, '--model', String(body.model)]
-        : ['-p', prompt(names), '--output-format', 'json', '--allowedTools', 'Read(./**)',
-          '--disallowedTools', 'Bash', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit', ...NEVER,
-          '--model', String(body.model)];
-      if (body.effort) args.push('--effort', String(body.effort));
-      const fmt = args.indexOf('json');
-      if (fmt > 0) args.splice(fmt, 1, 'stream-json', '--verbose');
+      // It may write only in «salida» (besides what the folder's permission allows); everything else stays as it was.
+      const out = [`Write(./${OUT(body.place)}/**)`, `Edit(./${OUT(body.place)}/**)`];
+      const allow = mode ? [...mode.allow, ...out] : ['Read(./**)', ...out];
+      const deny = mode ? [...mode.deny, ...NEVER] : ['Bash', 'MultiEdit', 'NotebookEdit', ...NEVER];
+      const ask = (body.place ? placePrompt(names, body.place) : prompt(names)) + outNote(body.place);
+      const cwd = body.place ? body.place.path : dir;
       console.log(`\nTu IA trabaja (${account.email || account.id}, ${body.model}${body.place ? `, en ${body.place.path}, puede ${MODES[body.place.mode].label}` : ', en una carpeta temporal'})…`);
       const live = progressOf(body.runId);
-      const r = await runCli(b, args, { cwd: body.place ? body.place.path : dir, timeoutMs, env: account.env, onLine: (l) => showStep(l, live) });
+      if (body.watch && WIN) return claudeInWindow(b, { body, account, ask: ask + windowNote(body.place), allow, deny, cwd, dir, live, timeoutMs });
+      const args = ['-p', ask, '--output-format', 'stream-json', '--verbose', '--allowedTools', ...allow, '--disallowedTools', ...deny, '--model', String(body.model)];
+      if (body.effort) args.push('--effort', String(body.effort));
+      const r = await runCli(b, args, { cwd, timeoutMs, env: account.env, onLine: (l) => showStep(l, live) });
       if (live) live.done = true;
       let result = null;
       for (const line of r.out.split(/\r?\n/)) { try { const e = JSON.parse(line); if (e.type === 'result') result = e; } catch { /* not an event */ } }
       if (!result) { try { result = JSON.parse(r.out.trim()); } catch { /* not the JSON result */ } }
       if (result && !result.is_error && result.subtype !== 'error' && typeof result.result === 'string') {
         if (result.session_id) {
-          const again = `${account.env ? `${WIN ? `set CLAUDE_CONFIG_DIR=${account.env.CLAUDE_CONFIG_DIR}&& ` : `CLAUDE_CONFIG_DIR="${account.env.CLAUDE_CONFIG_DIR}" `}` : ''}claude --resume ${result.session_id}`;
+          const again = resumeCommand(account, result.session_id);
           console.log(`  Para seguir hablando con tu IA sobre este pedido, en ${body.place ? body.place.path : 'cualquier carpeta'}:\n      ${again}`);
           return { text: result.result, session: result.session_id, resume: again };
         }
@@ -780,26 +828,15 @@ async function handleRun(body) {
   try {
     const names = writeRun(dir, body);
     if (typeof body.runId !== 'string' || !/^[\w-]{6,40}$/.test(body.runId)) body.runId = '';
-    const watch = body.watch === true ? openWatch(body, place) : null;
-    const live = watch ? progressOf(body.runId) : null;
-    if (live) live.watch = watch.write;
-    let got;
-    try { got = await engine.run(await bin(body.engine === 'antigravity' ? 'agy' : body.engine), dir, { ...body, place }, names, timeoutMs); } catch (e) {
-      watch?.write(`
-✖ No terminó: ${e.message}
-Studium te muestra qué hacer. Puedes cerrar esta ventana.`);
-      throw e;
-    }
+    mkdirSync(path.join(dir, 'salida'), { recursive: true });
+    const run = { ...body, place };
+    const got = await engine.run(await bin(body.engine === 'antigravity' ? 'agy' : body.engine), dir, run, names, timeoutMs);
     const text = typeof got === 'string' ? got : got.text;
-    watch?.write(`
-✔ Listo: Studium recibió la respuesta (${Math.round((Date.now() - started) / 1000)} s).${got?.resume ? `
-Para seguir hablando con tu IA sobre este pedido, en tu terminal:
-    ${got.resume}` : ''}
-Puedes cerrar esta ventana.`);
-    return { text, session: got?.session ?? '', resume: got?.resume ?? '', engine: body.engine, model: String(body.model ?? ''), effort: String(body.effort ?? ''), ms: Date.now() - started, folder: place ? place.path : '' };
+    if (run.keepFolder) body.keepFolder = true;
+    return { text, outputs: readOutputs(path.join(dir, 'salida')), session: got?.session ?? '', resume: got?.resume ?? '', engine: body.engine, model: String(body.model ?? ''), effort: String(body.effort ?? ''), ms: Date.now() - started, folder: place ? place.path : '' };
   } finally {
-    removeFolder(dir);
-    if (place) { try { rmSync(path.join(place.path, '.studium'), { recursive: false }); } catch { /* not empty, or gone */ } try { const left = readdirSync(path.join(place.path, '.studium')); if (!left.length) rmSync(path.join(place.path, '.studium'), { recursive: true, force: true }); } catch { /* gone */ } }
+    if (!body.keepFolder) removeFolder(dir);
+    if (place && !body.keepFolder) { try { rmSync(path.join(place.path, '.studium'), { recursive: false }); } catch { /* not empty, or gone */ } try { const left = readdirSync(path.join(place.path, '.studium')); if (!left.length) rmSync(path.join(place.path, '.studium'), { recursive: true, force: true }); } catch { /* gone */ } }
   }
 }
 
