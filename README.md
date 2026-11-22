@@ -28,7 +28,11 @@ Each person connects their AI in Settings in whatever way they have, as many way
 - **The local bridge, with their subscription:** `bridge.mjs`, downloaded from Studium and run with
   `node studium-bridge.mjs`, lets the page use the Claude Code, Codex or Antigravity already signed in on their computer,
   with no API. It listens on 127.0.0.1 only, answers only Studium's origins and only with the code it prints (its link
-  pairs it), runs each CLI read-only in a folder of its own that it deletes, and one request at a time per CLI.
+  pairs it), and runs one request at a time per CLI: by default read-only in a temporary folder it deletes; or, if the
+  person chooses, in a folder of theirs added through their computer's own folder dialog, with the permission they give
+  it (read only, write files, or also git), never outside it and never on the web. It finds each Claude account of the
+  computer and uses the one chosen, shows in its window each file the AI reads or changes, and says when a newer
+  version must be downloaded.
 - **OpenRouter** (free models) and **Puter**, each signed in with one click.
 - **An API key** of Claude, ChatGPT or Gemini, which bills per use.
 - **The chat**, with no connection at all (a free Claude account included): every part comes with its instructions, to

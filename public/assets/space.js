@@ -597,8 +597,8 @@ function bridgeWay(engine) {
   const e = b?.engines?.find((x) => x.id === engine);
   const name = { claude: 'Claude Code', codex: 'Codex', antigravity: 'Antigravity' }[engine];
   return `<article class="ai-way ${ai.connected().includes(way) ? 'on' : ''}">
-    <h3><span class="step">3</span> Automático, con tu suscripción <small>avanzado · el puente con ${name}</small></h3>
-    <p>Studium usa el ${name} que ya tienes instalado en tu computadora, con tu suscripción, sin pagar por uso. Necesita el puente (abajo, en «Avanzado»).</p>
+    <h3><span class="step">2</span> Automático, con tu suscripción <small>el puente con ${name}</small></h3>
+    <p>Studium usa el ${name} que ya tienes instalado en tu computadora, con tu suscripción, sin pagar por uso. Necesita el puente (abajo, en «El puente»).</p>
     ${b?.token ? (e ? `<p class="muted">${e.ready ? `${name} está listo en tu computadora.` : `${name}: ${esc(e.detail || 'no está listo')}.`}</p>` : `<p class="muted">El puente está enlazado, pero no encontró ${name} en tu computadora.</p>`) : ''}
     ${wayStatus(way)}
   </article>`;
@@ -625,13 +625,13 @@ function vendorPanel(v) {
     const site = v === 'openai' ? 'https://chatgpt.com' : 'https://claude.ai';
     const company = v === 'openai' ? 'OpenAI' : 'Anthropic';
     return `${chatWay(name, site)}
+      ${ai.offered('bridge:claude') ? bridgeWay(v === 'openai' ? 'codex' : 'claude') : ''}
+      <details class="ai-paid" ${ai.keyOf(v) ? 'open' : ''}><summary>Otra forma: pagar por uso, con una clave de API de ${company}</summary>
       <article class="ai-way ${ai.keyOf(v) ? 'on' : ''}">
-        <h3><span class="step">2</span> Automático, pagando por uso <small>con una clave de API de ${company}</small></h3>
-        <p>Studium lo hace todo solo. Cada pedido se cobra en tu cuenta de ${company}, aparte de tu suscripción: una suscripción de ${name} no incluye la API.</p>
+        <p>Studium lo hace todo solo, pero <b>cada pedido se cobra en tu cuenta de ${company}</b>, aparte de tu suscripción: una suscripción de ${name} no incluye la API. Úsala solo si ya tienes una clave y sabes lo que cuesta.</p>
         ${keyBox(v, 'La clave se guarda solo en este navegador. En un computador compartido, bórrala al terminar.')}
         ${wayStatus(v)}
-      </article>
-      ${ai.offered('bridge:claude') ? bridgeWay(v === 'openai' ? 'codex' : 'claude') : ''}
+      </article></details>
       ${THEIRS(name)}`;
   }
   const on = (w) => ai.connected().includes(w);
@@ -653,12 +653,12 @@ function bridgeAdvanced() {
   const b = ai.bridgeOf();
   const engines = b?.engines ?? [];
   const names = { claude: 'Claude Code', codex: 'Codex', antigravity: 'Antigravity' };
-  return `<details class="ai-advanced" ${b?.token ? 'open' : ''}><summary>Avanzado: el puente, para usar tu suscripción automáticamente</summary>
+  return `<details class="ai-advanced" ${b?.token ? 'open' : ''}><summary>El puente: para usar tu suscripción automáticamente</summary>
     <div class="ai-bridge">
       <p><b>Qué es.</b> Un programa pequeño que corre en tu computadora mientras lo tienes abierto. Conecta Studium con Claude Code, Codex o Antigravity, si ya los tienes instalados con tu sesión iniciada, para usar tu suscripción sin pagar por uso.</p>
       <ul>
-        <li><b>Qué hace:</b> recibe un pedido de Studium, se lo pasa a tu IA en una carpeta temporal, y devuelve la respuesta. Después borra la carpeta.</li>
-        <li><b>Qué no puede hacer:</b> no lee tus otros archivos ni cambia nada en tu computadora; solo responde a Studium, y solo con el código que muestra al abrirse.</li>
+        <li><b>Qué hace:</b> recibe un pedido de Studium, se lo pasa a tu IA y devuelve la respuesta. Por defecto trabaja en una carpeta temporal que borra al terminar; si tú lo eliges, en una carpeta tuya, con el permiso que le des (solo leer, escribir archivos o también usar git). Su ventana muestra cada archivo que tu IA lee o cambia.</li>
+        <li><b>Qué no puede hacer:</b> nada fuera de las carpetas que le diste, nada en internet, y nada si no es un pedido de Studium con el código que muestra al abrirse.</li>
         <li><b>Cómo apagarlo:</b> cierra la ventana de la terminal, o pulsa Ctrl+C en ella.</li>
         <li><b>Para quién:</b> si nunca abriste una terminal, mejor usa la forma por chat: hace lo mismo, solo que a mano.</li>
       </ul>
@@ -673,7 +673,12 @@ function bridgeAdvanced() {
           ${on && accounts.length ? `<div class="bridge-accounts" role="radiogroup" aria-label="Cuenta de ${esc(names[e.id] ?? e.name)}">${accounts.map((a) => `<label class="check"><input type="radio" name="bridge-account" data-ai-bridge-account="${esc(a.id)}" ${a.id === b.account ? 'checked' : ''}> ${esc(a.email || a.id)}${a.plan ? ` <small>plan ${esc(a.plan)}</small>` : ''} <small>· carpeta ${esc(a.id)}</small></label>`).join('')}</div>` : ''}
           ${on ? (ai.defaultWay() === `bridge:${e.id}` ? '<span class="badge">la que usa Studium</span>' : `<button class="button ghost small" data-ai-default="bridge:${e.id}">Usar esta para todo</button>`) : ''}</li>`;
         }).join('') : '<li>Pulsa «Revisar» con el puente abierto.</li>'}</ul>
-        <div class="actions"><button class="button ghost small" data-ai-bridge-check>Revisar</button><button class="link" data-ai-forget="bridge">Desenlazar</button></div>`
+        <div class="actions"><button class="button ghost small" data-ai-bridge-check>Revisar</button><button class="link" data-ai-forget="bridge">Desenlazar</button></div>
+        <div class="bridge-version ${ai.bridgeOld() ? 'old' : ''}">
+          <p>${ai.bridgeOld() ? `<b>Tu puente está desactualizado</b>: tienes abierta la versión ${esc(b.version || 'anterior')} y la última es la ${ai.BRIDGE_VERSION}. Descárgalo de nuevo, ciérralo (Ctrl+C) y ábrelo otra vez.` : `Tu puente: versión ${esc(b.version || '?')}, la última.`}
+            <a href="${esc(ai.BRIDGE_URL)}" download="studium-bridge.mjs">Descargar el puente</a></p>
+          <details><summary>Cómo abrirlo otra vez</summary><p>En la carpeta donde lo guardaste: <code class="bridge-cmd">${esc(ai.bridgeCommand())}</code> <button type="button" class="link" data-ai-copy="${esc(ai.bridgeCommand())}">copiar</button>. Mientras sea el mismo código de enlace, no tienes que volver a enlazarlo.</p></details>
+        </div>`
       : bridgeSteps()}
       ${aiMsg('bridge')}
     </div></details>`;
