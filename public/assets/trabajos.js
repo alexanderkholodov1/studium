@@ -417,7 +417,7 @@ function tryThis(way) {
 }
 function errorBox(info, retry = '') {
   if (!info) return '';
-  if (info.kind === 'cancel') return `<p class="tj-ok">Lo detuviste. Puedes volver a escribirla cuando quieras.</p>`;
+  if (info.kind === 'cancel') return `<p class="tj-ok">Lo detuviste tú. Puedes volver a escribirla cuando quieras.</p>`;
   const who = ai.WAYS[info.way]?.name ?? 'tu IA';
   const means = MEANS[info.kind] ?? `${who} recibió el pedido, pero devolvió un error en vez de la guía.`;
   const report = `${info.what} en «${T?.title ?? ''}», con ${who}. Studium mostró: ${info.message}`;
@@ -1307,7 +1307,7 @@ function closing() {
 function noOutline() {
   return `<section class="sec" id="cap-inicio" style="--c:var(--blue);--cs:var(--blue-s)"><h2><span class="n">0</span>La guía todavía no está escrita</h2><div class="card soft">${T.owner === uid()
     ? `${errorBox(T.lastError ?? failed.get(T.id))}<p>Tu IA lee el enunciado y arma los capítulos: qué pide el trabajo, cómo se reparten y cada paso explicado.</p>${aiBlock('solution')}${ai.ready() ? `${ai.choice('solution').provider === 'bridge:claude' ? accountPick() : ''}<p><button type="button" class="act" data-tj="outline">${(T.lastError ?? failed.get(T.id)) ? 'Intentarlo otra vez' : 'Escribir la guía'}</button> <span class="mut" id="tj-gen-status" role="status"></span></p>` : ''}`
-    : '<p>Quien creó el trabajo todavía no escribió la guía.</p>'}</div>${statementBlock()}</section>`;
+    : '<p>Quien creó el trabajo todavía no escribió la guía.</p>'}</div></section>`;
 }
 
 function paint() {

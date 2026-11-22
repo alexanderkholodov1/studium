@@ -502,7 +502,7 @@ export async function findBridge(port = BRIDGE_PORT) {
   try { const r = await fetch(`http://127.0.0.1:${port}/v1/hello`); return r.ok ? await r.json() : null; } catch { return null; }
 }
 // The bridge's version this page expects (bridge.mjs, VERSION): an older one is downloaded again.
-export const BRIDGE_VERSION = '1.6.0';
+export const BRIDGE_VERSION = '1.7.0';
 // «Ver a mi IA en una terminal»: the bridge opens a window that shows the exact instructions and, live, what the AI
 // does. Chosen by the person, kept in this browser.
 const WATCH = 'studium-ai-watch';

@@ -14,7 +14,7 @@ import { homedir, platform, tmpdir } from 'node:os';
 import path from 'node:path';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
-const VERSION = '1.6.0';
+const VERSION = '1.7.0';
 const NAME = 'studium-bridge';
 const DEFAULT_PORT = 41730;
 const MAX_BODY = 64 * 1024 * 1024;
@@ -169,10 +169,12 @@ public static class StudiumPicker {
     return path;
   }
 }`;
+// Windows PowerShell by its own path: a PATH without it (it happens) must not break the window or the folder dialog.
+const POWERSHELL = WIN ? path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe') : 'powershell';
 const WIN_SCRIPT = `Add-Type -ReferencedAssemblies System.Windows.Forms -TypeDefinition @'\n${WIN_PICKER}\n'@\n[Console]::OutputEncoding = [Text.Encoding]::UTF8\n$p = [StudiumPicker]::Pick('Studium: elige la carpeta donde trabajará tu IA', $env:STUDIUM_START)\nif ($p) { Write-Output $p }`;
 function pickFolder(start = '') {
   const [cmd, args] = WIN
-    ? ['powershell.exe', ['-NoProfile', '-STA', '-EncodedCommand', Buffer.from(WIN_SCRIPT, 'utf16le').toString('base64')]]
+    ? [POWERSHELL, ['-NoProfile', '-STA', '-EncodedCommand', Buffer.from(WIN_SCRIPT, 'utf16le').toString('base64')]]
     : platform() === 'darwin' ? ['osascript', ['-e', 'POSIX path of (choose folder with prompt "Studium: elige la carpeta donde trabajará tu IA")']]
       : ['zenity', ['--file-selection', '--directory', '--title=Studium: elige la carpeta donde trabajará tu IA']];
   return new Promise((resolve) => execFile(cmd, args, { timeout: 10 * 60_000, windowsHide: false, encoding: 'utf8', env: { ...process.env, STUDIUM_START: start } }, (err, out) => {
@@ -492,21 +494,47 @@ const resumeCommand = (account, session) => `${account.env ? `${WIN ? `set CLAUD
 // afterwards. It writes its answer to «salida» and then the file LISTO; the bridge waits for that. What it does is
 // read, live, from Claude Code's own record of the session (its transcript), for the page. Studium's «Detener» closes
 // the window.
+// The window is PowerShell running Claude Code: it comes to the front with a clear title, records how Claude Code
+// ended, and stays open when it ended with an error, so the person reads why (it used to close at once, which looked
+// like a window that never opened). The program and its arguments travel as JSON in the environment, never through a
+// command line that a quote could break.
+const WINDOW_SCRIPT = `try { $host.UI.RawUI.WindowTitle = $env:STUDIUM_TITLE } catch {}
+try {
+  Add-Type -Namespace Studium -Name Win -MemberDefinition '[DllImport("kernel32.dll")] public static extern System.IntPtr GetConsoleWindow(); [DllImport("user32.dll")] public static extern bool SetForegroundWindow(System.IntPtr h); [DllImport("user32.dll")] public static extern bool ShowWindow(System.IntPtr h, int c); [DllImport("user32.dll")] public static extern void keybd_event(byte v, byte s, uint f, System.UIntPtr e);'
+  $w = [Studium.Win]::GetConsoleWindow(); [Studium.Win]::keybd_event(0x87, 0, 0, [UIntPtr]::Zero); [Studium.Win]::keybd_event(0x87, 0, 2, [UIntPtr]::Zero); [void][Studium.Win]::ShowWindow($w, 9); [void][Studium.Win]::SetForegroundWindow($w)
+} catch {}
+Write-Host 'Studium: Claude Code trabaja aqui en tu trabajo. Esc lo detiene; al terminar puedes seguir hablandole.' -ForegroundColor Cyan
+$a = @($env:STUDIUM_ARGS | ConvertFrom-Json)
+& $env:STUDIUM_EXE @a
+$code = $LASTEXITCODE
+Set-Content -LiteralPath $env:STUDIUM_EXIT -Value "$code" -Encoding ascii
+if ($code -ne 0) { Write-Host ''; Write-Host "Claude Code termino con un error (codigo $code); arriba esta el detalle. Studium ya lo sabe." -ForegroundColor Yellow; Read-Host 'Pulsa Enter para cerrar esta ventana' | Out-Null }`;
+// What Claude Code says when a plan's limit is reached (in its session record, as its own message).
+const LIMIT_SAID = /hit your .{0,30}limit|usage limit|limit reached|out of (?:usage|extra) (?:credits|usage)/i;
 function claudeInWindow(b, { body, account, ask, allow, deny, cwd, dir, live, timeoutMs }) {
   const session = randomUUID();
-  const args = [ask, '--model', String(body.model), '--allowedTools', ...allow, '--disallowedTools', ...deny, '--session-id', session];
+  // No straight double quotes reach Windows' argument rules (PowerShell 5 mangles them); the text keeps its meaning.
+  const args = [ask, '--model', String(body.model), '--allowedTools', ...allow, '--disallowedTools', ...deny, '--session-id', session].map((x) => String(x).replace(/"/g, '’'));
   if (body.effort) args.push('--effort', String(body.effort));
-  const child = spawn(b.cmd, [...b.pre, ...args], { cwd, detached: true, windowsHide: process.env.STUDIUM_BRIDGE_NO_WINDOW === '1' /* the tests */, stdio: 'ignore', shell: false, ...(account.env ? { env: { ...process.env, ...account.env } } : {}) });
+  const exitFile = path.join(dir, '.claude-code-exit');
+  const env = { ...process.env, ...(account.env ?? {}), STUDIUM_TITLE: `Studium · Claude Code · ${String(body.label ?? 'tu trabajo').slice(0, 60)}`, STUDIUM_EXE: b.cmd, STUDIUM_ARGS: JSON.stringify([...b.pre, ...args]), STUDIUM_EXIT: exitFile };
+  // A window of its own is `start`: Node's «detached» gives a Windows process no console at all, so Claude Code ran
+  // unseen and the window «never opened» (his words). The command line holds only safe characters (PowerShell's path
+  // and base64), and /wait keeps the bridge's child alive while the window is open. The tests run it hidden.
+  const encoded = Buffer.from(WINDOW_SCRIPT, 'utf16le').toString('base64');
+  const child = process.env.STUDIUM_BRIDGE_NO_WINDOW === '1'
+    ? spawn(POWERSHELL, ['-NoProfile', '-EncodedCommand', encoded], { cwd, windowsHide: true, stdio: 'ignore', shell: false, env })
+    : spawn(process.env.ComSpec || 'cmd.exe', [['/d /c start "Studium" /wait', `"${POWERSHELL}"`, '-NoProfile', '-EncodedCommand', encoded].join(' ')], { cwd, windowsHide: true, windowsVerbatimArguments: true, stdio: 'ignore', shell: false, env });
   const home = account.env?.CLAUDE_CONFIG_DIR ?? process.env.CLAUDE_CONFIG_DIR ?? path.join(homedir(), '.claude');
   const transcript = path.join(home, 'projects', cwd.replace(/[^A-Za-z0-9]/g, '-'), `${session}.jsonl`);
   const done = path.join(dir, 'salida', 'LISTO');
   const again = resumeCommand(account, session);
-  console.log(`  Se abrió Claude Code en su propia ventana (sesión ${session}). Ahí lo ves trabajar; Esc lo detiene.`);
+  console.log(`  Se abrió Claude Code en su propia ventana («Studium · Claude Code», sesión ${session}). Ahí lo ves trabajar; Esc lo detiene.`);
   const signal = asking.getStore();
   return new Promise((resolve, reject) => {
-    let offset = 0; let rest = ''; let exited = false; let finished = false;
+    let offset = 0; let rest = ''; let exited = false; let finished = false; let lastSaid = '';
     let poll = null; let timer = null;
-    const stop = () => { console.log('  Studium detuvo el pedido: se cerró la ventana de Claude Code.'); killTree(child); end(() => reject(new Failure(499, 'cancelled', 'Studium canceló el pedido.'))); };
+    const stop = () => { console.log('  Studium detuvo el pedido: se cerró la ventana de Claude Code.'); killTree(child); end(() => reject(new Failure(499, 'cancelled', 'Lo detuviste desde Studium.'))); };
     const end = (then) => { if (finished) return; finished = true; clearInterval(poll); clearTimeout(timer); signal?.removeEventListener('abort', stop); if (live) live.done = true; then(); };
     child.on('exit', () => { exited = true; });
     child.on('error', (e) => end(() => reject(new Failure(502, 'failed', `No se pudo abrir Claude Code: ${e.message}`))));
@@ -521,9 +549,13 @@ function claudeInWindow(b, { body, account, ask, allow, deny, cwd, dir, live, ti
         offset = size;
         const lines = (rest + buf.toString('utf8')).split(/\r?\n/);
         rest = lines.pop();
-        for (const l of lines) showStep(l, live);
+        for (const l of lines) {
+          showStep(l, live);
+          try { const e = JSON.parse(l); if (e.type === 'assistant') for (const c of e.message?.content ?? []) if (c.type === 'text' && c.text) lastSaid = String(c.text); } catch { /* not an event */ }
+        }
       } finally { closeSync(fd); }
     };
+    const who = account.email || account.id;
     poll = setInterval(() => {
       readNew();
       if (existsSync(done)) {
@@ -531,8 +563,18 @@ function claudeInWindow(b, { body, account, ask, allow, deny, cwd, dir, live, ti
         console.log(`  Claude Code terminó. Su ventana sigue abierta para que sigas hablándole.\n      (otra vez, más tarde: ${again})`);
         body.keepFolder = true; // Claude Code is still open in it
         end(() => resolve({ text: outputs['RESPUESTA.md'] || 'Listo.', session, resume: again }));
+      } else if (LIMIT_SAID.test(lastSaid)) {
+        // A plan's limit: said as a limit, with its reset time; the window stays, showing the same message.
+        console.log(`  Claude Code dijo: ${lastSaid}`);
+        end(() => reject(failureOf('claude', lastSaid, who)));
+      } else if (existsSync(exitFile)) {
+        const code = String(readFileSync(exitFile, 'utf8')).trim();
+        console.log(`  Claude Code terminó (código ${code}) sin terminar el trabajo.${lastSaid ? ` Su último mensaje: ${lastSaid.slice(0, 200)}` : ''}`);
+        end(() => reject(code === '0'
+          ? new Failure(499, 'closed', `Claude Code se cerró antes de terminar el trabajo${lastSaid ? `. Lo último que dijo: «${lastSaid.slice(0, 300)}»` : ''}.`)
+          : failureOf('claude', lastSaid || `Claude Code terminó con un error (código ${code}); su ventana muestra el detalle.`, who)));
       } else if (exited) {
-        end(() => reject(new Failure(499, 'cancelled', 'Se cerró la ventana de Claude Code antes de que terminara.')));
+        end(() => reject(new Failure(499, 'closed', 'Cerraste la ventana de Claude Code antes de que terminara.')));
       }
     }, 1000);
     timer = setTimeout(() => { killTree(child); end(() => reject(new Failure(504, 'timeout', 'Tu IA tardó demasiado en responder.'))); }, timeoutMs);

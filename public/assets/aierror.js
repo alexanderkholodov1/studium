@@ -81,7 +81,8 @@ export function classify({ way = '', status = 0, message = '', body = null, head
         : new AIError(said || 'Tu suscripción llegó a su límite de uso por ahora.', opts('rate', now + 5 * MINUTE));
     }
     if (status === 413) return new AIError('Esta parte es demasiado grande para el puente.', opts('job'));
-    if (status === 499) return new AIError(said || 'Se detuvo antes de terminar.', opts('cancel'));
+    // 499: «cancelled» is the person's own «Detener»; any other end before finishing is said as it was, with its box.
+    if (status === 499) return new AIError(said || 'Se detuvo antes de terminar.', opts(code === 'cancelled' ? 'cancel' : 'job'));
     if (status === 504 || status >= 500) return new AIError(said || 'Tu IA tardó demasiado o falló en tu computadora.', opts('transient'));
     return new AIError(said || `El puente respondió con un error (${status}).`, opts('job'));
   }

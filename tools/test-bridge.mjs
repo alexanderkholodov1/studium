@@ -40,8 +40,9 @@ if (!args.includes('-p')) {
   const tdir = join(process.env.CLAUDE_CONFIG_DIR ?? join(process.env.USERPROFILE ?? process.env.HOME, '.claude'), 'projects', process.cwd().replace(/[^A-Za-z0-9]/g, '-'));
   mkdirSync(tdir, { recursive: true });
   writeFileSync(join(tdir, sid + '.jsonl'), JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Read', input: { file_path: 'enunciado.txt' } }] } }) + '\\n');
-  if (!s.neverDone) { mkdirSync('salida', { recursive: true }); writeFileSync(join('salida', 'RESPUESTA.md'), 'desde la ventana'); writeFileSync(join('salida', 'LISTO'), ''); }
-  setTimeout(() => process.exit(0), s.windowOpen ?? 3000);
+  if (s.saysLimit) { const { appendFileSync: add } = await import('node:fs'); add(join(tdir, sid + '.jsonl'), JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'You\\'ve hit your 5-hour limit · resets 1:30pm (America/Guayaquil)' }] } }) + '\\n'); }
+  if (!s.neverDone && !s.saysLimit && s.exitCode === undefined) { mkdirSync('salida', { recursive: true }); writeFileSync(join('salida', 'RESPUESTA.md'), 'desde la ventana'); writeFileSync(join('salida', 'LISTO'), ''); }
+  setTimeout(() => process.exit(s.exitCode ?? 0), s.exitCode !== undefined ? 300 : (s.windowOpen ?? 3000));
 } else {
 if (s.writes) { const { mkdirSync, writeFileSync } = await import('node:fs'); mkdirSync('salida', { recursive: true }); for (const [n, t] of Object.entries(s.writes)) writeFileSync('salida/' + n, t); }
 if (s.sleep) { setTimeout(() => {}, s.sleep); } else {
@@ -333,10 +334,20 @@ await test('«ver a Claude Code trabajando» opens the official CLI with the req
   const r = await run({ engine: 'claude', model: 'claude-sonnet-5-5', runId: 'ventana-123', watch: true });
   const prog = await call('GET', '/v1/progress?id=ventana-123');
   const c = calls()[0];
-  check(r.status === 200 && r.data.text === 'desde la ventana', `${r.status} ${JSON.stringify(r.data).slice(0, 200)}`);
+  check(r.status === 200 && r.data.text === 'desde la ventana', `${r.status} ${JSON.stringify(r.data).slice(0, 200)} || ${printed.split(/\r?\n/).filter((l) => /PS(OUT|ERR)/.test(l)).join(' / ').slice(0, 1500)}`);
   check(!c.args.includes('-p') && c.args.includes('--session-id') && /LISTO/.test(c.args[0]), `args ${c.args.slice(0, 3).join(' | ')}`);
   check(prog.data.events?.some((e) => e.kind === 'Read'), `progress ${JSON.stringify(prog.data)}`);
   check(/claude --resume/.test(r.data.resume), 'resume');
+});
+await test('a limit said inside the Claude Code window comes back as a limit, not as «you closed it»', async () => {
+  scenario({ claude: { saysLimit: true, windowOpen: 4000 } });
+  const r = await run({ engine: 'claude', model: 'claude-sonnet-5-5', watch: true });
+  check(r.status === 429 && /límite/.test(r.data.error.message) && !/cerr/i.test(r.data.error.message), `${r.status} ${JSON.stringify(r.data)}`);
+});
+await test('Claude Code ending with an error in its window is an error, not «you closed it»', async () => {
+  scenario({ claude: { exitCode: 1 } });
+  const r = await run({ engine: 'claude', model: 'claude-sonnet-5-5', watch: true });
+  check(r.status === 502 && !/cerr/i.test(r.data.error.message), `${r.status} ${JSON.stringify(r.data)}`);
 });
 await test('Studium\'s «Detener» closes the Claude Code window', async () => {
   scenario({ claude: { neverDone: true, windowOpen: 60000 } });
@@ -415,7 +426,8 @@ await test('a CLI that is not signed in is a 424 before any run', async () => {
 });
 
 bridge.kill();
-for (const dir of [fakes, home, temp]) rmSync(dir, { recursive: true, force: true });
+// A Claude Code window the tests left open on purpose (a limit) may still hold its folder for a moment.
+for (const dir of [fakes, home, temp]) { try { rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 500 }); } catch (e) { console.log(`(could not remove ${dir} yet: ${e.code})`); } }
 for (const [ok, name] of results) console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}`);
 const failed = results.filter(([ok]) => !ok).length;
 console.log(`\n${results.length - failed} of ${results.length} passed`);
