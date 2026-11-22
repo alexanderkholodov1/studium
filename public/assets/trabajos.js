@@ -13,6 +13,7 @@ import { db, auth, gzip, gunzip, loadProfile } from './data.js';
 import * as ai from './ai.js';
 import { prepare } from './files.js';
 import * as amigos from './amigos.js';
+import { communityOf } from './settings.js';
 import { reunionSection, wireReunion, resetReunion } from './reunion.js';
 import { bridgeSteps, pairBridge, findBridgeSay } from './space.js';
 import { LETTERS, outlinePrompt, milestonePrompt, wholePrompt, adjustPrompt, ADJUST_KINDS, TUTOR, parseJSON, cleanOutline, cleanMilestone } from './trabajo-prompts.js';
@@ -633,14 +634,30 @@ async function invitePanel(tid, title, code) {
   const inside = friends.filter((f) => members.includes(f.uid));
   return `<div class="tj-invite" data-tid="${esc(tid)}" data-title="${esc(title)}" data-code="${esc(code)}">
     <h3>Invitar a «<span class="no-i18n">${esc(title)}</span>»</h3>
+    <h4>Ya está en Studium</h4>
     ${out.length ? `<p class="fine">Tus amigos de Studium: lo verán en sus Trabajos, con «Entrar al trabajo».</p>
       <div class="tj-friends">${out.map((f) => `<label class="tj-pick"><input type="checkbox" data-tj-friend value="${esc(f.uid)}" data-name="${esc(f.name)}"> <i class="am-av" aria-hidden="true">${esc(String(f.name).trim()[0]?.toUpperCase() ?? '?')}</i> <span class="no-i18n">${esc(f.name)}</span></label>`).join('')}</div>
       <p><button type="button" class="button primary small" data-tj="invite-send">Invitar</button> <span class="fine" data-invite-status role="status"></span></p>`
     : `<p class="fine">${friends.length ? 'Todos tus amigos ya están en este trabajo.' : 'Todavía no tienes amigos en Studium.'} <a href="#/comunidad">Agrégalos en Comunidad</a> con tu enlace de amigo, y vuelve aquí.</p>`}
     ${inside.length ? `<p class="fine">Ya están: ${inside.map((f) => `<span class="no-i18n">${esc(f.name)}</span>`).join(', ')}.</p>` : ''}
-    <p class="fine">¿Alguien que no es tu amigo en Studium? <button type="button" class="link" data-tj="invite-link">Copiar el enlace de invitación</button>: quien lo tenga puede entrar, así que pásalo solo a tu grupo.</p>
+    <h4>Todavía no está en Studium, o no es tu amigo aquí</h4>
+    <p class="fine">Copia este mensaje y mándalo por donde hablen (WhatsApp, correo). Quien tenga el enlace puede entrar al trabajo: pásalo solo a tu grupo.</p>
+    <textarea class="tj-invite-text plain" rows="9" readonly data-invite-text>${esc(inviteText(tid, title, code))}</textarea>
+    <p><button type="button" class="button primary small" data-tj="invite-copy">Copiar el mensaje</button> <button type="button" class="link" data-tj="invite-link">o solo el enlace</button></p>
     <p><button type="button" class="link mut" data-tj="invite-close">Cerrar</button></p>
   </div>`;
+}
+// The message for someone who is not in Studium yet: where to go, how to make the account, and the trabajo's link.
+function inviteText(tid, title, code) {
+  const c = communityOf(auth.currentUser?.email ?? '');
+  const domain = c?.domains?.[0] ?? '';
+  const home = `${location.origin}${location.pathname}`;
+  return [`¡Hola! Estoy armando «${title}» en Studium, una página para resolver el trabajo en grupo con una guía paso a paso, entendiendo cada parte. Únete así:`, '',
+    `1. Entra a ${home}`,
+    `2. Crea tu cuenta con tu correo ${domain ? `de la universidad (@${domain})` : 'de la universidad'} y confírmalo con el enlace que te llega al correo.`,
+    `3. Ya con tu cuenta abierta, entra a este enlace para unirte al trabajo:`,
+    inviteLink(tid, code), '',
+    'Adentro eliges tu parte (Persona A, B, C…) y vas marcando lo que haces y lo que entiendes.'].join('\n');
 }
 const inviteLink = (tid, code) => `${location.origin}${location.pathname}#/trabajos/unirse/${tid}/${code}`;
 
@@ -1746,6 +1763,11 @@ function wire(root) {
       const box = b.closest('.tj-invite');
       const link = inviteLink(box.dataset.tid, box.dataset.code);
       await navigator.clipboard.writeText(link).then(() => ctx.toast('Enlace copiado: pásalo solo a tu grupo.'), () => ctx.toast(`No pude copiarlo. El enlace: ${link}`));
+      return;
+    }
+    if (kind === 'invite-copy') {
+      const t = b.closest('.tj-invite').querySelector('[data-invite-text]');
+      await navigator.clipboard.writeText(t.value).then(() => ctx.toast('Mensaje copiado: pégalo en el chat de tu grupo.'), () => { t.select(); ctx.toast('Selecciónalo y cópialo (Ctrl+C).'); });
       return;
     }
     if (kind === 'invite-close') { const box = b.closest('.tj-invite'); (box.closest('.tj-invite-pop') ?? box).remove(); return; }

@@ -3343,3 +3343,5 @@ canvas.prop { display: block; }
 .beta-ribbon { position: fixed; z-index: 60; left: 14px; bottom: 14px; padding: 6px 12px; border-radius: 999px; color: #1a1300; text-decoration: none;
   background: repeating-linear-gradient(-45deg, #ffc400 0 10px, #ffd84d 10px 20px); font: 800 12px/1 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase;
   box-shadow: 0 6px 16px -6px rgba(0, 0, 0, .5), inset 0 -2px 0 rgba(0, 0, 0, .18); }
+.tj-invite h4 { margin: 6px 0 0; font-size: 15px; }
+.tj-invite-text { width: 100%; font: 14px/1.5 var(--body, system-ui); padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg, #fff); color: inherit; resize: vertical; }
