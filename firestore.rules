@@ -536,6 +536,52 @@ service cloud.firestore {
         && request.resource.data.ids.size() <= 60 && request.resource.data.updated == request.time;
     }
 
+    // «Amigos» (docs/v0.6.0.md §4): a friend is added with a link or a code. The link is its owner's proposal; whoever
+    // opens it and accepts writes the friendship on both sides at once, proving it with the code. Either side ends it
+    // alone, on both sides. A new code voids the old one.
+    // amigoCodes/{code}: whose code it is and the name their friends see; any member who knows the code reads it.
+    // amigos/{uid}: the person's current code. amigos/{uid}/lista/{other}: a friend. amigos/{uid}/invitaciones/{tid}:
+    // a trabajo a friend invited them to, carrying its code (they join with it as with the link).
+    function codeOf(code) { return get(at('amigoCodes', code)).data; }
+    function friends(a, b) {
+      return exists(/databases/$(database)/documents/amigos/$(a)/lista/$(b)) && exists(/databases/$(database)/documents/amigos/$(b)/lista/$(a));
+    }
+    match /amigoCodes/{code} {
+      allow get: if member();
+      allow create: if member() && code.matches('[A-Za-z0-9_-]{24,64}')
+        && request.resource.data.keys().hasOnly(['uid', 'name', 'updated']) && request.resource.data.uid == request.auth.uid
+        && text(request.resource.data.name, 40) && request.resource.data.updated == request.time
+        && getAfter(at('amigos', request.auth.uid)).data.code == code;
+      allow update: if member() && resource.data.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'updated'])
+        && text(request.resource.data.name, 40) && request.resource.data.updated == request.time;
+      allow delete: if member() && resource.data.uid == request.auth.uid;
+    }
+    match /amigos/{uid} {
+      allow get, delete: if member() && uid == request.auth.uid;
+      allow create, update: if member() && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['code', 'updated']) && request.resource.data.code is string
+        && request.resource.data.code.matches('[A-Za-z0-9_-]{24,64}') && request.resource.data.updated == request.time;
+
+      match /lista/{other} {
+        allow get, list: if member() && uid == request.auth.uid;
+        // Written by either of the two, with the code of the other one: the writer accepts the other's proposal.
+        allow create: if member() && uid != other && request.auth.uid in [uid, other]
+          && request.resource.data.keys().hasOnly(['name', 'code', 'since']) && text(request.resource.data.name, 40)
+          && request.resource.data.since == request.time && request.resource.data.code is string
+          && codeOf(request.resource.data.code).uid == (request.auth.uid == uid ? other : uid);
+        allow delete: if member() && request.auth.uid in [uid, other];
+      }
+      match /invitaciones/{tid} {
+        allow get, list: if member() && uid == request.auth.uid;
+        allow create: if member() && request.resource.data.keys().hasOnly(['title', 'from', 'name', 'code', 'at'])
+          && request.resource.data.from == request.auth.uid && uid != request.auth.uid
+          && text(request.resource.data.title, 160) && text(request.resource.data.name, 40) && request.resource.data.at == request.time
+          && friends(uid, request.auth.uid) && inTrabajo(tid) && request.resource.data.code == get(trabajoAt(tid)).data.code;
+        allow delete: if member() && (uid == request.auth.uid || resource.data.from == request.auth.uid);
+      }
+    }
+
     // stations/{id}: the radio's stations, as the admins set them in the panel: a tune generated live, a YouTube
     // upload (with or without its caption), or an audio file kept in pieces (stations/{id}/audio/{n}, under 1 MB each)
     // that plays in a seamless loop. Members read them; only admins write them.

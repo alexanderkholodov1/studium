@@ -327,7 +327,7 @@ $('#foot-version').textContent = `v${VERSION} · Novedades`;
 mountEggs({ toast, onFound: (id, fresh) => { unlocked(fresh); if (current === 'home') { if (fresh) renderHome(); else refreshTile('shelf'); } } });
 mountAdmin(context);
 mountFeedback();
-mountComunidad();
+mountComunidad(context);
 mountTrabajos(context);
 mountCommunity(context);
 mountLibrary(context);
@@ -537,6 +537,8 @@ async function route() {
       novedades: ['news', 'Novedades', () => renderNews($('#news'))],
       guias: ['catalog', 'Guías', renderCatalog],
       comunidad: ['comunidad', 'Comunidad', renderComunidad],
+      // A friend's link (amigos.js): Comunidad, with the friend's proposal on top.
+      amigos: ['comunidad', 'Comunidad', () => renderComunidad(arg)],
       // A trabajo's guide opens apart from Studium's page, as a guide does; the list and a new one stay inside.
       trabajos: [arg[0] && arg[0] !== 'unirse' ? 'trabajo' : 'trabajos', 'Trabajos', () => renderTrabajos(arg)],
       // The logo: the public page, also for members, who reach their own space from «Inicio».

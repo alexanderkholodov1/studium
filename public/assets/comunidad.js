@@ -3,6 +3,7 @@
 import { doc, getDoc, writeBatch, increment } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-lite.js';
 import { db, auth } from './data.js';
 import { burst } from './play.js';
+import { renderFriends, mountFriends } from './amigos.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const $ = (s, r = document) => r.querySelector(s);
@@ -37,14 +38,17 @@ const card = (i) => `<article class="cm-idea ${mine.has(i.id) ? 'wanted' : ''}" 
     <div class="cm-foot"><button type="button" class="cm-want" aria-pressed="${mine.has(i.id)}">${mine.has(i.id) ? '✓ Lo quiero' : 'Yo quiero'}</button><span class="cm-count">${esc(waiting(counts[i.id] ?? 0))}</span></div>
   </article>`;
 
-export async function renderComunidad() {
+// Friends are real now (amigos.js): their panel goes on top, and their idea card leaves the list of what is coming.
+export async function renderComunidad(arg = []) {
   const box = $('#cm-body');
   box.innerHTML = '<p class="status">Cargando…</p>';
   try { await load(); } catch { /* the counts stay empty */ }
-  box.innerHTML = `<p class="cm-note" data-cm-note ${localStorage.getItem?.('studium-cm-note') === 'off' ? 'hidden' : ''}>Aquí vendrán los amigos, los grupos, la música y los juegos: cosas divertidas que también distraen. Studium es para estudiar; entra con eso en mente. <button type="button" class="link" data-cm-close>Entendido</button></p>
-    <div class="cm-build"><span class="cm-tape" aria-hidden="true">En construcción</span><p>La Comunidad se está construyendo. Esto es lo que viene, <b>y mucho más</b>. Pulsa «Yo quiero» en lo que más esperas: así sé qué hacer primero.</p></div>
-    <div class="cm-grid">${IDEAS.map(card).join('')}</div>
+  box.innerHTML = `<div id="am-panel"></div>
+    <p class="cm-note" data-cm-note ${localStorage.getItem?.('studium-cm-note') === 'off' ? 'hidden' : ''}>Aquí vendrán los amigos, los grupos, la música y los juegos: cosas divertidas que también distraen. Studium es para estudiar; entra con eso en mente. <button type="button" class="link" data-cm-close>Entendido</button></p>
+    <div class="cm-build"><span class="cm-tape" aria-hidden="true">En construcción</span><p>La Comunidad se está construyendo: <b>tus amigos ya funcionan, arriba</b>. Esto es lo que viene, <b>y mucho más</b>. Pulsa «Yo quiero» en lo que más esperas: así sé qué hacer primero.</p></div>
+    <div class="cm-grid">${IDEAS.filter((i) => i.id !== 'amigos').map(card).join('')}</div>
     <div class="cm-more glass"><h3>¿Qué más te gustaría?</h3><p>Propón cualquier funcionalidad: la leo y te respondo.</p><button type="button" class="button primary" data-feedback="funcion">Proponer una idea</button></div>`;
+  await renderFriends($('#am-panel'), arg[0] ?? '');
 }
 
 async function toggle(el) {
@@ -70,7 +74,8 @@ async function toggle(el) {
   }
 }
 
-export function mountComunidad() {
+export function mountComunidad(context = {}) {
+  mountFriends((t) => context.toast?.(t));
   document.addEventListener('click', (e) => {
     const want = e.target.closest('#view-comunidad .cm-want');
     if (want) toggle(want.closest('[data-idea]'));

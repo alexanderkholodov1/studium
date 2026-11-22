@@ -3271,3 +3271,39 @@ canvas.prop { display: block; }
 .menu-amb > span { font: 700 11px var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .menu-amb .ambiences.mini { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .menu-amb .amb { padding: 6px 10px; font-size: 13px; justify-content: center; }
+
+/* «Amigos» (amigos.js), on top of Comunidad, and inviting friends to a trabajo (trabajos.js) */
+.am-panel { margin: 0 0 18px; padding: 20px 22px; border-radius: 22px; display: grid; gap: 12px; }
+.am-head { display: flex; align-items: baseline; gap: 12px; }
+.am-head h2 { margin: 0; font-size: 24px; }
+.am-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.am-list li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); }
+.am-list li > span:first-of-type { flex: 1; display: grid; min-width: 0; }
+.am-list small { color: var(--muted); font-size: 12px; }
+.am-av { flex: none; display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; font-style: normal; font-weight: 800; color: #fff;
+  background: radial-gradient(circle at 32% 28%, color-mix(in oklab, var(--blue) 55%, #fff), var(--blue) 70%);
+  box-shadow: 0 3px 0 color-mix(in oklab, var(--blue) 55%, #000), 0 6px 14px rgba(0, 0, 0, .16); }
+.am-av.big { width: 56px; height: 56px; font-size: 24px; }
+.am-offer { display: flex; gap: 14px; align-items: flex-start; padding: 16px; border-radius: 18px; border: 2px solid var(--blue); background: color-mix(in oklab, var(--blue) 8%, var(--card)); }
+.am-offer p { margin: 0 0 6px; }
+.am-share h3 { margin: 4px 0 6px; font-size: 16px; }
+.am-share p { margin: 0 0 8px; }
+.am-link code { display: block; padding: 8px 12px; border-radius: 12px; background: var(--card); border: 1px dashed var(--line); font-size: 13px; overflow-wrap: anywhere; }
+.am-code { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-top: 8px; }
+.am-code .field { flex: 1; min-width: 240px; margin: 0; }
+.am-empty { margin: 0; color: var(--ink-2); }
+.am-sure { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.tj-invite { display: grid; gap: 8px; padding: 14px 16px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); margin-top: 8px; color: var(--ink); text-align: left; }
+.tj-invite h3 { margin: 0; font-size: 17px; }
+.tj-invite p { margin: 0; }
+.tj-friends { display: flex; flex-wrap: wrap; gap: 8px; }
+.tj-friends .tj-pick { display: inline-flex; align-items: center; gap: 8px; }
+.tj-invite-pop { max-width: 680px; margin: 12px auto 18px; padding: 0 16px; position: relative; z-index: 3; }
+.tj-invited p { margin: 0 0 6px; }
+.tj-kept { padding: 10px 14px; border-radius: 12px; background: color-mix(in oklab, var(--teal) 12%, var(--card)); border: 1px solid var(--line); }
+.tj-editing { margin: 0 0 6px; padding: 8px 12px; border-left: 3px solid var(--blue); border-radius: 8px; background: color-mix(in oklab, var(--blue) 6%, transparent); color: var(--ink-2); font-size: 14px; }
+.tj-gone { margin-bottom: 12px; padding: 12px 14px; border-radius: 14px; border: 2px solid var(--red); background: color-mix(in oklab, var(--red) 7%, transparent); }
+.tj-gone p { margin: 0 0 8px; }
+.am-panel { scroll-margin-top: 96px; }
+.tj-card:has(.tj-invite) { grid-column: 1 / -1; }
+.tj-card:has(.tj-invite) .tj-invite { max-width: 720px; }

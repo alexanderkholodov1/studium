@@ -673,6 +673,47 @@ try {
     expect('the owner deletes the trabajo', await commit(s.token, [remove(`trabajos/${tid}`)]), 200);
   }
 
+  // «Amigos»: a code, a friendship written on both sides by whoever accepts the other's link, ended by either side,
+  // and an invitation to a trabajo between friends.
+  {
+    const stamped = (path, data, stamps, create = false) => {
+      touched.add(path);
+      return { update: { name: `${base}/${path}`, fields: fields(data) }, updateTransforms: stamps.map((f) => ({ fieldPath: f, setToServerValue: 'REQUEST_TIME' })), ...(create ? { currentDocument: { exists: false } } : {}) };
+    };
+    const sCode = randomBytes(24).toString('base64url');
+    const cCode = randomBytes(24).toString('base64url');
+    const myCode = (who, code) => [stamped(`amigos/${who.uid}`, { code }, ['updated']), stamped(`amigoCodes/${code}`, { uid: who.uid, name: 'Nombre' }, ['updated'], true)];
+    expect('a code that is not the person\'s current one is refused', await commit(s.token, [stamped(`amigoCodes/${sCode}`, { uid: s.uid, name: 'Ana' }, ['updated'], true)]), 403);
+    expect('student makes a friend code', await commit(s.token, myCode(s, sCode)), 200);
+    expect('a code in someone else\'s name is refused', await commit(c.token, [stamped(`amigos/${c.uid}`, { code: cCode }, ['updated']), stamped(`amigoCodes/${cCode}`, { uid: s.uid, name: 'Ana' }, ['updated'], true)]), 403);
+    expect('classmate makes a friend code', await commit(c.token, myCode(c, cCode)), 200);
+    expect('a member reads whose a code is', await status(c.token, 'GET', `/amigoCodes/${sCode}`), 200);
+    expect('otherDomain cannot read a code', await status(accounts.otherDomain.token, 'GET', `/amigoCodes/${sCode}`), 403);
+    expect('nobody reads someone else\'s current code', await status(c.token, 'GET', `/amigos/${s.uid}`), 403);
+    const pair = (who, other, code) => [stamped(`amigos/${who.uid}/lista/${other.uid}`, { name: 'Ana', code }, ['since'], true), stamped(`amigos/${other.uid}/lista/${who.uid}`, { name: 'Bea', code }, ['since'], true)];
+    expect('a friendship without the other\'s code is refused', await commit(c.token, pair(c, s, cCode)), 403);
+    expect('a friendship with a made-up code is refused', await commit(c.token, pair(c, s, 'z'.repeat(32))), 403);
+    expect('otherDomain cannot befriend with the code', await commit(accounts.otherDomain.token, [stamped(`amigos/${accounts.otherDomain.uid}/lista/${s.uid}`, { name: 'X', code: sCode }, ['since'], true)]), 403);
+    expect('classmate accepts the student\'s link: friends on both sides', await commit(c.token, pair(c, s, sCode)), 200);
+    expect('student lists their friends', await status(s.token, 'GET', `/amigos/${s.uid}/lista`), 200);
+    expect('classmate cannot list the student\'s friends', await status(c.token, 'GET', `/amigos/${s.uid}/lista`), 403);
+    // An invitation to a trabajo, between friends.
+    const tid = appId();
+    const tcode = randomBytes(24).toString('base64url');
+    expect('student creates a trabajo to invite to', await commit(s.token, [
+      stamped(`trabajos/${tid}`, { title: 'T', parts: 2, owner: s.uid, code: tcode, statement: gz('e'), encoding: 'gzip' }, ['created', 'updated'], true), stamped(`trabajos/${tid}/miembros/${s.uid}`, { name: 'Ana', code: tcode }, ['joined'], true)]), 200);
+    const invite = (code = tcode, from = s.uid) => [stamped(`amigos/${c.uid}/invitaciones/${tid}`, { title: 'T', from, name: 'Ana', code }, ['at'], true)];
+    expect('an invitation with a wrong code is refused', await commit(s.token, invite('y'.repeat(32))), 403);
+    expect('an invitation in someone else\'s name is refused', await commit(s.token, invite(tcode, c.uid)), 403);
+    expect('a friend invites to a trabajo', await commit(s.token, invite()), 200);
+    expect('the invited reads their invitations', await status(c.token, 'GET', `/amigos/${c.uid}/invitaciones`), 200);
+    expect('the invited joins with the invitation\'s code', await commit(c.token, [stamped(`trabajos/${tid}/miembros/${c.uid}`, { name: 'Bea', code: tcode }, ['joined'], true), remove(`amigos/${c.uid}/invitaciones/${tid}`)]), 200);
+    expect('classmate ends the friendship, on both sides', await commit(c.token, [remove(`amigos/${c.uid}/lista/${s.uid}`), remove(`amigos/${s.uid}/lista/${c.uid}`)]), 200);
+    expect('no invitation once they are not friends', await commit(s.token, invite()), 403);
+    expect('a renewed code voids the old one', await commit(s.token, [stamped(`amigos/${s.uid}`, { code: `${sCode}x` }, ['updated']), remove(`amigoCodes/${sCode}`), stamped(`amigoCodes/${sCode}x`, { uid: s.uid, name: 'Ana' }, ['updated'], true)]), 200);
+    expect('the old link no longer makes friends', await commit(c.token, pair(c, s, sCode)), 403);
+  }
+
   expect('nobody writes elsewhere', await status(s.token, 'PATCH', `/other/${tag}`, write), 403);
 } finally {
   // The settings stay: the emulators keep the defaults the tests wrote, and live they were never touched.
