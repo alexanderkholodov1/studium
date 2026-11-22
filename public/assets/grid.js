@@ -21,7 +21,7 @@ export const SIZES = {
   news: { min: [4, 2], add: [8, 3] },
   explore: { min: [3, 2], add: [4, 3] },
   shelf: { min: [4, 2], add: [12, 3] },
-  decor: { min: [3, 3], add: [6, 4] },
+  decor: { min: [3, 3], add: [4, 5] },
 };
 
 // What a person sees first: on the first screen what matters today (the next exam, what to do, today's classes,

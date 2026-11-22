@@ -14,7 +14,7 @@ import { auth } from './data.js';
 import { communityLabel, communityOf, flag, settings } from './settings.js';
 import { seen, markSeen, unmarkSeen, hintsOn, setHints } from './hints.js';
 import { luckyHit, found, radioOn, openRadio, radioDocked, placeRadio, rescueRadio, critCount, eggCount, prop3d, poke, backdrop, EGGS, openStations } from './eggs.js';
-import { props } from './props3d.js';
+import { props, pokeProp } from './props3d.js';
 import { SKINS, skinOpen, specterSkin, setSpecterSkin } from './specter.js';
 import { renderHomeSchedule } from './schedule.js';
 import * as grid from './grid.js';
@@ -287,15 +287,15 @@ function shelfTile(span) {
 }
 // Today's classes (schedule.js fills it): what is on now and what comes next; wide, the whole week.
 const scheduleTile = (span) => tile('schedule', span, '<div class="home-schedule" data-home-schedule></div>', 'glass sched-tile');
-// «Decoración»: the 3D objects the Easter eggs unlocked, placed on a shelf; each one is pressed like in the Easter
-// eggs, and «+» adds another one.
+// «Decoración»: one 3D scene the Easter eggs unlocked, with no card behind it: purely decorative room. Pressed, it
+// plays (the fire flares up, the cake's candle goes out…); «Cambiar», on hover, picks another one.
 function decorTile(span) {
-  const here = decor.placed();
-  const free = decor.unlocked().filter((k) => !here.includes(k));
+  const k = decor.current();
+  const all = decor.unlocked();
   const POKE = { cake: 'cake', monitor: 'medic', portals: 'portal' };
-  return tile('decor', span, `<h2>Decoración ${free.length ? `<details class="decor-add"><summary title="Agregar una decoración">+</summary><div class="decor-menu">${free.map((k) => `<button type="button" data-decor-add="${k}">${prop3d(k)}<span>${esc(decor.DECOR[k].name)}</span></button>`).join('')}</div></details>` : ''}</h2>
-    ${here.length ? `<div class="decor-shelf">${here.map((k) => `<div class="decor-item"><button type="button" class="decor-obj" ${POKE[k] ? `data-trinket="${POKE[k]}"` : 'data-decor-spin'} aria-label="${esc(decor.DECOR[k].name)}" title="${esc(decor.DECOR[k].name)}">${prop3d(k)}</button><button type="button" class="icon x" data-decor-remove="${k}" aria-label="Quitar ${esc(decor.DECOR[k].name)}"><svg><use href="#i-x"/></svg></button></div>`).join('')}</div>`
-    : `<p class="muted">${free.length ? 'Tienes decoraciones desbloqueadas: ponlas aquí con el «+».' : 'Los Easter eggs desbloquean objetos en 3D para decorar tu inicio: una fogata, un fonógrafo, una torta… Búscalos.'}</p>`}`, 'glass decor-tile');
+  const menu = all.length ? `<details class="decor-add"><summary title="Elegir la decoración">${k ? 'Cambiar' : 'Elegir'}</summary><div class="decor-menu">${all.map((x) => `<button type="button" data-decor-add="${x}" aria-pressed="${x === k}">${prop3d(decor.sceneOf(x))}<span>${esc(decor.DECOR[x].name)}</span></button>`).join('')}${k ? '<button type="button" class="decor-none" data-decor-remove>Sin decoración</button>' : ''}</div></details>` : '';
+  return tile('decor', span, `${menu}${k ? `<button type="button" class="decor-obj" ${POKE[k] ? `data-trinket="${POKE[k]}"` : 'data-decor-poke'} aria-label="${esc(decor.DECOR[k].name)}" title="${esc(decor.DECOR[k].name)}">${prop3d(decor.sceneOf(k))}</button>`
+    : `<p class="decor-empty">${all.length ? 'Elige una decoración para este espacio.' : 'Los Easter eggs desbloquean escenas en 3D para este espacio: una fogata en la noche, un fonógrafo, una torta… Búscalos.'}</p>`}`, 'decor-tile');
 }
 const RENDER = { decor: decorTile, schedule: scheduleTile, shelf: shelfTile, todos: todosTile, countdown: countdownTile, deadlines: deadlinesTile, week: weekTile, goals: goalsTile, timer: timerTile, notes: notesTile, links: linksTile, recent: recentTile, news: newsTile, explore: exploreTile };
 
@@ -860,9 +860,9 @@ export function mountSpace(context) {
     if (t.dataset.tileReset !== undefined) setTiles([]);
     if (t.dataset.radioAdd !== undefined) { const home = !!t.closest('#dash'); openRadio(false, home ? true : undefined); if (home) refreshTile('shelf'); else renderSettings(); }
     if (t.dataset.trinket) poke(t.dataset.trinket, t);
-    if (t.dataset.decorAdd) { decor.add(t.dataset.decorAdd); sfx.tick(); }
-    if (t.dataset.decorRemove) { decor.remove(t.dataset.decorRemove); }
-    if (t.dataset.decorSpin !== undefined) { t.classList.remove('spun'); void t.offsetWidth; t.classList.add('spun'); sfx.tick(); }
+    if (t.dataset.decorAdd) { decor.choose(t.dataset.decorAdd); sfx.tick(); }
+    if (t.dataset.decorRemove !== undefined) decor.clear();
+    if (t.dataset.decorPoke !== undefined) { const c = t.querySelector('canvas'); if (pokeProp(c) === undefined) { t.classList.remove('spun'); void t.offsetWidth; t.classList.add('spun'); } sfx.tick(); }
     if (t.dataset.deadlineRemove) { prefs.set({ deadlines: prefs.get().deadlines.filter((d) => d.id !== t.dataset.deadlineRemove) }); renderHome(); }
     if (t.dataset.deadlineClear !== undefined) { prefs.set({ deadlines: prefs.get().deadlines.filter((d) => daysTo(d.date) >= 0) }); renderHome(); }
     if (t.dataset.linkRemove) { prefs.set({ links: prefs.get().links.filter((l) => l.id !== t.dataset.linkRemove) }); renderHome(); }

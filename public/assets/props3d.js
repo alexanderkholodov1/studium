@@ -312,6 +312,113 @@ const PROPS = {
     };
   },
 
+  // The campfire at night, as a decoration for Inicio: the fire in a clearing of darkness, pines that grow around it
+  // over the days, pairs of eyes that open now and then in the dark behind, and something that peeks out from behind a
+  // tree. Poked, the fire flares up and whatever watches from the dark goes away. Original shapes.
+  campfire() {
+    const base = PROPS.fire();
+    const { scene } = base;
+    const light = scene.children.find((o) => o.isPointLight);
+    if (light) { light.distance = 9; }
+    // The night: a dark clearing that fades into the page at its edges.
+    const nightTex = (() => {
+      const c = document.createElement('canvas'); c.width = c.height = 128;
+      const x = c.getContext('2d'); const g = x.createRadialGradient(64, 64, 8, 64, 64, 64);
+      g.addColorStop(0, 'rgba(10,12,22,.95)'); g.addColorStop(0.6, 'rgba(8,10,20,.8)'); g.addColorStop(1, 'rgba(8,10,20,0)');
+      x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+      return new T.CanvasTexture(c);
+    })();
+    const night = new T.Mesh(new T.CircleGeometry(4.2, 48), new T.MeshBasicMaterial({ map: nightTex, transparent: true, depthWrite: false }));
+    night.rotation.x = -Math.PI / 2; night.position.y = -0.01; night.renderOrder = -2; night.scale.setScalar(0.9); scene.add(night);
+    const back = new T.Sprite(new T.SpriteMaterial({ map: nightTex, transparent: true, depthWrite: false }));
+    back.scale.set(9.5, 5.2, 1); back.position.set(0, 1.4, -3.2); back.renderOrder = -3; scene.add(back);
+    const glow = new T.Sprite(new T.SpriteMaterial({ map: soft(), color: 0xff8a2a, transparent: true, opacity: 0.35, blending: T.AdditiveBlending, depthWrite: false }));
+    glow.scale.setScalar(3.4); glow.position.y = 0.6; scene.add(glow);
+    // The pines: each sprouts some minutes after the one before (counted from the first time the fire was lit here)
+    // and grows slowly; the forest keeps growing between visits.
+    let born = Date.now();
+    try { born = Number(localStorage.getItem('studium-campfire')) || born; localStorage.setItem('studium-campfire', String(born)); } catch { /* grows from now */ }
+    const bark = std(0x3b271a, 0.95);
+    const needles = [std(0x1f4a33, 0.85), std(0x24563a, 0.85), std(0x1a3f2c, 0.85)];
+    const SPOTS = [[-2.1, -1.4], [2.2, -1.2], [-1.1, -2.3], [1.0, -2.4], [-2.9, -0.2], [2.9, -0.3], [0, -2.9], [-2.4, -2.6], [2.5, -2.5]];
+    const trees = SPOTS.map(([x, z], i) => {
+      const tr = new T.Group(); tr.position.set(x, 0, z);
+      const h = 1.5 + ((i * 37) % 10) / 10;
+      tr.add(mesh(new T.CylinderGeometry(0.08, 0.12, h * 0.35, 8), bark, { y: h * 0.17 }));
+      for (let k = 0; k < 3; k += 1) tr.add(mesh(new T.ConeGeometry(0.62 - k * 0.15, h * 0.42, 9), needles[(i + k) % 3], { y: h * 0.32 + k * h * 0.22 }));
+      // The first ones are there almost at once; then one every few minutes, and the last ones days later.
+      tr.userData = { sprout: [0, 0.2, 0.8, 3, 8, 20, 60, 240, 1440][i] * 60000, grow: 90000, sway: Math.random() * 6 };
+      tr.scale.setScalar(0.001); scene.add(tr);
+      return tr;
+    });
+    // Eyes in the dark: a pair opens between the trees, blinks, looks, and closes.
+    const eyeMat = () => new T.SpriteMaterial({ map: soft(), color: 0xfff2a8, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false });
+    const pairs = Array.from({ length: 3 }, () => {
+      const p = new T.Group(); const l = new T.Sprite(eyeMat()); const r = new T.Sprite(eyeMat());
+      l.position.x = -0.11; r.position.x = 0.11; p.add(l, r); scene.add(p);
+      p.userData = { at: 4 + Math.random() * 12, life: 0, l, r };
+      return p;
+    });
+    const placeEyes = (p) => {
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4;
+      p.position.set(Math.cos(a) * (3 + Math.random() * 0.6), 0.5 + Math.random() * 0.9, Math.sin(a) * (2.6 + Math.random() * 0.6) - 0.4);
+      p.userData.life = 2.6 + Math.random() * 2.4; p.userData.started = null;
+    };
+    // Something behind a tree: a shadow with two small lights, that leans out and hides again.
+    const peeker = new T.Group();
+    peeker.add(mesh(new T.SphereGeometry(0.32, 20, 16), new T.MeshBasicMaterial({ color: 0x07080d }), { s: [1, 1.25, 0.8], cast: false }));
+    const pe = [-0.1, 0.1].map((x) => { const s = new T.Sprite(eyeMat()); s.position.set(x, 0.1, 0.27); s.scale.setScalar(0.16); s.material.opacity = 1; s.material.color.set(0xd6f3ff); peeker.add(s); return s; });
+    peeker.visible = false; scene.add(peeker);
+    let peek = { next: 20 + Math.random() * 20, start: 0, tree: null, side: 1 };
+    let flare = 0; let lastT = 0;
+    return {
+      scene, camera: camera(40, [0, 2.7, 5.6], [0, 0.6, -0.6]),
+      update(t, dt) {
+        base.update(t, dt);
+        const step = Math.max(0, t - lastT); lastT = t;
+        flare = Math.max(0, flare - step * 0.6);
+        for (const f of scene.children) if (f.isMesh && f.geometry?.type === 'ConeGeometry' && f.material?.blending === T.AdditiveBlending) f.scale.multiplyScalar(1 + flare * 0.6);
+        if (light) light.intensity += flare * 8;
+        glow.material.opacity = 0.3 + flare * 0.5 + Math.sin(t * 11) * 0.04;
+        const age = Date.now() - born;
+        for (const tr of trees) {
+          const g = Math.min(1, Math.max(0, (age - tr.userData.sprout) / tr.userData.grow));
+          const s = g <= 0 ? 0.001 : 0.15 + 0.85 * (1 - (1 - g) ** 2);
+          tr.scale.setScalar(s);
+          tr.rotation.z = Math.sin(t * 0.8 + tr.userData.sway) * 0.02 * s;
+        }
+        // The eyes: only when the fire is calm; a flare sends them away at once.
+        for (const p of pairs) {
+          const u = p.userData;
+          if (u.started === null && t > u.at && flare < 0.05) { placeEyes(p); u.started = t; }
+          if (u.started === null) continue;
+          const k = (t - u.started) / u.life;
+          const blink = Math.abs(Math.sin((t - u.started) * 2.3)) > 0.97 ? 0.1 : 1;
+          const o = flare > 0.05 ? 0 : Math.min(1, k * 6, (1 - k) * 6) * blink;
+          for (const e of [u.l, u.r]) { e.material.opacity = Math.max(0, o); e.scale.set(0.17, 0.11 * blink + 0.005, 1); }
+          p.position.x += Math.sin(t * 0.7) * 0.0015;
+          if (k >= 1 || flare > 0.05) { u.started = null; u.at = t + 8 + Math.random() * 16; for (const e of [u.l, u.r]) e.material.opacity = 0; }
+        }
+        // The peeker: behind the nearest grown tree, it leans out, looks, and goes back.
+        const grown = trees.filter((tr) => tr.scale.x > 0.7);
+        if (!peeker.visible && t > peek.next && grown.length && flare < 0.05) {
+          peek = { next: 0, start: t, tree: grown[Math.floor(Math.random() * grown.length)], side: Math.random() < 0.5 ? -1 : 1 };
+          peeker.visible = true;
+        }
+        if (peeker.visible) {
+          const k = (t - peek.start) / 4.5;
+          const out = flare > 0.05 ? 0 : Math.sin(Math.min(1, k) * Math.PI) ** 0.6;
+          const tp = peek.tree.position;
+          peeker.position.set(tp.x + peek.side * (0.05 + out * 0.42), 0.55 + out * 0.08, tp.z - 0.25);
+          peeker.rotation.z = -peek.side * out * 0.25;
+          for (const e of pe) e.material.opacity = out > 0.3 ? 1 : 0;
+          if (k >= 1 || flare > 0.05) { peeker.visible = false; peek.next = t + 25 + Math.random() * 30; }
+        }
+      },
+      poke() { flare = 1; return true; },
+    };
+  },
+
   // A glossy red heart that beats.
   heart() {
     const scene = new T.Scene(); stage(scene, { key: [2, 4, 4], ground: false });
