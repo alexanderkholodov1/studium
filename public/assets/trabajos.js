@@ -527,7 +527,7 @@ function saveDraft() {
     draftStore('readwrite', (st) => st.put(keep, draft.id)).catch((e) => console.warn('draft', e));
   }, 300);
 }
-const listDrafts = () => draftStore('readonly', (st) => st.getAll()).then((all) => (all ?? []).filter((d) => d.owner === uid()).sort((a, b) => b.saved - a.saved)).catch(() => []);
+const listDrafts = () => draftStore('readonly', (st) => st.getAll()).then((all) => (all ?? []).filter((d) => d.owner === uid() && d.kind !== 'files').sort((a, b) => b.saved - a.saved)).catch(() => []);
 const dropDraft = (id) => draftStore('readwrite', (st) => st.delete(id)).catch(() => {});
 const getDraft = (id) => draftStore('readonly', (st) => st.get(id)).catch(() => null);
 function draftsHTML(list) {
@@ -570,6 +570,7 @@ async function deleteTrabajo(id) {
   await deleteDoc(tRef(id));
   await deleteDoc(tRef(id, 'miembros', uid())).catch(() => {});
   await keepIds((await myIds()).filter((x) => x !== id));
+  dropDraft(`files:${id}`);
 }
 async function leaveTrabajo(id) {
   const r = listRows.find((x) => x.id === id);
@@ -643,9 +644,9 @@ function startDraft() {
 }
 const sameFile = (a, b) => a.name === b.name && a.size === b.size && a.lastModified === b.lastModified;
 // A folder brought whole: its files keep their place in it («carpeta/sub/archivo.py»). Skipped: hidden files and the
-// folders that are never material (git, dependencies, caches); at most 400 files and 150 MB.
+// folders that are never material (git, dependencies, caches); at most 400 files and 40 MB.
 const SKIP_DIR = /^(\.|node_modules$|__pycache__$|venv$|\.venv$|env$|dist$|build$|target$)/;
-const FOLDER_MAX = { files: 400, bytes: 150e6 };
+const FOLDER_MAX = { files: 400, bytes: 40e6 }; // the bridge takes 64 MB per request, and files travel as base64 (+33 %)
 function addFolderFiles(files, rootName) {
   let n = 0; let bytes = 0; let skipped = 0;
   const keep = [];
@@ -868,6 +869,23 @@ function repoOf(p) {
   const m = p?.share === 'repo' && String(p.repoUrl ?? '').match(/github\.com[/:]([\w.-]{1,100})\/([\w.-]{1,100}?)(?:\.git)?(?:[/?#]|$)/i);
   return m ? { repo: { owner: m[1], name: m[2] } } : {};
 }
+// The statement as the database keeps it (at most 600 KB compressed, firestore.rules): a statement too long is cut,
+// and says so, instead of failing with «Missing or insufficient permissions».
+async function fitStatement(text) {
+  let t = String(text);
+  let packed = await pack(t);
+  while (packed.toUint8Array().length > 580_000 && t.length > 1000) {
+    t = `${t.slice(0, Math.floor(t.length * 0.8))}
+
+[… Studium guardó solo esta parte: el material completo es demasiado largo para guardarlo; tu IA sí lo recibe entero al escribir la guía.]`;
+    packed = await pack(t);
+  }
+  return packed;
+}
+// The PDFs, pictures and other files of the statement, kept on this device next to the trabajo: a guide written again
+// (after a failure or «Intentarlo otra vez») gets them too, not only their names.
+const keepFiles = (tid, files) => draftStore('readwrite', (st) => st.put({ kind: 'files', owner: uid(), files, saved: Date.now() }, `files:${tid}`)).catch(() => {});
+const filesOf = (tid) => draftStore('readonly', (st) => st.get(`files:${tid}`)).then((x) => x?.files ?? []).catch(() => []);
 async function createTrabajo() {
   const { texts, binaries, notes } = await readAll(draft.files);
   const statement = [draft.text, ...texts].filter(Boolean).join('\n\n');
@@ -877,13 +895,14 @@ async function createTrabajo() {
   const batch = writeBatch(db);
   batch.set(ref, {
     title: draft.title.slice(0, 160), course: draft.course.slice(0, 120), group: draft.group.slice(0, 80), deadline: draftDeadline(), prefs: { ...draft.prefs, inFolder: !!(draft.workspace && draft.workspace !== 'temp') },
-    parts: draft.parts, owner: uid(), code, ...repoOf(draft.prefs), statement: await pack((statement + (binaries.length ? `\n\n(Archivos entregados a la IA tal como son: ${binaries.map((p) => p.name).join(', ')})` : '')).slice(0, 2_000_000)),
+    parts: draft.parts, owner: uid(), code, ...repoOf(draft.prefs), statement: await fitStatement(statement + (binaries.length ? `\n\n(Archivos entregados a la IA tal como son: ${binaries.map((p) => p.name).join(', ')})` : '')),
     encoding: 'gzip', created: serverTimestamp(), updated: serverTimestamp(),
   });
   batch.set(doc(db, 'trabajos', ref.id, 'miembros', uid()), { name: await myName(), code, joined: serverTimestamp() });
   await batch.commit();
   await keepIds([...(await myIds()), ref.id]);
   keepFolder(ref.id, draft.workspace);
+  if (binaries.length) await keepFiles(ref.id, binaries);
   return { id: ref.id, pdfs: binaries, notes };
 }
 function working(text, live = false) {
@@ -1656,7 +1675,7 @@ function wire(root) {
     if (kind === 'outline') {
       const box = b.closest('.card') ?? gRoot();
       box.insertAdjacentHTML('beforeend', liveHTML('Tu IA está armando la guía'));
-      startWork(); await busy(b, async () => { if (wholeAtOnce()) { await generateWhole([], liveFeed(box)); await releaseFolder(T.id); } else await generateOutline([], liveFeed(box)); repaint(); }).catch(() => repaint());
+      startWork(); await busy(b, async () => { const files = await filesOf(T.id); if (wholeAtOnce()) { await generateWhole(files, liveFeed(box)); await releaseFolder(T.id); } else await generateOutline(files, liveFeed(box)); repaint(); }).catch(() => repaint());
       return;
     }
     if (kind === 'gen-all') { await busy(b, () => writeAll(b)).catch((e) => { const box = b.closest('.card') ?? gRoot(); box.querySelector('[data-live]')?.remove(); box.querySelector('.tj-error')?.remove(); box.insertAdjacentHTML('beforeend', errorBox(errInfo(e, 'Escribir los capítulos'), 'gen-all')); }); return; }
