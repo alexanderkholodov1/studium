@@ -922,7 +922,7 @@ function statementBlock() {
   const words = String(T.statement ?? '').split(/\s+/).filter(Boolean).length;
   return `<div class="card source"><h3>El enunciado, tal cual</h3>
       <p class="mut">La fuente original y completa. Lo de arriba es la lectura de tu IA; esto es lo que dice el profesor.</p>
-      <details class="q"><summary class="qh">Leer el enunciado completo${words ? ` · ${words.toLocaleString('es')} palabras` : ''}</summary><pre class="src">${esc(T.statement)}</pre>
+      <details class="q"><summary class="qh">Leer el enunciado completo${words ? ` · ${words.toLocaleString('es')} ${words === 1 ? 'palabra' : 'palabras'}` : ''}</summary><pre class="src">${esc(T.statement)}</pre>
         ${o.enunciado_textual ? `<h4>Lo que dicen los archivos (transcrito por tu IA)</h4><pre class="src">${esc(o.enunciado_textual)}</pre>` : ''}</details>
       ${stepChecks('enunciado', `el enunciado de «${T.title}»: ${o.resumen}`, 'Lo leí completo')}</div>`;
 }
@@ -1066,6 +1066,35 @@ function paint() {
 // Diagrams the AI wrote in Mermaid, drawn by Mermaid itself (jsDelivr, pinned), only when there are some. Each one is
 // drawn once and kept: the guide repaints whenever someone marks a step or takes a part, and redrawing every diagram
 // each time made the page feel slow.
+// Node labels in quotes: A[Cliente (casa)] → A["Cliente (casa)"], also in { } and ( ); quotes inside become ’.
+const SHAPES = [['[[', ']]'], ['[(', ')]'], ['([', '])'], ['((', '))'], ['{{', '}}'], ['[', ']'], ['(', ')'], ['{', '}']];
+const reEsc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function quoteLabels(t) {
+  return String(t).split('\n').map((line) => {
+    let out = '';
+    let i = 0;
+    const id = /\b[A-Za-z_][\w-]*/g;
+    for (;;) {
+      id.lastIndex = i;
+      const m = id.exec(line);
+      if (!m) { out += line.slice(i); break; }
+      out += line.slice(i, m.index + m[0].length);
+      i = m.index + m[0].length;
+      const shape = SHAPES.find(([open]) => line.startsWith(open, i));
+      if (!shape || line[i + shape[0].length] === '"') continue;
+      // Its own closing, where an arrow, «&», «;», «:::» or the end of the line follows.
+      const from = i + shape[0].length;
+      const end = new RegExp(`${reEsc(shape[1])}(?=\\s*(?:-|=|&|;|:::|$))`, 'g');
+      end.lastIndex = from;
+      const c = end.exec(line);
+      if (!c) continue;
+      const label = line.slice(from, c.index);
+      out += /[()"'{}[\]]/.test(label) ? `${shape[0]}"${label.replace(/"/g, '’')}"${shape[1]}` : `${shape[0]}${label}${shape[1]}`;
+      i = c.index + shape[1].length;
+    }
+    return out;
+  }).join('\n');
+}
 let mermaidLib = null;
 const drawn = new Map();
 async function drawDiagrams() {
@@ -1079,8 +1108,18 @@ async function drawDiagrams() {
   try {
     mermaidLib ??= import('https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs').then((m) => { m.default.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'neutral' }); return m.default; });
     const mermaid = await mermaidLib;
-    await mermaid.run({ nodes, suppressErrors: true });
-    nodes.forEach((n, i) => { if (n.isConnected && n.querySelector('svg')) drawn.set(sources[i], n.innerHTML); });
+    // A diagram with a mistake is never drawn as Mermaid's «Syntax error» bomb: first its labels are put in quotes (the
+    // usual mistake: parentheses or quotes inside [ ] or { }); if it still does not parse, the figure is left out.
+    const ok = [];
+    for (const n of nodes) {
+      const text = n.textContent;
+      const valid = async (t) => (await mermaid.parse(t, { suppressErrors: true })) !== false;
+      let use = (await valid(text)) ? text : '';
+      if (!use) { const fixed = quoteLabels(text); if (await valid(fixed)) use = fixed; }
+      if (use) { n.textContent = use; ok.push(n); } else n.closest('figure')?.remove();
+    }
+    if (ok.length) await mermaid.run({ nodes: ok, suppressErrors: true });
+    ok.forEach((n) => { if (n.isConnected && n.querySelector('svg') && !/Syntax error/.test(n.textContent)) drawn.set(sources[nodes.indexOf(n)], n.innerHTML); else n.closest('figure')?.remove(); });
   } catch { for (const n of nodes) n.closest('figure')?.classList.add('as-text'); }
 }
 // The chapter being read is lit in the top bar.

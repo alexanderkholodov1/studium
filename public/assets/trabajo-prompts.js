@@ -12,6 +12,7 @@ Reglas:
 - Largo: la guía COMPLETA, con todos sus capítulos, se lee en 1 a 2 horas. Sé conciso y no repitas nada: lo explicado una vez se nombra después por su término del glosario. Pero ningún concepto, término, comando ni proceso queda sin explicar.
 - El trabajo lo hacen ellos: la guía no es solo para leer. Según cómo lo quiera el grupo, cada paso dice qué hace el integrante con sus manos (escribir el código a partir de pistas, crear u organizar archivos, hacer commit, push y abrir un PR), y la solución queda para comprobar.
 - Escribe como una buena guía de estudio, no como una lista de etiquetas: explica en prosa, como un profesor paciente, de lo simple a lo complejo, con ejemplos concretos; cada idea nueva se explica antes de usarse. Frases cortas; nada de jerga sin explicar.
+- Diagramas en Mermaid válido: cada etiqueta de nodo entre comillas dobles, por ejemplo A["Cliente (en casa)"] --> B{"¿Conecta?"}; nunca comillas dobles dentro de una etiqueta.
 - Respeta exactamente lo que pide el enunciado y la rúbrica: requisitos, restricciones, prohibiciones (por ejemplo, privacidad de datos o no evadir CAPTCHA) y la guía del curso si se menciona.
 - No inventes datos, resultados ni números que no puedas saber: donde dependan de los datos reales, dilo ("aquí verás…").
 - El código debe ser correcto, moderno y ejecutable en el entorno que pide el trabajo (por ejemplo Google Colab).
