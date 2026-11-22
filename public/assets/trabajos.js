@@ -49,7 +49,7 @@ function md(text) {
   }).join('');
 }
 const pct = (a, b) => (b ? Math.round((100 * a) / b) : 0);
-const bar = (p, color = 'var(--teal)') => `<span class="tj-bar" style="--p:${p}%;--c:${color}"><i></i></span>`;
+const bar = (p, color = 'var(--teal)') => `<span class="tj-bar" style="--tj-p:${p}%;--tj-c:${color}"><i></i></span>`;
 
 /* ---------- data ---------- */
 async function myIds() {
@@ -71,9 +71,9 @@ async function loadTrabajo(tid) {
   const d = snap.data();
   const [members, parts, hitos, avance, ia] = await Promise.all(['miembros', 'partes', 'hitos', 'avance', 'ia'].map((c) => getDocs(collection(db, 'trabajos', tid, c))));
   const t = {
-    id: tid, ...d, statement: await unpack(d.statement), outline: d.outline ? JSON.parse(await unpack(d.outline)) : null,
+    id: tid, viewer: uid(), ...d, statement: await unpack(d.statement), outline: d.outline ? JSON.parse(await unpack(d.outline)) : null,
     members: members.docs.map((m) => ({ uid: m.id, name: m.data().name })),
-    parts: Object.fromEntries(parts.docs.map((p) => [p.id, p.data().uid])),
+    taken: Object.fromEntries(parts.docs.map((p) => [p.id, p.data().uid])),
     hitos: {}, avance: {}, ia: {},
   };
   for (const h of hitos.docs) { try { t.hitos[h.id] = { ...JSON.parse(await unpack(h.data().data)), by: h.data().by, ai: h.data().ai }; } catch { /* unreadable: generated again */ } }
@@ -194,12 +194,13 @@ async function join(form) {
   const name = String(new FormData(form).get('name')).trim().slice(0, 40);
   await setDoc(tRef(tid, 'miembros', uid()), { name, code, joined: serverTimestamp() });
   await keepIds([...(await myIds()), tid]);
+  T = null;
   location.hash = `#/trabajos/${tid}`;
 }
 
 /* ---------- the trabajo ---------- */
 const steps = () => (T.outline?.hitos ?? []).flatMap((h) => h.pasos.map((p) => ({ ...p, hito: h.id })));
-const myPart = () => Object.entries(T.parts).find(([, u]) => u === uid())?.[0] ?? '';
+const myPart = () => Object.entries(T.taken).find(([, u]) => u === uid())?.[0] ?? '';
 const nameOf = (u) => T.members.find((m) => m.uid === u)?.name ?? 'alguien';
 const mark = (key) => T.avance[uid()]?.[key] ?? {};
 const doneBy = (key) => T.members.filter((m) => T.avance[m.uid]?.[key]?.d);
@@ -215,7 +216,7 @@ function header() {
       <div class="tj-total"><b>${total}%</b><span class="fine">del trabajo hecho</span>${bar(total)}</div>
     </div>
     <div class="tj-people">${T.members.map((m) => {
-      const letter = Object.entries(T.parts).find(([, u]) => u === m.uid)?.[0];
+      const letter = Object.entries(T.taken).find(([, u]) => u === m.uid)?.[0];
       const mine = letter ? all.filter((s) => s.parte === letter) : [];
       const p = pct(mine.filter((s) => T.avance[m.uid]?.[s.id]?.d).length, mine.length);
       return `<span class="tj-person" style="--c:${letter ? colorOf(letter) : 'var(--muted)'}"><i>${esc(letter ?? '·')}</i>${esc(m.name)}${letter ? ` <small>${p}%</small>` : ' <small>sin parte</small>'}</span>`;
@@ -264,7 +265,7 @@ function renderReparto() {
   const mine = myPart();
   return `<section class="tj-sec"><p class="fine">Cada integrante toma una parte. Las partes avanzan en paralelo; aun así, cada uno debe entender todo el trabajo: la defensa es de todos.</p>
     <div class="tj-board" style="--n:${letters.length}">${letters.map((L) => {
-      const holder = T.parts[L];
+      const holder = T.taken[L];
       const list = all.filter((s) => s.parte === L);
       const doneN = list.filter((s) => isDone(s.id)).length;
       return `<div class="tj-col glass" style="--c:${colorOf(L)}"><header><i>${L}</i><b>Persona ${L}</b></header>
@@ -284,7 +285,7 @@ function stepHTML(s, step) {
       ${tutorBox(`${key}#${ci}`, `este código del paso ${key} («${s.titulo}»):\n${c.codigo}`)}</div>`;
   }).join('');
   return `<article class="tj-step glass" id="paso-${esc(key)}" style="--c:${colorOf(s.parte)}">
-    <header><i>${esc(s.parte)}</i><b>${esc(key)} · ${esc(s.titulo)}</b>${s.requisitos.map((r) => `<span class="tag">${esc(r)}</span>`).join('')}${T.parts[s.parte] ? `<span class="fine">${esc(nameOf(T.parts[s.parte]))}</span>` : ''}</header>
+    <header><i>${esc(s.parte)}</i><b>${esc(key)} · ${esc(s.titulo)}</b>${s.requisitos.map((r) => `<span class="tag">${esc(r)}</span>`).join('')}${T.taken[s.parte] ? `<span class="fine">${esc(nameOf(T.taken[s.parte]))}</span>` : ''}</header>
     ${step ? `${step.objetivo ? `<p><b>Objetivo:</b> ${esc(step.objetivo)}</p>` : ''}
       ${step.teoria ? `<div class="tj-theory"><h4>La teoría</h4>${md(step.teoria)}</div>` : ''}
       ${step.librerias.length ? `<p class="fine"><b>Librerías:</b> ${step.librerias.map((l) => `<code>${esc(l.nombre)}</code>: ${esc(l.para_que)}`).join(' · ')}</p>` : ''}
@@ -329,7 +330,7 @@ function renderAvance() {
   return `<section class="tj-sec">
     <div class="tj-table glass"><table><thead><tr><th>Integrante</th><th>Parte</th><th>Su parte hecha</th><th>Entiende los pasos</th><th>Entiende el enunciado</th></tr></thead><tbody>
     ${T.members.map((m) => {
-      const L = Object.entries(T.parts).find(([, u]) => u === m.uid)?.[0] ?? '';
+      const L = Object.entries(T.taken).find(([, u]) => u === m.uid)?.[0] ?? '';
       const own = all.filter((s) => s.parte === L);
       const a = T.avance[m.uid] ?? {};
       const pOwn = pct(own.filter((s) => a[s.id]?.d).length, own.length);
@@ -364,7 +365,7 @@ function renderIA() {
 function citation() {
   const lines = [`# Uso de inteligencia artificial en «${T.title}»`, '',
     `Este trabajo${T.course ? ` del curso ${T.course}` : ''} se desarrolló en grupo con **Studium** (alexanderkholodov.web.app/studium), una plataforma de estudio. Studium generó, con la IA que eligió cada integrante, una guía de solución a partir del enunciado y la rúbrica: la teoría, el código en piezas con cada línea explicada y preguntas para comprobar la comprensión. Cada integrante escribió y ejecutó el código personalmente siguiendo la guía, marcó qué entendió y qué hizo, y consultó a su IA cuando no entendía algo. Abajo están las IA, los modelos y las instrucciones (prompts) usados, por integrante.`, '',
-    '## Integrantes y partes', ...T.members.map((m) => { const L = Object.entries(T.parts).find(([, u]) => u === m.uid)?.[0]; return `- ${m.name}${L ? ` (Persona ${L})` : ''}`; }), '',
+    '## Integrantes y partes', ...T.members.map((m) => { const L = Object.entries(T.taken).find(([, u]) => u === m.uid)?.[0]; return `- ${m.name}${L ? ` (Persona ${L})` : ''}`; }), '',
     '## Modelos usados', ...[...new Set(T.members.flatMap((m) => (T.ia[m.uid] ?? []).map((e) => `${e.model} (${e.provider})`)))].map((x) => `- ${x}`), ''];
   for (const m of T.members) {
     const log = T.ia[m.uid] ?? [];
@@ -389,7 +390,7 @@ function paint() {
 
 async function openTrabajo(tid, sub) {
   tab = ['enunciado', 'reparto', 'guia', 'avance', 'ia'].includes(sub) ? sub : (T?.id === tid ? tab : 'enunciado');
-  if (T?.id !== tid) {
+  if (T?.id !== tid || T.viewer !== uid()) {
     root.innerHTML = '<p class="status">Abriendo el trabajo…</p>';
     T = await loadTrabajo(tid);
     asking.clear(); openMilestone = '';
@@ -513,8 +514,8 @@ function wire() {
       return;
     }
     if (kind === 'reload') { await busy(b, async () => { T = await loadTrabajo(T.id); paint(); }).catch(() => {}); return; }
-    if (kind === 'take') { await busy(b, async () => { await setDoc(tRef(T.id, 'partes', b.dataset.part), { uid: uid(), at: serverTimestamp() }); T.parts[b.dataset.part] = uid(); paint(); }).catch(() => ctx.toast('Esa parte ya la tomó alguien: pulsa «Actualizar».')); return; }
-    if (kind === 'leave') { const L = myPart(); await busy(b, async () => { await deleteDoc(tRef(T.id, 'partes', L)); delete T.parts[L]; paint(); }).catch(() => {}); return; }
+    if (kind === 'take') { await busy(b, async () => { await setDoc(tRef(T.id, 'partes', b.dataset.part), { uid: uid(), at: serverTimestamp() }); T.taken[b.dataset.part] = uid(); paint(); }).catch(() => ctx.toast('Esa parte ya la tomó alguien: pulsa «Actualizar».')); return; }
+    if (kind === 'leave') { const L = myPart(); await busy(b, async () => { await deleteDoc(tRef(T.id, 'partes', L)); delete T.taken[L]; paint(); }).catch(() => {}); return; }
     if (kind === 'outline') {
       await busy(b, async () => { say('#tj-gen-status', 'Tu IA está armando el esquema…'); await generateOutline(); paint(); }).catch((e) => say('#tj-gen-status', e.message));
       return;
