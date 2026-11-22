@@ -34,6 +34,7 @@ import { mountEggs } from './eggs.js';
 import { mountTour, offerTour } from './tour.js';
 import { renderNews, newsOnce } from './news.js';
 import { VERSION } from './config.js';
+import { markWip, markBeta, BETA } from './wip.js';
 import { mountAdmin, renderAdmin } from './admin.js';
 import { mountFeedback } from './feedback.js';
 import * as vault from './vault.js';
@@ -127,6 +128,7 @@ let current = 'boot';
 function show(view) {
   const swap = () => {
     for (const v of VIEWS) $(`#view-${v}`).hidden = v !== view;
+    markWip(view);
     const member = isMember(auth.currentUser);
     const nav = $('#nav');
     nav.dataset.mode = member ? 'member' : 'public';
@@ -323,7 +325,8 @@ const context = { state, get user() { return { uid: auth.currentUser?.uid, email
 mountMap(context);
 mountSpace(context);
 mountTour();
-$('#foot-version').textContent = `v${VERSION} · Novedades`;
+$('#foot-version').textContent = `${BETA ? 'Studium beta · ' : ''}v${VERSION} · Novedades`;
+markBeta();
 mountEggs({ toast, onFound: (id, fresh) => { unlocked(fresh); if (current === 'home') { if (fresh) renderHome(); else refreshTile('shelf'); } } });
 mountAdmin(context);
 mountFeedback();

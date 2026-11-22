@@ -3331,3 +3331,15 @@ canvas.prop { display: block; }
 @media (max-width: 1100px) { .tjg-app .rn-two { grid-template-columns: 1fr 1fr; } .tjg-app .rn-plan { grid-column: 1 / -1; position: static; } }
 @media (max-width: 760px) { .tjg-app .rn-two { grid-template-columns: 1fr; } }
 .am-note { margin: 0; padding: 10px 14px; border-radius: 12px; background: color-mix(in oklab, var(--blue) 10%, var(--card)); font-weight: 600; }
+
+/* «En construcción» and «Beta» (wip.js) */
+.wip-tape { position: relative; margin: 0 0 18px; border-radius: 14px; overflow: hidden; background: #1a1300; color: #fff6cc;
+  box-shadow: 0 10px 24px -14px rgba(0, 0, 0, .55), inset 0 -3px 0 rgba(0, 0, 0, .35); }
+.wip-tape .wip-stripes { display: block; height: 14px; background: repeating-linear-gradient(-45deg, #ffc400 0 16px, #1a1300 16px 32px); }
+.wip-tape p { margin: 0; padding: 10px 16px 12px; font-size: 15px; }
+.wip-tape b { color: #ffc400; text-transform: uppercase; letter-spacing: .05em; }
+.wip-link { position: relative; }
+.wip-link::after { content: ""; position: absolute; left: 10%; right: 10%; bottom: -3px; height: 4px; border-radius: 2px; background: repeating-linear-gradient(-45deg, #ffc400 0 5px, #1a1300 5px 10px); }
+.beta-ribbon { position: fixed; z-index: 60; left: 14px; bottom: 14px; padding: 6px 12px; border-radius: 999px; color: #1a1300; text-decoration: none;
+  background: repeating-linear-gradient(-45deg, #ffc400 0 10px, #ffd84d 10px 20px); font: 800 12px/1 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase;
+  box-shadow: 0 6px 16px -6px rgba(0, 0, 0, .5), inset 0 -2px 0 rgba(0, 0, 0, .18); }
