@@ -781,7 +781,7 @@ export async function findBridgeSay(scope = document) {
   const hello = await ai.findBridge();
   const say = !hello
     ? (ai.bridgeKnowsThisPage() ? 'No encuentro el puente abierto. ¿Escribiste el comando en la terminal? Si ya lo hiciste, espera un par de segundos y vuelve a comprobar.' : `No encuentro el puente, o no acepta esta página. Ábrelo con: ${ai.bridgeCommand()}`)
-    : String(hello.version ?? '0') < ai.BRIDGE_VERSION ? `Tienes abierta una versión anterior del puente (${hello.version ?? '?'}). Ciérralo, descárgalo de nuevo y ábrelo otra vez.`
+    : ai.bridgeOld(hello.version) ? `Tienes abierta una versión anterior del puente (${hello.version ?? '?'}). Ciérralo, descárgalo de nuevo y ábrelo otra vez.`
       : 'El puente está abierto. Ahora pega aquí el código que te muestra y pulsa «Enlazar».';
   if (msg) msg.textContent = say; else ctx?.toast(say);
   return !!hello;

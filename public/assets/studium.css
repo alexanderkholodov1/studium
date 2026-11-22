@@ -2821,3 +2821,7 @@ canvas.prop { display: block; }
 .tj-addfolder { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; }
 .tj-addfolder select { width: auto; padding: 6px 30px 6px 10px; font-size: 14px; }
 .tjg-app .place .tj-pick { background: var(--panel); }
+/* «Trabajos»: the advice for what was brought, as a sentence, not a list of options. */
+.tj-advice { padding: 14px 18px; border-radius: 16px; background: color-mix(in oklab, var(--blue) 6%, transparent); }
+.tj-advice p { margin: 4px 0; }
+.tj-advice .tj-ok { margin-top: 6px; }

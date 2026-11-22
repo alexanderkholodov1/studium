@@ -503,6 +503,13 @@ export async function findBridge(port = BRIDGE_PORT) {
 }
 // The bridge's version this page expects (bridge.mjs, VERSION): an older one is downloaded again.
 export const BRIDGE_VERSION = '1.2.0';
+// Is the bridge that answered older than this page needs? (Compared number by number.)
+export function bridgeOld(version = load().bridge?.version) {
+  const a = String(version ?? '0').split('.').map(Number);
+  const b = BRIDGE_VERSION.split('.').map(Number);
+  for (let i = 0; i < 3; i += 1) { if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) < (b[i] || 0); }
+  return false;
+}
 // The addresses the bridge answers without --origin (bridge.mjs, ORIGINS and PREVIEW).
 export function bridgeKnowsThisPage() {
   const o = location.origin;
@@ -539,7 +546,7 @@ export async function bridgeStatus() {
   const engines = Array.isArray(body.engines) ? body.engines : [];
   patch((s) => {
     if (!s.bridge) return;
-    s.bridge.engines = engines; s.bridge.at = Date.now(); s.bridge.cwd = String(body.cwd ?? '');
+    s.bridge.engines = engines; s.bridge.at = Date.now(); s.bridge.cwd = String(body.cwd ?? ''); s.bridge.version = String(body.version ?? '');
     for (const e of engines) s.models[`bridge:${e.id}`] = (e.models ?? []).map((m) => m.id);
     // The Claude account: the one chosen, while it still has its session; else the first signed in.
     const claude = engines.find((e) => e.id === 'claude');
@@ -557,6 +564,9 @@ export async function bridgeFolders() {
   return body.folders ?? [];
 }
 export async function pickBridgeFolder(mode = 'read') {
+  const hello = await findBridge(bridgeOf()?.port);
+  if (!hello) throw new AIError('El puente no está abierto. Ábrelo en tu computadora y vuelve a intentarlo.', { kind: 'account', way: 'bridge:claude' });
+  if (bridgeOld(hello.version)) throw new AIError(`Tu puente abierto es la versión ${hello.version ?? 'anterior'}: para elegir carpetas necesitas la ${BRIDGE_VERSION}. Ciérralo, descárgalo de nuevo desde Studium y ábrelo otra vez.`, { kind: 'account', way: 'bridge:claude' });
   const body = await bridgeFetch('/v1/folders/pick', { method: 'POST', body: JSON.stringify({ mode }) });
   await bridgeFolders();
   return body.folder;

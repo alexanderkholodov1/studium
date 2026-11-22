@@ -213,9 +213,9 @@ function placeHTML(now) {
   return `<label class="tj-pick ${now === 'temp' || !now ? 'on' : ''}"><input type="radio" name="workspace" value="temp" data-tj-ws ${now === 'temp' || !now ? 'checked' : ''}> Una carpeta temporal <small>se crea en cada pedido y se borra al terminar; tu IA solo lee lo que trajiste</small></label>
     ${folders.map((f) => `<div class="tj-pick ${now === f.id ? 'on' : ''} ${f.exists === false ? 'off' : ''}"><label><input type="radio" name="workspace" value="${esc(f.id)}" data-tj-ws ${now === f.id ? 'checked' : ''} ${f.exists === false ? 'disabled' : ''}> ${esc(f.name)} <small>${esc(f.path)}${f.exists === false ? ' · ya no existe' : ''}</small></label>
       <span class="tj-mode">${modeSel(f)}<small>${esc(MODE_WHY[f.mode] ?? '')}</small></span><button type="button" class="link" data-tj="folder-remove" data-id="${esc(f.id)}">quitar</button></div>`).join('')}
-    <div class="tj-addfolder"><button type="button" class="button ghost small" data-tj="folder-pick">Elegir una carpeta de mi computadora…</button>
+    ${ai.bridgeOld() ? `<p class="tj-warn">Tu puente abierto es la versión ${esc(ai.bridgeOf()?.version || 'anterior')}; para trabajar en tus carpetas necesitas la ${ai.BRIDGE_VERSION}. Ciérralo (Ctrl+C), <a href="${esc(ai.BRIDGE_URL)}" download="studium-bridge.mjs">descárgalo de nuevo</a> y ábrelo con <code>${esc(ai.bridgeCommand())}</code>. Después pulsa <button type="button" class="link" data-tj="bridge-recheck">Ya lo abrí</button>.</p>` : `<div class="tj-addfolder"><button type="button" class="button ghost small" data-tj="folder-pick">Elegir una carpeta de mi computadora…</button>
       <select data-tj-newmode aria-label="Permiso para la carpeta nueva">${Object.entries(MODE_TEXT).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('')}</select>
-      <span class="fine" id="tj-folder-status" role="status">Se abre la ventana de tu computadora para elegirla. Cada trabajo puede tener la suya, sin cerrar el puente.</span></div>`;
+      <span class="fine" id="tj-folder-status" role="status">Se abre la ventana de tu computadora para elegirla. Cada trabajo puede tener la suya, sin cerrar el puente.</span></div>`}`;
 }
 async function myName() {
   const p = await loadProfile(uid()).catch(() => null);
@@ -269,11 +269,14 @@ function renderDraft(error = '') {
         <div><h3>Quién responde tus dudas al instante</h3><p class="fine">Cuando pulses «No lo entiendo». Conviene una rápida.</p>${wayRadio('tutor', tutor)}</div>
         ${bridgeWrites ? `<div><h3>Dónde trabaja tu IA</h3>${placeHTML(draft.workspace)}</div>` : ''}
       </div>` : '';
-    control = `${roles}<h3 class="tj-ways-title">${ways.length ? 'Otras formas, según lo que trajiste' : 'Lo que conviene, según lo que trajiste'}</h3><div class="tj-ways">${opts.map((o, i) => `<div class="tj-way glass ${i === 0 ? 'rec' : ''}">
-        <div><b>${esc(o.name)}</b>${i === 0 ? ' <span class="tag rec">Recomendado</span>' : ''}<p>${esc(o.why)}</p><p class="fine">${esc(o.how)}</p></div>
-        ${usable(o) ? '<span class="tj-ok">Conectada ✓</span>' : o.id === 'bridge' ? `<button type="button" class="button ${i === 0 ? 'primary' : 'ghost'} small" data-tj="pair-here">Conectar aquí</button>` : `<button type="button" class="button ${i === 0 ? 'primary' : 'ghost'} small" data-tj="connect" data-vendor="${o.vendor}" data-bridge="${o.bridge ? '1' : ''}">Conectar</button>`}</div>
-        ${o.id === 'bridge' && draft.pairing && !usable(o) ? `<div class="tj-bridge ai-bridge">${bridgeSteps().replace('data-ai-pair>', 'data-tj="pair-code">')}</div>` : ''}`).join('')}</div>
-      ${ready ? '' : '<p class="fine">Puedes seguir sin conectar ninguna y escribir la guía después.</p>'}`;
+    const best = opts[0];
+    const connectBtn = (o, primary) => (o.id === 'bridge' ? `<button type="button" class="button ${primary ? 'primary' : 'ghost'} small" data-tj="pair-here">Conectar ${esc(o.name.toLowerCase())}</button>` : `<button type="button" class="button ${primary ? 'primary' : 'ghost'} small" data-tj="connect" data-vendor="${o.vendor}" data-bridge="${o.bridge ? '1' : ''}">Conectar ${esc(o.name)}</button>`);
+    // What is advised for this case: a sentence. A button appears only for what is missing.
+    const advice = `<div class="tj-advice"><p><b>Para lo que trajiste, conviene: ${esc(best.name.toLowerCase())}.</b> ${esc(best.why)}</p>
+        ${usable(best) ? '<p class="tj-ok">Ya lo tienes conectado ✓</p>' : `<p>${connectBtn(best, true)} ${ready ? '' : `<span class="fine">o también: ${opts.slice(1).filter((o) => !usable(o)).map((o) => (o.id === 'bridge' ? `<button type="button" class="link" data-tj="pair-here">${esc(o.name.toLowerCase())}</button>` : `<button type="button" class="link" data-tj="connect" data-vendor="${o.vendor}" data-bridge="${o.bridge ? '1' : ''}">${esc(o.name)}</button>`)).join(' · ')}</span>`}</p>`}
+        ${best.id === 'bridge' && draft.pairing && !usable(best) ? `<div class="tj-bridge ai-bridge">${bridgeSteps().replace('data-ai-pair>', 'data-tj="pair-code">')}</div>` : ''}
+        ${ready ? '' : '<p class="fine">Puedes seguir sin conectar ninguna y escribir la guía después.</p>'}</div>`;
+    control = `${advice}${roles}`;
   }
   if (q.input === 'prefs') {
     const seg = (key, choices) => `<div class="tj-seg" role="radiogroup">${choices.map(([v, label]) => `<label class="${draft.prefs[key] === v ? 'on' : ''}"><input type="radio" name="p-${key}" value="${v}" data-tj-pref="${key}" ${draft.prefs[key] === v ? 'checked' : ''}>${esc(label)}</label>`).join('')}</div>`;
@@ -619,7 +622,7 @@ const say = (sel, text) => { const el = document.querySelector(sel); if (el) el.
 async function busy(button, work) {
   const was = button?.disabled;
   if (button) button.disabled = true;
-  try { await work(); } catch (e) { console.error(e); ctx?.toast?.(ctx.explain ? ctx.explain(e) : e.message); throw e; } finally { if (button && button.isConnected) button.disabled = was; }
+  try { await work(); } catch (e) { console.error(e); ctx?.toast?.(e?.code && ctx.explain ? ctx.explain(e) : e?.message || 'No se pudo: vuelve a intentarlo.'); throw e; } finally { if (button && button.isConnected) button.disabled = was; }
 }
 // Repaint, keeping the place on the page.
 function repaint() { const sc = scroller(); const y = sc?.scrollTop ?? 0; paint(); if (sc) sc.scrollTop = y; }
@@ -770,6 +773,10 @@ function wire(root) {
     if (kind === 'pair-code') {
       const code = b.closest('.tj-bridge')?.querySelector('[data-ai-pair-code]')?.value;
       await busy(b, async () => { if (await pairBridge(code)) { draft.pairing = false; renderDraft(); } }).catch(() => {});
+      return;
+    }
+    if (kind === 'bridge-recheck') {
+      await busy(b, async () => { await ai.bridgeStatus(); if (draft) { keepAnswer(); renderDraft(); } else repaint(); ctx.toast(ai.bridgeOld() ? 'Sigue abierta la versión anterior del puente.' : `Puente ${ai.bridgeOf()?.version} listo.`); }).catch(() => {});
       return;
     }
     if (kind === 'folder-pick') {
