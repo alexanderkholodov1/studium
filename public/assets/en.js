@@ -206,7 +206,7 @@ export const EN = {
   'Terminada': 'Finished', 'Leyendo': 'Reading', 'Lo nuevo en tu comunidad': 'New in your community', 'Todas las guías': 'All the guides', 'El grafo': 'The map',
   'Todavía no hay guías. La primera puede ser la tuya.': 'No guides yet. The first one could be yours.', 'Un concepto al azar': 'A random concept',
   'Verlo en el grafo': 'See it on the map', 'Cuando el grafo tenga conceptos, aquí aparece uno distinto cada vez.': 'When the map has concepts, a different one shows up here each time.',
-  'Hoy': 'Today', 'Mañana': 'Tomorrow', 'día': 'day', 'días': 'days',
+  'Hoy': 'Today', 'Ahora': 'Now', 'Mañana': 'Tomorrow', 'día': 'day', 'días': 'days',
   'ene': 'Jan', 'feb': 'Feb', 'mar': 'Mar', 'abr': 'Apr', 'may': 'May', 'jun': 'Jun', 'jul': 'Jul', 'ago': 'Aug', 'sept': 'Sep', 'sep': 'Sep', 'oct': 'Oct', 'nov': 'Nov', 'dic': 'Dec',
 
   // guides
@@ -412,7 +412,12 @@ export const EN = {
   '+ Enfoque': '+ Focus',
   '+ Radio': '+ Radio',
   'Personaliza tu inicio': 'Customize your home',
-  'Mueve, cambia el tamaño o quita cada cosa con sus botones': 'Move, resize or remove each one with its buttons',
+  'Arrastra cada cosa para moverla, estírala desde su esquina, o quítala con la ×': 'Drag each one to move it, stretch it from its corner, or remove it with the ×',
+  'Arrástrala para moverla': 'Drag it to move it', 'Arrastra para cambiar el tamaño': 'Drag to resize', 'Quitar': 'Remove',
+  'Hoy en tu horario': 'Today in your schedule', 'La semana': 'The week', 'Sigue': 'Next', 'Tu horario, aquí': 'Your schedule, here',
+  'Una captura de Banner, una foto o tu Excel: lo subes una vez y cada día ves qué clase sigue.': 'A Banner screenshot, a photo or your Excel: upload it once and every day see which class comes next.',
+  'o arma tu inscripción': 'or plan your registration', 'Nada nuevo fuera de lo que ya estás leyendo.': 'Nothing new beyond what you are already reading.',
+  'Un buen día para adelantar.': 'A good day to get ahead.', 'Disfruta el fin de semana.': 'Enjoy the weekend.',
   'Ya tienes todo a la vista.': 'You already have everything in view.',
   'Como venía': 'As it was',
   'No hay nada con fecha por venir. Agrega tus fechas en «Fechas y entregas», o crea la guía de tu próximo examen.': 'Nothing with an upcoming date. Add your dates in “Dates and deadlines”, or create the guide for your next exam.',
@@ -925,6 +930,9 @@ const QKIND = { 'Opción múltiple': 'Multiple choice', 'Verdadero o falso': 'Tr
   'Problema': 'Problem', 'Código': 'Code', 'Problema de programación': 'Programming problem', 'Diagrama': 'Diagram', 'Desarrollo': 'Essay', 'Oral': 'Oral' };
 
 export const PATTERNS = [
+  [/^(\d+) de (\d+) encontrados$/, (m, a, b) => `${a} of ${b} found`],
+  [/^(Lunes|Martes|Miércoles|Jueves|Viernes|Sábado|Domingo): sin clases\.$/, (m, d) => `${{ Lunes: 'Monday', Martes: 'Tuesday', Miércoles: 'Wednesday', Jueves: 'Thursday', Viernes: 'Friday', Sábado: 'Saturday', Domingo: 'Sunday' }[d]}: no classes.`],
+  [/^Quitar (.+) del inicio$/, (m, n) => `Remove ${n} from home`],
   [/\b(lunes|martes|miércoles|jueves|viernes|sábado|domingo), (\d{1,2}) de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\b/g, (m, d, n, mo) => `${DAYS[d]}, ${MONTHS[mo]} ${n}`],
   [/^Tu próximo examen · /, 'Your next exam · '],
   [/^(Buenas noches|Buenos días|Buenas tardes)/, (m) => ({ 'Buenas noches': 'Good evening', 'Buenos días': 'Good morning', 'Buenas tardes': 'Good afternoon' })[m]],

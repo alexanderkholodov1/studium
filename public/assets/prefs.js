@@ -22,7 +22,7 @@ const LANG = /^en\b/i.test(globalThis.navigator?.language ?? '') ? 'en' : 'es';
 const DEFAULTS = { mode: 'examenes', ambience: 'vivo', sound: false, theme: 'auto', lang: LANG, avatar: 'blue', semester: 0, career: '', nickname: '', name: '', goals: [], progress: {},
   deadlines: [], todos: [], tiles: [], notes: '', links: [], focus: { study: 25, rest: 5 }, bubbles: false, courses: [], interests: [], known: [], malla: '', passed: [], plan: [] };
 // The tiles the home page can show (space.js draws them).
-const TILE_IDS = ['shelf', 'todos', 'countdown', 'deadlines', 'week', 'goals', 'timer', 'notes', 'links', 'recent', 'news', 'explore'];
+const TILE_IDS = ['shelf', 'schedule', 'todos', 'countdown', 'deadlines', 'week', 'goals', 'timer', 'notes', 'links', 'recent', 'news', 'explore'];
 const rid = () => Math.random().toString(36).slice(2, 10);
 const range = (v, lo, hi, d) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d; };
 const KEYS = Object.keys(DEFAULTS);
@@ -59,10 +59,12 @@ const clean = (p) => {
     }))
     .filter((t) => t.text);
   const tiles = new Set();
+  // A tile is "id@x.y.w.h", its place and size in the home page's grid (grid.js); the older "id" and "id:s" are
+  // still read, and laid out again.
   out.tiles = (Array.isArray(out.tiles) ? out.tiles : []).map(String).filter((t) => {
-    const [id, size] = t.split(':');
-    if (!TILE_IDS.includes(id) || (size && !['s', 'l'].includes(size)) || tiles.has(id)) return false;
-    tiles.add(id); return true;
+    const m = t.match(/^([a-z]+)(?::[sl]|@\d{1,3}\.\d{1,3}\.\d{1,2}\.\d{1,2})?$/);
+    if (!m || !TILE_IDS.includes(m[1]) || tiles.has(m[1])) return false;
+    tiles.add(m[1]); return true;
   }).slice(0, 16);
   out.notes = String(out.notes ?? '').slice(0, 4000);
   out.links = (Array.isArray(out.links) ? out.links : []).slice(0, 12)

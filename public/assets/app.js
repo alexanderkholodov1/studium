@@ -18,7 +18,7 @@ import { mountContribute, renderPane, presetGuide, startQueue } from './contribu
 import { prefs } from './prefs.js';
 import { sfx } from './sfx.js';
 import { play, springLetters, celebrate } from './play.js';
-import { mountSpace, unlocked, renderHome, renderSettings, renderAmbiences, remember, soonLabel, daysTo, pairBridge } from './space.js';
+import { mountSpace, unlocked, renderHome, refreshTile, renderSettings, renderAmbiences, remember, soonLabel, daysTo, pairBridge } from './space.js';
 import { mountCommunity, loadCommunity, kudosRow, renderKudos, renderProfes } from './community.js';
 import { mountDemos } from './demos.js';
 import { mountScenes } from './scenes.js';
@@ -323,7 +323,7 @@ mountMap(context);
 mountSpace(context);
 mountTour();
 $('#foot-version').textContent = `v${VERSION} · Novedades`;
-mountEggs({ toast, onFound: (id, fresh) => { unlocked(fresh); if (current === 'home') renderHome(); } });
+mountEggs({ toast, onFound: (id, fresh) => { unlocked(fresh); if (current === 'home') { if (fresh) renderHome(); else refreshTile('shelf'); } } });
 mountAdmin(context);
 mountFeedback();
 mountComunidad();

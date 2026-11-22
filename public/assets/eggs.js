@@ -277,7 +277,7 @@ function stopMusic() { radio.playing = false; clearInterval(radio.timer); radio.
 // It goes with you to every tab (floating, wherever you drop it), or it stays on Inicio, in «Tus hallazgos». Either
 // way the music goes on while you move around the page.
 function radioEl() { return document.getElementById('egg-radio'); }
-const SCALE = 0.56; // floating, the radio is smaller (its CSS scales it from its top left corner)
+const SCALE = 0.78; // floating, the radio is a bit smaller (its CSS scales it from its top left corner)
 const size = (el) => ({ w: (el.offsetWidth || 300) * SCALE, h: (el.offsetHeight || 210) * SCALE });
 const topEdge = () => Math.max(84, (document.getElementById('nav')?.getBoundingClientRect().bottom ?? 0) + 8);
 function place(el, pos) {
@@ -460,10 +460,11 @@ export function placeRadio(stand = document.querySelector('[data-radio-stand]'))
 }
 export function rescueRadio() { const el = radioEl(); if (el && el.parentElement !== document.body) document.body.append(el); }
 
-export function openRadio(discovered = false) {
+// Turned on from Inicio (dock), it plays inside its tile, at its full size; carried, it floats over every tab.
+export function openRadio(discovered = false, dock = undefined) {
   if (!flag('radio')) return;
   if (discovered) discover('radio', 'Encontraste la radio. Llévala contigo o déjala en tu Inicio.');
-  write(RADIO, { ...read(RADIO, {}), on: true });
+  write(RADIO, { ...read(RADIO, {}), on: true, ...(dock === undefined ? {} : { dock }) });
   if (radioEl()) { placeRadio(); return; }
   const el = document.createElement('section');
   el.id = 'egg-radio';
@@ -488,7 +489,7 @@ export function openRadio(discovered = false) {
     write(RADIO, { ...read(RADIO, {}), dock });
     sfx.tick();
     placeRadio();
-    toast(t(dock ? 'La radio se queda en tu Inicio, en «Tus hallazgos». Sigue sonando aunque cambies de pestaña.' : 'La radio va contigo a todas las pestañas.'));
+    toast(t(dock ? 'La radio se queda en tu Inicio, en «Easter eggs». Sigue sonando aunque cambies de pestaña.' : 'La radio va contigo a todas las pestañas.'));
     onFound('radio-dock', false);
   });
   // It turns a little toward the pointer, like a box on the table.

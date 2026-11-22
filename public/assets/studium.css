@@ -485,10 +485,10 @@ input[type="range"] { padding: 0; border: 0; background: none; accent-color: var
 .home-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 18px; margin-bottom: 26px; }
 .home-head h1 { font-size: clamp(46px, 6.6vw, 84px); font-weight: 800; letter-spacing: -.05em; line-height: .92; }
 .home-head .lede-small { margin-top: 10px; }
-.dash { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px; }
-.tile { position: relative; grid-column: span var(--span, 6); padding: 24px; border-radius: 30px; display: grid; gap: 14px; align-content: start; min-width: 0; }
-.tile > h2 { font-size: 24px; letter-spacing: -.03em; display: flex; align-items: center; gap: 10px; }
-.tile > h2 small { margin-left: auto; font: 650 14px var(--display); color: var(--muted); letter-spacing: 0; }
+.dash { display: grid; gap: 16px; }
+.tile { position: relative; padding: 24px; border-radius: 30px; display: grid; gap: 14px; align-content: start; min-width: 0; }
+.tile-body > h2, .tray > h2 { font-size: 24px; letter-spacing: -.03em; display: flex; align-items: center; gap: 10px; }
+.tile-body > h2 small, .tray > h2 small { margin-left: auto; font: 650 14px var(--display); color: var(--muted); letter-spacing: 0; }
 .tile.solid-blue { color: #fff; background: radial-gradient(130% 120% at 0% 0%, color-mix(in oklab, var(--sky) 55%, var(--blue)), var(--blue) 50%, color-mix(in oklab, var(--blue) 55%, #061033));
   box-shadow: 0 40px 70px -40px color-mix(in oklab, var(--blue) 80%, black), inset 0 1px 0 rgba(255, 255, 255, .35); }
 .tile.solid-blue .muted, .tile.solid-blue .kicker { color: rgba(255, 255, 255, .8); }
@@ -1112,7 +1112,6 @@ kbd { font: 700 .85em var(--display); padding: 1px 7px; border-radius: 6px; back
 .page-head h1 + .button { margin-right: auto; }
 
 /* ---------- the home page, as the person wants it ---------- */
-.dash { grid-auto-flow: row dense; }
 .home-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 #home-edit[aria-pressed="true"] { color: var(--on-accent); background: var(--blue); box-shadow: none; }
 .dash.editing .tile[data-tile] { outline: 2px dashed color-mix(in oklab, var(--blue) 45%, transparent); outline-offset: 4px; }
@@ -1223,7 +1222,7 @@ kbd { font: 700 .85em var(--display); padding: 1px 7px; border-radius: 6px; back
 .egg-radio.held { cursor: grabbing; }
 .egg-radio.waiting { display: none; }
 /* Floating, it is smaller and rests in a corner; its two buttons show only when the pointer is on it */
-.egg-radio:not(.docked) { transform: scale(.56); transform-origin: top left; }
+.egg-radio:not(.docked) { transform: scale(.78); transform-origin: top left; }
 .egg-radio.snapping { transition: left .35s cubic-bezier(.3, .8, .3, 1), top .35s cubic-bezier(.3, .8, .3, 1); }
 .egg-radio:not(.docked) .radio-bar { opacity: 0; transition: opacity .2s; }
 .egg-radio:not(.docked):hover .radio-bar, .egg-radio:not(.docked):focus-within .radio-bar { opacity: 1; }
@@ -1741,8 +1740,6 @@ html.has-announce .page { padding-top: 170px; }
 @keyframes busy-spin { to { transform: rotate(360deg); } }
 
 /* «Mi horario» in the home page. */
-.home-schedule { margin: 22px 0 0; }
-.home-schedule:empty { display: none; }
 .hs-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 10px; }
 .hs-head h2 { margin: 0; font: 800 24px var(--display); letter-spacing: -.02em; }
 .hs-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; }
@@ -2459,3 +2456,91 @@ canvas.prop { display: block; }
 
 /* While Inicio loads, its space keeps its height, so the footer does not float up into the middle of the screen */
 .dash:has(> .status:only-child) { min-height: 70vh; }
+
+/* ---------- Inicio's grid (grid.js): every tile has its place and size; personalizing, it is dragged and stretched ---------- */
+.home-head { margin-bottom: 16px; align-items: center; }
+.home-head h1 { font-size: clamp(34px, 3vw, 46px); line-height: 1; }
+.home-head .kicker { margin-bottom: 4px; }
+.home-head .lede-small { margin-top: 4px; font-size: 16px; }
+.dash-grid { --row: 50px; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: var(--row); gap: 16px; position: relative; }
+.dash-grid > .tile { min-height: 0; overflow: hidden; padding: 0; display: flex; flex-direction: column;
+  transition: translate .25s var(--spring, ease), box-shadow .25s, opacity .22s, scale .22s; }
+.dash-grid > .tile > .tile-body { flex: 1; min-height: 0; overflow: auto; padding: 20px 22px; display: grid; gap: 12px; align-content: start;
+  scrollbar-width: none; }
+.dash-grid > .tile > .tile-body:hover { scrollbar-width: thin; scrollbar-color: color-mix(in oklab, var(--ink) 22%, transparent) transparent; }
+.dash-grid > .tile > .tile-body > h2 { font-size: 21px; }
+.dash-grid > .tile.short > .tile-body { padding: 14px 18px; gap: 8px; }
+.dash-grid > .tile.leaving { opacity: 0; scale: .92; }
+/* The post-it: its paper fills the tile, and the tape shows above it. */
+.dash-grid > .tile.postit { overflow: visible; }
+.dash-grid > .tile.postit > .tile-body { padding: 10px 4px 4px; overflow: visible; display: block; }
+.dash-grid > .tile.postit .pi-paper { height: 100%; overflow: auto; scrollbar-width: thin; }
+.dash-grid > .tile.solid-blue > .tile-body { color: #fff; }
+/* Each tile in its own size: the countdown and the timer shrink with the room they have. */
+.dash-grid .countdown .big { font-size: clamp(44px, 4.4vw, 76px); }
+.dash-grid .countdown h3 { font-size: 21px; }
+.dash-grid .timer { grid-template-columns: auto minmax(0, 1fr); align-items: center; justify-items: start; gap: 18px; }
+.dash-grid .timer .face { width: 140px; height: 140px; }
+.dash-grid .timer .face b { font-size: 34px; }
+.dash-grid .timer .face small { bottom: 30px; font-size: 12px; }
+.dash-grid .timer .actions { flex-direction: column; align-items: stretch; }
+.dash-grid .short .timer .face { width: 96px; height: 96px; }
+.dash-grid .short .timer .face b { font-size: 24px; }
+.dash-grid .short .timer .face small { display: none; }
+.dash-grid .short .timer .actions { flex-direction: row; }
+.dash-grid .goal-head .ring { width: 56px; height: 56px; font-size: 15px; }
+.mini-guides.wide { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+/* Today's classes, in the grid. */
+.sched-tile > .tile-body { padding: 18px 20px; }
+.sched-tile .home-schedule .hs-empty { background: none; box-shadow: none; padding: 0; grid-template-columns: auto minmax(0, 1fr); align-content: center; height: 100%; }
+.sched-tile .home-schedule .hs-empty .hs-actions { grid-column: 1 / -1; flex-direction: row; align-items: center; }
+.sched-tile .hs-head h2 { font-size: 21px; }
+.hs-today { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.hs-today li { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 12px; align-items: center; padding: 8px 10px; border-radius: 16px; background: var(--well); }
+.hs-today li time { font: 750 14px/1.15 var(--display); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.hs-today li time small { display: block; font-weight: 600; color: var(--muted); }
+.hs-today li b { font: 750 15.5px/1.2 var(--display); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hs-today li span small { color: var(--muted); font-size: 13px; }
+.hs-today li { border-left: 4px solid var(--c, var(--blue)); }
+.hs-today li.now { background: color-mix(in oklab, var(--c, var(--blue)) 16%, var(--well)); box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--c, var(--blue)) 55%, transparent); }
+.hs-today li.past { opacity: .5; }
+.hs-today li em { font: 800 11px var(--display); font-style: normal; text-transform: uppercase; letter-spacing: .06em; color: var(--c, var(--blue)); }
+.hs-free { color: var(--muted); margin: 0; }
+/* Personalizing: each tile shows its grip, its × and its corner; the place it will take is drawn under it. */
+.dash.editing .dash-grid > .tile[data-tile] { outline: 2px dashed color-mix(in oklab, var(--blue) 45%, transparent); outline-offset: 3px; cursor: grab; touch-action: none; user-select: none; }
+.dash.editing .dash-grid > .tile[data-tile]:focus-visible { outline: 3px solid var(--blue); }
+.dash.editing .dash-grid > .tile .tile-body { pointer-events: none; }
+.dash-grid > .tile.dragging, .dash-grid > .tile.resizing { z-index: 5; cursor: grabbing; transition: none; box-shadow: 0 30px 60px -24px rgba(0, 0, 0, .45); scale: 1.015; }
+.dash-grid > .tile.resizing { scale: 1; }
+.dash-grid.arranging > .tile:not(.dragging):not(.resizing) { transition: grid-area .2s; }
+.tile-ghost { border-radius: 30px; background: color-mix(in oklab, var(--blue) 12%, transparent); box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--blue) 40%, transparent); pointer-events: none; z-index: 0; }
+.tile-tools .grip { display: grid; place-items: center; width: 32px; height: 32px; color: var(--muted); cursor: grab; }
+.tile-tools .grip svg { width: 18px; height: 18px; }
+.tile-resize { position: absolute; z-index: 3; right: 6px; bottom: 6px; width: 22px; height: 22px; cursor: nwse-resize; border-radius: 6px;
+  background: linear-gradient(135deg, transparent 50%, color-mix(in oklab, var(--blue) 70%, transparent) 50% 58%, transparent 58% 68%, color-mix(in oklab, var(--blue) 70%, transparent) 68% 76%, transparent 76%); }
+.tray { margin: 0; }
+@media (max-width: 1000px) {
+  .dash-grid { grid-template-columns: minmax(0, 1fr); grid-auto-rows: auto; }
+  .dash-grid > .tile { grid-area: auto !important; max-height: 70vh; }
+  .tile-resize { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .dash-grid > .tile { transition: none; } }
+#view-home.page { padding-top: 92px; }
+.dash-grid .timer-set { position: absolute; z-index: 2; top: 18px; right: 20px; }
+.dash-grid .timer-set summary { list-style: none; padding: 4px 10px; border-radius: 999px; background: var(--well); font: 650 13px var(--display); }
+.dash-grid .timer-set summary::-webkit-details-marker { display: none; }
+.dash-grid .timer-set summary::after { content: ' ▾'; opacity: .6; }
+.dash-grid .timer-set[open] .grid { position: absolute; right: 0; width: 240px; padding: 12px; border-radius: 18px; background: var(--bg);
+  box-shadow: 0 18px 40px -18px rgba(0, 0, 0, .45), inset 0 0 0 1px var(--line); }
+.dash-grid > .tile[data-tile="timer"] { overflow: visible; }
+.dash-grid > .tile[data-tile="timer"] > .tile-body { overflow: visible; }
+.dash-grid .timer { justify-content: center; }
+.tray { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 14px 18px; border-radius: 24px; }
+.tray > h2 { font-size: 18px; flex: 1 1 100%; }
+.tray > h2 small { margin-left: 8px; font-size: 13.5px; }
+.tray > .muted { margin: 0; }
+.tray > .chips { flex: 1; }
+.tray > .actions { margin-left: auto; }
+.dash.editing .timer-set { display: none; }
+.dash-grid [data-tile="shelf"] .shelf { align-items: center; }
+.dash-grid [data-tile="shelf"] .radio-stand { order: -1; margin-right: 8px; }

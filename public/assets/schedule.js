@@ -170,18 +170,34 @@ export async function renderHomeSchedule(el) {
   if (loadedFor !== uid) { await load(); loadedFor = uid; }
   paintHome();
 }
+// Today, in a narrow tile: each class of the day by its time; the one on now stands out, the ones gone fade.
+function todayList(o) {
+  const t = today();
+  const list = o.classes.flatMap((c) => c.slots.filter((s) => s.d === t.d).map((s) => ({ c, s }))).sort((a, b) => a.s.s - b.s.s);
+  const next = list.find(({ s }) => s.s > t.m);
+  const day = DAYS[t.d] ?? 'Domingo';
+  if (!list.length) return `<p class="hs-free">${day}: sin clases. ${t.d >= 5 ? 'Disfruta el fin de semana.' : 'Un buen día para adelantar.'}</p>`;
+  return `<ol class="hs-today">${list.map(({ c, s }) => {
+    const now = s.s <= t.m && t.m < s.e; const past = s.e <= t.m;
+    return `<li class="${now ? 'now' : past ? 'past' : ''}" style="--c:var(--${c.color})"><time>${hhmm(s.s)}<small>${hhmm(s.e)}</small></time>
+      <span>${now ? '<em>Ahora</em>' : next && next.s === s ? '<em>Sigue</em>' : ''}<b>${esc(label(c))}</b><small>${esc([c.room, c.prof].filter(Boolean).join(' · '))}</small></span></li>`;
+  }).join('')}</ol>`;
+}
 function paintHome() {
   if (!homeEl) return;
   const o = state.mine;
   homeEl.classList.add('sched');
-  homeEl.innerHTML = o.classes.length ? `
+  const wide = homeEl.clientWidth >= 640;
+  homeEl.innerHTML = o.classes.length ? (wide ? `
     <div class="hs-head"><h2>Mi horario</h2><span class="muted">${credits(o.classes)} de ${INCLUDED} créditos${state.term ? ` · ${esc(termName(state.term))}` : ''}</span>
       <div class="hs-actions"><a class="button ghost small" href="#/malla">Mi malla</a><a class="button ghost small" href="#/horario">Editar</a><button class="sched-special small" data-hs-prep>Preparar mi inscripción</button></div></div>
-    ${week(o, true)}`
+    ${week(o, true)}` : `
+    <div class="hs-head"><h2>Hoy</h2><a class="link" href="#/horario">La semana</a></div>
+    ${todayList(o)}`)
     : `<div class="hs-empty glass">
       <span class="sg-icon c-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></span>
-      <div><h2>Pon tu horario</h2><p>Súbelo una vez (una captura de Banner, una foto o tu Excel) y lo verás aquí cada día.</p></div>
-      <div class="hs-actions"><button class="button primary" data-hs-upload>Subir mi horario</button><button class="link" data-hs-prep>o prepara tu inscripción</button></div>
+      <div><h2>Tu horario, aquí</h2><p>Una captura de Banner, una foto o tu Excel: lo subes una vez y cada día ves qué clase sigue.</p></div>
+      <div class="hs-actions"><button class="button primary" data-hs-upload>Subir mi horario</button><button class="link" data-hs-prep>o arma tu inscripción</button></div>
     </div>`;
 }
 // Whatever changed, both places show it.
@@ -210,6 +226,7 @@ const nowLine = (rows) => { const t = today(); const r = rowOf(t.m); return r <=
 // Every minute the line moves and the class in progress changes, without drawing the week again.
 setInterval(() => {
   const t = today();
+  if (homeEl?.isConnected && homeEl.querySelector('.hs-today, .hs-free')) paintHome();
   for (const sheet of document.querySelectorAll('.sched-sheet')) {
     const rows = Number(getComputedStyle(sheet).getPropertyValue('--rows')) || BLOCKS.length;
     for (const day of sheet.querySelectorAll('.sched-day')) {

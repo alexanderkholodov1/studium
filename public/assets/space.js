@@ -17,6 +17,7 @@ import { luckyHit, found, radioOn, openRadio, radioDocked, placeRadio, rescueRad
 import { props } from './props3d.js';
 import { SKINS, skinOpen, specterSkin, setSpecterSkin } from './specter.js';
 import { renderHomeSchedule } from './schedule.js';
+import * as grid from './grid.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -85,43 +86,42 @@ export function remember(id) {
 }
 
 /* ---------- the home page: tiles the person chooses ---------- */
-// Every tile is optional. With nothing chosen, the home page follows how the person studies; «Personalizar» lets them
-// add, remove, move and resize tiles. A tile is stored as its id, plus ":s" (compact) or ":l" (wide) when resized.
-const TILE_SPAN = { shelf: 12, todos: 6, countdown: 7, deadlines: 6, week: 12, goals: 5, timer: 4, notes: 6, links: 6, recent: 8, news: 12, explore: 5 };
+// Every tile is optional, and each has its place and size in the grid of grid.js. With nothing chosen, the home page
+// shows everything it can hold, the most important on the first screen; «Personalizar» lets the person move, resize,
+// remove and add tiles.
 export const TILE_NAMES = {
-  todos: 'Pendientes', countdown: 'Tu próximo examen', deadlines: 'Fechas y entregas', week: 'Tu semana', goals: 'Metas', timer: 'Enfoque',
+  todos: 'Pendientes', countdown: 'Tu próximo examen', schedule: 'Hoy en tu horario', deadlines: 'Fechas y entregas', week: 'Tu semana', goals: 'Metas', timer: 'Enfoque',
   notes: 'Bloc de notas', links: 'Accesos rápidos', recent: 'Sigue donde quedaste', news: 'Lo nuevo en tu comunidad', explore: 'Un concepto al azar',
-  shelf: 'Tus hallazgos',
-};
-const BY_MODE = {
-  examenes: ['todos', 'timer', 'recent', 'news', 'countdown', 'goals'],
-  gusto: ['todos', 'explore', 'recent', 'news', 'timer', 'goals'],
-  intensivo: ['todos', 'timer', 'recent', 'news', 'countdown', 'goals'],
-  metas: ['todos', 'goals', 'recent', 'timer', 'news', 'countdown'],
+  shelf: 'Easter eggs',
 };
 let editing = false;
-// «Tus hallazgos» joins the home page by itself once a secret is found (and can be removed like any tile).
-// It shows for everyone who found one, whatever tiles they chose, until they remove it themselves.
-const chosen = () => {
+// The Easter eggs join the home page by themselves once a secret is found (and can be removed like any tile).
+const shelfWanted = () => found().size && !seen('shelf-removed');
+const layout = () => {
   const p = prefs.get();
-  const list = p.tiles.length ? p.tiles : BY_MODE[p.mode];
-  const shelf = found().size && !seen('shelf-removed') && !list.some((x) => x.split(':')[0] === 'shelf');
-  return shelf ? [...list, 'shelf'] : list;
+  let items = p.tiles.length ? grid.parse(p.tiles) : null;
+  if (!items) {
+    // Nothing chosen, or a list from before the grid (mostly what the page chose itself): the default layout.
+    items = grid.DEFAULT.map((it) => ({ ...it }));
+  }
+  items = items.filter((it) => it.id !== 'shelf' || shelfWanted());
+  if (shelfWanted() && !items.some((it) => it.id === 'shelf')) items.push(grid.place(items, 'shelf'));
+  // The radio left on Inicio needs its room in the Easter eggs.
+  const shelf = items.find((it) => it.id === 'shelf');
+  if (shelf && radioDocked()) { shelf.h = Math.max(shelf.h, 5); shelf.w = Math.max(shelf.w, 6); shelf.x = Math.min(shelf.x, grid.COLS - shelf.w); }
+  return grid.compact(items);
 };
-const tileId = (t) => t.split(':')[0];
-const spanOf = (t) => { const [id, size] = t.split(':'); return size === 's' ? 4 : size === 'l' ? 12 : TILE_SPAN[id] ?? 6; };
-const rid = () => Math.random().toString(36).slice(2, 10);
+const chosen = () => layout().map((it) => it.id);
+const tileId = (t) => String(t).split(/[:@]/)[0];
 
-function tools(t, i, n) {
+function tools(id) {
   if (!editing) return '';
-  const size = t.split(':')[1] ?? 'm';
-  return `<div class="tile-tools">
-    <button class="icon" data-tile-move="${i}" data-dir="-1" ${i === 0 ? 'disabled' : ''} aria-label="Mover antes"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-    <button class="icon" data-tile-move="${i}" data-dir="1" ${i === n - 1 ? 'disabled' : ''} aria-label="Mover después"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-    <button class="icon size" data-tile-size="${i}" aria-label="Cambiar tamaño" title="Tamaño">${{ s: 'S', m: 'M', l: 'L' }[size]}</button>
-    <button class="icon" data-tile-hide="${i}" aria-label="Quitar del inicio"><svg><use href="#i-x"/></svg></button></div>`;
+  return `<div class="tile-tools"><span class="grip" aria-hidden="true" title="Arrástrala para moverla"><svg viewBox="0 0 24 24"><g fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></g></svg></span>
+    <button class="icon" data-tile-hide="${id}" aria-label="Quitar ${esc(TILE_NAMES[id])} del inicio" title="Quitar"><svg><use href="#i-x"/></svg></button></div>
+    <span class="tile-resize" data-resize aria-hidden="true" title="Arrastra para cambiar el tamaño"></span>`;
 }
-const tile = (id, span, inner, cls = 'glass', attrs = '') => `<section class="tile ${cls}" style="--span:${span}" data-tile="${id}" ${attrs}>${inner}</section>`;
+// A tile: its size in columns (w) and rows (h) lets its content choose a compact or a wide form.
+const tile = (id, it, inner, cls = 'glass', attrs = '') => `<section class="tile ${cls}${it.w <= 4 ? ' narrow' : ''}${it.h <= 2 ? ' short' : ''}" style="grid-area:${it.y + 1} / ${it.x + 1} / span ${it.h} / span ${it.w}" data-tile="${id}" ${editing ? `tabindex="0" aria-label="${esc(TILE_NAMES[id])}: flechas para mover, Mayús y flechas para el tamaño"` : ''} ${attrs}>${tools(id)}<div class="tile-body">${inner}</div></section>`;
 
 // Exams of the guides and the person's own dates, together, from the nearest.
 function agenda() {
@@ -230,12 +230,12 @@ function goalsTile(span) {
 
 function timerTile(span) {
   const f = prefs.get().focus;
-  return tile('timer', span, `<h2>Enfoque <small>${f.study} min de estudio, ${f.rest} de descanso</small></h2>
-    <div class="timer" id="timer"><div class="face" style="--p:100"><b id="timer-left">${String(f.study).padStart(2, '0')}:00</b><small id="timer-what">Estudio</small></div>
-      <div class="actions"><button class="button primary" id="timer-go">Empezar</button><button class="button ghost" id="timer-reset">Reiniciar</button></div></div>
-    <details class="timer-set"><summary>Ajustar los tiempos</summary><div class="grid">
+  return tile('timer', span, `<h2>Enfoque</h2>
+    <details class="timer-set"><summary title="Ajustar los tiempos">${f.study} + ${f.rest} min</summary><div class="grid">
       <label class="field"><span>Estudio (min)</span><input type="number" min="5" max="90" step="5" value="${f.study}" data-focus="study"></label>
-      <label class="field"><span>Descanso (min)</span><input type="number" min="1" max="30" value="${f.rest}" data-focus="rest"></label></div></details>`);
+      <label class="field"><span>Descanso (min)</span><input type="number" min="1" max="30" value="${f.rest}" data-focus="rest"></label></div></details>
+    <div class="timer" id="timer"><div class="face" style="--p:100"><b id="timer-left">${String(f.study).padStart(2, '0')}:00</b><small id="timer-what">Estudio</small></div>
+      <div class="actions"><button class="button primary" id="timer-go">Empezar</button><button class="button ghost" id="timer-reset">Reiniciar</button></div></div>`);
 }
 
 function guideRow(g) {
@@ -252,17 +252,19 @@ function recentTile(span) {
     ${list.length ? `<div class="mini-guides">${list.map(guideRow).join('')}</div>` : '<p class="muted">Las guías que abras aparecen aquí, con cuáles ya terminaste.</p>'}`);
 }
 function newsTile(span) {
-  const latest = [...ctx.state.catalog].sort((a, b) => b.updated - a.updated).slice(0, 4);
+  // A guide already in «Sigue donde quedaste» is not shown twice.
+  const mine = chosen().includes('recent') ? new Set(recent().slice(0, 4)) : new Set();
+  const latest = [...ctx.state.catalog].filter((g) => !mine.has(g.id)).sort((a, b) => b.updated - a.updated).slice(0, 4);
   const concepts = ctx.state.graph?.nodes.filter((n) => n.type === 'concept').length ?? 0;
   return tile('news', span, `<h2>Lo nuevo en tu comunidad <small>${ctx.state.catalog.length} ${ctx.state.catalog.length === 1 ? 'guía' : 'guías'} · ${ctx.state.contributions.length} aportes · ${concepts} conceptos en el grafo</small></h2>
-    ${latest.length ? `<div class="mini-guides" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr))">${latest.map(guideRow).join('')}</div>` : '<p class="muted">Todavía no hay guías. La primera puede ser la tuya.</p>'}
+    ${latest.length ? `<div class="mini-guides wide">${latest.map(guideRow).join('')}</div>` : `<p class="muted">${ctx.state.catalog.length ? 'Nada nuevo fuera de lo que ya estás leyendo.' : 'Todavía no hay guías. La primera puede ser la tuya.'}</p>`}
     <div class="actions"><a class="button ghost" href="#/guias">Todas las guías</a><a class="button ghost" href="#/grafo">El grafo</a><a class="button ghost" href="#/profes">Profes</a></div>`);
 }
 function exploreTile(span) {
   const concepts = ctx.state.graph?.nodes.filter((n) => n.type === 'concept' && !n.ghost && n.summaries?.length) ?? [];
   const c = concepts[Math.floor(Math.random() * concepts.length)];
   return tile('explore', span, `<h2>Un concepto al azar</h2>
-    ${c ? `<h3 style="font-size:30px;letter-spacing:-.03em">${esc(c.name)}</h3><p class="muted">${esc(c.summaries[0].text)}</p><div class="actions"><a class="button primary" href="#/grafo/${encodeURIComponent(c.id)}">Verlo en el grafo</a><button class="button ghost" data-reroll>Otro</button></div>`
+    ${c ? `<h3 style="font-size:24px;letter-spacing:-.03em">${esc(c.name)}</h3><p class="muted">${esc(c.summaries[0].text)}</p><div class="actions"><a class="button primary" href="#/grafo/${encodeURIComponent(c.id)}">Verlo en el grafo</a><button class="button ghost" data-reroll>Otro</button></div>`
     : '<p class="muted">Cuando el grafo tenga conceptos, aquí aparece uno distinto cada vez.</p>'}`);
 }
 // What the easter eggs left on the home page: each find, to press, and a «?» for each secret still hidden.
@@ -279,10 +281,12 @@ function shelfTile(span) {
     f.has('radio') ? (radioDocked() ? '<div class="radio-stand" data-radio-stand></div>' : `<div class="trinket radio-slot">${radioOn() ? '<small>La radio va contigo</small>' : '<button type="button" class="button ghost small" data-radio-add>Encender la radio</button>'}</div>`) : '',
   ].filter(Boolean);
   const hidden = eggCount() - f.size;
-  return tile('shelf', span, `<h2>Tus hallazgos <small>${f.size} de ${eggCount()} secretos</small></h2>
+  return tile('shelf', span, `<h2>Easter eggs <small>${f.size} de ${eggCount()} encontrados</small></h2>
     <div class="shelf">${items.join('')}${Array.from({ length: hidden }, () => '<span class="trinket locked" title="Un secreto por encontrar">?</span>').join('')}</div>`);
 }
-const RENDER = { shelf: shelfTile, todos: todosTile, countdown: countdownTile, deadlines: deadlinesTile, week: weekTile, goals: goalsTile, timer: timerTile, notes: notesTile, links: linksTile, recent: recentTile, news: newsTile, explore: exploreTile };
+// Today's classes (schedule.js fills it): what is on now and what comes next; wide, the whole week.
+const scheduleTile = (span) => tile('schedule', span, '<div class="home-schedule" data-home-schedule></div>', 'glass sched-tile');
+const RENDER = { schedule: scheduleTile, shelf: shelfTile, todos: todosTile, countdown: countdownTile, deadlines: deadlinesTile, week: weekTile, goals: goalsTile, timer: timerTile, notes: notesTile, links: linksTile, recent: recentTile, news: newsTile, explore: exploreTile };
 
 function onboardTile() {
   const p = prefs.get();
@@ -291,19 +295,10 @@ function onboardTile() {
     <div class="row" role="radiogroup">${Object.entries(MODES).map(([id, m]) => `<button type="button" class="pick" role="radio" aria-checked="${p.mode === id}" data-set-mode="${id}"><strong>${esc(m.name)}</strong><span>${esc(m.text)}</span></button>`).join('')}</div>
     <div class="actions"><button class="button primary" data-onboard-done>Listo</button></div></section>`;
 }
-// The first times only: what else the home page can hold, one click away. It goes away for good when used or closed.
-function suggestTile() {
-  const have = new Set(chosen().map(tileId));
-  const offer = ['deadlines', 'week', 'notes', 'links'].filter((id) => !have.has(id));
-  if (!offer.length) return '';
-  return `<section class="tile suggest-strip" style="--span:12"><p><strong>Tu inicio es tuyo.</strong> Agrega lo que te sirva, o quita lo que no:</p>
-    <div class="chips">${offer.map((id) => `<button class="chip new" data-tile-add="${id}">+ ${esc(TILE_NAMES[id])}</button>`).join('')}<button class="chip" data-home-edit>Personalizar todo</button></div>
-    <button class="icon x" data-suggest-close aria-label="No volver a mostrar"><svg><use href="#i-x"/></svg></button></section>`;
-}
 function trayTile() {
   const have = new Set(chosen().map(tileId));
   const missing = Object.keys(TILE_NAMES).filter((id) => !have.has(id) && (id !== 'shelf' || found().size));
-  return `<section class="tile glass tray" style="--span:12"><h2>Personaliza tu inicio <small>Mueve, cambia el tamaño o quita cada cosa con sus botones</small></h2>
+  return `<section class="tile glass tray"><h2>Personaliza tu inicio <small>Arrastra cada cosa para moverla, estírala desde su esquina, o quítala con la ×</small></h2>
     ${missing.length ? `<div class="chips">${missing.map((id) => `<button class="chip new" data-tile-add="${id}">+ ${esc(TILE_NAMES[id])}</button>`).join('')}${eggTray()}</div>` : `<p class="muted">Ya tienes todo a la vista.</p>${eggTray() ? `<div class="chips">${eggTray()}</div>` : ''}`}
     <div class="actions"><button class="button ghost" data-tile-reset>Como venía</button><button class="button primary" data-home-edit>Listo</button></div></section>`;
 }
@@ -312,7 +307,7 @@ const eggTray = () => (found().has('radio') && !radioOn() ? '<button class="chip
 // A secret found: if the person chose their own tiles, «Tus hallazgos» joins them once, so the find is on Inicio.
 export function unlocked(fresh) {
   const p = prefs.get();
-  if (fresh && !seen('shelf-removed') && p.tiles.length && !p.tiles.some((x) => tileId(x) === 'shelf') && p.tiles.length < 16) prefs.set({ tiles: [...p.tiles, 'shelf'] });
+  if (fresh && !seen('shelf-removed') && p.tiles.length && !p.tiles.some((x) => tileId(x) === 'shelf') && p.tiles.length < 16) prefs.set({ tiles: grid.serialize(layout()) });
 }
 
 export function renderHome() {
@@ -320,14 +315,15 @@ export function renderHome() {
   $('#home-hello').textContent = `${hello()}${p.nickname ? `, ${p.nickname}` : ''}.`;
   $('#home-where').textContent = [communityLabel(auth.currentUser?.email), p.semester ? `${p.semester}.º semestre` : '', p.career].filter(Boolean).join(' · ');
   $('#home-sub').textContent = SUB[p.mode];
-  const list = chosen();
-  const tiles = list.map((t, i) => RENDER[tileId(t)]?.(spanOf(t)).replace(/^<section /, `<section data-i="${i}" `).replace(/(data-tile="[a-z]+"[^>]*>)/, `$1${tools(t, i, list.length)}`) ?? '').join('');
-  const top = prefs.fresh && !sessionStorage.getItem('studium-onboarded') ? onboardTile() : !editing && !p.tiles.length && !seen('home-suggest') ? suggestTile() : '';
+  const items = layout();
+  const tiles = items.map((it) => RENDER[it.id]?.(it) ?? '').join('');
+  const top = prefs.fresh && !sessionStorage.getItem('studium-onboarded') ? onboardTile() : '';
   rescueRadio(); // the radio left on Inicio is taken out before Inicio is redrawn, so its music goes on
-  $('#dash').innerHTML = top + tiles + (editing ? trayTile() : '');
+  // The welcome and the tray go above and below the grid of tiles, never inside it.
+  $('#dash').innerHTML = `${top}${editing ? trayTile() : ''}<div class="dash-grid" id="dash-grid" style="--rows:${grid.rows(items)}">${tiles}</div>`;
   placeRadio();
   props($('#dash'));
-  renderHomeSchedule($('#home-schedule'));
+  renderHomeSchedule($('#dash [data-home-schedule]'));
   $('#dash').classList.toggle('editing', editing);
   $('#home-edit').textContent = editing ? 'Listo' : 'Personalizar';
   $('#home-edit').setAttribute('aria-pressed', String(editing));
@@ -335,8 +331,25 @@ export function renderHome() {
   syncTimer();
   rise($('#dash'));
 }
+// One tile drawn again, in its place, without redrawing (and re-animating) the whole home page: the radio turned on
+// or off, a find pressed.
+export function refreshTile(id) {
+  const el = document.querySelector(`#dash [data-tile="${id}"]`);
+  const it = layout().find((x) => x.id === id);
+  // A tile that changes size (the radio left in the Easter eggs) moves the others: then the whole grid.
+  const area = `${it.y + 1} / ${it.x + 1} / span ${it.h} / span ${it.w}`;
+  if (!el || !it || el.style.gridArea.replace(/\s+/g, '') !== area.replace(/\s+/g, '')) { renderHome(); return; }
+  rescueRadio();
+  el.outerHTML = RENDER[id](it);
+  const fresh = document.querySelector(`#dash [data-tile="${id}"]`);
+  placeRadio();
+  if (fresh) props(fresh);
+}
 // Changing the tiles: from then on the home page keeps the person's own list.
-function setTiles(list) { prefs.set({ tiles: list }); markSeen('home-suggest'); renderHome(); }
+function setTiles(items, focus) {
+  prefs.set({ tiles: items.length ? grid.serialize(items) : [] }); markSeen('home-suggest'); renderHome();
+  if (focus) document.querySelector(`#dash [data-tile="${focus}"]`)?.focus();
+}
 
 /* ---------- goals ---------- */
 function addGoal(text, guide) {
@@ -439,10 +452,10 @@ function secretsSection() {
   if (!f.size) return '';
   const stations = openStations();
   return `<section class="set glass" id="set-secrets"><h2>Tus secretos <small>${f.size} de ${EGGS.length}</small></h2>
-    <p>Lo que desbloqueaste vive en tu Inicio, en «Tus hallazgos»: ahí se presiona cada cosa. La radio tiene ${stations.length} ${stations.length === 1 ? 'estación abierta' : 'estaciones abiertas'}; se cambia con su perilla del medio.</p>
+    <p>Lo que desbloqueaste vive en tu Inicio, en «Easter eggs»: ahí se presiona cada cosa. La radio tiene ${stations.length} ${stations.length === 1 ? 'estación abierta' : 'estaciones abiertas'}; se cambia con su perilla del medio.</p>
     <ul class="secrets">${EGGS.map((e) => (f.has(e.id) ? `<li><strong>${esc(e.name)}</strong><span>${esc(e.what)}</span></li>` : '<li class="locked"><strong>?</strong><span>Un secreto por encontrar.</span></li>')).join('')}</ul>
     ${skinOpen('doctor') ? `<fieldset class="seg"><legend>Cómo se viste Specter</legend>${Object.entries(SKINS).filter(([id]) => skinOpen(id)).map(([id, k]) => `<label><input type="radio" name="specter-skin" value="${id}" data-specter-skin ${specterSkin() === id ? 'checked' : ''}><span>${esc(k.name)}</span></label>`).join('')}</fieldset>` : ''}
-    <div class="actions"><button class="button primary" data-shelf-show>Ver «Tus hallazgos» en Inicio</button>${f.has('radio') && !radioOn() ? '<button class="button ghost" data-radio-add>Encender la radio</button>' : ''}</div></section>`;
+    <div class="actions"><button class="button primary" data-shelf-show>Ver los Easter eggs en Inicio</button>${f.has('radio') && !radioOn() ? '<button class="button ghost" data-radio-add>Encender la radio</button>' : ''}</div></section>`;
 }
 export function renderSettings() {
   const p = prefs.get();
@@ -759,6 +772,7 @@ let savedTimer = 0;
 export function mountSpace(context) {
   ctx = context;
   bindAmbiences();
+  grid.bindGrid($('#dash'), { get: layout, save: (items, focus) => { sfx.tick(); setTiles(items, focus); }, editing: () => editing });
   prefs.on((p, patch) => {
     if (patch.saved) { const el = $('#saved'); el.classList.add('on'); clearTimeout(savedTimer); savedTimer = setTimeout(() => el.classList.remove('on'), 1600); }
   });
@@ -807,29 +821,23 @@ export function mountSpace(context) {
     if (t.id === 'timer-reset') { clearInterval(timer.id); Object.assign(timer, { mode: 'study', left: minutes('study'), total: minutes('study'), running: false }); syncTimer(); }
     // The home page's tiles.
     if (t.id === 'home-edit' || t.dataset.homeEdit !== undefined) { editing = !editing; markSeen('home-suggest'); renderHome(); sfx.toggle(editing); }
-    if (t.dataset.suggestClose !== undefined) { markSeen('home-suggest'); renderHome(); }
     if (t.dataset.tileAdd) {
-      const list = [...chosen()];
-      if (!list.some((x) => tileId(x) === t.dataset.tileAdd)) list.push(t.dataset.tileAdd);
-      setTiles(list);
+      const items = layout();
+      if (!items.some((it) => it.id === t.dataset.tileAdd)) items.push(grid.place(items, t.dataset.tileAdd));
+      setTiles(items);
       ctx.toast(`${TILE_NAMES[t.dataset.tileAdd]}: en tu inicio.`);
       requestAnimationFrame(() => document.querySelector(`[data-tile="${t.dataset.tileAdd}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
     }
-    if (t.dataset.tileMove) {
-      const list = [...chosen()]; const i = Number(t.dataset.tileMove); const j = i + Number(t.dataset.dir);
-      if (j >= 0 && j < list.length) { [list[i], list[j]] = [list[j], list[i]]; setTiles(list); }
+    if (t.dataset.tileHide) {
+      const id = t.dataset.tileHide;
+      if (id === 'shelf') markSeen('shelf-removed');
+      const el = t.closest('[data-tile]');
+      const gone = () => setTiles(grid.compact(layout().filter((it) => it.id !== id)));
+      if (el && !matchMedia('(prefers-reduced-motion: reduce)').matches) { el.classList.add('leaving'); setTimeout(gone, 220); } else gone();
     }
-    if (t.dataset.tileSize) {
-      const list = [...chosen()]; const i = Number(t.dataset.tileSize);
-      const [id, size = 'm'] = list[i].split(':');
-      const next = { m: 'l', l: 's', s: 'm' }[size];
-      list[i] = next === 'm' ? id : `${id}:${next}`;
-      setTiles(list);
-    }
-    if (t.dataset.tileHide) { const list = [...chosen()]; const [gone] = list.splice(Number(t.dataset.tileHide), 1); if (gone?.startsWith('shelf')) markSeen('shelf-removed'); setTiles(list); }
-    if (t.dataset.shelfShow !== undefined) { unmarkSeen('shelf-removed'); const p = prefs.get(); if (p.tiles.length && !p.tiles.some((x) => x.startsWith('shelf'))) prefs.set({ tiles: [...p.tiles, 'shelf'] }); renderSettings(); location.hash = '#/inicio'; }
+    if (t.dataset.shelfShow !== undefined) { unmarkSeen('shelf-removed'); if (prefs.get().tiles.length) prefs.set({ tiles: grid.serialize(layout()) }); renderSettings(); location.hash = '#/inicio'; }
     if (t.dataset.tileReset !== undefined) setTiles([]);
-    if (t.dataset.radioAdd !== undefined) { openRadio(); renderHome(); }
+    if (t.dataset.radioAdd !== undefined) { const home = !!t.closest('#dash'); openRadio(false, home ? true : undefined); if (home) refreshTile('shelf'); else renderSettings(); }
     if (t.dataset.trinket) poke(t.dataset.trinket, t);
     if (t.dataset.deadlineRemove) { prefs.set({ deadlines: prefs.get().deadlines.filter((d) => d.id !== t.dataset.deadlineRemove) }); renderHome(); }
     if (t.dataset.deadlineClear !== undefined) { prefs.set({ deadlines: prefs.get().deadlines.filter((d) => daysTo(d.date) >= 0) }); renderHome(); }

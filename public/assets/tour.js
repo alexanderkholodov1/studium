@@ -22,8 +22,8 @@ const SECTIONS = {
     { sel: '#home-sub', text: 'Tu inicio cambia según cómo estudias. Lo eliges en Ajustes.' },
     { sel: '#home-edit', text: 'Con «Personalizar» agregas, quitas, mueves y cambias de tamaño cada cosa.' },
     { sel: '#dash', text: 'Tus recuadros: pendientes, metas, enfoque, tu próximo examen y más.' },
-    { sel: '[data-tile="shelf"]', text: 'Tus hallazgos: lo que dejaron los secretos que encontraste. Cada cosa se presiona.' },
-    { sel: '#home-schedule', text: 'Tu horario de hoy, si lo subiste.' },
+    { sel: '[data-tile="shelf"]', text: 'Easter eggs: lo que dejaron los secretos que encontraste. Cada cosa se presiona.' },
+    { sel: '[data-tile="schedule"]', text: 'Tu horario de hoy, si lo subiste.' },
   ],
   'view-catalog': [
     { sel: '#q', text: 'Busca una guía por materia, profe o tema.' },
