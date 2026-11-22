@@ -612,6 +612,7 @@ void main(){
       dizzy: { dizzy: 1, mouth: 0.35, smile: -0.2 },
       wink: { shutR: 1, smile: 1, blush: 0.6 },
       scared: { wide: 0.7, brow: 0.85, mouth: 0.45, smile: -0.5, blush: 0.1 },
+      yawn: { shutL: 0.85, shutR: 0.85, mouth: 1, smile: 0, brow: 0.3 },
     };
     const now = { ...REST };
     let blinkAt = 2; let lastT = 0;

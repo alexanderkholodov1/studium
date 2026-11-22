@@ -225,6 +225,25 @@ export const sfx = {
   // Letters of the wordmark: soft wooden notes.
   note(step = 0) { if (!audio()) return; body(note(step + 7), now(), { gain: 0.035, decay: 0.6, bright: 0.35, room: 0.4 }); },
   boing(step = 0) { this.note(step); },
+  // Specter's voice: a small sound of his own for each emotion, soft and short, never words.
+  voice(mood = 'glad') {
+    if (!audio() || !limit('voice', 260)) return;
+    const t = now(); const v = (f) => vary(f, 0.04); const k = { gain: 0.03, room: 0.35 };
+    const V = {
+      glad: () => { sine(v(620), t, { ...k, decay: 0.12, glide: 1.35 }); sine(v(780), t + 0.11, { ...k, decay: 0.16, glide: 1.3 }); },
+      surprised: () => sine(v(420), t, { ...k, gain: 0.035, decay: 0.22, glide: 2.6 }),
+      sad: () => sine(v(520), t, { ...k, type: 'triangle', attack: 0.06, decay: 0.7, glide: 0.62 }),
+      angry: () => { sine(v(170), t, { ...k, type: 'triangle', gain: 0.045, decay: 0.12, glide: 0.85 }); sine(v(150), t + 0.13, { ...k, type: 'triangle', gain: 0.045, decay: 0.16, glide: 0.8 }); },
+      love: () => [0, 1, 2].forEach((i) => sine(v(note(i * 2 + 7, 330)), t + i * 0.09, { ...k, decay: 0.3, room: 0.55 })),
+      dizzy: () => { sine(v(480), t, { ...k, decay: 0.3, glide: 1.6 }); sine(v(760), t + 0.22, { ...k, decay: 0.34, glide: 0.55 }); },
+      wink: () => sine(v(1180), t, { ...k, gain: 0.022, decay: 0.08, glide: 1.1 }),
+      scared: () => [0, 1, 2, 3].forEach((i) => sine(v(880 - i * 40), t + i * 0.05, { ...k, gain: 0.02, decay: 0.05 })),
+      yawn: () => sine(v(520), t, { ...k, type: 'triangle', attack: 0.15, decay: 0.9, glide: 0.45 }),
+      hum: () => [0, 2, 1, 3].forEach((s, i) => sine(note(s + 5, 330), t + i * 0.2, { ...k, gain: 0.022, attack: 0.03, decay: 0.22 })),
+      hop: () => sine(v(300), t, { ...k, gain: 0.025, decay: 0.12, glide: 1.8 }),
+    };
+    (V[mood] ?? V.glad)();
+  },
 
   /* ---------- moments ---------- */
   // A goal met: a soft rising figure, voiced differently each time, over a low note.

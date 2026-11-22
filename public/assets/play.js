@@ -108,10 +108,10 @@ function makeNodo() {
   const face = el.querySelector('canvas');
   face.dataset.skin = specterSkin();
   front.append(el);
-  const r = W < 720 ? 40 : 54;
+  const r = W < 720 ? 50 : 72;
   el.style.width = el.style.height = `${r * 2}px`;
   nodo = { el, x: Math.min(W - r - 20, Math.max(r + 20, W * 0.12)), y: H - r - 34, vx: 0, vy: 0, r, m: r * r * 1.4, a: 0, va: 0, tier: 0, phase: 0, sq: 0, sqa: 0, kind: 'nodo',
-    hop: performance.now() + rand(3000, 6000), blink: performance.now() + rand(1500, 4000), mood: '', moodUntil: 0, face };
+    hop: performance.now() + rand(9000, 15000), blink: performance.now() + rand(1500, 4000), mood: '', moodUntil: 0, face };
   bodies.push(nodo);
   el.addEventListener('pointerdown', (e) => { e.preventDefault(); grab(nodo, e); });
   props(el);
@@ -130,14 +130,36 @@ function poked(b) {
   sfx.boing(Math.floor(rand(0, 5)));
   wake();
 }
-function mood(name, ms) {
+function mood(name, ms, quiet = false) {
   if (!nodo) return;
+  if (name && name !== 'sleep' && name !== nodo.mood && !quiet) sfx.voice(name);
   nodo.mood = name; nodo.moodUntil = performance.now() + ms;
   nodo.el.dataset.mood = name;
   nodo.face.dataset.mood = name === 'sleep' ? 'shut' : FACES.includes(name) ? name : name ? 'glad' : '';
 }
 // The faces his canvas knows (props3d.js).
-const FACES = ['glad', 'shut', 'sad', 'surprised', 'angry', 'love', 'dizzy', 'wink', 'scared'];
+const FACES = ['glad', 'shut', 'sad', 'surprised', 'angry', 'love', 'dizzy', 'wink', 'scared', 'yawn'];
+// When nobody touches him, now and then he does a little something, in his own place: a hop that squashes him, a look
+// around, a yawn, a tune, a stretch, a wink.
+function hopUp(b = nodo) {
+  if (!b) return;
+  b.sq = 0.16; b.sqa = 0; // crouching first
+  setTimeout(() => { if (nodo !== b) return; b.vy = -320; b.sq = -0.12; b.hopping = true; sfx.voice('hop'); wake(); }, 140);
+  wake();
+}
+const ROUTINES = {
+  hop: () => hopUp(),
+  look: () => { nodo.lookAt = performance.now(); },
+  yawn: () => { mood('yawn', 1700); },
+  hum: () => { sfx.voice('hum'); say('♪ ♫', 1400); },
+  stretch: () => { nodo.sq = -0.16; nodo.sqa = 0; wake(); },
+  wink: () => mood('wink', 1100),
+};
+function routine() {
+  const names = Object.keys(ROUTINES);
+  const pick = names[Math.floor(Math.random() * names.length)];
+  ROUTINES[pick]();
+}
 export function say(text, ms = 2600) {
   if (!nodo) return;
   front.querySelector('.speech')?.remove();
@@ -248,6 +270,7 @@ function release() {
   b.vx = pointer.vx * k * 0.8; b.vy = pointer.vy * k * 0.8;
   b.va += (pointer.vx / b.r) * 0.004;
   // Thrown hard he gets dizzy; let go gently, glad.
+  if (b.kind === 'nodo') b.home = null;
   if (b.kind === 'nodo') { if (drag.moved < 4) poked(b); else if (speed > 900) { mood('dizzy', 2200); say(['¡Wiii!', 'Mareado…', '¡Otra vez!'][Math.floor(Math.random() * 3)], 1500); } else mood('glad', 900); }
   else if (drag.moved < 4) { b.vy -= 160; b.va += rand(-1, 1); }
   sfx.release(drag.moved < 4 ? 600 : speed, b.r * 2);
@@ -331,12 +354,12 @@ function step(h, now) {
       b.vx = (tx - b.x) / Math.max(h, 0.001) * 0.5; b.vy = (ty - b.y) / Math.max(h, 0.001) * 0.5;
       b.a = 0; b.va = 0;
       if (p >= 1 && f.then) { const then = f.then; f.then = null; then(); }
-      if (f.until && now > f.until) { b.fly = null; b.home = Math.max(b.r + 20, Math.min(W - b.r - 20, b.x)); }
+      if (f.until && now > f.until) { b.fly = null; b.home = b.place ?? Math.max(b.r + 20, Math.min(W - b.r - 20, b.x)); }
     } else if (b.kind === 'nodo') {
       // Nodo floats: it rests a little above the bottom edge, bobbing, and glides back there as if under water.
       const rest = H - b.r - 34 + Math.sin(t * 0.9) * 5;
       b.vy += (rest - b.y) * 5 * h;
-      b.vx += ((b.home ?? b.x) - b.x) * 0.6 * h;
+      if (b.home != null) b.vx += (b.home - b.x) * 0.6 * h;
       const k = Math.exp(-2.4 * h); b.vx *= k; b.vy *= k;
       b.a = 0; b.va = 0;
     } else {
@@ -397,11 +420,14 @@ function step(h, now) {
     if (b.y < -b.r * 2 || now - b.born > b.life) pop(b, b.y < 0);
   }
   if (nodo) {
-    // Now and then it drifts to another spot along the bottom, slowly.
-    if (!drag && now > nodo.hop && nodo.mood !== 'sleep') {
-      nodo.home = Math.max(nodo.r + 20, Math.min(W - nodo.r - 20, (nodo.home ?? nodo.x) + rand(-160, 160)));
-      nodo.hop = now + rand(9000, 18000);
+    // He stays where he is; where he was dropped becomes his place once he stops.
+    if (nodo.home == null && Math.abs(nodo.vx) < 20 && !drag) nodo.home = nodo.x;
+    if (!drag && !nodo.fly && now > nodo.hop && nodo.mood !== 'sleep' && !nodo.gone) {
+      routine();
+      nodo.hop = now + rand(14000, 28000);
     }
+    // A hop ends with a squash where he lands.
+    if (nodo.hopping && nodo.vy > 0 && nodo.y >= H - nodo.r - 40) { nodo.hopping = false; nodo.sq = 0.14; nodo.sqa = 0; }
     if (nodo.mood && nodo.mood !== 'sleep' && now > nodo.moodUntil) { nodo.mood = ''; nodo.el.dataset.mood = ''; nodo.face.dataset.mood = ''; }
     if (!drag && !nodo.mood && now - idleSince > 45000) { mood('sleep', 0); say('zzz…', 3000); }
   }
@@ -425,7 +451,9 @@ function render() {
     const dx = pointer.x - nodo.x; const dy = pointer.y - nodo.y;
     const len = Math.hypot(dx, dy) || 1;
     const k = Math.min(1, len / 160) * 2.6;
-    nodo.face.dataset.look = ((dx / len) * (k / 2.6)).toFixed(2);
+    // Looking around (a routine): left, right, and back to the pointer.
+    const la = nodo.lookAt ? (performance.now() - nodo.lookAt) / 2600 : 1;
+    nodo.face.dataset.look = la < 1 ? (Math.sin(la * Math.PI * 2) * 0.9).toFixed(2) : ((dx / len) * (k / 2.6)).toFixed(2);
     if (nodo.speech) nodo.speech.style.transform = `translate3d(${(nodo.x).toFixed(1)}px, ${(nodo.y - nodo.r - 14).toFixed(1)}px, 0) translate(-50%, -100%)`;
   }
 }
@@ -470,12 +498,13 @@ export const specter = {
   here: () => !!nodo && running() && !nodo.gone,
   // Where he is, on the screen.
   at: () => (nodo ? { x: nodo.x, y: nodo.y, r: nodo.r } : null),
-  visit(x, y, stay = 0) { return flyTo(Math.max(nodo?.r ?? 40, Math.min(W - (nodo?.r ?? 40), x)), Math.max(70, Math.min(H - (nodo?.r ?? 40), y)), { ms: 900, stay, arc: 40 }); },
-  home() { if (!nodo) return; if (nodo.gone) { this.back(); return; } nodo.fly = null; wake(); },
+  visit(x, y, stay = 0) { if (nodo && !nodo.fly) nodo.place = nodo.home ?? nodo.x; return flyTo(Math.max(nodo?.r ?? 40, Math.min(W - (nodo?.r ?? 40), x)), Math.max(70, Math.min(H - (nodo?.r ?? 40), y)), { ms: 900, stay, arc: 40 }); },
+  home() { if (!nodo) return; if (nodo.gone) { this.back(); return; } nodo.fly = null; if (nodo.place != null) nodo.home = nodo.place; wake(); },
   // Out of the screen, waving, with a loop; `back` in a while, flying in from the other side.
   away(backIn = 0) {
     if (!nodo) return;
     mood('wink', 1400);
+    nodo.place = nodo.home ?? nodo.x; // he comes back to his own place
     const right = nodo.x > W / 2;
     flyTo(right ? W + 120 : -120, -100, { ms: 1300, loops: 1, arc: 90, out: true, then: () => { nodo.gone = true; nodo.el.style.visibility = 'hidden'; } });
     if (backIn) setTimeout(() => specter.back(), backIn);
@@ -485,7 +514,7 @@ export const specter = {
     const fromLeft = Math.random() < 0.5;
     nodo.gone = false; nodo.el.style.visibility = '';
     nodo.x = fromLeft ? -80 : W + 80; nodo.y = H * 0.35;
-    const home = fromLeft ? W * 0.14 : W * 0.86;
+    const home = Math.max(nodo.r + 20, Math.min(W - nodo.r - 20, nodo.place ?? W * 0.14));
     nodo.home = home;
     flyTo(home, H - nodo.r - 34, { ms: 1600, loops: 1, arc: 110, stay: 1, then: () => { mood('glad', 1600); say(['¡Volví!', '¡Aquí estoy!', 'Boo. ¿Me extrañaste?'][Math.floor(Math.random() * 3)], 1800); sfx.boing(2); } });
   },
