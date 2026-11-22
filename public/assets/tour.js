@@ -186,13 +186,16 @@ export function offerTour(tries = 0) {
       <small>Cuando quieras, el «?» de abajo te explica cada parte.</small>`;
     document.body.append(card);
     props(card);
+    // Only one Specter: where the page's own one cannot come to the card (not in the playful ambience), he steps out
+    // while the card shows him, and comes back when it closes.
+    if (!live) specter.leave();
     if (live) {
       const r = card.getBoundingClientRect();
       specter.visit(r.left - 46, r.top + r.height / 2);
     }
-    const fold = () => { card.classList.add('out'); setTimeout(() => card.remove(), 450); };
+    const fold = () => { card.classList.add('out'); setTimeout(() => card.remove(), 450); if (!live) specter.comeBack(); };
     card.addEventListener('click', (e) => {
-      if (e.target.closest('[data-yes]')) { card.remove(); if (live) specter.home(); startTour('general'); }
+      if (e.target.closest('[data-yes]')) { card.remove(); if (live) specter.home(); else specter.comeBack(); startTour('general'); }
       else if (e.target.closest('[data-no]')) {
         sfx.tick();
         if (live) { specter.say('¡Va! Aquí estaré.', 1400); setTimeout(() => specter.away(9000), 700); }

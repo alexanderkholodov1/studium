@@ -1290,6 +1290,15 @@ function dispose(scene) {
     }
   });
 }
+// Its drawing has the size of its box, now and whenever the box changes (a tile resized, a page shown again):
+// never stretched, never blurry. A box of no size (hidden) keeps the last good size.
+function fit(p) {
+  const w = p.canvas.clientWidth; const h = p.canvas.clientHeight;
+  if (!w || !h) return;
+  const cw = Math.round(Math.min(MAX_W, w) * DPR()); const ch = Math.round(Math.min(MAX_H, h) * DPR());
+  if (p.canvas.width !== cw || p.canvas.height !== ch) { p.canvas.width = cw; p.canvas.height = ch; p.drawn = false; schedule(); }
+}
+const sized = new ResizeObserver((entries) => { for (const e of entries) for (const p of live) if (p.canvas === e.target) fit(p); });
 const seen = new IntersectionObserver((entries) => {
   for (const e of entries) for (const p of live) if (p.canvas === e.target) p.on = e.isIntersecting;
   schedule();
@@ -1302,7 +1311,7 @@ function frame(now) {
   const { renderer } = gl;
   let moving = false;
   for (const p of [...live]) {
-    if (!p.canvas.isConnected) { live.delete(p); seen.unobserve(p.canvas); dispose(p.prop.scene); continue; }
+    if (!p.canvas.isConnected) { live.delete(p); seen.unobserve(p.canvas); sized.unobserve(p.canvas); dispose(p.prop.scene); continue; }
     if (!p.on && p.drawn) continue;
     moving = moving || p.on;
     const w = Math.min(gl.w, p.canvas.width); const h = Math.min(gl.h, p.canvas.height);
@@ -1327,10 +1336,9 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) sche
 export async function prop(canvas, kind) {
   await boot();
   shared.add(woodTex); shared.add(softTex);
-  const r = canvas.getBoundingClientRect();
-  canvas.width = Math.round(Math.min(MAX_W, r.width || canvas.clientWidth || 160) * DPR());
-  canvas.height = Math.round(Math.min(MAX_H, r.height || canvas.clientHeight || 160) * DPR());
   const p = { canvas, ctx: canvas.getContext('2d'), prop: PROPS[kind](canvas), on: true, drawn: false };
+  fit(p);
+  sized.observe(canvas);
   const drawn = new Promise((resolve) => { p.ready = resolve; });
   live.add(p); seen.observe(canvas);
   last = 0; schedule();

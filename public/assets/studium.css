@@ -2691,3 +2691,18 @@ canvas.prop { display: block; }
 .dove { position: absolute; left: 0; top: 0; z-index: 4; width: 72px; height: 72px; pointer-events: none; will-change: transform; transition: opacity .35s; }
 .dove canvas.prop { width: 100%; height: 100%; }
 .dove.out { opacity: 0; }
+.trinket.costume { position: relative; }
+/* Worn: a blue ring and «✓ Puesto»; kept: dimmer, «Ponérselo» on hover. */
+.trinket.costume:not(.worn) canvas.prop { opacity: .55; filter: saturate(.7); transition: opacity .25s, filter .25s; }
+.trinket.costume:not(.worn):hover canvas.prop { opacity: 1; filter: none; }
+.trinket.costume.worn { box-shadow: inset 0 0 0 2px var(--blue), 0 0 22px -6px color-mix(in oklab, var(--blue) 70%, transparent); }
+.trinket.costume .worn-badge { position: absolute; top: 6px; right: 6px; padding: 2px 8px; border-radius: 999px; font: 800 11px var(--display); pointer-events: none; }
+.trinket.costume.worn .worn-badge { color: #fff; background: var(--blue); }
+.trinket.costume:not(.worn) .worn-badge { color: var(--ink-2); background: var(--well); opacity: 0; transition: opacity .2s; }
+.trinket.costume:not(.worn):hover .worn-badge, .trinket.costume:not(.worn):focus-visible .worn-badge { opacity: 1; }
+
+/* The page's mode, from the profile's menu: four small pills. */
+.menu-amb { display: grid; gap: 6px; padding: 8px 10px 10px; margin-bottom: 4px; border-bottom: 1px solid var(--line); }
+.menu-amb > span { font: 700 11px var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.menu-amb .ambiences.mini { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.menu-amb .amb { padding: 6px 10px; font-size: 13px; justify-content: center; }

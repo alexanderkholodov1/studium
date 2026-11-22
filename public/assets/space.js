@@ -7,7 +7,7 @@ import { prefs, MODES, AMBIENCES, THEMES, AVATARS } from './prefs.js';
 import * as ai from './ai.js';
 import { when, nextMidnight } from './aierror.js';
 import { sfx } from './sfx.js';
-import { celebrate } from './play.js';
+import { celebrate, wearCostume } from './play.js';
 import { themeStyle, keyOf } from './themes.js';
 import { rise } from './fx.js';
 import { auth } from './data.js';
@@ -274,7 +274,7 @@ function shelfTile(span) {
   const crits = critCount();
   const items = [
     f.has('cake') ? `<button type="button" class="trinket" data-trinket="cake" aria-label="La torta: sopla la vela" title="Sopla la vela">${prop3d('cake')}<small>La torta</small></button>` : '',
-    f.has('medic') ? `<button type="button" class="trinket costume" data-trinket="medic" data-costume="doctor" aria-label="El disfraz de médico: arrástralo sobre Specter" title="Arrástralo sobre Specter para vestirlo; otra vez, para quitárselo">${prop3d('specter', '', 'data-skin="doctor" data-mood="glad" data-fixed')}<small>Disfraz de médico</small></button>` : '',
+    f.has('medic') ? `<button type="button" class="trinket costume ${specterSkin() === 'doctor' ? 'worn' : ''}" data-costume="doctor" data-costume-toggle="doctor" aria-pressed="${specterSkin() === 'doctor'}" aria-label="Disfraz de médico: ${specterSkin() === 'doctor' ? 'puesto; púlsalo para quitárselo' : 'guardado; púlsalo o arrástralo sobre Specter para ponérselo'}" title="${specterSkin() === 'doctor' ? 'Puesto. Púlsalo para quitárselo' : 'Púlsalo, o arrástralo sobre Specter, para ponérselo'}">${prop3d('specter', '', 'data-skin="doctor" data-mood="glad" data-fixed')}<small>Disfraz de médico</small><span class="worn-badge" aria-hidden="true">${specterSkin() === 'doctor' ? '✓ Puesto' : 'Ponérselo'}</span></button>` : '',
     f.has('portal') ? `<button type="button" class="trinket" data-trinket="portal" aria-label="Los portales: suelta una canica" title="Suelta una canica">${prop3d('portals')}<small>Portales</small></button>` : '',
     f.has('crit') ? `<button type="button" class="trinket" data-trinket="crit" aria-label="Golpes críticos: ${crits}" title="Golpes críticos">${prop3d('trophy')}<small>× ${crits} crítico${crits === 1 ? '' : 's'}</small></button>` : '',
     f.has('cafe') ? `<button type="button" class="trinket" data-trinket="cafe" aria-pressed="${backdrop() === 'cafe'}" title="Enciende o apaga la «Noche de estudio»">${prop3d('cup')}<small>Noche de estudio</small></button>` : '',
@@ -821,6 +821,8 @@ export function mountSpace(context) {
   ctx = context;
   bindAmbiences();
   // A decoration added: into its tile; if the person's own layout has no «Decoración», it joins it.
+  // The costume's button says whether he wears it, however he got it on or off.
+  addEventListener('studium-skin', () => { if (document.querySelector('#dash [data-tile="shelf"]')) refreshTile('shelf'); });
   addEventListener('studium-decor', () => {
     if (document.querySelector('#dash [data-tile="decor"]')) { refreshTile('decor'); return; }
     const items = layout();
@@ -902,6 +904,8 @@ export function mountSpace(context) {
     if (t.dataset.tileReset !== undefined) setTiles([]);
     if (t.dataset.radioAdd !== undefined) { const home = !!t.closest('#dash'); openRadio(false, home ? true : undefined); if (home) refreshTile('shelf'); else renderSettings(); }
     if (t.dataset.trinket) poke(t.dataset.trinket, t);
+    // A costume put on or taken off with its button (when Specter is not on the screen to drag it onto him).
+    if (t.dataset.costumeToggle) wearCostume(t.dataset.costumeToggle);
     if (t.dataset.decorAdd) { decor.choose(t.dataset.decorAdd); sfx.tick(); }
     if (t.dataset.decorRemove !== undefined) decor.clear();
     if (t.dataset.decorPoke !== undefined) { const c = t.querySelector('canvas'); if (pokeProp(c) === undefined) { t.classList.remove('spun'); void t.offsetWidth; t.classList.add('spun'); } sfx.tick(); }
