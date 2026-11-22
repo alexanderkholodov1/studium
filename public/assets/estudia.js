@@ -11,6 +11,7 @@
 // Then the course, asked only when it cannot be deduced, and «¿Qué hacemos con esto?»: «Sumar al grafo de
 // conocimiento» (on by default; only the anonymous summary leaves) and «Generar una guía de estudio».
 // Everything dropped stays on this device (IndexedDB), on the desk of its course.
+import { startTour } from './tour.js';
 import { keyOf } from './themes.js';
 import { sfx } from './sfx.js';
 import * as ai from './ai.js';
@@ -117,16 +118,18 @@ export async function units(files) {
     const top = tops.find((d) => r.rel.startsWith(`${d}/`));
     if (top) { if (!byProject.has(top)) byProject.set(top, []); byProject.get(top).push(r.f); } else loose.push(r);
   }
-  // Many photos or screenshots in one folder (a lab's evidence, a notebook's pages) are one thing too.
-  const photosIn = new Map();
-  for (const r of loose) { const dir = r.rel.split('/').slice(0, -1).join('/'); if (PHOTO.test(r.name.toLowerCase())) photosIn.set(dir, [...(photosIn.get(dir) ?? []), r]); }
-  const grouped = new Set([...photosIn].filter(([dir, list]) => dir && list.length >= 4).map(([dir]) => dir));
+  // Folders stay as they were (his words, 2026-11-22: "los destripó en archivos separados, no los organizó por carpetas
+  // como lo eran originalmente"): every folder right under what was dropped is one thing (a lab, a week, a homework),
+  // whatever it holds; only the files lying loose at the top are things of their own.
+  const inFolder = new Map();
   for (const r of loose) {
-    const dir = r.rel.split('/').slice(0, -1).join('/');
-    if (grouped.has(dir) && PHOTO.test(r.name.toLowerCase())) continue;
-    out.push({ files: [r.f], name: r.name, path: dir });
+    const top = r.rel.includes('/') ? r.rel.split('/')[0] : '';
+    if (top) inFolder.set(top, [...(inFolder.get(top) ?? []), r]); else out.push({ files: [r.f], name: r.name, path: '' });
   }
-  for (const dir of grouped) out.push({ files: photosIn.get(dir).map((r) => r.f), name: dir.split('/').pop(), path: dir.split('/').slice(0, -1).join('/'), photos: true });
+  for (const [dir, list] of inFolder) {
+    const photos = list.every((r) => PHOTO.test(r.name.toLowerCase()));
+    out.push({ files: list.map((r) => r.f), name: dir, path: '', photos, folder: true });
+  }
   for (const [dir, list] of byProject) out.push({ files: list, name: dir.split('/').pop(), path: dir.split('/').slice(0, -1).join('/'), project: true });
   // In the order of the folders, as a person reads them: Semana 2 before Semana 10.
   out.sort((a, b) => natural(`${a.path}/${a.name}`, `${b.path}/${b.name}`));
@@ -190,19 +193,28 @@ function flip(el, first, { rotate = 0, scale = 1, duration = 600 } = {}) {
 export async function renderEstudia(el, deps) {
   api = deps;
   const items = await desk.all();
+  // What this place is, said once (his words, 2026-11-22: "que se entienda que engloba todo en un solo lugar, y puedes
+  // decidir que hacer con ciertos archivos mas adelante… una explicacion de eso y un tutorial tambien").
   el.innerHTML = `
+    <p class="es-intro">Todo lo de tus materias, en un solo lugar. Suelta lo que tengas: Studium lo ordena por materia, y después decides qué hacer con cada cosa. <button type="button" class="link" data-es-tour>Ver cómo funciona</button></p>
     <div class="es-drop glass" data-es-drop>
       <div class="es-drop-in">
         <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 14a4 4 0 0 1 4-4h8l4 4h12a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4Z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M24 20v12m-5-5 5 5 5-5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <h2>Suelta aquí lo que tengas</h2>
         <p>Archivos, carpetas enteras, fotos del cuaderno. Mejor de una materia a la vez.</p>
         <div class="actions"><label class="button primary">Elegir archivos<input type="file" multiple hidden data-es-files></label><label class="button ghost">Elegir una carpeta<input type="file" webkitdirectory multiple hidden data-es-files></label></div>
+        <p class="es-wait" data-es-wait role="status" hidden></p>
         <form class="es-link" data-es-link><input type="url" placeholder="O pega un enlace: una página, un repo de GitHub…" aria-label="Pegar un enlace"><button class="button ghost small">Agregar</button></form>
       </div>
     </div>
     <section class="es-table" data-es-table hidden></section>
     ${deskHTML(items)}
-    <p class="fine es-mine"><a class="link" href="#/mis-aportes">Lo que publicaste</a>: cambia quién lo ve o bórralo.</p>`;
+    ${items.length ? '' : `<ol class="es-how">
+      <li class="glass"><i>1</i><b>Suelta</b><span>Archivos, carpetas enteras, fotos o enlaces, todo junto. No hay nada que llenar.</span></li>
+      <li class="glass"><i>2</i><b>Se ordena solo</b><span>Cada cosa va a su montón (sílabo, material del profe, apuntes, deberes, exámenes) y cada materia a su carpeta.</span></li>
+      <li class="glass"><i>3</i><b>Tú decides, ahora o después</b><span>Una guía de estudio para tu examen, sumarlo al grafo de la comunidad, o solo guardarlo aquí.</span></li>
+    </ol>`}
+    <p class="fine es-mine"><a class="link" href="#/mis-aportes">Lo que subiste</a>: cambia quién lo ve o bórralo.</p>`;
   wire(el);
 }
 
@@ -262,14 +274,69 @@ async function endTerm(el) {
   api.ctx.toast('Guardado en su cajón. Tu escritorio está libre para el próximo semestre.');
 }
 
+/* ---------- before anything is taken in: a look at what was chosen ----------
+   His words (2026-11-22): before anything goes to an AI, what was chosen is looked at: what could harm (a program, text
+   written to give orders to the AI) is not let in, with a report to Studium if that is a mistake; what does not look
+   like something to study (a personal folder chosen by mistake) is asked about. And uploading needs an AI connected.
+   This is the part done in the browser, always; the AI's own look at the content comes with the new «Estudiar». */
+// Folders of a computer, not of a course («Videos» or «Música» inside a course are fine, so they are not here).
+const PERSONAL = /(^|\/)(desktop|escritorio|downloads|descargas|appdata|application data|my pictures|onedrive|dropbox|google drive|icloud drive|\.ssh|\.aws|\.gnupg|\.config|\.local|program files( \(x86\))?|programdata|windows|whatsapp|telegram desktop)(\/|$)/i;
+const PROGRAM = /\.(exe|msi|dll|scr|com|apk|app|dmg|iso|pif|cpl|sys|drv)$/i;
+const MEDIA = /\.(mp3|m4a|wav|flac|ogg|mp4|mkv|avi|mov|wmv|webm)$/i;
+// Text written to give orders to the AI that reads it (prompt injection), in Spanish and English.
+const INJECTION = /(ignore|disregard|forget)\s+(all\s+|any\s+)?(the\s+|your\s+)?(previous|prior|above|earlier|system)\s+(instructions|prompts?|rules)|ignora(r)?\s+(todas\s+)?(las\s+|tus\s+)?instrucciones\s+(anteriores|previas|de\s+arriba|del\s+sistema)|olvida\s+(todas\s+)?(tus|las)\s+instrucciones|you\s+are\s+now\s+(in\s+)?(developer\s+mode|dan\b|jailbroken)|act[uú]a\s+como\s+si\s+no\s+tuvieras\s+restricciones|<\s*\/?\s*(system|assistant)\s*>|\[\s*system\s*\]\s*:|new\s+instructions\s*:|nuevas\s+instrucciones\s*:/i;
+export async function review(files) {
+  const named = files.map((f) => ({ f, path: `${relOf(f) || f.name}` }));
+  const blocked = [];
+  for (const x of named) if (PROGRAM.test(x.f.name)) blocked.push({ name: x.path, why: 'es un programa' });
+  await Promise.all(named.filter((x) => TEXTISH.test(x.f.name) && x.f.size < 2_000_000).slice(0, 600).map(async (x) => {
+    try { if (INJECTION.test(await x.f.text())) blocked.push({ name: x.path, why: 'trae instrucciones para la IA escondidas en el texto' }); } catch { /* unreadable: left for later */ }
+  }));
+  const tops = new Set(named.map((x) => x.path.split('/').slice(0, 3).join('/')));
+  const personal = [...tops].some((t) => PERSONAL.test(t));
+  const media = named.filter((x) => MEDIA.test(x.f.name)).length;
+  const odd = personal || (named.length >= 10 && media / named.length > 0.5);
+  return { blocked, odd, why: personal ? 'Parece una carpeta personal de tu computadora, no material de una materia.' : 'Es casi todo música o video.' };
+}
+
+/* ---------- the browser's window for choosing files ----------
+   While it is open, or while Chrome counts a huge folder before asking «¿Subir N archivos?» (minutes, for a whole disk),
+   the browser opens no other one and says nothing, not even after a reload (his case, 2026-11-22: 830 000 files chosen
+   by mistake). Studium says it, and asks before reading a folder far bigger than a course. */
+const picker = { at: 0, timer: 0 };
+const BIG = 20000;
+const COUNTING = '<strong>Chrome está revisando la carpeta que elegiste.</strong> Si es muy grande (un disco entero, tu carpeta de usuario) puede tardar varios minutos, y después Chrome te preguntará si quieres «subir» esos archivos: si no era esa carpeta, elige <em>Cancelar</em>. Mientras tanto Chrome no abre otra ventana para elegir; arrastrar archivos aquí sí funciona.';
+const BUSY = '<strong>Chrome todavía está ocupado con la ventana para elegir archivos</strong>, por eso no se abre otra. Puede estar detrás de esta ventana (búscala con Alt+Tab) o revisando una carpeta muy grande: espera su pregunta y elige <em>Cancelar</em> si no era esa. Arrastrar archivos aquí sí funciona.';
+function waitNote(html) {
+  const p = document.querySelector('[data-es-wait]');
+  if (!p) return;
+  p.innerHTML = html; p.hidden = !html;
+}
+function pickerDone() { picker.at = 0; clearTimeout(picker.timer); waitNote(''); }
+// The window did open (this one lost the focus to it): whatever was said about a busy browser no longer holds.
+addEventListener('blur', () => { if (picker.at) { picker.at = Date.now(); clearTimeout(picker.timer); waitNote(''); } });
+// Back from the window with nothing chosen yet and no «cancel»: the browser is still busy with it (counting a folder).
+addEventListener('focus', () => {
+  if (!picker.at) return;
+  clearTimeout(picker.timer);
+  picker.timer = setTimeout(() => { if (picker.at) waitNote(COUNTING); }, 1500);
+});
+
 function wire(el) {
   const zone = $('[data-es-drop]', el);
   zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('over'); });
   zone.addEventListener('dragleave', () => zone.classList.remove('over'));
   zone.addEventListener('drop', async (e) => { e.preventDefault(); zone.classList.remove('over'); take(el, await api.droppedFiles(e.dataTransfer)); });
   // The pane is drawn again on every visit: its handlers are replaced, never added up.
-  el.onchange = (e) => { if (e.target.matches('[data-es-files]')) { take(el, [...e.target.files]); e.target.value = ''; } };
+  el.onchange = (e) => { if (e.target.matches('[data-es-files]')) { pickerDone(); take(el, [...e.target.files]); e.target.value = ''; } };
+  el.oncancel = (e) => { if (e.target.matches?.('[data-es-files]')) pickerDone(); };
   el.onclick = (e) => {
+    if (e.target.matches('[data-es-files]')) {
+      // Asked again while the browser is still busy with the last one: it will not open, so say why.
+      if (picker.at) waitNote(BUSY); else picker.at = Date.now();
+      return;
+    }
+    if (e.target.closest('[data-es-tour]')) { startTour('section'); return; }
     const end = e.target.closest('[data-end-term]');
     if (!end) return;
     if (end.dataset.sure) { endTerm(el); return; }
@@ -289,10 +356,65 @@ async function take(el, files) {
   const ticket = ++run;
   const table = $('[data-es-table]', el);
   table.hidden = false;
+  // Uploading needs an AI (his decision, 2026-11-22): it reads, sorts and checks what comes in.
+  if (!ai.ready()) {
+    table.innerHTML = `<div class="es-confirm"><p><strong>Para subir material necesitas una IA conectada.</strong> Ella lee lo que traes, lo ordena y revisa que sea seguro. Gemini es gratis y se conecta en un minuto.</p>
+      <div class="actions"><a class="button primary" href="#/ajustes">Conectar mi IA</a><button class="button ghost" data-es-close>Ahora no</button></div></div>`;
+    table.onclick = (e) => { if (e.target.closest('[data-es-close]')) { table.onclick = null; table.hidden = true; table.innerHTML = ''; } };
+    return;
+  }
   table.innerHTML = '<p class="es-reading">Abriendo…</p>';
+  if (files.length > BIG && !files.sure) {
+    const top = relOf(files[0]).split('/')[0] || files[0].name;
+    table.innerHTML = `<div class="es-confirm"><p><strong>Elegiste ${files.length.toLocaleString('es')} archivos</strong>${top ? ` de «${esc(top)}»` : ''}. Es mucho más que una materia: ¿quizá un disco entero o tu carpeta de usuario? Revisarlos todos puede tardar mucho.</p>
+      <div class="actions"><button class="button primary" data-es-big="no">No era esa, elijo otra</button><button class="button ghost" data-es-big="yes">Sí, revísala igual</button></div></div>`;
+    table.onclick = (e) => {
+      const b = e.target.closest('[data-es-big]');
+      if (!b) return;
+      table.onclick = null;
+      if (b.dataset.esBig === 'yes') { files.sure = true; take(el, files); } else { table.hidden = true; table.innerHTML = ''; }
+    };
+    return;
+  }
+  if (!files.reviewed) {
+    table.innerHTML = '<p class="es-status" role="status">Revisando lo que elegiste…</p>';
+    const r = await review(files.filter((f) => !f.url));
+    if (ticket !== run) return;
+    files.reviewed = true;
+    const close = () => { table.onclick = null; table.hidden = true; table.innerHTML = ''; };
+    if (r.blocked.length) {
+      const rest = files.filter((f) => !r.blocked.some((b) => b.name === (relOf(f) || f.name)));
+      const report = `Estudiar no me dejó subir ${r.blocked.length} ${r.blocked.length === 1 ? 'archivo' : 'archivos'} y creo que es un error: ${r.blocked.slice(0, 5).map((b) => `${b.name} (${b.why})`).join('; ')}`;
+      table.innerHTML = `<div class="es-confirm" role="alert"><p><strong>${r.blocked.length === 1 ? 'Este archivo no te lo puedo dejar subir' : 'Estos archivos no te los puedo dejar subir'}:</strong></p>
+        <ul class="es-blocked">${r.blocked.slice(0, 8).map((b) => `<li><b>${esc(b.name)}</b>: ${esc(b.why)}</li>`).join('')}${r.blocked.length > 8 ? `<li>y ${r.blocked.length - 8} más</li>` : ''}</ul>
+        <div class="actions">${rest.length ? `<button class="button primary" data-es-rest>Seguir sin ${r.blocked.length === 1 ? 'él' : 'ellos'} (${rest.length})</button>` : ''}<button class="button ghost" data-es-close>Cancelar</button>
+          <button class="link" data-feedback="error" data-feedback-text="${esc(report.slice(0, 500))}">¿Es un error? Envía un reporte a Studium</button></div></div>`;
+      table.onclick = (e) => {
+        if (e.target.closest('[data-es-close]')) close();
+        if (e.target.closest('[data-es-rest]')) { table.onclick = null; Object.assign(rest, { sure: files.sure }); take(el, rest); }
+      };
+      return;
+    }
+    if (r.odd && !files.okOdd) {
+      table.innerHTML = `<div class="es-confirm"><p><strong>¿Realmente quieres subir estos archivos?</strong> ${esc(r.why)}</p>
+        <div class="actions"><button class="button primary" data-es-close>No, elijo otra cosa</button><button class="button ghost" data-es-odd>Sí, son para estudiar</button></div></div>`;
+      table.onclick = (e) => {
+        if (e.target.closest('[data-es-close]')) close();
+        if (e.target.closest('[data-es-odd]')) { table.onclick = null; files.okOdd = true; take(el, files); }
+      };
+      return;
+    }
+  }
+  table.onclick = null;
   const known = knownCourses();
   const links = files.filter((f) => f.url);
-  const { units: list, skipped, secrets, hidden, root } = await units(files.filter((f) => !f.url));
+  let read;
+  try { read = await units(files.filter((f) => !f.url)); } catch (error) {
+    console.error(error);
+    if (ticket === run) table.innerHTML = '<p class="msg">No pude leer lo que elegiste. Prueba con una carpeta más pequeña, o arrastra los archivos aquí.</p>';
+    return;
+  }
+  const { units: list, skipped, secrets, hidden, root } = read;
   if (ticket !== run) return;
   const folder = root ? courseOfFolder(root) : null;
   const fresh = [...list, ...links.map((l) => ({ files: [], name: l.url, path: '', url: l.url }))].slice(0, 400).map((u, i) => {
@@ -551,6 +673,19 @@ async function trash(table) {
 
 /* ---------- 3. what to do with it ---------- */
 async function go(table) {
+  const button = $('[data-es-go]', table);
+  if (button?.disabled) return;
+  const label = button?.textContent;
+  const status = (text) => { let p = $('[data-es-status]', table); if (!p) { p = node('<p class="es-status" data-es-status role="status"></p>'); $('.es-what .actions', table)?.before(p); } p.textContent = text; p.hidden = !text; };
+  const release = () => { if (button?.isConnected) { button.disabled = false; button.textContent = label; } };
+  if (button) { button.disabled = true; button.textContent = 'Trabajando…'; }
+  try { await goOn(table, status); } catch (error) {
+    console.error(error);
+    status('');
+    $('[data-es-status]', table)?.insertAdjacentHTML('afterend', `<div class="es-confirm" role="alert"><p><strong>No se pudo terminar.</strong> ${esc(error?.message || 'Sin detalle')}. Nada se publicó. Inténtalo otra vez; si se repite, cuéntalo con el botón «Feedback».</p></div>`);
+  } finally { release(); }
+}
+async function goOn(table, status) {
   const course = $('[data-es-course]', table).value.trim();
   if (!course) { $('[data-es-course]', table).focus(); api.ctx.toast('¿De qué materia es? Con eso basta.'); return; }
   const toDesk = $('[data-es-desk]', table).checked;
@@ -567,6 +702,7 @@ async function go(table) {
   for (const it of chosen) { it.course = course; if (!it.kind) it.kind = 'notes'; }
   const code = chosen.find((x) => x.code)?.code ?? '';
   // On the desk of the course, on this device, if the person wants it there. Links have no file to keep.
+  if (toDesk) status('Guardando en tu escritorio…');
   if (toDesk) await desk.put(chosen.map(({ files: fs, ...rest }) => ({ ...rest, course, blobs: (fs ?? []).map((f) => ({ name: f.name, path: relOf(f), blob: f })), shared: toGraph })));
   const withFiles = chosen.filter((x) => x.files?.length).sort((a, b) => a.order - b.order);
   const files = withFiles.flatMap((x) => x.files);
@@ -574,8 +710,13 @@ async function go(table) {
   const started = Date.now();
   if (toGraph && files.length) {
     if (ai.ready()) ai.picked('material', table);
-    for (const f of folders(withFiles)) await api.shareToGraph(f.files, { kind: GRAPH_KIND[f.kind] ?? 'other', course, code, folder: f.name, place: f.place, tool: f.tool, oneFolder: f.name });
+    const list = folders(withFiles);
+    for (const [i, f] of list.entries()) {
+      status(`Leyendo «${f.name}» (${i + 1} de ${list.length}): ${f.files.length} ${f.files.length === 1 ? 'archivo' : 'archivos'}…`);
+      await api.shareToGraph(f.files, { kind: GRAPH_KIND[f.kind] ?? 'other', course, code, folder: f.name, place: f.place, tool: f.tool, oneFolder: f.name });
+    }
   }
+  status('');
   const done = chosen; batch = [];
   if (toGraph && files.length && !toGuide) { processing(table, started, course); return; }
   if (toGuide) api.startGuide(files, { course, piles: [...new Set(done.map((x) => x.kind))], exams: done.filter((x) => x.kind === 'exam').map((x) => x.name), links: done.filter((x) => x.url).map((x) => x.url) });

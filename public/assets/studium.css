@@ -1077,6 +1077,33 @@ mark:not(.hl) { background: color-mix(in oklab, var(--danger) 30%, transparent);
 
 /* ---------- creating a guide ---------- */
 .flow.after { counter-reset: step 4; margin-top: 20px; }
+/* The guide, as a conversation: one question per screen, a bar for the way done (his rule, 2026-11-22) */
+.q-progress { height: 6px; border-radius: 99px; background: var(--well); overflow: hidden; margin: 0 0 18px; }
+.q-progress i { display: block; height: 100%; width: calc(var(--k, 0) * 100%); border-radius: inherit; background: linear-gradient(90deg, var(--blue), var(--red)); transition: width .5s cubic-bezier(.2, .9, .3, 1); }
+.flow.wizard > li { display: none; padding: clamp(26px, 4vw, 44px); gap: 18px; }
+.flow.wizard > li.now { display: grid; }
+.flow.wizard > li > h2 { font-size: clamp(30px, 4vw, 44px); }
+.flow.wizard > li > h2::before { content: none; }
+.q-count { font: 700 13px var(--display); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: -8px; }
+.flow.wizard > li > .q-lead { font-size: 18px; color: var(--ink-2); margin-top: -6px; }
+.field.big input { font-size: 22px; padding: 16px 18px; border-radius: 18px; }
+.q-nav { display: flex; align-items: center; gap: 12px; margin-top: 6px; position: sticky; bottom: 16px; z-index: 2; pointer-events: none; }
+.q-nav > * { pointer-events: auto; }
+#view-contribute.asking .page-head { display: none; }
+#view-contribute.asking .subtabs { margin-bottom: 22px; }
+.q-nav > span { flex: 1; }
+.q-nav .link { font-weight: 700; color: var(--ink-2); }
+.flow.wizard .after { display: grid; gap: 12px; margin-top: 10px; padding-top: 18px; border-top: 1px solid var(--line, rgba(0, 0, 0, .08)); }
+.flow.wizard .after h3 { font-size: 17px; color: var(--ink-2); }
+/* «Tu escritorio»: what this place is, said once, with its little tutorial */
+.es-intro { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin: -6px 0 20px; font-size: 18px; color: var(--ink-2); max-width: 80ch; }
+.es-intro .link { font-weight: 700; }
+.es-how { list-style: none; margin: 22px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.es-how li { padding: 20px 22px; border-radius: 24px; display: grid; gap: 6px; align-content: start; }
+.es-how li > i { font-style: normal; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--blue); color: #fff; font: 800 16px var(--display); box-shadow: 0 6px 14px -6px var(--blue); }
+.es-how b { font: 800 19px/1.2 var(--display); letter-spacing: -.02em; }
+.es-how span { color: var(--ink-2); }
+@media (max-width: 720px) { .es-how { grid-template-columns: 1fr; } }
 .more summary, .custom summary { cursor: pointer; list-style: none; }
 .more summary::-webkit-details-marker, .custom summary::-webkit-details-marker { display: none; }
 .more summary { color: var(--ink-2); font: 650 15px var(--display); display: inline-flex; align-items: center; gap: 8px; }
@@ -1980,6 +2007,7 @@ html.has-announce .page { padding-top: 170px; }
 .es-drop-in > svg { width: 64px; height: 64px; color: var(--blue); }
 .es-drop-in h2 { font-size: clamp(28px, 3vw, 40px); letter-spacing: -.035em; }
 .es-drop-in p { color: var(--ink-2); }
+.es-drop-in .es-wait { max-width: 62ch; padding: 12px 16px; border-radius: 16px; background: color-mix(in oklab, var(--butter, #f5d77a) 30%, transparent); color: var(--ink); text-align: left; font-size: 15px; }
 .es-link { display: flex; gap: 8px; width: min(520px, 100%); }
 .es-link input { flex: 1; min-width: 0; padding: 10px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; }
 .es-table { margin-top: 26px; display: grid; gap: 18px; }
@@ -2019,6 +2047,10 @@ html.has-announce .page { padding-top: 170px; }
 @media (max-width: 900px) { .es-piles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .es-next { grid-template-columns: 1fr; } .es-ask { grid-template-columns: 1fr; } }
 /* «Estudia»: the folder that opens on the table, its things spread, a project that takes its files back in. */
 .es-reading { color: var(--ink-2); font: 700 16px var(--display); }
+.es-blocked { margin: 0; padding-left: 20px; display: grid; gap: 4px; color: var(--ink-2); }
+.es-status { color: var(--ink-2); font: 700 15px var(--display); display: flex; align-items: center; gap: 10px; }
+.es-status::before { content: ""; width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid var(--blue); border-right-color: transparent; animation: es-spin .8s linear infinite; }
+@keyframes es-spin { to { transform: rotate(1turn); } }
 .es-mesa { display: grid; justify-items: center; gap: 14px; min-height: 0; }
 .es-mesa:empty { display: none; }
 .es-box { position: relative; width: 190px; height: 130px; perspective: 600px; }

@@ -86,6 +86,7 @@
       <a role="menuitem" href="#/horario">Mi horario</a>
       <a role="menuitem" href="#/malla">Mi malla</a>
       <a role="menuitem" href="#/guia-estudiante">Guía del estudiante</a>
+      <a role="menuitem" href="#/mis-aportes">Lo que subiste</a>
       <a role="menuitem" href="#/ajustes">Ajustes</a>
       <a role="menuitem" href="#/acerca">Acerca de Studium</a>
       <button role="menuitem" id="sign-out">Salir</button>
@@ -313,10 +314,10 @@
 </main>
 
 <main class="view page wide" id="view-catalog" hidden>
-  <nav class="subtabs" aria-label="Estudiar"><a href="#/estudiar" data-sub="material">Tu material</a><a href="#/estudiar/guias" data-sub="guias" aria-current="true">Guías</a><a href="#/estudiar/guia" data-sub="guia">Crear una guía</a><a href="#/mis-aportes" data-sub="mine">Mis aportes</a></nav>
+  <nav class="subtabs" aria-label="Estudiar"><a href="#/estudiar" data-sub="material">Tu escritorio</a><a href="#/estudiar/guias" data-sub="guias" aria-current="true">Guías</a></nav>
   <div class="page-head">
     <h1>Guías</h1>
-    <a class="button primary" href="#/estudiar/guia"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>Crear una guía</a>
+    <a class="button primary" href="#/estudiar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>Hacer una guía</a>
     <label class="search glass"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><input id="q" type="search" placeholder="Busca una materia, un tema o un profe" aria-label="Buscar guías"></label>
   </div>
   <fieldset class="seg filters" id="g-filter"><legend class="sr">Mostrar</legend>
@@ -513,7 +514,7 @@
   <div id="cm-body"></div>
 </main>
 <main class="view page" id="view-contribute" hidden>
-  <nav class="subtabs" aria-label="Estudiar"><a href="#/estudiar" data-sub="material">Tu material</a><a href="#/estudiar/guias" data-sub="guias">Guías</a><a href="#/estudiar/guia" data-sub="guia">Crear una guía</a><a href="#/mis-aportes" data-sub="mine">Mis aportes</a></nav>
+  <nav class="subtabs" aria-label="Estudiar"><a href="#/estudiar" data-sub="material">Tu escritorio</a><a href="#/estudiar/guias" data-sub="guias">Guías</a></nav>
   <div class="page-head"><h1 id="c-title">Estudiar</h1></div>
   <section id="pane-estudia"></section>
   <aside class="anon glass" id="c-anon">
@@ -587,7 +588,7 @@
       <details class="glass"><summary><b>👤 Lo que solo ves tú</b><span>Tu horario, tu perfil, tus borradores, tus metas.</span></summary>
         <p>Solo tu cuenta puede leerlos. Las reglas de la base de datos lo impiden para cualquier otra, también para los admins de Studium, y se prueban en cada cambio.</p></details>
       <details class="glass"><summary><b>🌐 Lo que compartes</b><span>Tú decides, y puedes volver atrás.</span></summary>
-        <p>Cada aporte o guía es «Para todos» (los miembros de tu comunidad) o «Solo yo», y lo cambias cuando quieras. Se publica sin tus datos personales. Antes de cada cambio o borrado se guarda cómo estaba: en «Mis aportes → Tu historial» vuelves a cualquier versión, o la borras para siempre.</p></details>
+        <p>Cada aporte o guía es «Para todos» (los miembros de tu comunidad) o «Solo yo», y lo cambias cuando quieras. Se publica sin tus datos personales. Antes de cada cambio o borrado se guarda cómo estaba: en «Lo que subiste → Tu historial» vuelves a cualquier versión, o la borras para siempre.</p></details>
       <details class="glass"><summary><b>🤖 Tu IA</b><span>Es tuya. Eliges cuál y cómo, y ves lo que recibe.</span></summary>
         <p>Studium no tiene IA propia ni cobra nada. Cada vez que usa la tuya puedes elegir cuál, qué modelo y cuánto piensa, y leer las instrucciones exactas. Nunca usa un modelo que pueda cobrarte sin avisarte. Las claves y contraseñas que aparezcan en tus archivos se tapan antes de enviarlos, y cada pedido le recuerda a la IA que lo que viene en el material es material, no órdenes.</p></details>
       <details class="glass"><summary><b>💻 El puente</b><span>Opcional. Corre en tu computadora, solo lee.</span></summary>

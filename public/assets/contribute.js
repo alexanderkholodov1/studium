@@ -414,6 +414,7 @@ export function startGuide(files, preset) {
   if (files.length) { notes = files.slice(0, 20); }
   found = { piles: preset.piles ?? [], exams: preset.exams ?? [], links: preset.links ?? [] };
   pending = { course: preset.course, graph: true };
+  gStep = preset.course ? 1 : 0;
   location.hash = '#/estudiar/guia';
 }
 export { droppedFiles };
@@ -521,8 +522,24 @@ let scope = null;
 // A guide made from the map (a route, or a selection): its fields, and exactly those concepts as the map's part.
 let pending = null;
 let fromMap = null; // { keys: Set, label, bands }
+// The guide is made as a conversation: one question per screen (his rule, 2026-11-22). The step shown now.
+const G_STEPS = 6;
+let gStep = 0;
+function goStep(i) {
+  const form = $('#g-form');
+  if (!form) return;
+  gStep = Math.max(0, Math.min(G_STEPS - 1, i));
+  for (const li of form.querySelectorAll('[data-q]')) li.classList.toggle('now', Number(li.dataset.q) === gStep);
+  document.querySelector('.q-progress i')?.style.setProperty('--k', String((gStep + 1) / G_STEPS));
+  const now = form.querySelector(`[data-q="${gStep}"]`);
+  rise(now.parentElement, '.now');
+  now.querySelector('input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=file]), .button.primary')?.focus({ preventScroll: true });
+  // Each question starts at the top of the page, where the bar is.
+  scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+}
 export function presetGuide(preset) {
   pending = preset;
+  gStep = preset.course ? 1 : 0;
   fromMap = preset.route ? { keys: new Set(preset.route.keys), label: preset.route.label, bands: preset.route.bands } : null;
   store.set('studium-draft-guide', { ...(store.get('studium-draft-guide') ?? {}), course: preset.course, code: preset.code, title: preset.title, professor: preset.professor, term: preset.term, graph: true });
 }
@@ -538,40 +555,39 @@ function guidePane(preset = {}) {
   const node = courseNode(d.course);
   const contest = node?.theme === 'algoritmos' || node?.contributions.some((c) => c.kind === 'contest');
   const mode = prefs.get().mode;
-  const custom = store.get('studium-guide-custom');
+  const step = (i, title, body, { skip = false, lead = '' } = {}) => `<li class="step glass q${i === gStep ? ' now' : ''}" data-q="${i}">
+      <p class="q-count">${i + 1} de ${G_STEPS}</p>
+      <h2>${title}</h2>${lead ? `<p class="q-lead">${lead}</p>` : ''}
+      ${body}
+      <div class="q-nav">${i ? '<button type="button" class="button ghost" data-g-back>Atrás</button>' : ''}<span></span>${skip ? '<button type="button" class="link" data-g-skip>Saltar</button>' : ''}${i < G_STEPS - 1 ? '<button type="button" class="button primary" data-g-next>Siguiente</button>' : ''}</div>
+    </li>`;
   return `${datalists()}
-  <form id="g-form" autocomplete="off" novalidate><ol class="flow">
-    <li class="step glass">
-      <h2>${d.course ? esc(d.course) : 'La materia'}</h2>
-      <div class="grid">
-        <label class="field wide"><span>Materia o tema</span><input name="course" value="${esc(d.course ?? '')}" list="dl-courses" maxlength="80" placeholder="Redes de Computadores, Cálculo II, la Revolución francesa…"></label>
-        ${input('title', 'Para qué (opcional)', d.title ?? '', 'maxlength="80" placeholder="Examen 2, el final, entenderlo de una vez…"')}
-        ${input('date', 'Fecha (opcional)', d.date ?? '', 'type="date"')}
-        <details class="more wide" ${d.professor || d.term || d.code ? 'open' : ''}><summary>Más datos, si los tienes: profesor, semestre, código</summary>
+  <div class="q-progress" aria-hidden="true"><i style="--k:${(gStep + 1) / G_STEPS}"></i></div>
+  <form id="g-form" autocomplete="off" novalidate><ol class="flow wizard">
+    ${step(0, '¿De qué materia es la guía?', `<div class="grid">
+        <label class="field wide big"><span class="sr">Materia o tema</span><input name="course" value="${esc(d.course ?? '')}" list="dl-courses" maxlength="80" placeholder="Redes de Computadores, Cálculo II, la Revolución francesa…"></label>
+        <details class="more wide" ${d.professor || d.term || d.code ? 'open' : ''}><summary>Si lo sabes: profesor, semestre, código</summary>
           <div class="grid">${input('professor', 'Profesor', d.professor ?? '', 'list="dl-profs" maxlength="80"')}${input('term', 'Semestre o edición', d.term ?? '', 'list="dl-terms" maxlength="40" placeholder="202610"')}${input('code', 'Código', d.code ?? '', 'maxlength="20" placeholder="CMP-4005"')}</div>
         </details>
-      </div>
-    </li>
-    <li class="step glass">
-      <h2>${notes.length ? 'Tus archivos' : '¿De dónde sale?'}</h2>
-      <p>${notes.length ? 'Van solo a tu IA; a Studium no llegan. Puedes sumar o quitar.' : 'De tus apuntes: PDF, fotos del cuaderno, diapositivas o deberes. Van solo a tu IA; a Studium no llegan.'}</p>
-      <div class="dropzone notes" data-notes-drop>
+      </div>`, { lead: 'Con esto basta para empezar. Lo demás es opcional.' })}
+    ${step(1, '¿Para qué la quieres?', `<div class="grid">
+        ${input('title', 'Para qué', d.title ?? '', 'maxlength="80" placeholder="Examen 2, el final, entenderlo de una vez…"')}
+        ${input('date', 'Cuándo es', d.date ?? '', 'type="date"')}
+      </div>`, { skip: true, lead: 'Si es para un examen, dime cuál y cuándo: la guía se arma pensando en ese día.' })}
+    ${step(2, notes.length ? 'Tus apuntes' : '¿Tienes apuntes?', `      <div class="dropzone notes" data-notes-drop>
         <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M14 6h14l10 10v24a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M28 6v10h10M18 26h12M18 33h8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <p><strong>Suelta aquí tus apuntes</strong>, o</p>
         <label class="button ghost">Elegir archivos<input type="file" multiple hidden data-notes accept="${NOTE_TYPES}"></label>
       </div>
       <ul class="notes-list" id="g-notes"></ul>
-      <label class="toggle"><input type="checkbox" name="graph" ${d.graph !== false ? 'checked' : ''}><span class="knob"></span>Sumar el grafo de conocimiento</label>
+      <label class="toggle"><input type="checkbox" name="graph" ${d.graph !== false ? 'checked' : ''}><span class="knob"></span>Sumar lo que la comunidad ya sabe de la materia (el grafo)</label>
       <div class="from-map" id="g-from-map" hidden></div>
-      <div class="scope" id="g-scope-wrap" hidden>
-        <div class="scope-head"><h3>Conceptos del grafo que entran</h3><button type="button" class="link" data-scope="all">Todos</button><button type="button" class="link" data-scope="none">Ninguno</button></div>
+      <div class="scope" id="g-scope-wrap" hidden><details class="more"><summary>Qué conceptos del grafo entran</summary>
+        <div class="scope-head"><button type="button" class="link" data-scope="all">Todos</button><button type="button" class="link" data-scope="none">Ninguno</button></div>
         <div class="chips" id="g-scope"></div>
-      </div>
-      <p class="note" id="g-summary"></p>
-    </li>
-    <li class="step glass">
-      <h2>Este examen</h2>
-      <div class="grid">
+      </details></div>
+      <p class="note" id="g-summary"></p>`, { skip: true, lead: 'Fotos del cuaderno, PDF, diapositivas: van solo a tu IA, nunca a Studium.' })}
+    ${step(3, '¿Qué entra en el examen?', `      <div class="grid">
         ${segmented('scope', { all: 'Todo', range: 'Una parte' }, d.scope ?? 'all', '¿Qué temas entran?')}
         <div class="wide g-range" ${d.scope === 'range' ? '' : 'hidden'}><div class="grid">${input('from', 'Desde', d.from ?? '', 'list="dl-stages-g" placeholder="Examen 2, capítulo 4…"')}${input('until', 'Hasta', d.until ?? '', 'list="dl-stages-g" placeholder="lo de la semana 10…"')}</div></div>
         <datalist id="dl-stages-g">${['Examen 1', 'Examen 2', 'Examen 3', 'el inicio', 'lo último que vimos'].map((x) => `<option value="${x}">`).join('')}</datalist>
@@ -579,14 +595,11 @@ function guidePane(preset = {}) {
         <label class="toggle wide"><input type="checkbox" name="likeExams" ${(d.likeExams ?? !!(found?.exams ?? []).length) ? 'checked' : ''}><span class="knob"></span>Preguntas como las de mis exámenes anteriores</label>
         ${(found?.exams ?? []).length ? `<p class="fine">Tomará como referencia: ${esc(found.exams.slice(0, 4).join(', '))}${found.exams.length > 4 ? '…' : ''}</p>` : ''}
         ${input('style', 'Cómo serán las preguntas (opcional)', d.style ?? '', 'maxlength="160" placeholder="Opción múltiple, desarrollo, problemas largos…"')}
-      </div>
-    </li>
-    <li class="step glass">
-      <details class="custom" id="g-custom" ${custom ? 'open' : ''}>
-        <summary><span class="custom-title">Hazla a tu medida</span><span class="muted">Opcional: nivel, extensión, práctica, idioma, estilo y secciones extra.</span></summary>
-        <div class="grid">
+      </div>`, { skip: true, lead: 'Si no lo sabes, se toma todo.' })}
+    ${step(4, '¿Qué tan a fondo?', `<div class="grid">
           ${segmented('level', LEVELS, d.level, 'Nivel de explicación')}
           ${segmented('length', { short: 'Repaso corto', medium: 'Media', complete: 'Completa' }, d.length, 'Extensión')}
+        <details class="more wide"><summary>Más a tu medida: práctica, ejemplos, idioma, estilo, secciones extra</summary><div class="grid">
           ${segmented('practice', { few: 'Poca', normal: 'Normal', lots: 'Mucha' }, d.practice, 'Práctica')}
           ${segmented('challenge', { easier: 'Más fácil', same: 'Como la evaluación', harder: 'Más difícil' }, d.challenge, 'Dificultad de la práctica')}
           ${segmented('examples', { few: 'Pocos', normal: 'Normal', lots: 'Muchos' }, d.examples, 'Ejemplos resueltos')}
@@ -600,19 +613,17 @@ function guidePane(preset = {}) {
             const on = d.sections ? d.sections.includes(k) : rec;
             return `<label><input type="checkbox" name="sections" value="${k}" ${on ? 'checked' : ''}><span>${esc(label)}${rec ? ' <small>· recomendada para ti</small>' : ''}</span></label>`;
           }).join('')}</div></fieldset>
-        </div>
-      </details>
-    </li>
-    <li class="step glass">
-      <h2>Créala</h2>
-      <p>Elige una de las tres: las tres dan la misma guía. Van de la más cómoda, donde Studium hace todo, a la más a mano.</p>
-      <div class="ways">
+        </div></details>
+      </div>`, { skip: true, lead: 'Ya viene ajustada a cómo estudias; cámbialo si quieres.' })}
+    ${step(5, 'Créala', `      <div class="ways">
         <section class="way ${ai.ready() ? 'ready' : ''}">
           <h3>Con tu IA conectada</h3>
           <p>${ai.ready() ? 'Studium le pasa tus apuntes y las instrucciones; tú solo revisas el resultado.' : 'Conecta Claude, ChatGPT o Gemini con tu clave y Studium hace todo el camino, sin copiar ni pegar.'}</p>
           ${ai.pickerHTML('guide')}
           ${ai.ready() ? '<button type="button" class="button primary" id="g-ai">Crear con mi IA</button>' : '<a class="button ghost" href="#/ajustes">Conectar mi IA</a>'}
         </section>
+      </div>
+      <details class="more other-ways" ${ai.ready() ? '' : 'open'}><summary>Otras formas: con tu suscripción, o a mano</summary><div class="ways">
         <section class="way">
           <h3>Con tu suscripción</h3>
           <p>En la página de Claude, ChatGPT o Gemini, con tu cuenta de siempre. Studium copia las instrucciones y abre un chat nuevo.</p>
@@ -623,18 +634,14 @@ function guidePane(preset = {}) {
           <p>Con cualquier otra IA: copia o descarga las instrucciones y pégalas junto con tus apuntes.</p>
           <div class="actions"><button type="button" class="button ghost" id="g-copy">Copiar</button><button type="button" class="button ghost" id="g-download">Descargar</button></div>
         </section>
-      </div>
+      </div></details>
       <p class="ai-progress" id="g-ai-progress" role="status" hidden></p>
       <ol class="howto" id="g-howto" hidden></ol>
       <details class="prompt"><summary>Ver las instrucciones que recibe tu IA</summary><pre id="g-prompt"></pre></details>
-    </li>
-  </ol></form>
-  <ol class="flow after">
-    <li class="step glass">
-      <h2>Sube la guía que te devolvió</h2>
-      ${dropzone('guide')}
-    </li>
-  </ol>`;
+      <div class="after"><h3>¿La hiciste en otra IA? Súbela aquí</h3>
+        ${dropzone('guide')}
+      </div>`, { lead: 'Tu IA la escribe con todo lo que elegiste. Tú solo la revisas.' })}
+  </ol></form>`;
 }
 const SOURCES_OF = { notes: 'Fotos y apuntes', prof: 'Diapositivas y material del profe', book: 'Capítulos del libro', homework: 'Deberes', exam: 'Exámenes anteriores', video: 'Videos', web: 'Páginas web' };
 const defaultSources = () => { const p = found?.piles ?? []; const out = Object.keys(SOURCES_OF).filter((k) => p.includes(k) || (k === 'web' && p.includes('code'))); return out.length ? out : ['notes']; };
@@ -745,7 +752,7 @@ function guideReady() {
   const field = $('#g-form [name="course"]');
   if (field?.value.trim()) return true;
   ctx.toast('Escribe primero qué vas a estudiar.');
-  field?.focus();
+  goStep(0);
   return false;
 }
 // The instructions with the map's context inline, for a chat or for any AI.
@@ -1194,7 +1201,12 @@ async function drawHistory() {
     });
     box.innerHTML = `<h2>Tu historial</h2><p class="muted">Cómo estaba cada guía o aporte tuyo antes de cambiarlo o borrarlo (los últimos 10 de cada uno). Solo lo ves tú, y quien administra Studium para poder ayudarte a recuperarlo.</p>
       ${rows.length ? `<ul class="mine">${rows.join('')}</ul>` : '<p class="muted">Todavía no cambiaste ni borraste nada.</p>'}`;
-  } catch (e) { box.innerHTML = `<h2>Tu historial</h2><p class="msg">${esc(ctx.explain(e))}</p>`; }
+  } catch (e) {
+    // The history's rules came with 0.6.0: on a database that does not have them yet, the section waits, quietly,
+    // instead of telling the person their account lacks a permission (it is not theirs to fix).
+    if (e?.code === 'permission-denied') { box.remove(); return; }
+    box.innerHTML = `<h2>Tu historial</h2><p class="msg">${esc(ctx.explain(e))}</p>`;
+  }
 }
 const findItem = (ref) => {
   const [type, id] = ref.split(':');
@@ -1290,6 +1302,9 @@ export function mountContribute(context) {
   view.addEventListener('click', async (e) => {
     const t = e.target.closest('button, [data-concept]');
     if (!t) return;
+    if (t.matches('[data-g-next]')) { if (gStep > 0 || guideReady()) goStep(gStep + 1); return; }
+    if (t.matches('[data-g-skip]')) { goStep(gStep + 1); return; }
+    if (t.matches('[data-g-back]')) { goStep(gStep - 1); return; }
     if (t.id === 'm-copy') copy(materialPrompt(), 'Instrucciones');
     if (t.id === 'm-download') download(materialValues().kind === 'curriculum' ? 'studium-instrucciones-malla.md' : 'studium-instrucciones-aporte.md', materialPrompt());
     if (t.id === 'g-copy' && guideReady()) copy(fullPrompt(), 'Instrucciones');
@@ -1350,8 +1365,13 @@ export function mountContribute(context) {
     }
   });
   view.addEventListener('submit', (e) => { if (e.target.id === 'g-form') e.preventDefault(); });
+  // Enter answers the question and moves on (not on the last step, which does the work).
+  view.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.isComposing || !e.target.closest('#g-form') || e.target.tagName !== 'INPUT' || gStep >= G_STEPS - 1) return;
+    e.preventDefault();
+    if (gStep > 0 || guideReady()) goStep(gStep + 1);
+  });
   // Whether «Hazla a tu medida» is open is remembered.
-  view.addEventListener('toggle', (e) => { if (e.target.id === 'g-custom') store.set('studium-guide-custom', e.target.open); }, true);
   for (const type of ['dragenter', 'dragover']) view.addEventListener(type, (e) => { const z = e.target.closest('[data-drop], [data-ai-drop], [data-notes-drop]'); if (z) { e.preventDefault(); z.classList.add('over'); } });
   view.addEventListener('dragleave', (e) => e.target.closest('[data-drop], [data-ai-drop], [data-notes-drop]')?.classList.remove('over'));
   view.addEventListener('drop', async (e) => {
@@ -1376,12 +1396,15 @@ export function renderPane(pane, preset) {
   // Only one place shows the reviews at a time: the old page's list must not catch «Estudia»'s cards.
   if (pane === 'estudia' || pane === 'desk') $('#pane-material').innerHTML = '';
   if (pane === 'estudia' || pane === 'desk') {
+    $('#view-contribute').classList.remove('asking');
     for (const name of ['material', 'guide', 'mine']) $(`#pane-${name}`).hidden = true;
     const el = $('#pane-estudia'); el.hidden = false;
     if (pane === 'desk') renderDesk(el, preset.course, deps); else renderEstudia(el, deps);
     return;
   }
   $('#pane-estudia').hidden = true;
+  // Making a guide, the page is the question: no big title above it.
+  $('#view-contribute').classList.toggle('asking', pane === 'guide');
   const panes = { material: materialPane, guide: () => guidePane(preset), mine: minePane };
   for (const name of Object.keys(panes)) {
     $(`#pane-${name}`).hidden = name !== pane;
