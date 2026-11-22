@@ -274,6 +274,31 @@ async function endTerm(el) {
   api.ctx.toast('Guardado en su cajón. Tu escritorio está libre para el próximo semestre.');
 }
 
+/* ---------- before anything is taken in: a look at what was chosen ----------
+   His words (2026-11-22): before anything goes to an AI, what was chosen is looked at: what could harm (a program, text
+   written to give orders to the AI) is not let in, with a report to Studium if that is a mistake; what does not look
+   like something to study (a personal folder chosen by mistake) is asked about. And uploading needs an AI connected.
+   This is the part done in the browser, always; the AI's own look at the content comes with the new «Estudiar». */
+// Folders of a computer, not of a course («Videos» or «Música» inside a course are fine, so they are not here).
+const PERSONAL = /(^|\/)(desktop|escritorio|downloads|descargas|appdata|application data|my pictures|onedrive|dropbox|google drive|icloud drive|\.ssh|\.aws|\.gnupg|\.config|\.local|program files( \(x86\))?|programdata|windows|whatsapp|telegram desktop)(\/|$)/i;
+const PROGRAM = /\.(exe|msi|dll|scr|com|apk|app|dmg|iso|pif|cpl|sys|drv)$/i;
+const MEDIA = /\.(mp3|m4a|wav|flac|ogg|mp4|mkv|avi|mov|wmv|webm)$/i;
+// Text written to give orders to the AI that reads it (prompt injection), in Spanish and English.
+const INJECTION = /(ignore|disregard|forget)\s+(all\s+|any\s+)?(the\s+|your\s+)?(previous|prior|above|earlier|system)\s+(instructions|prompts?|rules)|ignora(r)?\s+(todas\s+)?(las\s+|tus\s+)?instrucciones\s+(anteriores|previas|de\s+arriba|del\s+sistema)|olvida\s+(todas\s+)?(tus|las)\s+instrucciones|you\s+are\s+now\s+(in\s+)?(developer\s+mode|dan\b|jailbroken)|act[uú]a\s+como\s+si\s+no\s+tuvieras\s+restricciones|<\s*\/?\s*(system|assistant)\s*>|\[\s*system\s*\]\s*:|new\s+instructions\s*:|nuevas\s+instrucciones\s*:/i;
+export async function review(files) {
+  const named = files.map((f) => ({ f, path: `${relOf(f) || f.name}` }));
+  const blocked = [];
+  for (const x of named) if (PROGRAM.test(x.f.name)) blocked.push({ name: x.path, why: 'es un programa' });
+  await Promise.all(named.filter((x) => TEXTISH.test(x.f.name) && x.f.size < 2_000_000).slice(0, 600).map(async (x) => {
+    try { if (INJECTION.test(await x.f.text())) blocked.push({ name: x.path, why: 'trae instrucciones para la IA escondidas en el texto' }); } catch { /* unreadable: left for later */ }
+  }));
+  const tops = new Set(named.map((x) => x.path.split('/').slice(0, 3).join('/')));
+  const personal = [...tops].some((t) => PERSONAL.test(t));
+  const media = named.filter((x) => MEDIA.test(x.f.name)).length;
+  const odd = personal || (named.length >= 10 && media / named.length > 0.5);
+  return { blocked, odd, why: personal ? 'Parece una carpeta personal de tu computadora, no material de una materia.' : 'Es casi todo música o video.' };
+}
+
 /* ---------- the browser's window for choosing files ----------
    While it is open, or while Chrome counts a huge folder before asking «¿Subir N archivos?» (minutes, for a whole disk),
    the browser opens no other one and says nothing, not even after a reload (his case, 2026-11-22: 830 000 files chosen
@@ -331,6 +356,13 @@ async function take(el, files) {
   const ticket = ++run;
   const table = $('[data-es-table]', el);
   table.hidden = false;
+  // Uploading needs an AI (his decision, 2026-11-22): it reads, sorts and checks what comes in.
+  if (!ai.ready()) {
+    table.innerHTML = `<div class="es-confirm"><p><strong>Para subir material necesitas una IA conectada.</strong> Ella lee lo que traes, lo ordena y revisa que sea seguro. Gemini es gratis y se conecta en un minuto.</p>
+      <div class="actions"><a class="button primary" href="#/ajustes">Conectar mi IA</a><button class="button ghost" data-es-close>Ahora no</button></div></div>`;
+    table.onclick = (e) => { if (e.target.closest('[data-es-close]')) { table.onclick = null; table.hidden = true; table.innerHTML = ''; } };
+    return;
+  }
   table.innerHTML = '<p class="es-reading">Abriendo…</p>';
   if (files.length > BIG && !files.sure) {
     const top = relOf(files[0]).split('/')[0] || files[0].name;
@@ -344,6 +376,36 @@ async function take(el, files) {
     };
     return;
   }
+  if (!files.reviewed) {
+    table.innerHTML = '<p class="es-status" role="status">Revisando lo que elegiste…</p>';
+    const r = await review(files.filter((f) => !f.url));
+    if (ticket !== run) return;
+    files.reviewed = true;
+    const close = () => { table.onclick = null; table.hidden = true; table.innerHTML = ''; };
+    if (r.blocked.length) {
+      const rest = files.filter((f) => !r.blocked.some((b) => b.name === (relOf(f) || f.name)));
+      const report = `Estudiar no me dejó subir ${r.blocked.length} ${r.blocked.length === 1 ? 'archivo' : 'archivos'} y creo que es un error: ${r.blocked.slice(0, 5).map((b) => `${b.name} (${b.why})`).join('; ')}`;
+      table.innerHTML = `<div class="es-confirm" role="alert"><p><strong>${r.blocked.length === 1 ? 'Este archivo no te lo puedo dejar subir' : 'Estos archivos no te los puedo dejar subir'}:</strong></p>
+        <ul class="es-blocked">${r.blocked.slice(0, 8).map((b) => `<li><b>${esc(b.name)}</b>: ${esc(b.why)}</li>`).join('')}${r.blocked.length > 8 ? `<li>y ${r.blocked.length - 8} más</li>` : ''}</ul>
+        <div class="actions">${rest.length ? `<button class="button primary" data-es-rest>Seguir sin ${r.blocked.length === 1 ? 'él' : 'ellos'} (${rest.length})</button>` : ''}<button class="button ghost" data-es-close>Cancelar</button>
+          <button class="link" data-feedback="error" data-feedback-text="${esc(report.slice(0, 500))}">¿Es un error? Envía un reporte a Studium</button></div></div>`;
+      table.onclick = (e) => {
+        if (e.target.closest('[data-es-close]')) close();
+        if (e.target.closest('[data-es-rest]')) { table.onclick = null; Object.assign(rest, { sure: files.sure }); take(el, rest); }
+      };
+      return;
+    }
+    if (r.odd && !files.okOdd) {
+      table.innerHTML = `<div class="es-confirm"><p><strong>¿Realmente quieres subir estos archivos?</strong> ${esc(r.why)}</p>
+        <div class="actions"><button class="button primary" data-es-close>No, elijo otra cosa</button><button class="button ghost" data-es-odd>Sí, son para estudiar</button></div></div>`;
+      table.onclick = (e) => {
+        if (e.target.closest('[data-es-close]')) close();
+        if (e.target.closest('[data-es-odd]')) { table.onclick = null; files.okOdd = true; take(el, files); }
+      };
+      return;
+    }
+  }
+  table.onclick = null;
   const known = knownCourses();
   const links = files.filter((f) => f.url);
   let read;

@@ -2047,6 +2047,7 @@ html.has-announce .page { padding-top: 170px; }
 @media (max-width: 900px) { .es-piles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .es-next { grid-template-columns: 1fr; } .es-ask { grid-template-columns: 1fr; } }
 /* «Estudia»: the folder that opens on the table, its things spread, a project that takes its files back in. */
 .es-reading { color: var(--ink-2); font: 700 16px var(--display); }
+.es-blocked { margin: 0; padding-left: 20px; display: grid; gap: 4px; color: var(--ink-2); }
 .es-status { color: var(--ink-2); font: 700 15px var(--display); display: flex; align-items: center; gap: 10px; }
 .es-status::before { content: ""; width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid var(--blue); border-right-color: transparent; animation: es-spin .8s linear infinite; }
 @keyframes es-spin { to { transform: rotate(1turn); } }
