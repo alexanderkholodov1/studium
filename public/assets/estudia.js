@@ -118,16 +118,18 @@ export async function units(files) {
     const top = tops.find((d) => r.rel.startsWith(`${d}/`));
     if (top) { if (!byProject.has(top)) byProject.set(top, []); byProject.get(top).push(r.f); } else loose.push(r);
   }
-  // Many photos or screenshots in one folder (a lab's evidence, a notebook's pages) are one thing too.
-  const photosIn = new Map();
-  for (const r of loose) { const dir = r.rel.split('/').slice(0, -1).join('/'); if (PHOTO.test(r.name.toLowerCase())) photosIn.set(dir, [...(photosIn.get(dir) ?? []), r]); }
-  const grouped = new Set([...photosIn].filter(([dir, list]) => dir && list.length >= 4).map(([dir]) => dir));
+  // Folders stay as they were (his words, 2026-11-22: "los destripó en archivos separados, no los organizó por carpetas
+  // como lo eran originalmente"): every folder right under what was dropped is one thing (a lab, a week, a homework),
+  // whatever it holds; only the files lying loose at the top are things of their own.
+  const inFolder = new Map();
   for (const r of loose) {
-    const dir = r.rel.split('/').slice(0, -1).join('/');
-    if (grouped.has(dir) && PHOTO.test(r.name.toLowerCase())) continue;
-    out.push({ files: [r.f], name: r.name, path: dir });
+    const top = r.rel.includes('/') ? r.rel.split('/')[0] : '';
+    if (top) inFolder.set(top, [...(inFolder.get(top) ?? []), r]); else out.push({ files: [r.f], name: r.name, path: '' });
   }
-  for (const dir of grouped) out.push({ files: photosIn.get(dir).map((r) => r.f), name: dir.split('/').pop(), path: dir.split('/').slice(0, -1).join('/'), photos: true });
+  for (const [dir, list] of inFolder) {
+    const photos = list.every((r) => PHOTO.test(r.name.toLowerCase()));
+    out.push({ files: list.map((r) => r.f), name: dir, path: '', photos, folder: true });
+  }
   for (const [dir, list] of byProject) out.push({ files: list, name: dir.split('/').pop(), path: dir.split('/').slice(0, -1).join('/'), project: true });
   // In the order of the folders, as a person reads them: Semana 2 before Semana 10.
   out.sort((a, b) => natural(`${a.path}/${a.name}`, `${b.path}/${b.name}`));
@@ -609,6 +611,19 @@ async function trash(table) {
 
 /* ---------- 3. what to do with it ---------- */
 async function go(table) {
+  const button = $('[data-es-go]', table);
+  if (button?.disabled) return;
+  const label = button?.textContent;
+  const status = (text) => { let p = $('[data-es-status]', table); if (!p) { p = node('<p class="es-status" data-es-status role="status"></p>'); $('.es-what .actions', table)?.before(p); } p.textContent = text; p.hidden = !text; };
+  const release = () => { if (button?.isConnected) { button.disabled = false; button.textContent = label; } };
+  if (button) { button.disabled = true; button.textContent = 'Trabajando…'; }
+  try { await goOn(table, status); } catch (error) {
+    console.error(error);
+    status('');
+    $('[data-es-status]', table)?.insertAdjacentHTML('afterend', `<div class="es-confirm" role="alert"><p><strong>No se pudo terminar.</strong> ${esc(error?.message || 'Sin detalle')}. Nada se publicó. Inténtalo otra vez; si se repite, cuéntalo con el botón «Feedback».</p></div>`);
+  } finally { release(); }
+}
+async function goOn(table, status) {
   const course = $('[data-es-course]', table).value.trim();
   if (!course) { $('[data-es-course]', table).focus(); api.ctx.toast('¿De qué materia es? Con eso basta.'); return; }
   const toDesk = $('[data-es-desk]', table).checked;
@@ -625,6 +640,7 @@ async function go(table) {
   for (const it of chosen) { it.course = course; if (!it.kind) it.kind = 'notes'; }
   const code = chosen.find((x) => x.code)?.code ?? '';
   // On the desk of the course, on this device, if the person wants it there. Links have no file to keep.
+  if (toDesk) status('Guardando en tu escritorio…');
   if (toDesk) await desk.put(chosen.map(({ files: fs, ...rest }) => ({ ...rest, course, blobs: (fs ?? []).map((f) => ({ name: f.name, path: relOf(f), blob: f })), shared: toGraph })));
   const withFiles = chosen.filter((x) => x.files?.length).sort((a, b) => a.order - b.order);
   const files = withFiles.flatMap((x) => x.files);
@@ -632,8 +648,13 @@ async function go(table) {
   const started = Date.now();
   if (toGraph && files.length) {
     if (ai.ready()) ai.picked('material', table);
-    for (const f of folders(withFiles)) await api.shareToGraph(f.files, { kind: GRAPH_KIND[f.kind] ?? 'other', course, code, folder: f.name, place: f.place, tool: f.tool, oneFolder: f.name });
+    const list = folders(withFiles);
+    for (const [i, f] of list.entries()) {
+      status(`Leyendo «${f.name}» (${i + 1} de ${list.length}): ${f.files.length} ${f.files.length === 1 ? 'archivo' : 'archivos'}…`);
+      await api.shareToGraph(f.files, { kind: GRAPH_KIND[f.kind] ?? 'other', course, code, folder: f.name, place: f.place, tool: f.tool, oneFolder: f.name });
+    }
   }
+  status('');
   const done = chosen; batch = [];
   if (toGraph && files.length && !toGuide) { processing(table, started, course); return; }
   if (toGuide) api.startGuide(files, { course, piles: [...new Set(done.map((x) => x.kind))], exams: done.filter((x) => x.kind === 'exam').map((x) => x.name), links: done.filter((x) => x.url).map((x) => x.url) });
