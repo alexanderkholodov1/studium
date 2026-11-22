@@ -210,6 +210,18 @@ await test('a usage limit of Claude is a 429 with its reset time', async () => {
   check(r.data.error.resetsAt === new Date(1894614400 * 1000).toISOString(), `resetsAt ${r.data.error.resetsAt}`);
   check(leftovers().length === 0, 'folder left behind');
 });
+await test('a weekly limit that says «out of usage credits» is a limit, not a request for credits', async () => {
+  // His real message, 2026-11-22: the account ran out of its week; nothing was charged.
+  scenario({ claude: { error: "You've hit your weekly limit · resets Nov 24, 8pm (America/Guayaquil) · out of usage credits" } });
+  const r = await run({ engine: 'claude', model: 'claude-opus-5-5' });
+  check(r.status === 429 && r.data.error.code === 'limit', `status ${r.status} ${JSON.stringify(r.data)}`);
+  check(/Nov 24, 8pm/.test(r.data.error.message) && /No se cobró nada/.test(r.data.error.message), r.data.error.message);
+});
+await test('a real request for credits is still «paid»', async () => {
+  scenario({ claude: { error: 'This model requires usage credits. Switch to extra usage to continue.' } });
+  const r = await run({ engine: 'claude', model: 'claude-opus-5-5' });
+  check(r.status === 402 && r.data.error.code === 'paid', `status ${r.status}`);
+});
 await test('codex is paused until its cost is verified, and never called', async () => {
   scenario({});
   const r = await run({ engine: 'codex', model: 'default' });

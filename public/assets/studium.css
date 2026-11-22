@@ -2825,3 +2825,13 @@ canvas.prop { display: block; }
 .tj-advice { padding: 14px 18px; border-radius: 16px; background: color-mix(in oklab, var(--blue) 6%, transparent); }
 .tj-advice p { margin: 4px 0; }
 .tj-advice .tj-ok { margin-top: 6px; }
+/* «Trabajos»: long paths wrap instead of breaking the page; Claude's accounts; the AI's questions. */
+.tj-wrap { overflow-wrap: anywhere; }
+.tj-pick { flex-wrap: wrap; min-width: 0; }
+.tj-pick > label { flex-wrap: wrap; }
+.tj-pick small { min-width: 0; overflow-wrap: anywhere; white-space: normal !important; }
+.tj-pick > label small { flex-basis: 100%; overflow: visible; text-overflow: clip; }
+.tj-accounts { margin: 6px 0 0 18px; }
+.tjg-app .questions h4 { margin-top: 0; }
+.tjg-app .questions .qa { display: grid; gap: 4px; margin: 10px 0; }
+.tjg-app .questions textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); color: var(--ink); font: 15px var(--gb); }

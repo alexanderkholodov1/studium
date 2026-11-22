@@ -199,7 +199,17 @@ const QUESTIONS = [
   { key: 'ready', ask: 'Todo listo', input: 'ready' },
 ];
 export const PREF_DEFAULT = { tone: 'balanced', level: 'zero', length: 'normal', text: 'some', cards: true, defense: true, practice: false, visuals: true, note: '' };
+// Which Claude account writes (several may be signed in on this computer).
+function accountPick() {
+  const b = ai.bridgeOf();
+  const accounts = (b?.engines ?? []).find((e) => e.id === 'claude')?.accounts?.filter((a) => a.ready) ?? [];
+  if (accounts.length < 2) return '';
+  return `<div class="tj-accounts"><p class="fine">Con qué cuenta de Claude:</p>${accounts.map((a) => `<label class="tj-pick ${a.id === b.account ? 'on' : ''}"><input type="radio" name="claude-account" value="${esc(a.id)}" data-tj-account ${a.id === b.account ? 'checked' : ''}> <span class="tj-wrap">${esc(a.email || a.id)}</span> <small>${a.plan ? `plan ${esc(a.plan)} · ` : ''}carpeta ${esc(a.id)}</small></label>`).join('')}</div>`;
+}
 const FOLDERS = 'studium-tj-folders';
+const RESUME = 'studium-tj-resume';
+const resumeOf = (tid) => { try { return JSON.parse(localStorage.getItem(RESUME) ?? '{}')[tid] ?? ''; } catch { return ''; } };
+function keepResume(tid, cmd) { if (!cmd) return; try { const m = JSON.parse(localStorage.getItem(RESUME) ?? '{}'); m[tid] = cmd; localStorage.setItem(RESUME, JSON.stringify(m)); } catch { /* this device only */ } }
 const folderOf = (tid) => { try { return JSON.parse(localStorage.getItem(FOLDERS) ?? '{}')[tid] ?? ''; } catch { return ''; } };
 function keepFolder(tid, id) {
   try { const m = JSON.parse(localStorage.getItem(FOLDERS) ?? '{}'); if (id && id !== 'temp') m[tid] = id; else delete m[tid]; localStorage.setItem(FOLDERS, JSON.stringify(m)); } catch { /* this device only */ }
@@ -265,9 +275,11 @@ function renderDraft(error = '') {
     const wayRadio = (task, now) => ways.map((w) => `<label class="tj-pick ${w === now ? 'on' : ''}"><input type="radio" name="use-${task}" value="${esc(w)}" data-tj-use="${task}" ${w === now ? 'checked' : ''}> ${esc(ai.WAYS[w]?.name ?? w)} <small>${esc(ai.WAYS[w]?.where ?? '')}</small></label>`).join('');
     const bridgeWrites = writer.startsWith('bridge:');
     const roles = ways.length ? `<div class="tj-roles">
-        <div><h3>Quién escribe la guía</h3>${wayRadio('solution', writer)}</div>
+        <div><h3>Quién escribe la guía</h3>${wayRadio('solution', writer)}${writer === 'bridge:claude' ? accountPick() : ''}</div>
         <div><h3>Quién responde tus dudas al instante</h3><p class="fine">Cuando pulses «No lo entiendo». Conviene una rápida.</p>${wayRadio('tutor', tutor)}</div>
-        ${bridgeWrites ? `<div><h3>Dónde trabaja tu IA</h3>${placeHTML(draft.workspace)}</div>` : ''}
+        ${bridgeWrites ? `<div><h3>Dónde trabaja tu IA</h3>${placeHTML(draft.workspace)}
+          ${draft.workspace && draft.workspace !== 'temp' ? `<label class="tj-pick ${draft.prefs.useFolder !== false ? 'on' : ''}"><input type="checkbox" data-tj-pref="useFolder" ${draft.prefs.useFolder !== false ? 'checked' : ''}> Usar lo que ya hay en esta carpeta para escribir la guía <small>por ejemplo, una solución que ya tienen: tu IA la revisa, la explica y la completa</small></label>` : ''}
+          <p class="fine">Mientras trabaja, la ventana del puente muestra cada archivo que lee o cambia; al terminar te da el comando para seguir hablándole en tu terminal.</p></div>` : ''}
       </div>` : '';
     const best = opts[0];
     const connectBtn = (o, primary) => (o.id === 'bridge' ? `<button type="button" class="button ${primary ? 'primary' : 'ghost'} small" data-tj="pair-here">Conectar ${esc(o.name.toLowerCase())}</button>` : `<button type="button" class="button ${primary ? 'primary' : 'ghost'} small" data-tj="connect" data-vendor="${o.vendor}" data-bridge="${o.bridge ? '1' : ''}">Conectar ${esc(o.name)}</button>`);
@@ -359,7 +371,7 @@ async function createTrabajo() {
   const code = newCode();
   const batch = writeBatch(db);
   batch.set(ref, {
-    title: draft.title.slice(0, 160), course: draft.course.slice(0, 120), group: draft.group.slice(0, 80), deadline: draftDeadline(), prefs: { ...draft.prefs },
+    title: draft.title.slice(0, 160), course: draft.course.slice(0, 120), group: draft.group.slice(0, 80), deadline: draftDeadline(), prefs: { ...draft.prefs, inFolder: !!(draft.workspace && draft.workspace !== 'temp') },
     parts: draft.parts, owner: uid(), code, statement: await pack((statement + (binaries.length ? `\n\n(Archivos entregados a la IA tal como son: ${binaries.map((p) => p.name).join(', ')})` : '')).slice(0, 2_000_000)),
     encoding: 'gzip', created: serverTimestamp(), updated: serverTimestamp(),
   });
@@ -376,7 +388,9 @@ function working(text) {
 async function generateOutline(files = []) {
   const system = outlinePrompt({ parts: T.parts, course: T.course, deadline: deadlineText(T.deadline), prefs: T.prefs });
   const text = `El enunciado del trabajo «${T.title}»${T.group ? ` (grupo: ${T.group})` : ''} y lo que lo acompaña:\n\n${T.statement}`;
-  const r = await askAI('solution', system, text, files, `Esquema de «${T.title}»`);
+  let r;
+  try { r = await askAI('solution', system, text, files, `Esquema de «${T.title}»`); T.lastError = ''; } catch (e) { T.lastError = e.message; throw e; }
+  keepResume(T.id, r.resume);
   const outline = cleanOutline(parseJSON(r.text), T.parts);
   await setDoc(tRef(T.id), { outline: await pack(outline), ai: madeBy(r), updated: serverTimestamp() }, { merge: true });
   T.outline = outline; T.ai = madeBy(r);
@@ -386,6 +400,7 @@ async function generateMilestone(hid) {
   const milestone = T.outline.hitos.find((h) => h.id === hid);
   const system = milestonePrompt({ milestone, outline: T.outline, prefs: T.prefs });
   const r = await askAI('solution', system, `Escribe el hito ${hid} completo.`, [], `Hito ${hid} de «${T.title}»`);
+  keepResume(T.id, r.resume);
   const data = cleanMilestone(parseJSON(r.text), milestone);
   await setDoc(tRef(T.id, 'hitos', hid), { data: await pack(data), encoding: 'gzip', by: uid(), ai: madeBy(r), updated: serverTimestamp() });
   T.hitos[hid] = { ...data, by: uid(), ai: madeBy(r) };
@@ -501,6 +516,9 @@ function intro() {
           ${holder ? `<span class="who">${esc(nameOf(holder))}${holder === uid() ? ' <button type="button" class="ask" data-tj="leave">soltar</button>' : ''}</span>` : myPart() ? '<span class="mut">libre</span>' : `<button type="button" class="act" data-tj="take" data-part="${L}">Es la mía</button>`}</div>`;
       }).join('')}</div>
       ${missing ? `<div class="card soft"><p>${missing === o.hitos.length ? 'Los capítulos todavía no están escritos.' : missing === 1 ? 'Falta un capítulo por escribir.' : `Faltan ${missing} capítulos por escribir.`} Tu IA los escribe uno por uno; cada uno tarda unos minutos.</p>${aiBlock('solution')}<p><button type="button" class="act" data-tj="gen-all">Escribir ${missing === 1 ? 'el capítulo que falta' : `los ${missing} capítulos`}</button> <span class="mut" id="tj-gen-status" role="status"></span></p></div>` : ''}
+      ${(o.preguntas ?? []).length && !T.prefs?.answers ? `<div class="card soft questions"><h4>Antes de seguir, tu IA quiere confirmar contigo</h4>
+        ${o.preguntas.map((q, i) => `<label class="qa"><b>${esc(q.pregunta)}</b>${q.por_que ? `<span class="mut small">${esc(q.por_que)}</span>` : ''}<textarea data-tj-answer="${i}" rows="2" placeholder="Tu respuesta"></textarea></label>`).join('')}
+        ${T.owner === uid() ? '<p><button type="button" class="act" data-tj="answer">Responder y rehacer el esquema</button> <button type="button" class="ask" data-tj="answer-skip">Seguir sin responder</button> <span class="mut" id="tj-answer-status" role="status"></span></p>' : '<p class="mut small">Quien creó el trabajo responde estas preguntas.</p>'}</div>` : ''}
       ${stepChecks('enunciado', `qué pide el trabajo «${T.title}»: ${o.resumen}`, 'Lo leí')}
     </section>`;
 }
@@ -563,7 +581,8 @@ function closing() {
         <p><button type="button" class="act" data-tj="cite">Descargar la cita</button></p>
         ${used ? `<details class="q"><summary class="qh">Ver lo que se usó</summary><div class="ans">${T.members.flatMap((m) => (T.ia[m.uid] ?? []).map((e) => `<details class="q"><summary class="qh">${esc(m.name)} · ${esc(e.task === 'tutor' ? 'explicación' : 'guía')} · ${esc(e.model)}</summary><pre class="src">${esc(e.prompt)}</pre></details>`)).join('')}</div></details>` : ''}
       </div><div>
-        ${ai.connected().includes('bridge:claude') ? `<h3>Dónde trabaja tu IA</h3><p class="small mut">En esta computadora, para este trabajo.</p><div class="place">${placeHTML(folderOf(T.id) || 'temp')}</div>` : ''}
+        ${ai.connected().includes('bridge:claude') ? `<h3>Dónde trabaja tu IA</h3><p class="small mut">En esta computadora, para este trabajo.</p><div class="place">${placeHTML(folderOf(T.id) || 'temp')}</div>
+          ${resumeOf(T.id) ? `<p class="small">Para seguir hablando con tu IA sobre este trabajo en tu terminal: <code class="tj-wrap">${esc(resumeOf(T.id))}</code> <button type="button" class="ask" data-tj="copy" data-text="${esc(resumeOf(T.id))}">copiar</button></p>` : ''}` : ''}
         <h3>GitHub</h3>
         <p>Si el commit empieza con el número del paso entre corchetes, Studium lo encuentra y marca ese paso como hecho para ti.</p>
         ${T.owner === uid() ? `<form class="inline" id="tj-repo"><input name="repo" value="${esc(repo)}" placeholder="usuario/repositorio" pattern="[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+" aria-label="Repositorio"><button class="act" type="submit">Guardar</button></form>` : repo ? `<p><a href="https://github.com/${esc(repo)}" target="_blank" rel="noopener">${esc(repo)}</a></p>` : ''}
@@ -584,7 +603,7 @@ function closing() {
 
 function noOutline() {
   return `<section class="sec" id="cap-inicio" style="--c:var(--blue);--cs:var(--blue-s)"><h2><span class="n">0</span>La guía todavía no está escrita</h2><div class="card soft">${T.owner === uid()
-    ? `<p>Tu IA lee el enunciado y arma los capítulos: qué pide el trabajo, cómo se reparten y cada paso explicado.</p>${aiBlock('solution')}<p><button type="button" class="act" data-tj="outline">Escribir la guía</button> <span class="mut" id="tj-gen-status" role="status"></span></p>`
+    ? `${T.lastError ? `<div class="trap"><b>Tu IA no pudo escribir la guía.</b><p>${esc(T.lastError)}</p></div>` : ''}<p>Tu IA lee el enunciado y arma los capítulos: qué pide el trabajo, cómo se reparten y cada paso explicado.</p>${aiBlock('solution')}${ai.choice('solution').provider === 'bridge:claude' ? accountPick() : ''}<p><button type="button" class="act" data-tj="outline">${T.lastError ? 'Intentarlo otra vez' : 'Escribir la guía'}</button> <span class="mut" id="tj-gen-status" role="status"></span></p>`
     : '<p>Quien creó el trabajo todavía no escribió la guía.</p>'}</div></section>`;
 }
 
@@ -716,7 +735,7 @@ function wire(root) {
         draft = null;
         if (!later && ai.ready()) {
           working('Tu IA está leyendo el enunciado y armando la guía…');
-          try { await generateOutline(made.pdfs); } catch (e) { ctx.toast(`El trabajo se creó, pero tu IA no pudo armar la guía: ${e.message}`); }
+          try { await generateOutline(made.pdfs); } catch (e) { T.lastError = e.message; }
         }
         location.hash = `#/trabajos/${made.id}`;
       } catch (e) { console.error(e); renderDraft(e.message); }
@@ -743,6 +762,7 @@ function wire(root) {
     } else if (kind === 'mine') { onlyMine = el.checked; repaint(); }
     else if (el.name === 'files' && draft) { keepAnswer(); addFiles([...el.files]); renderDraft(); }
     else if (el.dataset?.tjUse) { ai.setChoice(el.dataset.tjUse, { provider: el.value, model: '', effort: '' }); keepAnswer(); renderDraft(); }
+    else if (el.dataset?.tjAccount !== undefined) { ai.setBridgeAccount(el.value); if (draft) { keepAnswer(); renderDraft(); } else repaint(); }
     else if (el.dataset?.tjWs !== undefined) { if (draft) { draft.workspace = el.value; renderDraft(); } else if (T) { keepFolder(T.id, el.value); repaint(); } }
     else if (el.dataset?.tjMode) {
       try { await ai.changeBridgeFolder(el.dataset.tjMode, { mode: el.value }); ctx.toast(`Permiso cambiado: ${MODE_TEXT[el.value]}.`); } catch (e) { ctx.toast(e.message); }
@@ -773,6 +793,16 @@ function wire(root) {
     if (kind === 'pair-code') {
       const code = b.closest('.tj-bridge')?.querySelector('[data-ai-pair-code]')?.value;
       await busy(b, async () => { if (await pairBridge(code)) { draft.pairing = false; renderDraft(); } }).catch(() => {});
+      return;
+    }
+    if (kind === 'answer' || kind === 'answer-skip') {
+      const answers = kind === 'answer' ? T.outline.preguntas.map((q, i) => `${q.pregunta} → ${String(gRoot().querySelector(`[data-tj-answer="${i}"]`)?.value ?? '').trim() || '(sin respuesta)'}`).join('\n') : '(el grupo prefirió seguir sin responder)';
+      await busy(b, async () => {
+        T.prefs = { ...(T.prefs ?? {}), answers: answers.slice(0, 3000) };
+        await setDoc(tRef(T.id), { prefs: T.prefs, updated: serverTimestamp() }, { merge: true });
+        if (kind === 'answer') { say('#tj-answer-status', 'Tu IA rehace el esquema con tus respuestas…'); await generateOutline(); }
+        repaint();
+      }).catch((e) => say('#tj-answer-status', e.message));
       return;
     }
     if (kind === 'bridge-recheck') {

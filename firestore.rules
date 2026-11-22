@@ -471,7 +471,7 @@ service cloud.firestore {
         && d.statement is bytes && d.statement.size() <= 600000 && d.encoding == 'gzip'
         && (!('outline' in d) || (d.outline is bytes && d.outline.size() <= 600000))
         && (!('ai' in d) || made(d.ai))
-        && (!('prefs' in d) || (d.prefs is map && d.prefs.size() <= 12 && (!('note' in d.prefs) || (d.prefs.note is string && d.prefs.note.size() <= 1500))))
+        && (!('prefs' in d) || (d.prefs is map && d.prefs.size() <= 20 && (!('note' in d.prefs) || (d.prefs.note is string && d.prefs.note.size() <= 1500))))
         && (!('repo' in d) || (d.repo is map && d.repo.keys().hasOnly(['owner', 'name']) && text(d.repo.owner, 100) && text(d.repo.name, 100)))
         && d.created is timestamp && d.updated == request.time;
     }

@@ -13,7 +13,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSyn
 import { homedir, platform, tmpdir } from 'node:os';
 import path from 'node:path';
 
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 const NAME = 'studium-bridge';
 const DEFAULT_PORT = 41730;
 const MAX_BODY = 64 * 1024 * 1024;
@@ -100,9 +100,13 @@ const NEVER = ['WebFetch', 'WebSearch', 'Task', 'Agent'];
 const folders = () => (Array.isArray(readConfig().folders) ? readConfig().folders : []).filter((f) => f && typeof f.path === 'string' && MODES[f.mode]);
 const folderView = (f) => ({ id: f.id, name: path.basename(f.path), path: f.path, mode: f.mode, label: MODES[f.mode].label, exists: existsSync(f.path) });
 // This computer's own «choose a folder» dialog.
+// PowerShell 7 shows Windows' modern folder dialog; Windows PowerShell 5 only the old tree.
+let PWSH = null;
+if (WIN) execFile('where.exe', ['pwsh.exe'], { timeout: 8000, windowsHide: true }, (err, out) => { if (!err) PWSH = String(out).split(/\r?\n/).find((l) => /pwsh\.exe$/i.test(l.trim()))?.trim() ?? null; });
 function pickFolder() {
+  const script = "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Application]::EnableVisualStyles(); $d = New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description = 'Studium: elige la carpeta donde trabajará tu IA'; try { $d.UseDescriptionForTitle = $true } catch {}; $d.ShowNewFolderButton = $true; $f = New-Object System.Windows.Forms.Form; $f.TopMost = $true; $f.ShowInTaskbar = $false; $f.Opacity = 0; $f.StartPosition = 'CenterScreen'; $f.Show(); $f.Activate(); $r = $d.ShowDialog($f); $f.Close(); if ($r -eq 'OK') { [Console]::OutputEncoding = [Text.Encoding]::UTF8; Write-Output $d.SelectedPath }";
   const [cmd, args] = WIN
-    ? ['powershell.exe', ['-NoProfile', '-STA', '-Command', "Add-Type -AssemblyName System.Windows.Forms; $d = New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description = 'Studium: elige la carpeta donde trabajará tu IA'; $d.ShowNewFolderButton = $true; $f = New-Object System.Windows.Forms.Form; $f.TopMost = $true; if ($d.ShowDialog($f) -eq 'OK') { [Console]::OutputEncoding = [Text.Encoding]::UTF8; Write-Output $d.SelectedPath }"]]
+    ? [PWSH ?? 'powershell.exe', ['-NoProfile', '-STA', '-Command', script]]
     : platform() === 'darwin' ? ['osascript', ['-e', 'POSIX path of (choose folder with prompt "Studium: elige la carpeta donde trabajará tu IA")']]
       : ['zenity', ['--file-selection', '--directory', '--title=Studium: elige la carpeta donde trabajará tu IA']];
   return new Promise((resolve) => execFile(cmd, args, { timeout: 10 * 60_000, windowsHide: false, encoding: 'utf8' }, (err, out) => {
@@ -215,7 +219,7 @@ function killTree(child) {
   } catch { /* already gone */ }
 }
 // Runs a CLI without a shell. Resolves with its exit code and output; a timeout kills its whole process tree.
-function runCli(b, args, { cwd, input = null, timeoutMs = DEFAULT_TIMEOUT, env = null } = {}) {
+function runCli(b, args, { cwd, input = null, timeoutMs = DEFAULT_TIMEOUT, env = null, onLine = null } = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(b.cmd, [...b.pre, ...args], { cwd, shell: false, windowsHide: true, detached: !WIN, ...(env ? { env: { ...process.env, ...env } } : {}), stdio: [input == null ? 'ignore' : 'pipe', 'pipe', 'pipe'] });
     let out = ''; let err = '';
@@ -228,7 +232,15 @@ function runCli(b, args, { cwd, input = null, timeoutMs = DEFAULT_TIMEOUT, env =
       child.once('close', () => { clearTimeout(grace); timedOut(); });
       killTree(child);
     }, timeoutMs);
-    child.stdout.on('data', (d) => { out += d; });
+    let pending = '';
+    child.stdout.on('data', (d) => {
+      out += d;
+      if (!onLine) return;
+      pending += d;
+      const lines = pending.split(/\r?\n/);
+      pending = lines.pop();
+      for (const l of lines) { try { onLine(l); } catch { /* only shown */ } }
+    });
     child.stderr.on('data', (d) => { err += d; });
     child.on('error', (e) => { if (done) return; done = true; clearTimeout(timer); reject(new Failure(502, 'failed', `No se pudo abrir la IA: ${e.message}`)); });
     child.on('close', (code) => { if (done) return; done = true; clearTimeout(timer); resolve({ code, out, err }); });
@@ -280,11 +292,17 @@ function claudeAllowed(plan) {
   const families = new Set(rows.filter((m) => m.plans?.[col] === 'incluido' && m.id.toLowerCase() !== 'fable').map((m) => m.id.toLowerCase()));
   return { families, source: `la revisión completa del ${rows[0].checkedAt ?? ''}, tabla de claude.com/pricing` };
 }
-function failureOf(engine, text) {
+function failureOf(engine, text, who = '') {
   const name = { claude: 'Claude Code', codex: 'Codex', antigravity: 'Antigravity' }[engine];
   const t = String(text ?? '');
-  if (/usage credits|pay-as-you-go|spend limit|extra usage/i.test(t)) {
-    return new Failure(402, 'paid', `${name} pidió créditos de uso, que se cobran aparte de tu plan. El puente se detuvo y no reintenta: elige un modelo incluido en tu plan.`);
+  const said = lastLine(t).slice(0, 240);
+  const account = who ? ` (cuenta ${who})` : '';
+  if (/hit your .{0,30}limit|usage limit|limit reached|out of (?:usage|extra) (?:credits|usage)/i.test(t)) {
+    const when = t.match(/resets?\s+([^·\n]{3,60})/i)?.[1]?.trim();
+    return new Failure(429, 'limit', `Tu ${name}${account} llegó a su límite de uso${when ? `; se reinicia ${when}` : ''}. No se cobró nada. Elige otra cuenta, otra IA, o espera. Tu IA dijo: «${said}»`, resetOf(t));
+  }
+  if (/(?:requires?|use|switch to|buy|purchase) (?:usage credits|extra usage)|pay-as-you-go|spend limit/i.test(t)) {
+    return new Failure(402, 'paid', `${name}${account} pidió créditos de uso, que se cobran aparte de tu plan. El puente se detuvo y no reintenta: elige un modelo incluido en tu plan. Tu IA dijo: «${said}»`);
   }
   if (/not supported when using codex with a chatgpt account|not recognized as a known model|invalid model|model.{0,40}not (?:available|found|supported)/i.test(t)) {
     return new Failure(424, 'model', `${name} no acepta ese modelo con tu cuenta. Elige otro en Studium, o deja el que viene por defecto.`);
@@ -295,7 +313,19 @@ function failureOf(engine, text) {
   if (/usage limit|limit reached|rate limit|quota (?:reached|exceeded)|too many requests|hit your .{0,20}limit/i.test(t)) {
     return new Failure(429, 'limit', `Tu suscripción de ${name} llegó a su límite de uso.`, resetOf(t));
   }
-  return new Failure(502, 'failed', `${name} terminó con un error: ${lastLine(t) || 'sin detalle'}`);
+  return new Failure(502, 'failed', `${name}${account} terminó con un error: ${said || 'sin detalle'}`);
+}
+
+// One line per thing the AI does, in the bridge's window.
+function showStep(line) {
+  let e; try { e = JSON.parse(line); } catch { return; }
+  if (e.type !== 'assistant') return;
+  for (const c of e.message?.content ?? []) {
+    if (c.type !== 'tool_use') continue;
+    const target = c.input?.file_path ?? c.input?.path ?? c.input?.pattern ?? c.input?.command ?? '';
+    const what = { Read: 'lee', Glob: 'busca archivos', Grep: 'busca en los archivos', Edit: 'edita', Write: 'escribe', MultiEdit: 'edita', NotebookEdit: 'edita el notebook', Bash: 'ejecuta' }[c.name] ?? c.name;
+    console.log(`    · ${what} ${String(target).slice(0, 140)}`);
+  }
 }
 
 /* ---------- Claude's accounts on this computer ---------- */
@@ -361,11 +391,22 @@ const ENGINES = {
           '--disallowedTools', 'Bash', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit', ...NEVER,
           '--model', String(body.model)];
       if (body.effort) args.push('--effort', String(body.effort));
-      const r = await runCli(b, args, { cwd: body.place ? body.place.path : dir, timeoutMs, env: account.env });
+      const fmt = args.indexOf('json');
+      if (fmt > 0) args.splice(fmt, 1, 'stream-json', '--verbose');
+      console.log(`\nTu IA trabaja (${account.email || account.id}, ${body.model}${body.place ? `, en ${body.place.path}, puede ${MODES[body.place.mode].label}` : ', en una carpeta temporal'})…`);
+      const r = await runCli(b, args, { cwd: body.place ? body.place.path : dir, timeoutMs, env: account.env, onLine: showStep });
       let result = null;
-      try { result = JSON.parse(r.out.trim()); } catch { /* not the JSON result */ }
-      if (result && !result.is_error && result.subtype !== 'error' && typeof result.result === 'string') return result.result;
-      throw failureOf('claude', result?.result || `${r.err}\n${r.out}`);
+      for (const line of r.out.split(/\r?\n/)) { try { const e = JSON.parse(line); if (e.type === 'result') result = e; } catch { /* not an event */ } }
+      if (!result) { try { result = JSON.parse(r.out.trim()); } catch { /* not the JSON result */ } }
+      if (result && !result.is_error && result.subtype !== 'error' && typeof result.result === 'string') {
+        if (result.session_id) {
+          const again = `${account.env ? `${WIN ? `set CLAUDE_CONFIG_DIR=${account.env.CLAUDE_CONFIG_DIR}&& ` : `CLAUDE_CONFIG_DIR="${account.env.CLAUDE_CONFIG_DIR}" `}` : ''}claude --resume ${result.session_id}`;
+          console.log(`  Para seguir hablando con tu IA sobre este pedido, en ${body.place ? body.place.path : 'cualquier carpeta'}:\n      ${again}`);
+          return { text: result.result, session: result.session_id, resume: again };
+        }
+        return result.result;
+      }
+      throw failureOf('claude', result?.result || `${r.err}\n${r.out}`, account.email || account.id);
     },
   },
   codex: {
@@ -613,8 +654,9 @@ async function handleRun(body) {
   try { dir = realpathSync.native(made); } catch { /* keep the path as made */ }
   try {
     const names = writeRun(dir, body);
-    const text = await engine.run(await bin(body.engine === 'antigravity' ? 'agy' : body.engine), dir, { ...body, place }, names, timeoutMs);
-    return { text, engine: body.engine, model: String(body.model ?? ''), effort: String(body.effort ?? ''), ms: Date.now() - started, folder: place ? place.path : '' };
+    const got = await engine.run(await bin(body.engine === 'antigravity' ? 'agy' : body.engine), dir, { ...body, place }, names, timeoutMs);
+    const text = typeof got === 'string' ? got : got.text;
+    return { text, session: got?.session ?? '', resume: got?.resume ?? '', engine: body.engine, model: String(body.model ?? ''), effort: String(body.effort ?? ''), ms: Date.now() - started, folder: place ? place.path : '' };
   } finally {
     removeFolder(dir);
     if (place) { try { rmSync(path.join(place.path, '.studium'), { recursive: false }); } catch { /* not empty, or gone */ } try { const left = readdirSync(path.join(place.path, '.studium')); if (!left.length) rmSync(path.join(place.path, '.studium'), { recursive: true, force: true }); } catch { /* gone */ } }
