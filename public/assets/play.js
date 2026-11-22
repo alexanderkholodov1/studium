@@ -288,7 +288,7 @@ function playAt(c, asked = false) {
       nodo.el.classList.remove('spin-out');
       nodo.fly = null; nodo.gone = true; nodo.el.style.visibility = 'hidden';
       front.querySelector('.speech')?.remove();
-      const started = actProp(c, 'story', { story, on: (ev) => {
+      const started = actProp(c, 'story', { story, skin: specterSkin(), on: (ev) => {
         if (ev.say && ev.x !== undefined) sceneSpeech(ev.say, ev.x, ev.y, ev.ms);
         if (ev.notes && ev.x !== undefined) notesAt(ev.x, ev.y, ev.notes);
         if (ev.mark && ev.x !== undefined) markAt(ev.x, ev.y, ev.mark);

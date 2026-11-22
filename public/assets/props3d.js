@@ -124,7 +124,7 @@ vec2 map(vec3 w){
     if (pack < res.x) res = vec2(pack, 5.);
   }
   // the backpack (camping): a rounded bag on his back, with a rolled blanket on top
-  if (uOutfit > 2.5){
+  if (uOutfit > 2.5 && uDoctor < .5){
     vec3 bq = q - vec3(0., .0, -.52);
     vec3 bd = abs(bq) - vec3(.34, .36, .17);
     float bag = length(max(bd, 0.)) + min(max(bd.x, max(bd.y, bd.z)), 0.) - .08;
@@ -292,7 +292,7 @@ void main(){
     col = base * (.36 + .72*dif) * mix(.72, 1., ao) + vec3(.55,.5,1.)*fres*.8 + spec*.4;
     col += vec3(.35,.4,1.) * .16 * smoothstep(-.2, -.6, q.y);
     // the medic: a white lab coat, closed, with buttons; a white shirt and a red tie show only in the V at the neck;
-    // a high collar; a red cross on his chest; dark hair slicked back, smooth and shiny, parted on the side
+    // a high collar; a red cross on his chest
     if (uDoctor > .5){
       vec3 white = vec3(.97,.97,.95) * (.45 + .65*dif) * mix(.8, 1., ao) + spec*.2;
       float coat = smoothstep(.04, -.01, q.y);
@@ -317,12 +317,6 @@ void main(){
       // a red cross on the left of his chest
       vec2 cr = vec2(q.x + .26, q.y + .2);
       if (q.z > .2 && ((abs(cr.x) < .02 && abs(cr.y) < .055) || (abs(cr.y) < .02 && abs(cr.x) < .055))) col = vec3(.8,.12,.12) * (.5 + .6*dif);
-      // the hair: from a gentle widow's peak over the top to the back, smooth, with one broad shine and a side part
-      float line = .53 + .03 * smoothstep(.0, .3, abs(q.x)) - .07 * (1. - smoothstep(0., .1, abs(q.x))) * step(0., q.z) - .22 * smoothstep(.1, -.45, q.z);
-      if (q.y > line) {
-        col = vec3(.17,.13,.11) * (.5 + .55*dif) + vec3(.5,.42,.38) * pow(spec, .6) * .55;
-        if (q.z > -.2 && abs(q.x - .2) < .01) col *= .65;
-      }
     }
     // the apron (the cake): pink with a white frill and a heart, over his lower body
     if (uOutfit > 1.5 && uOutfit < 2.5 && q.z > 0.){
@@ -333,7 +327,7 @@ void main(){
       if (ap > .5 && length((q.xy - vec2(.0, -.22)) / vec2(.09, .07)) < 1.) col = vec3(.95,.45,.6) * (.6 + .4*dif);
     }
     // the backpack's straps over his shoulders
-    if (uOutfit > 2.5 && q.z > 0. && abs(abs(q.x) - .4) < .045 && q.y < .42 && q.y > -.3) col = vec3(.4,.28,.18) * (.5 + .6*dif);
+    if (uOutfit > 2.5 && uDoctor < .5 && q.z > 0. && abs(abs(q.x) - .4) < .045 && q.y < .42 && q.y > -.3) col = vec3(.4,.28,.18) * (.5 + .6*dif);
     if (q.z > .15) {
       if (uDoctor < .5){
         vec2 g = (q.xy - vec2(0., .64)) / vec2(.065, .08);
@@ -487,10 +481,11 @@ function storyStage({ actor, cam, look: { entry, exit, center, radius, height, s
   return {
     busy: () => !!run,
     hand: () => (run ? bodyPoint(actor.U.uHandR.value, actor.U.uYaw.value, actor.mesh.position) : null),
-    start(story, outfit, on) {
+    start(story, outfit, on, skin = '') {
       run = { story, on, t0: null, i: -1, stepT0: 0, from: null, pos: E.clone(), yaw: 0, stretch: 0 };
       actor.U.uOutfit.value = outfit;
-      Object.assign(actor.state, { mood: 'glad', talk: false, cream: false, roll: 0, hands: 'rest', yaw: 0 });
+      // His double wears what he wears (the medic's costume), with the scene's own things on top.
+      Object.assign(actor.state, { mood: 'glad', talk: false, cream: false, roll: 0, hands: 'rest', yaw: 0, skin });
       return true;
     },
     // When he leaves, the scene is as it was (what he ate grows back, what he moved goes back).
@@ -712,7 +707,7 @@ const PROPS = {
           for (const pr of cherries) for (const m of pr) m.visible = true;
           for (const d of dents) d.visible = false;
           lit = true; flame.visible = true;
-        } }, 2, arg.on); }
+        } }, 2, arg.on, arg.skin); }
         if (name === 'stop') { stage3.stop(); return 1; }
         if (name === 'hold') { hold = true; return 1; }
         if (name === 'free') { hold = false; return 1; }
@@ -1144,7 +1139,7 @@ const PROPS = {
         // He warms up by it: the fire rises a little, quietly.
         if (name === 'warm') { flare = Math.max(flare, 0.45); return 3000; }
         // Specter comes camping: one of his stories (`arg`: { story, on }).
-        if (name === 'story') { if (stage3.busy() || !STORIES[arg?.story]) return 0; return stage3.start({ steps: STORIES[arg.story](), done: () => { twig.visible = false; mallow.visible = false; Object.assign(roast, { toast: 0, burning: false, charred: false, shake: false }); } }, 3, arg.on); }
+        if (name === 'story') { if (stage3.busy() || !STORIES[arg?.story]) return 0; return stage3.start({ steps: STORIES[arg.story](), done: () => { twig.visible = false; mallow.visible = false; Object.assign(roast, { toast: 0, burning: false, charred: false, shake: false }); } }, 3, arg.on, arg.skin); }
         if (name === 'stop') { stage3.stop(); return 1; }
         if (name === 'hold') { hold = true; return 1; }
         if (name === 'free') { hold = false; return 1; }
