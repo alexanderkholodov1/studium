@@ -17,6 +17,7 @@ import { rise } from './fx.js';
 import * as ai from './ai.js';
 import { KINDS as FB_KINDS } from './feedback.js';
 import { IDEAS } from './comunidad.js';
+import * as radioData from './radio.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -24,7 +25,7 @@ const n = (v) => (v == null ? '—' : Number(v).toLocaleString('es'));
 const PROJECT = firebaseConfig.projectId;
 const SECTIONS = {
   resumen: 'Resumen', metricas: 'Métricas', feedback: 'Feedback', acceso: 'Acceso y comunidades', pagina: 'La página', cuentas: 'Cuentas', contenido: 'Contenido',
-  uso: 'Uso de Firebase', eggs: 'Easter eggs', correo: 'Correo', registro: 'Registro',
+  uso: 'Uso de Firebase', eggs: 'Easter eggs', radio: 'Radio', correo: 'Correo', registro: 'Registro',
 };
 // Firestore's free daily quota (Spark plan) and storage.
 const QUOTA = { reads: 50_000, writes: 20_000, deletes: 20_000, storage: 1024 ** 3 };
@@ -50,7 +51,7 @@ const stat = (label, value, note = '') => `<div class="stat"><span>${esc(label)}
 const meter = (label, used, max, fmt = n) => {
   const p = used == null ? 0 : Math.min(100, (used / max) * 100);
   return `<div class="meter ${p > 80 ? 'high' : p > 50 ? 'mid' : ''}"><div class="meter-head"><span>${esc(label)}</span><b>${used == null ? '—' : fmt(used)} <small>de ${fmt(max)}</small></b></div>
-    <i style="--p:${p.toFixed(1)}%"></i></div>`;
+    <i style="--pct:${p.toFixed(1)}%"></i></div>`;
 };
 const email = () => auth.currentUser?.email ?? '';
 
@@ -502,7 +503,155 @@ async function logSection() {
     ${snap.empty ? '<p class="muted">Todavía no hay cambios.</p>' : `<ol class="audit">${snap.docs.map((d) => { const x = d.data(); return `<li><time>${esc(when(x.at))}</time><div><strong>${esc(x.action)}</strong>${x.detail ? `<p>${esc(x.detail)}</p>` : ''}<small>${esc(x.by)}</small></div></li>`; }).join('')}</ol>`}</section>`;
 }
 
-const RENDER = { resumen: summary, metricas: metricsSection, feedback: feedbackSection, acceso: accessSection, pagina: pageSection, cuentas: accountsSection, contenido: contentSection, uso: usageSection, eggs: eggsSection, correo: mailSection, registro: logSection };
+/* ---------- the radio: its stations ---------- */
+// Each station: its name, where it sits on the dial, the secret that opens it, and what it plays: a tune generated
+// live, a YouTube upload (with or without a caption under the radio), or an audio file uploaded here, played in a
+// seamless loop with no window. «Probar» plays it right here.
+const GEN_NAMES = { bossa: 'Bossa para estudiar', lofi: 'Lluvia y lo-fi', chip: '8 bits', andina: 'Andina' };
+const OPENS = [['radio', 'La radio (desde el principio)'], ...EGGS.filter((e) => e.id !== 'radio').map((e) => [e.id, e.name]), ['all', 'Todos los secretos']];
+const mb = (b) => `${(b / 1e6).toFixed(1)} MB`;
+function stationCard(st, isNew = false) {
+  const opt = (v, l, cur) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`;
+  return `<form class="st-card glass" data-station="${esc(st.id)}" data-kind="${esc(st.kind)}" ${isNew ? 'data-new' : ''}>
+    <div class="st-row">
+      <label class="field st-name"><span>Nombre</span><input name="name" maxlength="80" value="${esc(st.name)}" required></label>
+      <label class="field st-freq"><span>En el dial</span><input name="freq" type="number" min="88" max="108" step="0.1" value="${esc(Number(st.freq).toFixed(1))}" required></label>
+      <label class="field"><span>Se abre con</span><select name="opens">${OPENS.map(([v, l]) => opt(v, l, st.opens)).join('')}</select></label>
+      <label class="toggle st-on"><input type="checkbox" name="on" ${st.on !== false ? 'checked' : ''}><span class="knob"></span>Al aire</label>
+    </div>
+    <fieldset class="seg st-kinds"><legend class="sr">Qué suena</legend>
+      ${[['gen', 'Música generada'], ['youtube', 'YouTube'], ['audio', 'Archivo de audio']].map(([k, l]) => `<label><input type="radio" name="kind" value="${k}" ${st.kind === k ? 'checked' : ''}><span>${l}</span></label>`).join('')}</fieldset>
+    <div class="st-k k-gen"><label class="field"><span>Música</span><select name="gen">${Object.entries(GEN_NAMES).map(([v, l]) => opt(v, l, st.gen ?? 'bossa')).join('')}</select></label></div>
+    <div class="st-k k-youtube"><label class="field"><span>Link de YouTube</span><input name="video" placeholder="https://www.youtube.com/watch?v=…" value="${st.video ? `https://youtu.be/${esc(st.video)}` : ''}"></label></div>
+    <div class="st-k k-audio">
+      <p class="st-file">${st.audio ? `Archivo: <strong>${esc(st.audio.name)}</strong> · ${mb(st.audio.size)}` : 'Todavía sin archivo.'}</p>
+      <label class="field"><span>${st.audio ? 'Cambiar el archivo' : 'Subir un archivo'} <small>(mp3, ogg, wav, m4a; hasta ${mb(radioData.MAX_AUDIO)})</small></span><input name="file" type="file" accept="audio/*"></label>
+      <p class="fine">Suena en loop continuo: el final se une con el principio sin silencio.</p>
+    </div>
+    <div class="st-k k-youtube k-audio">
+      <label class="check"><input type="checkbox" name="showCaption" ${st.showCaption ? 'checked' : ''}> Mostrar un texto bajo la radio</label>
+      <label class="field st-caption"><span>Texto</span><textarea name="caption" rows="2" maxlength="400" placeholder="Por ejemplo, el nombre de la canción y su autor">${esc(st.caption ?? '')}</textarea></label>
+    </div>
+    <div class="actions"><button type="button" class="button ghost small k-audio-btn" data-st-try>Probar</button>${st.video ? `<a class="link k-yt-link" href="https://www.youtube.com/watch?v=${esc(st.video)}" target="_blank" rel="noopener">Abrir en YouTube ↗</a>` : ''}
+      <span class="st-msg" role="status"></span>
+      <button type="button" class="link danger" data-st-delete>${isNew ? 'Descartar' : 'Borrar'}</button><button type="submit" class="button primary small">Guardar</button></div>
+  </form>`;
+}
+async function radioSection() {
+  await radioData.loadStations();
+  const list = radioData.allStations();
+  return `<section class="set glass adm-radio"><h2>La radio <small>${list.length} ${list.length === 1 ? 'estación' : 'estaciones'}</small></h2>
+    <p>Cada estación se abre con un secreto. Las de archivo suenan en loop continuo y sin ninguna ventana; las de YouTube se ven en la radio, con su texto si lo pones.</p>
+    ${radioData.isConfigured() ? '' : '<p class="fine">Por ahora suenan las estaciones de siempre. Al guardar cualquier cambio, todas quedan guardadas aquí.</p>'}
+    <div class="stations-list">${list.map((st) => stationCard(st)).join('')}</div>
+    <div class="actions"><button type="button" class="button primary" data-st-new>Agregar una estación</button></div></section>
+    ${await soundsSection()}`;
+}
+// The secrets' sounds: an audio file replaces the page's own sound (the shout of «¡Médico!»); «Quitar» goes back to it.
+async function soundsSection() {
+  const have = await radioData.loadSounds();
+  return `<section class="set glass adm-radio"><h2>Sonidos de los secretos</h2>
+    <p>Si subes un audio, suena en lugar del sonido de la página. Sin audio, suena el de siempre.</p>
+    <div class="stations-list">${Object.entries(radioData.SOUND_SLOTS).map(([id, slot]) => `<form class="st-card glass" data-sound="${esc(id)}" data-kind="audio">
+      <h3>${esc(slot.name)}</h3>
+      <p class="st-file">${have[id] ? `Ahora: <strong>${esc(have[id].name)}</strong> · ${mb(have[id].size)}` : `Ahora: ${esc(slot.fallback)}.`}</p>
+      <label class="field"><span>${have[id] ? 'Cambiar el audio' : 'Subir un audio'} <small>(hasta 2.7 MB)</small></span><input name="file" type="file" accept="audio/*"></label>
+      <div class="actions"><button type="button" class="button ghost small" data-st-try>Probar</button><span class="st-msg" role="status"></span>
+        ${have[id] ? '<button type="button" class="link danger" data-snd-delete>Quitar (volver al de siempre)</button>' : ''}<button type="submit" class="button primary small">Guardar</button></div>
+    </form>`).join('')}</div></section>`;
+}
+// «Probar»: the chosen file (or the one saved) in a loop, right here; pressed again, it stops.
+const trial = { ctx: null, src: null, form: null };
+function stopTrial() { try { trial.src?.stop(); } catch { /* ended */ } trial.src = null; if (trial.form) { const b = trial.form.querySelector('[data-st-try]'); if (b) b.textContent = 'Probar'; } trial.form = null; }
+async function tryStation(form) {
+  if (trial.form === form) { stopTrial(); return; }
+  stopTrial();
+  const msg = form.querySelector('.st-msg');
+  const file = form.querySelector('input[name="file"]').files[0];
+  const isSound = form.dataset.sound !== undefined;
+  try {
+    msg.textContent = 'Cargando…';
+    const bytes = file ? await file.arrayBuffer() : isSound ? await radioData.soundBytes(form.dataset.sound) : await radioData.audioOf(form.dataset.station);
+    trial.ctx ??= new AudioContext();
+    const buffer = await trial.ctx.decodeAudioData(bytes.slice(0));
+    const src = trial.ctx.createBufferSource(); src.buffer = buffer; src.loop = !isSound; src.connect(trial.ctx.destination); src.start();
+    Object.assign(trial, { src, form });
+    form.querySelector('[data-st-try]').textContent = 'Detener';
+    msg.textContent = isSound ? `${buffer.duration.toFixed(1)} s` : `${buffer.duration.toFixed(1)} s en loop`;
+    if (isSound) src.onended = () => { if (trial.src === src) stopTrial(); };
+  } catch { msg.textContent = file ? 'Este archivo no se pudo leer como audio.' : 'Todavía no hay un archivo guardado.'; }
+}
+async function saveStationForm(form) {
+  const f = new FormData(form);
+  const msg = form.querySelector('.st-msg');
+  const old = radioData.allStations().find((x) => x.id === form.dataset.station);
+  const kind = String(f.get('kind'));
+  const st = {
+    id: form.dataset.station, name: String(f.get('name')).trim(), freq: Math.min(108, Math.max(88, Number(f.get('freq')) || 99)),
+    opens: String(f.get('opens')), on: f.get('on') === 'on', kind, gen: String(f.get('gen') ?? 'bossa'),
+    video: radioData.videoId(f.get('video')), caption: String(f.get('caption') ?? '').trim(), showCaption: f.get('showCaption') === 'on', audio: old?.audio,
+  };
+  const file = form.querySelector('input[name="file"]').files[0] ?? null;
+  if (!st.name) { msg.textContent = 'Ponle un nombre.'; return; }
+  if (kind === 'youtube' && !st.video) { msg.textContent = 'Pega un link de YouTube válido.'; return; }
+  if (kind === 'audio' && !file && !old?.audio) { msg.textContent = 'Elige un archivo de audio.'; return; }
+  const btn = form.querySelector('button[type="submit"]'); btn.disabled = true;
+  try {
+    await radioData.saveStation(st, file, (k) => { msg.textContent = file ? `Subiendo… ${Math.round(k * 100)} %` : 'Guardando…'; });
+    await audit('Radio', `${form.dataset.new !== undefined ? 'Estación nueva' : 'Estación cambiada'}: ${st.name} (${st.freq.toFixed(1)})${file ? `, archivo ${file.name}` : ''}`);
+    ctx.toast(`«${st.name}» guardada.`);
+    renderAdmin('radio');
+  } catch (err) { msg.textContent = err.message || 'No se pudo guardar.'; btn.disabled = false; }
+}
+function bindRadio(view) {
+  view.addEventListener('change', (e) => {
+    const form = e.target.closest('.st-card');
+    if (!form) return;
+    if (e.target.name === 'kind') form.dataset.kind = e.target.value;
+    if (e.target.name === 'file' && trial.form === form) stopTrial();
+  });
+  view.addEventListener('submit', async (e) => {
+    const form = e.target.closest('.st-card');
+    if (!form) return;
+    e.preventDefault();
+    if (form.dataset.sound === undefined) { saveStationForm(form); return; }
+    const file = form.querySelector('input[name="file"]').files[0];
+    const msg = form.querySelector('.st-msg');
+    if (!file) { msg.textContent = 'Elige un audio.'; return; }
+    try {
+      await radioData.saveSound(form.dataset.sound, file, (k) => { msg.textContent = `Subiendo… ${Math.round(k * 100)} %`; });
+      await audit('Sonidos', `${radioData.SOUND_SLOTS[form.dataset.sound].name}: ${file.name}`);
+      ctx.toast('Sonido guardado.'); renderAdmin('radio');
+    } catch (err) { msg.textContent = err.message || 'No se pudo guardar.'; }
+  });
+  view.addEventListener('click', async (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.stTry !== undefined) tryStation(b.closest('.st-card'));
+    if (b.dataset.sndDelete !== undefined) {
+      if (!armed(b, '¿Seguro? Pulsa otra vez')) return;
+      const id = b.closest('.st-card').dataset.sound;
+      try { await radioData.deleteSound(id); await audit('Sonidos', `${radioData.SOUND_SLOTS[id].name}: de vuelta al de siempre`); ctx.toast('Volvió el sonido de siempre.'); renderAdmin('radio'); } catch (err) { b.closest('.st-card').querySelector('.st-msg').textContent = err.message || 'No se pudo quitar.'; }
+    }
+    if (b.dataset.stNew !== undefined) {
+      const used = new Set(radioData.allStations().map((x) => Math.round(x.freq * 10)));
+      let f = 999; while (used.has(f) && f < 1080) f += 4;
+      const id = `est-${Date.now().toString(36)}`;
+      $('.stations-list').insertAdjacentHTML('beforeend', stationCard({ id, name: 'Estación nueva', freq: f / 10, opens: 'radio', kind: 'audio', on: true, showCaption: false, caption: '' }, true));
+      $('.stations-list').lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    if (b.dataset.stDelete !== undefined) {
+      const form = b.closest('.st-card');
+      if (form.dataset.new !== undefined) { form.remove(); return; }
+      if (!armed(b, '¿Seguro? Pulsa otra vez')) return;
+      const name = form.querySelector('input[name="name"]').value;
+      try { await radioData.deleteStation(form.dataset.station); await audit('Radio', `Estación borrada: ${name}`); ctx.toast(`«${name}» borrada.`); renderAdmin('radio'); } catch (err) { form.querySelector('.st-msg').textContent = err.message || 'No se pudo borrar.'; }
+    }
+  });
+  addEventListener('hashchange', () => { if (!location.hash.startsWith('#/admin/radio')) stopTrial(); });
+}
+
+const RENDER = { resumen: summary, metricas: metricsSection, feedback: feedbackSection, acceso: accessSection, pagina: pageSection, cuentas: accountsSection, contenido: contentSection, uso: usageSection, eggs: eggsSection, radio: radioSection, correo: mailSection, registro: logSection };
 
 export async function renderAdmin(which = section) {
   section = SECTIONS[which] ? which : 'resumen';
@@ -577,6 +726,7 @@ function armed(button, label) {
 export function mountAdmin(context) {
   ctx = context;
   const view = $('#view-admin');
+  bindRadio(view);
   $('#adm-refresh').addEventListener('click', () => { accounts = null; renderAdmin(); });
   view.addEventListener('click', async (e) => {
     const t = e.target.closest('button');

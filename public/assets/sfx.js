@@ -1,6 +1,6 @@
 // Sounds, synthesized on the spot with the Web Audio API (no audio files), quiet and alive:
-// - every gesture has its own sound and follows what the hand does: grabbing, dragging (a continuous rub that grows
-//   with the speed), throwing (air that grows with the release speed), impacts (by size and speed), shaking,
+// - every gesture has its own sound and follows what the hand does: grabbing, dragging (a clean, airy swish that
+//   opens and brightens with the pull), throwing (a warm rising «fwoop»), impacts (by size and speed), shaking,
 //   setting down, pressing;
 // - nothing is ever the same sound twice: partials, filters, envelopes and stereo position vary on every hit, not
 //   only the pitch;
@@ -112,26 +112,48 @@ const pick = (xs) => xs[Math.floor(Math.random() * xs.length)];
 // Bigger things sound lower.
 const sizeToFreq = (size) => Math.max(140, Math.min(900, 1400 / Math.sqrt(Math.max(8, size))));
 
-/* ---------- the continuous voice of a drag ---------- */
-let rub = null; // { src, filter, gain }
+/* ---------- the voice of a drag: a clean, airy swish that opens with the pull ---------- */
+// Pink noise (no rumble, no hiss) through a soft resonant band: an elegant, breathy «shhh» with a hint of tone, like a
+// finger gliding on a smooth surface. The harder the pull, the brighter and fuller it gets; it pans with the hand, and
+// fades in and out gently. Under 150 Hz nothing sounds (that is what made it feel like a storm).
+let pink = null;
+function pinkNoise() {
+  if (pink) return pink;
+  const len = ctx.sampleRate * 2;
+  pink = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = pink.getChannelData(0);
+  let b0 = 0; let b1 = 0; let b2 = 0; let b3 = 0; let b4 = 0; let b5 = 0; let b6 = 0;
+  for (let i = 0; i < len; i += 1) {
+    const w = Math.random() * 2 - 1;
+    b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759; b2 = 0.969 * b2 + w * 0.153852;
+    b3 = 0.8665 * b3 + w * 0.3104856; b4 = 0.55 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.016898;
+    d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11; b6 = w * 0.115926;
+  }
+  const f = 2000; for (let i = 0; i < f; i += 1) { const k = i / f; d[i] *= k; d[len - 1 - i] *= k; }
+  return pink;
+}
+let rub = null; // { src, band, air, gain, pan }
 function rubStart() {
   if (rub) return;
   const s = ctx.createBufferSource();
-  s.buffer = noise; s.loop = true;
-  const f = ctx.createBiquadFilter();
-  f.type = 'bandpass'; f.Q.value = 0.9; f.frequency.value = 400;
-  const g = ctx.createGain();
-  g.gain.value = 0.0001;
-  out(s.connect(f).connect(g), 0.15, 0);
+  s.buffer = pinkNoise(); s.loop = true;
+  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 150; hp.Q.value = 0.5;
+  const band = ctx.createBiquadFilter(); band.type = 'bandpass'; band.frequency.value = 500; band.Q.value = 1.6;
+  const air = ctx.createBiquadFilter(); air.type = 'highshelf'; air.frequency.value = 3000; air.gain.value = -10;
+  const g = ctx.createGain(); g.gain.value = 0.0001;
+  let node = s.connect(hp).connect(band).connect(air).connect(g);
+  let pan = null;
+  if (ctx.createStereoPanner) { pan = ctx.createStereoPanner(); node = node.connect(pan); }
+  out(node, 0.2, 0);
   s.start(now(), Math.random() * 1.5);
-  rub = { src: s, filter: f, gain: g };
+  rub = { src: s, band, air, gain: g, pan };
 }
 function rubStop() {
   if (!rub) return;
   const r = rub; rub = null;
-  r.gain.gain.cancelScheduledValues(now());
-  r.gain.gain.setTargetAtTime(0.0001, now(), 0.06);
-  r.src.stop(now() + 0.4);
+  const t = now();
+  r.gain.gain.cancelScheduledValues(t); r.gain.gain.setTargetAtTime(0.0001, t, 0.07);
+  r.src.stop(t + 0.5);
 }
 let shakeDir = 0;
 
@@ -184,15 +206,20 @@ export const sfx = {
     rubStart();
     shakeDir = 0;
   },
-  // While dragging: a rub that grows with the speed; quick reversals are a shake.
+  // While dragging: a clean, airy swish that swells and brightens with the pull (and nothing else: no knocks, no taps).
   drag(speed = 0, vx = 0) {
     if (!audio() || !rub) return;
-    const s = Math.min(1, speed / 1800);
-    const t = now();
-    rub.gain.gain.setTargetAtTime(0.0001 + s * 0.035, t, 0.05);
-    rub.filter.frequency.setTargetAtTime(250 + s * 1800, t, 0.05);
+    if (rub) {
+      const s = Math.min(1, speed / 1800);
+      const t = now();
+      // Smooth on purpose: it swells and settles with the hand, never jitters.
+      rub.gain.gain.setTargetAtTime(0.0001 + Math.pow(s, 0.8) * 0.16, t, 0.09);
+      rub.band.frequency.setTargetAtTime(420 + s * 1300, t, 0.12);
+      rub.band.Q.setTargetAtTime(1.8 - s * 0.9, t, 0.12);
+      rub.air.gain.setTargetAtTime(-12 + s * 8, t, 0.12);
+      if (rub.pan) rub.pan.pan.setTargetAtTime(Math.max(-0.5, Math.min(0.5, vx / 2500)), t, 0.15);
+    }
     const dir = Math.sign(vx);
-    if (dir && shakeDir && dir !== shakeDir && Math.abs(vx) > 500 && limit('shake', 70)) this.shake(Math.min(1, Math.abs(vx) / 2500));
     if (dir) shakeDir = dir;
   },
   // Letting go: a soft set-down when slow, air that grows with the speed when thrown.
@@ -201,8 +228,10 @@ export const sfx = {
     rubStop();
     const t = now();
     if (speed > 500) {
+      // Thrown: a soft rising «fwoop», warm and low, never a hiss.
       const s = Math.min(1, speed / 2200);
-      hiss(t, { gain: 0.02 + s * 0.05, attack: 0.02, decay: 0.18 + s * 0.35, freq: 900 + s * 1400, q: 0.6, sweep: 0.35, room: 0.25, pan: (Math.random() - 0.5) * 0.4 });
+      sine(vary(240, 0.05), t, { gain: 0.016 + s * 0.012, attack: 0.03, decay: 0.28 + s * 0.2, glide: 1.6 + s, room: 0.35 });
+      hiss(t, { gain: 0.006 + s * 0.008, attack: 0.04, decay: 0.25, freq: 500, q: 0.5, type: 'lowpass', room: 0.2 });
     } else body(sizeToFreq(size), t, { gain: 0.03, decay: 0.25, bright: 0.3, room: 0.2 });
   },
   // Two things meeting: by size and speed, a different body every time; gentle and never too often.
@@ -214,7 +243,8 @@ export const sfx = {
   shake(intensity = 0.5) {
     if (!audio()) return;
     const t = now();
-    for (let i = 0; i < 3; i += 1) hiss(t + i * vary(0.022, 0.4), { gain: 0.01 + intensity * 0.025, decay: 0.015, freq: vary(2200, 0.4), q: 3, room: 0.1, pan: (Math.random() - 0.5) * 0.8 });
+    // A shake: two soft wooden taps, not a rattle of noise.
+    for (let i = 0; i < 2; i += 1) body(vary(520, 0.1), t + i * 0.05, { gain: 0.008 + intensity * 0.01, decay: 0.08, bright: 0.25, room: 0.1, pan: (Math.random() - 0.5) * 0.6 });
   },
   // A bubble: a drop of water, different every time.
   pop() {
@@ -258,6 +288,33 @@ export const sfx = {
     const t = now();
     sine(196, t, { gain: 0.018, type: 'triangle', attack: 0.4, decay: 1.4, glide: 0.97, room: 0.7 });
     sine(207.7, t + 0.15, { gain: 0.014, type: 'triangle', attack: 0.4, decay: 1.3, glide: 0.97, room: 0.7 });
+  },
+  // A dove: a soft, throaty coo; its wings, a few quick soft beats.
+  coo() {
+    if (!audio() || !limit('coo', 500)) return;
+    const t = now();
+    sine(vary(420, 0.04), t, { gain: 0.022, type: 'triangle', attack: 0.05, decay: 0.28, glide: 0.82, room: 0.3 });
+    sine(vary(380, 0.04), t + 0.32, { gain: 0.018, type: 'triangle', attack: 0.05, decay: 0.36, glide: 0.78, room: 0.3 });
+  },
+  wings() {
+    if (!audio() || !limit('wings', 250)) return;
+    const t = now();
+    for (let i = 0; i < 4; i += 1) hiss(t + i * 0.06, { gain: 0.012, attack: 0.01, decay: 0.05, freq: 700, q: 0.6, type: 'lowpass', room: 0.15 });
+  },
+  // Specter talking: soft syllables, one for every few letters of what he says, a little melody that rises at a
+  // question or an exclamation (a voice with no words).
+  babble(text = '') {
+    if (!audio() || !limit('babble', 120)) return;
+    const t = now();
+    const words = String(text).replace(/[^\p{L}\p{N}\s]/gu, '').trim();
+    const n = Math.max(1, Math.min(9, Math.round(words.length / 3.2)));
+    const lift = /[!¡]/.test(text) ? 1.25 : /[?¿]/.test(text) ? 1.15 : 1;
+    let f = vary(560, 0.06);
+    for (let i = 0; i < n; i += 1) {
+      const last = i === n - 1;
+      f = Math.max(380, Math.min(900, f * vary(1, 0.12) * (last ? lift : 1)));
+      sine(f, t + i * 0.085, { gain: 0.016, type: 'triangle', attack: 0.008, decay: last ? 0.12 : 0.06, glide: last && lift > 1 ? 1.12 : vary(1, 0.05), room: 0.2 });
+    }
   },
   // Specter's voice: a small sound of his own for each emotion, soft and short, never words.
   voice(mood = 'glad') {

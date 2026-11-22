@@ -13,7 +13,6 @@ const found = () => { try { return new Set(JSON.parse(localStorage.getItem(FOUND
 export const DECOR = {
   fire: { name: 'La fogata', opens: 'starve', scene: 'campfire' },
   cake: { name: 'La torta', opens: 'cake' },
-  monitor: { name: 'El monitor', opens: 'medic' },
   portals: { name: 'Los portales', opens: 'portal' },
   trophy: { name: 'El trofeo', opens: 'crit' },
   cup: { name: 'La taza de café', opens: 'cafe' },

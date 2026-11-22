@@ -70,7 +70,11 @@ let tour = null; // { steps, i, root }
 
 function close() {
   if (!tour) return;
-  tour.root.remove();
+  // It goes out the way it came in; Specter comes back to the page.
+  const gone = tour.root;
+  gone.classList.add('out');
+  setTimeout(() => gone.remove(), 320);
+  specter.comeBack();
   removeEventListener('keydown', onKey, true);
   removeEventListener('resize', place);
   removeEventListener('scroll', place, true);
@@ -107,6 +111,11 @@ function go(i) {
   el.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   const card = tour.root.querySelector('.tour-card');
   card.querySelector('.tour-text').textContent = step.text;
+  // Each step's words come in, and Specter nods.
+  const body = card.querySelector('.tour-body'); body.classList.remove('step-in'); void body.offsetWidth; body.classList.add('step-in');
+  const pic = card.querySelector('.tour-specter'); pic.classList.remove('nod'); void pic.offsetWidth; pic.classList.add('nod');
+  pic.dataset.mood = i === 0 ? 'glad' : i === tour.steps.length - 1 ? 'wink' : ['glad', '', 'surprised', ''][i % 4];
+  pic.dataset.talk = '1'; clearTimeout(pic._talk); pic._talk = setTimeout(() => { pic.dataset.talk = ''; }, 300 + step.text.length * 45);
   card.querySelector('.tour-count').textContent = `${i + 1} de ${tour.steps.length}`;
   card.querySelector('[data-tour-prev]').disabled = i === 0;
   card.querySelector('[data-tour-next]').textContent = i === tour.steps.length - 1 ? 'Listo' : 'Siguiente';
@@ -115,7 +124,7 @@ function go(i) {
   setTimeout(place, 420); // after the smooth scroll
 }
 export function startTour(kind = 'section') {
-  close();
+  if (tour) { tour.root.remove(); tour = null; specter.comeBack(); }
   const list = kind === 'general' ? GENERAL : SECTIONS[currentView()] ?? GENERAL;
   const steps = list.filter((s) => visible(document.querySelector(s.sel)));
   if (!steps.length) return;
@@ -130,6 +139,8 @@ export function startTour(kind = 'section') {
     </section>`;
   document.body.append(root);
   tour = { steps, i: 0, root };
+  // Only one Specter: the one of the page spins away, and is the one in the card now.
+  specter.leave();
   root.addEventListener('click', (e) => {
     if (e.target.closest('[data-tour-next]')) go(tour.i + 1);
     else if (e.target.closest('[data-tour-prev]')) go(tour.i - 1);
@@ -175,13 +186,16 @@ export function offerTour(tries = 0) {
       <small>Cuando quieras, el «?» de abajo te explica cada parte.</small>`;
     document.body.append(card);
     props(card);
+    // Only one Specter: where the page's own one cannot come to the card (not in the playful ambience), he steps out
+    // while the card shows him, and comes back when it closes.
+    if (!live) specter.leave();
     if (live) {
       const r = card.getBoundingClientRect();
       specter.visit(r.left - 46, r.top + r.height / 2);
     }
-    const fold = () => { card.classList.add('out'); setTimeout(() => card.remove(), 450); };
+    const fold = () => { card.classList.add('out'); setTimeout(() => card.remove(), 450); if (!live) specter.comeBack(); };
     card.addEventListener('click', (e) => {
-      if (e.target.closest('[data-yes]')) { card.remove(); if (live) specter.home(); startTour('general'); }
+      if (e.target.closest('[data-yes]')) { card.remove(); if (live) specter.home(); else specter.comeBack(); startTour('general'); }
       else if (e.target.closest('[data-no]')) {
         sfx.tick();
         if (live) { specter.say('¡Va! Aquí estaré.', 1400); setTimeout(() => specter.away(9000), 700); }

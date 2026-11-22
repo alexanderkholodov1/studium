@@ -4,7 +4,7 @@
 // wordmark. Everything is DOM moved with transforms; nothing runs when the person prefers reduced motion or focus.
 import { sfx } from './sfx.js';
 import { props, actProp } from './props3d.js';
-import { specterSkin } from './specter.js';
+import { specterSkin, setSpecterSkin, skinOpen } from './specter.js';
 
 const root = document.documentElement;
 const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -95,9 +95,12 @@ function build() {
     back.append(el);
     bodies.push({ el, x, y, vx: rand(-6, 6), vy: rand(-6, 6), r, m: r * r, a: rand(-0.3, 0.3), va: rand(-0.05, 0.05), tier, phase: rand(0, 6.28), sq: 0, sqa: 0 });
   }
-  if (ambience === 'jugueton') makeNodo();
+  if (ambience === 'jugueton' || ambience === 'vivo') makeNodo();
   render();
 }
+// Specter lives his little life (scenes, stories, dances, words) only in the playful ambience; in the lively one he is
+// there to be squashed and thrown, quietly; in the serene one and in focus, he is not there.
+const chatty = () => ambience === 'jugueton';
 
 /* ---------- Nodo ---------- */
 function makeNodo() {
@@ -132,10 +135,12 @@ function poked(b) {
 }
 function mood(name, ms, quiet = false) {
   if (!nodo) return;
-  if (name && name !== 'sleep' && name !== nodo.mood && !quiet) sfx.voice(name);
+  if (name && name !== 'sleep' && name !== nodo.mood && !quiet && chatty()) sfx.voice(name);
   nodo.mood = name; nodo.moodUntil = performance.now() + ms;
   nodo.el.dataset.mood = name;
   nodo.face.dataset.mood = name === 'sleep' ? 'shut' : FACES.includes(name) ? name : name ? 'glad' : '';
+  // His hands say it too.
+  nodo.face.dataset.hands = { surprised: 'cheeks', scared: 'up', yawn: 'mouth', dizzy: 'shrug', love: 'cheeks', angry: 'hips', sad: 'shrug', wink: 'wave' }[name] ?? (name === 'glad' && Math.random() < 0.5 ? 'wave' : 'rest');
 }
 // The faces his canvas knows (props3d.js).
 const FACES = ['glad', 'shut', 'sad', 'surprised', 'angry', 'love', 'dizzy', 'wink', 'scared', 'yawn'];
@@ -227,6 +232,16 @@ function notesAt(x, y, n = 3) {
     }, i * 420);
   }
 }
+// A mark over his head in the scene: «!» when he realizes, «?» when he wonders, «z» when he dozes.
+function markAt(x, y, m) {
+  if (!front) return;
+  const el = document.createElement('span');
+  el.className = `specter-mark m-${m === '!' ? 'bang' : m === '?' ? 'ask' : 'zz'}`;
+  el.textContent = m === 'z' ? 'z' : m;
+  el.style.left = `${x}px`; el.style.top = `${y - 26}px`;
+  front.append(el);
+  setTimeout(() => el.remove(), m === 'z' ? 2200 : 1300);
+}
 // The spin that hides him (out) or brings him back (in), with a puff of sparkles.
 function spin(dir) {
   if (!nodo) return;
@@ -276,9 +291,11 @@ function playAt(c, asked = false) {
       nodo.el.classList.remove('spin-out');
       nodo.fly = null; nodo.gone = true; nodo.el.style.visibility = 'hidden';
       front.querySelector('.speech')?.remove();
-      const started = actProp(c, 'story', { story, on: (ev) => {
-        if (ev.say && ev.x !== undefined) sceneSpeech(ev.say, ev.x, ev.y, ev.ms);
+      const started = actProp(c, 'story', { story, skin: specterSkin(), on: (ev) => {
+        if (ev.say && ev.x !== undefined) { sceneSpeech(ev.say, ev.x, ev.y, ev.ms); sfx.babble(ev.say); }
         if (ev.notes && ev.x !== undefined) notesAt(ev.x, ev.y, ev.notes);
+        if (ev.mark && ev.x !== undefined) markAt(ev.x, ev.y, ev.mark);
+        if (ev.poof && ev.x !== undefined) burst(ev.x, ev.y, 10);
         if (ev.end) comeBack();
       } });
       if (!started) { comeBack(); return; }
@@ -300,6 +317,181 @@ function droppedOnDecor(x, y) {
   nodo.place = nodo.grabbedFrom ?? nodo.place;
   return playAt(c, true) || true;
 }
+// Where he dances: beside the radio (right of it if there is room, else left).
+function danceSpot(el) {
+  const r = el.getBoundingClientRect();
+  const right = r.right + nodo.r * 1.2 < innerWidth;
+  return { x: right ? r.right + nodo.r * 0.8 : r.left - nodo.r * 0.8, y: Math.min(innerHeight - nodo.r - 20, Math.max(90, r.top + r.height * 0.55)), r };
+}
+// When the radio plays, he comes to dance by it for a while: bouncing on the beat, swaying, hands up, notes; then back
+// to his place. While the music goes on, he comes back now and then.
+let music = { on: false, el: null, next: 0 };
+let dancing = 0;
+function danceBy() {
+  const el = music.el;
+  if (!music.on || !nodo || nodo.gone || away || drag || dancing || !el?.isConnected || !running() || !chatty()) return false;
+  const { x, y, r } = danceSpot(el);
+  if (!r.width || r.bottom < 80 || r.top > innerHeight - 40) return false;
+  stopRoutine();
+  if (nodo.place == null) nodo.place = nodo.home ?? nodo.x;
+  specter.visit(x, y);
+  const run = ++dancing;
+  const beats = 22; const beat = 380;
+  setTimeout(() => {
+    if (run !== dancing || !nodo?.fly) { dancing = 0; return; }
+    mood('glad', beats * beat, true); say(['¡A bailar!', '¡Esta me gusta!', '♪ ♫'][Math.floor(Math.random() * 3)], 1500);
+    for (let i = 0; i < beats; i += 1) {
+      setTimeout(() => {
+        if (run !== dancing || !nodo?.fly) return;
+        // The radio moved (dragged somewhere else): he goes with it, dancing.
+        const to = danceSpot(el);
+        if (Math.hypot(to.x - nodo.fly.x, to.y - nodo.fly.y) > 24) flyTo(to.x, to.y, { ms: 420, arc: 10 });
+        const up = i % 2 === 0;
+        pose({ y: up ? -14 : 0, rot: (i % 4 < 2 ? -1 : 1) * 10, scale: up ? 1.04 : 0.97, ms: beat * 0.9 });
+        nodo.face.dataset.hands = i % 8 < 4 ? 'up' : 'wave';
+        if (i % 6 === 0) notes(2);
+        if (i === Math.floor(beats / 2)) mood('love', beat * 4, true);
+      }, i * beat);
+    }
+    setTimeout(() => {
+      if (run !== dancing) return;
+      dancing = 0; pose({ ms: 300 }); nodo.face.dataset.hands = 'rest'; mood('wink', 900);
+      if (nodo?.fly) specter.home();
+      music.next = performance.now() + rand(60000, 120000);
+    }, beats * beat + 200);
+  }, 1100);
+  return true;
+}
+let offTimer = 0;
+addEventListener('studium-radio', (e) => {
+  const was = music.on;
+  music.on = !!e.detail?.on; music.el = e.detail?.el ?? music.el;
+  clearTimeout(offTimer);
+  if (music.on) { if (!dancing) setTimeout(danceBy, 1400); return; }
+  if (!was) return;
+  // Turned off (and still off a moment later: not just a change of station): he reacts.
+  offTimer = setTimeout(() => {
+    if (music.on || !nodo || nodo.gone || away) return;
+    if (dancing) {
+      dancing = 0; pose({ ms: 200 }); nodo.face.dataset.hands = 'cheeks';
+      mood('sad', 2200); say(['¡Oye! Estaba bailando…', '¿Por qué la apagaste?', 'Ay, justo en la mejor parte.'][Math.floor(Math.random() * 3)], 2200);
+      setTimeout(() => { if (nodo?.fly) specter.home(); }, 1600);
+    } else if (running()) {
+      mood('surprised', 1200); say(['¿Se acabó la música?', 'Mmm, silencio.', '¿Ya no hay radio?'][Math.floor(Math.random() * 3)], 1800);
+    }
+  }, 700);
+});
+// Dropped on the radio: he dances by it, and turns it on first if it was off.
+function droppedOnRadio(x, y) {
+  const el = document.getElementById('egg-radio');
+  if (!el || el.classList.contains('waiting')) return false;
+  const r = el.getBoundingClientRect();
+  if (!r.width || x < r.left - 10 || x > r.right + 10 || y < r.top - 10 || y > r.bottom + 10) return false;
+  music.el = el;
+  if (el.classList.contains('playing')) { music.on = true; danceBy(); }
+  else { mood('glad', 1200, true); say('¡Pongamos música!', 1400); el.querySelector('[data-radio-play]')?.click(); }
+  return true;
+}
+/* ---------- the medic's routines (when he wears that costume): doves, Archimedes, a checkup ---------- */
+// A dove on the screen: a small 3D bird (props3d.js 'dove') that flies along an arc, perches, pecks, flies away.
+function dove(x, y) {
+  const el = document.createElement('div');
+  el.className = 'dove';
+  el.innerHTML = '<canvas class="prop" data-prop="dove" data-fixed data-flap="1" aria-hidden="true"></canvas>';
+  front.append(el);
+  props(el);
+  const c = el.querySelector('canvas');
+  const d = { el, x, y, set(px, py, face) { this.x = px; this.y = py; el.style.transform = `translate3d(${(px - 36).toFixed(1)}px, ${(py - 36).toFixed(1)}px, 0) scaleX(${face < 0 ? -1 : 1})`; } };
+  d.set(x, y, 1);
+  d.fly = (tx, ty, ms = 1400, lift = 70) => new Promise((res) => {
+    const fx = d.x; const fy = d.y; const t0 = performance.now(); const face = tx < fx ? -1 : 1;
+    c.dataset.flap = '1'; c.dataset.peck = ''; sfx.wings();
+    const step = (now) => {
+      if (!el.isConnected) { res(); return; }
+      const k = Math.min(1, (now - t0) / ms); const e = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
+      d.set(fx + (tx - fx) * e, fy + (ty - fy) * e - Math.sin(k * Math.PI) * lift, face);
+      if (k < 1) requestAnimationFrame(step); else res();
+    };
+    requestAnimationFrame(step);
+  });
+  d.perch = () => { c.dataset.flap = ''; };
+  d.peck = (on) => { c.dataset.peck = on ? '1' : ''; if (on) sfx.coo(); };
+  d.gone = () => { el.classList.add('out'); setTimeout(() => el.remove(), 400); };
+  return d;
+}
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+// The medic's lines: many, so they rarely repeat (each picks one it did not say last time).
+const LINES = {
+  hello: ['¡Archimedes!', '¡Mi pajarito!', '¡Ahí estás, Archimedes!', '¡Archimedes, amigo mío!', '¡Hola, pequeño!'],
+  ouch: ['¡Ay!', '¡Auch!', '¡Oye!', '¡Eso dolió!', '¡Mi cabeza!'],
+  scold: ['¡Archimedes! ¡No!', '¡Archimedes, compórtate!', '¡Nada de picotear al médico!', '¡Archimedes! ¡Eso no se hace!', '¡Archimedes! ¡Te vi!'],
+  after: ['Pájaro travieso…', 'Ya volverá.', 'Siempre lo mismo con él.', 'Mañana te quedas sin semillas.', 'Ese pájaro…'],
+  call: ['♪ Fiu, fiu…', '♪ Palomitas…', '♪ ¡Vengan, vengan!', '♪ Fiu-fiu-fiuuu…'],
+  feed: ['Coman, coman.', 'Hay para todos.', 'Despacio, despacio.', '¡Qué hambre traían!'],
+  bye: ['¡Adiós!', '¡Vuelvan pronto!', '¡Cuídense!', '¡Hasta luego, palomitas!'],
+  pulse: ['A ver ese pulso…', 'Mmm, revisemos…', 'Respire hondo…', 'Un momento, paciente…'],
+  fine: ['Mmm… todo en orden.', 'Sano como una manzana.', 'Nada que una siesta no cure.', 'Perfecto. Siguiente paciente.', 'El diagnóstico: necesitas estudiar.'],
+  dress: ['¡Listo para curar!', '¡El doctor ha llegado!', '¿Quién necesita un médico?', '¡A trabajar!'],
+  undress: ['Mejor así.', 'Turno terminado.', 'Hora de descansar.', 'Ahh, más cómodo.'],
+};
+const said = {};
+function line(kind) {
+  const list = LINES[kind]; let i = Math.floor(Math.random() * list.length);
+  if (list.length > 1 && i === said[kind]) i = (i + 1) % list.length;
+  said[kind] = i; return list[i];
+}
+const MEDIC = {
+  async archimedes() {
+    const head = () => ({ x: nodo.x + 6, y: nodo.y - nodo.r * 0.95 });
+    const b = dove(innerWidth + 60, Math.max(80, nodo.y - 260));
+    await b.fly(head().x, head().y, 1700, 60);
+    b.perch(); sfx.coo();
+    mood('love', 1800, true); nodo.face.dataset.hands = 'cheeks'; say(line('hello'), 1600);
+    await wait(1800);
+    b.peck(true); mood('surprised', 1200); nodo.face.dataset.hands = 'up'; say(line('ouch'), 900); nodo.sq = -0.12; wake();
+    await wait(1300);
+    b.peck(false); mood('angry', 2000); nodo.face.dataset.hands = 'hips'; say(line('scold'), 1700);
+    await wait(900);
+    b.fly(-80, Math.max(60, nodo.y - 300), 1600, 40).then(() => b.gone());
+    await wait(1000);
+    nodo.face.dataset.hands = 'shake'; say(line('after'), 1500);
+    await wait(1600);
+    nodo.face.dataset.hands = 'rest'; mood('wink', 900);
+  },
+  async flock() {
+    nodo.face.dataset.hands = 'up'; mood('glad', 2400, true); nodo.face.dataset.talk = '1'; sfx.voice('hum'); say(line('call'), 1500);
+    await wait(900);
+    nodo.face.dataset.talk = '';
+    const birds = [[-60, 120], [innerWidth + 60, 160], [innerWidth / 2, -60]].map(([x, y]) => dove(x, y));
+    const cx = nodo.x; const cy = nodo.y - nodo.r * 1.6;
+    await Promise.all(birds.map((b, i) => b.fly(cx + Math.cos(i * 2.1) * 110, cy + Math.sin(i * 2.1) * 50, 1500 + i * 200, 50)));
+    mood('love', 2000, true); nodo.face.dataset.hands = 'cheeks';
+    for (let r = 0; r < 2; r += 1) await Promise.all(birds.map((b, i) => b.fly(cx + Math.cos(i * 2.1 + (r + 1) * 1.4) * 110, cy + Math.sin(i * 2.1 + (r + 1) * 1.4) * 50, 700, 15)));
+    await Promise.all(birds.map((b, i) => b.fly(nodo.x + (i - 1) * 70 + (i === 1 ? 0 : 0), innerHeight - 30, 900, 10)));
+    for (const b of birds) { b.perch(); b.peck(true); }
+    say(line('feed'), 1500); nodo.face.dataset.hands = 'rest';
+    await wait(2000);
+    for (const [i, b] of birds.entries()) { b.peck(false); b.fly(i % 2 ? innerWidth + 80 : -80, 60 + i * 40, 1400, 60).then(() => b.gone()); }
+    nodo.face.dataset.hands = 'wave'; say(line('bye'), 1200);
+    await wait(1400);
+    nodo.face.dataset.hands = 'rest';
+  },
+  async checkup() {
+    nodo.face.dataset.hands = 'hold'; mood('', 3000, true); say(line('pulse'), 1600);
+    await wait(1200); sfx.heartbeat(); await wait(700); sfx.heartbeat(); await wait(900);
+    mood('wink', 1400); nodo.face.dataset.hands = 'hips'; say(line('fine'), 1600);
+    await wait(1500); nodo.face.dataset.hands = 'rest';
+  },
+};
+let medicBusy = false;
+function medicRoutine() {
+  if (medicBusy || !nodo || nodo.gone || specterSkin() !== 'doctor') return false;
+  const names = Object.keys(MEDIC);
+  const pick = names[Math.floor(Math.random() * names.length)];
+  medicBusy = true;
+  MEDIC[pick]().catch(() => {}).finally(() => { medicBusy = false; if (nodo) nodo.face.dataset.hands = 'rest'; });
+  return true;
+}
 let routineRun = 0;
 function stopRoutine() {
   routineRun += 1;
@@ -308,19 +500,24 @@ function stopRoutine() {
 function routine() {
   const now = performance.now();
   if (now - lastVisit > rand(6, 12) * 60000 && decorVisit()) { lastVisit = now; return; }
+  if (music.on && now > music.next && danceBy()) return;
+  // In his medic's costume, most of his little scenes are a medic's.
+  if (specterSkin() === 'doctor' && Math.random() < 0.65 && medicRoutine()) return;
   const names = Object.keys(ROUTINES);
   const steps = ROUTINES[names[Math.floor(Math.random() * names.length)]];
   const run = ++routineRun;
   for (const [ms, fn] of steps) setTimeout(() => { if (run === routineRun && nodo && !drag && !nodo.fly && !nodo.gone) fn(); }, ms);
 }
 export function say(text, ms = 2600) {
-  if (!nodo) return;
+  if (!nodo || !chatty()) return;
   front.querySelector('.speech')?.remove();
   const el = document.createElement('div');
   el.className = 'speech';
   el.textContent = text;
   front.append(el);
   nodo.speech = el;
+  // He says it out loud, in his voice with no words.
+  sfx.babble(text);
   // He moves his mouth while the words are on screen (about the time it takes to say them).
   nodo.face.dataset.talk = '1';
   clearTimeout(nodo.talking);
@@ -410,7 +607,7 @@ function hit(x, y) {
 function grab(b, e) {
   drag = { body: b, id: e.pointerId, ox: e.clientX - b.x, oy: e.clientY - b.y, moved: 0 };
   root.classList.add('grabbing');
-  if (b.kind === 'nodo') { b.grabbedFrom = b.home ?? b.x; if (away && !b.gone) away = null; stopRoutine(); mood('surprised', 99999); b.fly = null; }
+  if (b.kind === 'nodo') { b.grabbedFrom = b.home ?? b.x; if (away && !b.gone) away = null; if (dancing) { dancing = 0; pose({ ms: 150 }); } stopRoutine(); mood('surprised', 99999); b.fly = null; }
   sfx.grab(b.r * 2);
   idleSince = performance.now();
   wake();
@@ -424,7 +621,8 @@ function release() {
   b.va += (pointer.vx / b.r) * 0.004;
   // Thrown hard he gets dizzy; let go gently, glad.
   if (b.kind === 'nodo') b.home = null;
-  if (b.kind === 'nodo' && drag.moved >= 4 && speed < 900 && droppedOnDecor(b.x, b.y)) { drag = null; root.classList.remove('grabbing'); return; }
+  // Dropped on the decoration: he goes in (the grab's rubbing sound ends here too, or it would go on).
+  if (b.kind === 'nodo' && drag.moved >= 4 && speed < 900 && (droppedOnCostume(b.x, b.y) || (chatty() && (droppedOnRadio(b.x, b.y) || droppedOnDecor(b.x, b.y))))) { sfx.release(0, b.r * 2); drag = null; root.classList.remove('grabbing'); return; }
   if (b.kind === 'nodo') { if (drag.moved < 4) poked(b); else if (speed > 900) { mood('dizzy', 2200); say(['¡Wiii!', 'Mareado…', '¡Otra vez!'][Math.floor(Math.random() * 3)], 1500); } else mood('glad', 900); }
   else if (drag.moved < 4) { b.vy -= 160; b.va += rand(-1, 1); }
   sfx.release(drag.moved < 4 ? 600 : speed, b.r * 2);
@@ -566,7 +764,7 @@ function step(h, now) {
   if (nodo) {
     // He stays where he is; where he was dropped becomes his place once he stops.
     if (nodo.home == null && Math.abs(nodo.vx) < 20 && !drag && !nodo.gone) nodo.home = nodo.x;
-    if (!drag && !nodo.fly && !away && now > nodo.hop && nodo.mood !== 'sleep' && !nodo.gone) {
+    if (!drag && !nodo.fly && !away && now > nodo.hop && nodo.mood !== 'sleep' && !nodo.gone && chatty()) {
       routine();
       nodo.hop = now + rand(14000, 28000);
     }
@@ -638,9 +836,88 @@ function flyTo(x, y, { ms = 900, stay = 0, loops = 0, arc = 60, out = false, the
   wake();
   return true;
 }
+/* ---------- his costumes: dragged onto him (or he onto them), he puts one on; again, he takes it off ---------- */
+export function wearCostume(id) {
+  if (!skinOpen(id)) return;
+  const off = specterSkin() === id;
+  setSpecterSkin(off ? '' : id);
+  dispatchEvent(new CustomEvent('studium-skin', { detail: { skin: off ? '' : id } }));
+  if (!nodo || nodo.gone) return;
+  stopRoutine();
+  spin('in');
+  setTimeout(() => nodo?.el.classList.remove('spin-in'), 600);
+  sfx.voice(off ? 'wink' : 'glad');
+  mood(off ? 'wink' : 'love', 1600, true);
+  say(off ? line('undress') : id === 'doctor' ? line('dress') : '¡Me queda bien!', 1700);
+  wake();
+}
+// Specter dropped on a costume of the Easter eggs.
+function droppedOnCostume(x, y) {
+  for (const el of document.querySelectorAll('[data-costume]')) {
+    const r = el.getBoundingClientRect();
+    if (r.width && x >= r.left - 6 && x <= r.right + 6 && y >= r.top - 6 && y <= r.bottom + 6) { wearCostume(el.dataset.costume); return true; }
+  }
+  return false;
+}
+// A costume dragged onto him: it follows the hand; let go over him, he wears it; elsewhere, it goes back.
+function costumeDrag(e) {
+  const item = e.target.closest?.('[data-costume]');
+  if (!item || e.button !== 0) return;
+  const start = { x: e.clientX, y: e.clientY };
+  let moved = false;
+  const move = (ev) => {
+    const dx = ev.clientX - start.x; const dy = ev.clientY - start.y;
+    if (!moved && Math.hypot(dx, dy) < 6) return;
+    if (!moved) { moved = true; item.classList.add('dragging-costume'); }
+    item.style.translate = `${dx}px ${dy}px`;
+    const r = nodo?.el.getBoundingClientRect();
+    item.classList.toggle('over-specter', !!r && !nodo.gone && ev.clientX > r.left && ev.clientX < r.right && ev.clientY > r.top && ev.clientY < r.bottom);
+  };
+  const up = (ev) => {
+    removeEventListener('pointermove', move); removeEventListener('pointerup', up);
+    if (!moved) return;
+    const r = nodo?.el.getBoundingClientRect();
+    const onHim = !!r && !nodo.gone && ev.clientX > r.left - 10 && ev.clientX < r.right + 10 && ev.clientY > r.top - 10 && ev.clientY < r.bottom + 10;
+    item.classList.remove('dragging-costume', 'over-specter');
+    item.style.translate = '';
+    if (onHim) wearCostume(item.dataset.costume);
+    // A drag is not a press: the click that follows does nothing.
+    item.addEventListener('click', (c) => { c.stopPropagation(); c.preventDefault(); }, { capture: true, once: true });
+  };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+}
+document.addEventListener('pointerdown', costumeDrag);
+
+// Only one Specter on screen: when something else shows him (the tour), the one of the page spins away, and comes
+// back to his place when it ends. Nested callers are counted.
+let held = 0;
+function leavePage() {
+  held += 1;
+  if (!nodo || nodo.gone) return;
+  stopRoutine();
+  if (dancing) { dancing = 0; pose({ ms: 150 }); }
+  nodo.fly = null;
+  spin('out');
+  setTimeout(() => { if (!nodo || held === 0) return; nodo.el.classList.remove('spin-out'); nodo.gone = true; nodo.el.style.visibility = 'hidden'; front?.querySelector('.speech')?.remove(); }, 550);
+}
+function returnToPage() {
+  held = Math.max(0, held - 1);
+  if (held || !nodo || away) return;
+  if (!nodo.gone) { nodo.el.classList.remove('spin-out'); return; }
+  nodo.x = Math.max(nodo.r + 20, Math.min(W - nodo.r - 20, nodo.place ?? nodo.home ?? nodo.x)); nodo.y = H - nodo.r - 34; nodo.vx = 0; nodo.vy = 0;
+  nodo.home = nodo.x;
+  nodo.gone = false; nodo.el.style.visibility = '';
+  spin('in'); render();
+  setTimeout(() => { nodo?.el.classList.remove('spin-in'); mood('glad', 1000, true); }, 600);
+  wake();
+}
+
 export const specter = {
+  // Away from the page while something else shows him (the tour), and back.
+  leave: () => leavePage(),
+  comeBack: () => returnToPage(),
   // Is he on screen (the playful ambience, moving)?
-  here: () => !!nodo && running() && !nodo.gone && !away,
+  here: () => !!nodo && running() && !nodo.gone && !away && chatty(),
   // Where he is, on the screen.
   at: () => (nodo ? { x: nodo.x, y: nodo.y, r: nodo.r } : null),
   visit(x, y, stay = 0) { if (nodo && !nodo.fly) nodo.place = nodo.home ?? nodo.x; return flyTo(Math.max(nodo?.r ?? 40, Math.min(W - (nodo?.r ?? 40), x)), Math.max(70, Math.min(H - (nodo?.r ?? 40), y)), { ms: 900, stay, arc: 40 }); },
@@ -663,6 +940,8 @@ export const specter = {
     nodo.home = home;
     flyTo(home, H - nodo.r - 34, { ms: 1600, loops: 1, arc: 110, stay: 1, then: () => { mood('glad', 1600); say(['¡Volví!', '¡Aquí estoy!', 'Boo. ¿Me extrañaste?'][Math.floor(Math.random() * 3)], 1800); sfx.boing(2); } });
   },
+  // One of the medic's scenes now (in that costume).
+  medic: (name) => { if (name && MEDIC[name] && !medicBusy && nodo && !nodo.gone) { medicBusy = true; MEDIC[name]().catch(() => {}).finally(() => { medicBusy = false; }); return true; } return medicRoutine(); },
   // Into the decoration of Inicio now (its stories still wait their turn).
   decor: () => playAt(placedDecor(), true),
   say: (text, ms) => say(text, ms),
@@ -692,8 +971,22 @@ export const play = {
   setBubbles(on) { bubblesOn = !!on; if (!on) for (const b of [...bubbles]) pop(b, true); },
   setAmbience(name) {
     if (name === ambience) return;
+    const was = ambience;
     ambience = name;
-    if (back) { build(); wake(); }
+    if (!back) return;
+    // Into or out of focus (nothing floats there) the scene is made again; between the others, the floating things
+    // stay exactly where they are, and only Specter comes or goes, spinning.
+    if (name === 'enfoque' || was === 'enfoque' || !bodies.length) { build(); wake(); return; }
+    const wants = name === 'jugueton' || name === 'vivo';
+    if (wants && !nodo) { makeNodo(); spin('in'); setTimeout(() => nodo?.el.classList.remove('spin-in'), 600); }
+    else if (!wants && nodo) {
+      const gone = nodo; stopRoutine(); spin('out');
+      setTimeout(() => { gone.el.remove(); bodies = bodies.filter((b) => b !== gone); if (nodo === gone) nodo = null; front.querySelector('.speech')?.remove(); }, 560);
+    }
+    if (!chatty()) { dancing = 0; front?.querySelectorAll('.speech').forEach((el) => el.remove()); }
+    // Into the playful one, he says so: here he plays and talks.
+    if (name === 'jugueton' && nodo) setTimeout(() => { if (nodo && chatty()) { mood('glad', 1600); say(['¡Ahora sí! Aquí juego y hablo contigo.', '¡Modo juguetón! Ahora sí podemos conversar.', '¡Yupi! Aquí tengo mucho que contarte.'][Math.floor(Math.random() * 3)], 2600); } }, 700);
+    wake();
   },
   // The map and the guide reader need the whole screen still.
   setQuiet(on) { quiet = on; if (!on) wake(); },

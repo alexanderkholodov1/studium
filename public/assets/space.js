@@ -7,7 +7,7 @@ import { prefs, MODES, AMBIENCES, THEMES, AVATARS } from './prefs.js';
 import * as ai from './ai.js';
 import { when, nextMidnight } from './aierror.js';
 import { sfx } from './sfx.js';
-import { celebrate } from './play.js';
+import { celebrate, wearCostume } from './play.js';
 import { themeStyle, keyOf } from './themes.js';
 import { rise } from './fx.js';
 import { auth } from './data.js';
@@ -274,7 +274,7 @@ function shelfTile(span) {
   const crits = critCount();
   const items = [
     f.has('cake') ? `<button type="button" class="trinket" data-trinket="cake" aria-label="La torta: sopla la vela" title="Sopla la vela">${prop3d('cake')}<small>La torta</small></button>` : '',
-    f.has('medic') ? `<button type="button" class="trinket" data-trinket="medic" aria-label="El monitor: tómate el pulso" title="Tómate el pulso">${prop3d('monitor')}<small>El monitor</small></button>` : '',
+    f.has('medic') ? `<button type="button" class="trinket costume ${specterSkin() === 'doctor' ? 'worn' : ''}" data-costume="doctor" data-costume-toggle="doctor" aria-pressed="${specterSkin() === 'doctor'}" aria-label="Disfraz de médico: ${specterSkin() === 'doctor' ? 'puesto; púlsalo para quitárselo' : 'guardado; púlsalo o arrástralo sobre Specter para ponérselo'}" title="${specterSkin() === 'doctor' ? 'Puesto. Púlsalo para quitárselo' : 'Púlsalo, o arrástralo sobre Specter, para ponérselo'}">${prop3d('specter', '', 'data-skin="doctor" data-mood="glad" data-fixed')}<small>Disfraz de médico</small><span class="worn-badge" aria-hidden="true">${specterSkin() === 'doctor' ? '✓ Puesto' : 'Ponérselo'}</span></button>` : '',
     f.has('portal') ? `<button type="button" class="trinket" data-trinket="portal" aria-label="Los portales: suelta una canica" title="Suelta una canica">${prop3d('portals')}<small>Portales</small></button>` : '',
     f.has('crit') ? `<button type="button" class="trinket" data-trinket="crit" aria-label="Golpes críticos: ${crits}" title="Golpes críticos">${prop3d('trophy')}<small>× ${crits} crítico${crits === 1 ? '' : 's'}</small></button>` : '',
     f.has('cafe') ? `<button type="button" class="trinket" data-trinket="cafe" aria-pressed="${backdrop() === 'cafe'}" title="Enciende o apaga la «Noche de estudio»">${prop3d('cup')}<small>Noche de estudio</small></button>` : '',
@@ -292,7 +292,7 @@ const scheduleTile = (span) => tile('schedule', span, '<div class="home-schedule
 function decorTile(span) {
   const k = decor.current();
   const all = decor.unlocked();
-  const POKE = { cake: 'cake', monitor: 'medic', portals: 'portal' };
+  const POKE = { cake: 'cake', portals: 'portal' };
   const menu = all.length ? `<details class="decor-add"><summary title="Elegir la decoración">${k ? 'Cambiar' : 'Elegir'}</summary><div class="decor-menu">${all.map((x) => `<button type="button" data-decor-add="${x}" aria-pressed="${x === k}">${prop3d(decor.sceneOf(x))}<span>${esc(decor.DECOR[x].name)}</span></button>`).join('')}${k ? '<button type="button" class="decor-none" data-decor-remove>Sin decoración</button>' : ''}</div></details>` : '';
   return tile('decor', span, `${menu}${k ? `<button type="button" class="decor-obj" ${POKE[k] ? `data-trinket="${POKE[k]}"` : 'data-decor-poke'} aria-label="${esc(decor.DECOR[k].name)}" title="${esc(decor.DECOR[k].name)}">${prop3d(decor.sceneOf(k))}</button>`
     : `<p class="decor-empty">${all.length ? 'Elige una decoración para este espacio.' : 'Los Easter eggs desbloquean escenas en 3D para este espacio: una fogata en la noche, un fonógrafo, una torta… Búscalos.'}</p>`}`, 'decor-tile');
@@ -334,7 +334,8 @@ export function renderHome() {
   $('#dash').innerHTML = `${top}${editing ? trayTile() : ''}<div class="dash-grid" id="dash-grid" style="--rows:${grid.rows(items)}">${tiles}</div>`;
   placeRadio();
   props($('#dash'));
-  renderHomeSchedule($('#dash [data-home-schedule]'));
+  renderHomeSchedule($('#dash [data-home-schedule]')).then?.(() => fitTiles());
+  fitTiles();
   $('#dash').classList.toggle('editing', editing);
   $('#home-edit').textContent = editing ? 'Listo' : 'Personalizar';
   $('#home-edit').setAttribute('aria-pressed', String(editing));
@@ -342,6 +343,41 @@ export function renderHome() {
   syncTimer();
   rise($('#dash'));
 }
+// No tile scrolls inside: when its content is taller than the tile, first the descriptions go and the spacing
+// tightens, then each list shows only what fits, with «+N más», which makes the tile taller.
+const LISTS = '.pi-list > li, .goals > li, .dlist > li, .qlinks > li, .mini-guides > .mini-guide, .hs-today > li, .shelf > .trinket.locked';
+export function fitTiles(root = document) {
+  for (const t of root.querySelectorAll('#dash .dash-grid > .tile[data-tile]')) {
+    const body = t.querySelector('.tile-body');
+    if (!body || t.dataset.tile === 'decor') continue;
+    t.classList.remove('tight', 'tiny');
+    for (const el of body.querySelectorAll('[data-fit-hidden]')) el.removeAttribute('data-fit-hidden');
+    body.querySelector('.tile-more')?.remove();
+    const box = t.classList.contains('postit') ? body.querySelector('.pi-paper') : body;
+    if (!box) continue;
+    const over = () => box.scrollHeight > box.clientHeight + 1 || box.scrollWidth > box.clientWidth + 1;
+    if (!over()) continue;
+    t.classList.add('tight');
+    if (!over()) continue;
+    const items = [...body.querySelectorAll(LISTS)];
+    let hidden = 0;
+    let more = null;
+    while (over() && hidden < items.length) {
+      items[items.length - 1 - hidden].setAttribute('data-fit-hidden', '');
+      hidden += 1;
+      // Secrets still to find just step aside; real things get «+N más».
+      if (!more && !items[0].matches('.locked')) {
+        more = document.createElement('button');
+        more.type = 'button'; more.className = 'tile-more'; more.dataset.tileGrow = t.dataset.tile;
+        const list = items[0].parentElement; list.after(more);
+      }
+      if (more) more.textContent = `+${hidden} más`;
+    }
+    if (over()) t.classList.add('tiny');
+  }
+}
+let fitTimer = 0;
+addEventListener('resize', () => { clearTimeout(fitTimer); fitTimer = setTimeout(() => fitTiles(), 150); });
 // One tile drawn again, in its place, without redrawing (and re-animating) the whole home page: the radio turned on
 // or off, a find pressed.
 export function refreshTile(id) {
@@ -355,6 +391,7 @@ export function refreshTile(id) {
   const fresh = document.querySelector(`#dash [data-tile="${id}"]`);
   placeRadio();
   if (fresh) props(fresh);
+  fitTiles();
 }
 // Changing the tiles: from then on the home page keeps the person's own list.
 function setTiles(items, focus) {
@@ -825,6 +862,8 @@ export function mountSpace(context) {
   ctx = context;
   bindAmbiences();
   // A decoration added: into its tile; if the person's own layout has no «Decoración», it joins it.
+  // The costume's button says whether he wears it, however he got it on or off.
+  addEventListener('studium-skin', () => { if (document.querySelector('#dash [data-tile="shelf"]')) refreshTile('shelf'); });
   addEventListener('studium-decor', () => {
     if (document.querySelector('#dash [data-tile="decor"]')) { refreshTile('decor'); return; }
     const items = layout();
@@ -891,6 +930,11 @@ export function mountSpace(context) {
       ctx.toast(`${TILE_NAMES[t.dataset.tileAdd]}: en tu inicio.`);
       requestAnimationFrame(() => document.querySelector(`[data-tile="${t.dataset.tileAdd}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
     }
+    if (t.dataset.tileGrow) {
+      const items = layout(); const it = items.find((x) => x.id === t.dataset.tileGrow);
+      if (it) { it.h = Math.min(12, it.h + 2); for (const o of items) if (o !== it && o.x < it.x + it.w && it.x < o.x + o.w && o.y >= it.y && o.y < it.y + it.h) o.y = it.y + it.h; setTiles(grid.compact(items, it)); }
+      return;
+    }
     if (t.dataset.tileHide) {
       const id = t.dataset.tileHide;
       if (id === 'shelf') markSeen('shelf-removed');
@@ -902,6 +946,8 @@ export function mountSpace(context) {
     if (t.dataset.tileReset !== undefined) setTiles([]);
     if (t.dataset.radioAdd !== undefined) { const home = !!t.closest('#dash'); openRadio(false, home ? true : undefined); if (home) refreshTile('shelf'); else renderSettings(); }
     if (t.dataset.trinket) poke(t.dataset.trinket, t);
+    // A costume put on or taken off with its button (when Specter is not on the screen to drag it onto him).
+    if (t.dataset.costumeToggle) wearCostume(t.dataset.costumeToggle);
     if (t.dataset.decorAdd) { decor.choose(t.dataset.decorAdd); sfx.tick(); }
     if (t.dataset.decorRemove !== undefined) decor.clear();
     if (t.dataset.decorPoke !== undefined) { const c = t.querySelector('canvas'); if (pokeProp(c) === undefined) { t.classList.remove('spun'); void t.offsetWidth; t.classList.add('spun'); } sfx.tick(); }

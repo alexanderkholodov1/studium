@@ -19,6 +19,8 @@ rules_version = '2';
 //   switches. Every signed-in account reads it; only admins write it. audit/{id}: what each admin changed.
 // - presence/{uid}: when an account was last seen, written on real events (never on a timer); admins count them.
 // - eggs/{id}: how many people found each easter egg, as a counter that only goes up by one.
+// - stations/{id} (+ audio/{n}): the radio's stations as the admins set them; members read them.
+// - sounds/{id} (+ audio/{n}): the audio the admins chose for a secret's sound; members read it.
 // - packs/index + packs/{build}-{i}: every public contribution in a few documents, compiled by an admin on demand, so
 //   a visit reads a handful of documents. removed/{id}: when a contribution stopped being public (deleted or made
 //   private by its owner, or hidden by an admin), so every map drops it from its pack.
@@ -532,6 +534,50 @@ service cloud.firestore {
       allow create, update: if member() && uid == request.auth.uid
         && request.resource.data.keys().hasOnly(['ids', 'updated']) && request.resource.data.ids is list
         && request.resource.data.ids.size() <= 60 && request.resource.data.updated == request.time;
+    }
+
+    // stations/{id}: the radio's stations, as the admins set them in the panel: a tune generated live, a YouTube
+    // upload (with or without its caption), or an audio file kept in pieces (stations/{id}/audio/{n}, under 1 MB each)
+    // that plays in a seamless loop. Members read them; only admins write them.
+    function station(d) {
+      return d.keys().hasOnly(['name', 'freq10', 'opens', 'kind', 'gen', 'video', 'caption', 'showCaption', 'audio', 'on', 'updated'])
+        && text(d.name, 80) && d.freq10 is int && d.freq10 >= 880 && d.freq10 <= 1080
+        && d.opens in ['radio', 'portal', 'cake', 'medic', 'crit', 'cafe', 'starve', 'all']
+        && d.kind in ['gen', 'youtube', 'audio'] && d.on is bool
+        && (!('gen' in d) || (d.gen is string && d.gen.size() <= 20))
+        && (!('video' in d) || (d.video is string && d.video.matches('^[A-Za-z0-9_-]{6,20}$')))
+        && (!('caption' in d) || (d.caption is string && d.caption.size() <= 400))
+        && (!('showCaption' in d) || d.showCaption is bool)
+        && (!('audio' in d) || (d.audio is map && d.audio.keys().hasOnly(['pieces', 'type', 'size', 'name'])
+          && d.audio.pieces is int && d.audio.pieces >= 1 && d.audio.pieces <= 12 && d.audio.type is string && d.audio.type.size() <= 40
+          && d.audio['size'] is int && d.audio['size'] <= 12000000 && d.audio['name'] is string && d.audio['name'].size() <= 120))
+        && d.updated == request.time;
+    }
+    // sounds/{id}: the audio the admins chose for a secret's sound (the shout of «¡Médico!»), in pieces like a station's.
+    match /sounds/{id} {
+      allow read: if member();
+      allow create, update: if admin() && id in ['medic'] && request.resource.data.keys().hasOnly(['name', 'type', 'size', 'pieces', 'updated'])
+        && request.resource.data['name'] is string && request.resource.data['name'].size() <= 120 && request.resource.data.type is string && request.resource.data.type.size() <= 40
+        && request.resource.data['size'] is int && request.resource.data['size'] <= 3000000 && request.resource.data.pieces is int && request.resource.data.pieces >= 1 && request.resource.data.pieces <= 4
+        && request.resource.data.updated == request.time;
+      allow delete: if admin();
+      match /audio/{n} {
+        allow read: if member();
+        allow create, update: if admin() && n.matches('^[0-9]$') && request.resource.data.keys().hasOnly(['b', 'i'])
+          && request.resource.data.b is bytes && request.resource.data.b.size() <= 1000000 && request.resource.data.i is int;
+        allow delete: if admin();
+      }
+    }
+    match /stations/{id} {
+      allow read: if member();
+      allow create, update: if admin() && id.matches('^[a-z0-9-]{1,30}$') && station(request.resource.data);
+      allow delete: if admin();
+      match /audio/{n} {
+        allow read: if member();
+        allow create, update: if admin() && n.matches('^[0-9]{1,2}$') && request.resource.data.keys().hasOnly(['b', 'i'])
+          && request.resource.data.b is bytes && request.resource.data.b.size() <= 1000000 && request.resource.data.i is int;
+        allow delete: if admin();
+      }
     }
 
     match /{document=**} {
