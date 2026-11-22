@@ -142,6 +142,47 @@ FORMATO B, cada hito (salida/<id>.json):
 ${B}`;
 }
 
+// «Ajustar la guía»: the group points at parts of a guide already written and says what to change; the AI changes only
+// that and returns those parts in the same formats, everything else word for word. Adjusting costs far less than
+// writing again, and keeps what the group already read.
+export const ADJUST_KINDS = { simpler: 'explicarlo más simple, para alguien que empieza', shorter: 'hacerlo más corto, sin perder nada importante', deeper: 'explicarlo con más detalle', fix: 'corregir un error', diagram: 'agregar un diagrama que lo muestre', example: 'agregar un ejemplo concreto' };
+export function adjustPrompt({ outline, chapters, changes, prefs, files }) {
+  const outlineFmt = outlinePrompt({ parts: 1, course: '', deadline: '', prefs: {} });
+  const A = outlineFmt.slice(outlineFmt.indexOf('Formato exacto:')).trim();
+  const chapterFmt = milestonePrompt({ milestone: { id: 'H1', titulo: 'cada hito' }, outline: null, prefs: {} });
+  const B = chapterFmt.slice(chapterFmt.indexOf('Para cada paso:'), chapterFmt.indexOf('\n\nEl esquema de la guía:'));
+  const fence = '```';
+  const list = changes.map((c, i) => [
+    ` ${i + 1}. En ${c.label}${c.quote ? `, el fragmento: «${String(c.quote).slice(0, 1200)}»` : ''}:`,
+    ...(c.kinds ?? []).map((k) => `    - ${ADJUST_KINDS[k] ?? k}`),
+    c.note ? `    - en palabras del grupo: ${String(c.note).slice(0, 1500)}` : '',
+  ].filter(Boolean).join('\n')).join('\n');
+  const out = files
+    ? `Escribe cada parte que cambies como su propio archivo JSON en la carpeta «salida»: salida/<id del hito>.json para cada hito que cambies (formato B) y salida/esquema.json SOLO si cambias el esquema (formato A, completo). Sin ${fence} ni texto alrededor. No escribas archivos de las partes que no cambian.`
+    : `Responde SOLO con un bloque ${fence}json: { "esquema": null, o el esquema completo (formato A) si cambia, "hitos": [cada hito que cambia, completo, en formato B] }.`;
+  return `${COMMON.replace(/\n- Responde SOLO con un bloque [^\n]*$/, '')}${prefsText(prefs)}
+
+Tarea: AJUSTA una guía que ya está escrita. NO la reescribas desde cero: cambia SOLO lo que piden los cambios de abajo; todo lo demás queda igual, palabra por palabra.
+- Conserva los ids de hitos y pasos. Si un cambio necesita agregar o quitar un paso, devuelve también el esquema con ese paso (un id nuevo que siga la serie, por ejemplo H2.5) y el hito completo.
+- Un cambio en «De qué se trata», las reglas, el reparto o el glosario es un cambio del esquema.
+- Si un cambio no se puede hacer sin romper otra parte, haz lo más cercano y dilo en "avisos" del esquema.
+
+Los cambios que pide el grupo:
+${list}
+
+${out}
+
+FORMATO A, el esquema:
+${A}
+
+FORMATO B, un hito:
+${B}
+
+La guía tal como está ahora:
+- El esquema: ${JSON.stringify({ ...outline, enunciado_textual: undefined, razonamiento: undefined })}
+${chapters.map((h) => `- El hito ${h.id}: ${JSON.stringify(h)}`).join('\n')}`;
+}
+
 // «No lo entiendo»: a short explanation from the person's quick AI, about one requirement, step or line.
 export const TUTOR = `Eres un tutor paciente dentro de Studium. Un estudiante que está aprendiendo a programar no entiende una parte de su trabajo de curso. Explícasela de forma breve y concreta (máximo 200 palabras), con un ejemplo si ayuda, en el idioma del estudiante. No cambies la solución: ayúdale a entenderla. Termina con una pregunta corta para que compruebe que lo entendió. Texto simple; \`código\` entre comillas invertidas.`;
 

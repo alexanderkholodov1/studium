@@ -13,7 +13,7 @@ import { db, auth, gzip, gunzip, loadProfile } from './data.js';
 import * as ai from './ai.js';
 import { prepare } from './files.js';
 import { bridgeSteps, pairBridge, findBridgeSay } from './space.js';
-import { LETTERS, outlinePrompt, milestonePrompt, wholePrompt, TUTOR, parseJSON, cleanOutline, cleanMilestone } from './trabajo-prompts.js';
+import { LETTERS, outlinePrompt, milestonePrompt, wholePrompt, adjustPrompt, ADJUST_KINDS, TUTOR, parseJSON, cleanOutline, cleanMilestone } from './trabajo-prompts.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -219,6 +219,180 @@ function pickingNotice() {
 
 // «Ver a mi IA en una terminal», wherever the bridge writes.
 const watchBox = () => `<label class="tj-pick ${ai.watchTerminal() ? 'on' : ''}"><input type="checkbox" data-tj-watch ${ai.watchTerminal() ? 'checked' : ''}> <span><b>Ver a Claude Code trabajando, en su propia ventana</b><br><small>Se abre Claude Code en tu computadora con el pedido de Studium ya escrito: ves todo lo que hace, lo detienes con Esc y al terminar sigues hablándole ahí.</small></span></label>`;
+
+/* ---------- «Ajustar la guía»: point at a part, say what to change, the AI changes only that ---------- */
+// His words: «ajustar es más fácil que hacer desde 0». A member selects a fragment (or presses ✎ on a step, a chapter
+// or section 0), chooses what to change and writes a comment. The requests gather in a tray on this device; «Aplicar»
+// sends only the parts they touch to the person's AI, which returns those parts adjusted, the rest word for word.
+// The last adjustment can be undone.
+const ADJ = 'studium-tj-ajustes';
+const adjList = () => { try { return JSON.parse(localStorage.getItem(ADJ) ?? '{}')[T?.id] ?? []; } catch { return []; } };
+function adjKeep(list) {
+  try { const m = JSON.parse(localStorage.getItem(ADJ) ?? '{}'); if (list.length) m[T.id] = list; else delete m[T.id]; localStorage.setItem(ADJ, JSON.stringify(m)); } catch { /* this time only */ }
+  paintTray();
+}
+let undo = null;
+function targetOf(key) {
+  if (key.startsWith('paso:')) {
+    const s = steps().find((x) => x.id === key.slice(5));
+    return s ? { key, kind: 'paso', hito: s.hito, label: `el paso ${s.num} «${s.titulo}»` } : null;
+  }
+  if (key.startsWith('hito:')) {
+    const i = T.outline.hitos.findIndex((h) => h.id === key.slice(5));
+    return i >= 0 ? { key, kind: 'hito', hito: T.outline.hitos[i].id, label: `el capítulo ${i + 1} «${T.outline.hitos[i].titulo}»` } : null;
+  }
+  if (key === 'glosario') return { key, kind: 'esquema', label: 'el glosario (las tarjetas de términos)' };
+  return { key: 'esquema', kind: 'esquema', label: 'la sección 0 (de qué se trata, las reglas, el reparto)' };
+}
+const adjButton = (key) => `<button type="button" class="adj" data-tj="adj" data-key="${esc(key)}" title="Pedir un cambio a tu IA">✎ <span>Ajustar</span></button>`;
+// Which part of the guide a node belongs to.
+function keyOfNode(node) {
+  const el = node?.nodeType === 1 ? node : node?.parentElement;
+  const step = el?.closest?.('article.step');
+  if (step?.id?.startsWith('paso-')) return `paso:${step.id.slice(5)}`;
+  const sec = el?.closest?.('section.sec');
+  if (!sec) return '';
+  if (sec.id === 'cap-inicio') return 'esquema';
+  if (sec.id === 'cap-entrega') return el.closest('.fc-trainer, .gloss') ? 'glosario' : '';
+  return sec.id.startsWith('cap-') ? `hito:${sec.id.slice(4)}` : '';
+}
+function adjOpen(key, quote = '') {
+  const t = targetOf(key);
+  if (!t) return;
+  hideSelButton();
+  gRoot().querySelector('.tj-adjpop')?.remove();
+  const box = document.createElement('div');
+  box.className = 'tj-adjpop';
+  box.innerHTML = `<form data-adj-form data-key="${esc(t.key)}" class="tj-adjcard">
+      <h4>Ajustar ${esc(t.label)}</h4>
+      ${quote ? `<blockquote class="no-i18n">${esc(quote.slice(0, 600))}${quote.length > 600 ? '…' : ''}</blockquote><input type="hidden" name="quote" value="${esc(quote.slice(0, 1200))}">` : ''}
+      <div class="tj-adjkinds">${Object.entries({ simpler: 'Más simple', shorter: 'Más corto', deeper: 'Más detalle', fix: 'Hay un error', diagram: 'Un diagrama', example: 'Un ejemplo' }).map(([k, v]) => `<label><input type="checkbox" name="kinds" value="${k}"> ${esc(v)}</label>`).join('')}</div>
+      <textarea name="note" rows="3" maxlength="1500" placeholder="Qué cambiar, mejorar o corregir, en tus palabras (opcional si marcaste algo arriba)"></textarea>
+      <p class="tj-adjbtns"><button type="submit" class="act" data-now="1">Ajustar ahora</button><button type="submit" class="ask">Agregar a la lista</button><button type="button" class="ask" data-tj="adj-close">Cancelar</button></p>
+      <p class="mut small">Tu IA cambia solo esto; el resto de la guía queda igual. Puedes juntar varios cambios y aplicarlos de una vez.</p>
+    </form>`;
+  gRoot().querySelector('.tjg-app')?.append(box);
+  box.querySelector('textarea')?.focus();
+}
+// The floating «✎ Ajustar esto» over a selection inside the guide.
+let selButton = null;
+function hideSelButton() { selButton?.remove(); selButton = null; }
+function showSelButton() {
+  const sel = getSelection();
+  const text = String(sel ?? '').trim();
+  if (!T?.outline || !sel?.rangeCount || text.length < 3 || sel.anchorNode?.parentElement?.closest('.tj-adjpop, .tj-tray, nav.top, textarea, input')) { hideSelButton(); return; }
+  const key = keyOfNode(sel.anchorNode);
+  if (!key) { hideSelButton(); return; }
+  const r = sel.getRangeAt(0).getBoundingClientRect();
+  hideSelButton();
+  selButton = document.createElement('button');
+  selButton.type = 'button';
+  selButton.className = 'tj-selbtn';
+  selButton.textContent = '✎ Ajustar esto';
+  selButton.style.left = `${Math.max(8, Math.min(innerWidth - 150, r.left + r.width / 2 - 60))}px`;
+  selButton.style.top = `${Math.max(60, r.top - 44)}px`;
+  selButton.addEventListener('mousedown', (e) => e.preventDefault());
+  selButton.addEventListener('click', () => adjOpen(key, text));
+  gRoot().querySelector('.tjg-app')?.append(selButton);
+}
+// The tray: the changes waiting, and «Deshacer» after an adjustment.
+function trayHTML() {
+  const list = adjList();
+  if (!list.length && !undo) return '';
+  return `<div class="tj-traybar">${list.length ? `<button type="button" class="act" data-tj="tray-open">✎ ${list.length} ${list.length === 1 ? 'cambio' : 'cambios'} por aplicar</button>` : ''}
+      ${undo ? `<button type="button" class="ask" data-tj="adj-undo">Deshacer el último ajuste</button>` : ''}</div>
+    <div class="tj-traypanel" hidden><h4>Cambios por aplicar</h4><ol>${list.map((c, i) => `<li><b>${esc(c.label)}</b>${c.quote ? `<q class="no-i18n">${esc(c.quote.slice(0, 160))}${c.quote.length > 160 ? '…' : ''}</q>` : ''}<span class="mut small">${esc([...(c.kinds ?? []).map((k) => ADJUST_KINDS[k] ?? k), c.note].filter(Boolean).join(' · '))}</span><button type="button" class="ask" data-tj="adj-drop" data-i="${i}" aria-label="Quitar este cambio">quitar</button></li>`).join('')}</ol>
+      ${aiBlock('solution')}
+      <p class="tj-adjbtns"><button type="button" class="act" data-tj="adj-apply">Aplicar con tu IA</button><button type="button" class="ask" data-tj="adj-clear">Descartar todos</button><button type="button" class="ask" data-tj="tray-close">Cerrar</button></p>
+      <div data-adj-live></div></div>`;
+}
+function paintTray() {
+  const app = gRoot()?.querySelector('.tjg-app');
+  if (!app) return;
+  let tray = app.querySelector('.tj-tray');
+  if (!tray) { tray = document.createElement('div'); tray.className = 'tj-tray'; app.append(tray); }
+  const open = !tray.querySelector('.tj-traypanel')?.hidden;
+  tray.innerHTML = trayHTML();
+  if (open && tray.querySelector('.tj-traypanel')) tray.querySelector('.tj-traypanel').hidden = false;
+}
+async function applyAdjust(list, box) {
+  const hids = [...new Set(list.filter((c) => c.kind !== 'esquema').map((c) => c.hito))].filter((h) => T.hitos[h]);
+  const files = ai.choice('solution').provider === 'bridge:claude' && !ai.bridgeOld();
+  const chapters = hids.map((h) => { const { by: _by, ai: _ai, ...d } = T.hitos[h]; return d; });
+  const system = adjustPrompt({ outline: T.outline, chapters, changes: list, prefs: T.prefs, files });
+  startWork();
+  box.innerHTML = liveHTML('Tu IA ajusta la guía');
+  const r = await askAI('solution', system, 'Aplica los cambios pedidos a la guía.', [], `Ajustes a «${T.title}»`, liveFeed(box));
+  let esquema = null;
+  let chaptersBack = [];
+  if (files && Object.keys(r.outputs ?? {}).length) {
+    esquema = r.outputs['esquema.json'] ? parseJSON(r.outputs['esquema.json']) : null;
+    chaptersBack = Object.entries(r.outputs).filter(([n]) => /^H\w{0,4}\.json$/.test(n)).map(([, t]) => parseJSON(t));
+  } else {
+    const j = parseJSON(r.text);
+    esquema = j?.esquema ?? null;
+    chaptersBack = Array.isArray(j?.hitos) ? j.hitos : [];
+  }
+  const before = { outline: T.outline, hitos: {} };
+  const notes = [];
+  let outline = T.outline;
+  if (esquema) {
+    if (T.owner === uid()) outline = cleanOutline(esquema, T.parts);
+    else notes.push('Tu IA también cambió la sección 0 o la estructura, pero eso solo lo guarda quien creó el trabajo.');
+  }
+  const changed = [];
+  for (const raw of chaptersBack) {
+    const def = outline.hitos.find((h) => h.id === raw?.id);
+    if (!def) continue;
+    const data = cleanMilestone(raw, def);
+    if (!data.pasos.length) continue;
+    before.hitos[def.id] = T.hitos[def.id] ?? null;
+    await setDoc(tRef(T.id, 'hitos', def.id), { data: await pack(data), encoding: 'gzip', by: uid(), ai: madeBy(r), updated: serverTimestamp() });
+    T.hitos[def.id] = { ...data, by: uid(), ai: madeBy(r) };
+    changed.push(def.id);
+  }
+  if (outline !== T.outline) {
+    await setDoc(tRef(T.id), { outline: await pack(outline), updated: serverTimestamp() }, { merge: true });
+    T.outline = outline;
+    changed.push('esquema');
+  }
+  if (!changed.length) throw new Error('Tu IA no devolvió ninguna parte cambiada. Prueba a decir el cambio con otras palabras.');
+  undo = { ...before, changed };
+  await logAI({ task: 'solution', step: 'ajuste', model: r.model, provider: r.way, prompt: `${system.split('La guía tal como está ahora:')[0]}[la guía como estaba]` });
+  return { changed, notes };
+}
+async function undoAdjust() {
+  if (!undo) return;
+  const u = undo;
+  undo = null;
+  if (u.changed.includes('esquema') && T.owner === uid()) { await setDoc(tRef(T.id), { outline: await pack(u.outline), updated: serverTimestamp() }, { merge: true }); T.outline = u.outline; }
+  for (const [hid, prev] of Object.entries(u.hitos)) {
+    if (!prev) continue;
+    const { by: _by, ai: aiOf, ...d } = prev;
+    await setDoc(tRef(T.id, 'hitos', hid), { data: await pack(d), encoding: 'gzip', by: uid(), ...(aiOf ? { ai: aiOf } : {}), updated: serverTimestamp() });
+    T.hitos[hid] = prev;
+  }
+}
+async function runAdjust(list, button) {
+  if (!list.length) return;
+  paintTray();
+  const tray = gRoot().querySelector('.tj-tray');
+  const pnl = tray?.querySelector('.tj-traypanel');
+  if (pnl) pnl.hidden = false;
+  let box = pnl?.querySelector('[data-adj-live]');
+  if (!box) { box = document.createElement('div'); box.className = 'tj-adjlive'; gRoot().querySelector('.tjg-app')?.append(box); }
+  try {
+    const { changed, notes } = await (button ? busy(button, () => applyAdjust(list, box)) : applyAdjust(list, box));
+    if (button) adjKeep([]); else paintTray();
+    repaint();
+    lit(changed);
+    ctx.toast(`Ajustado: ${changed.map((x) => (x === 'esquema' ? 'la sección 0' : `el capítulo ${T.outline.hitos.findIndex((h) => h.id === x) + 1}`)).join(', ')}.${notes.length ? ` ${notes.join(' ')}` : ''}`);
+  } catch (e) {
+    box.innerHTML = errorBox(errInfo(e, 'Ajustar la guía'), '');
+    if (!button) adjKeep([...adjList(), ...list.filter((c) => !adjList().some((x) => x.at === c.at))]);
+  }
+}
+const lit = (ids) => { for (const id of ids) gRoot().querySelector(id === 'esquema' ? '#cap-inicio' : `#cap-${CSS.escape(id)}`)?.classList.add('just-adjusted'); };
 
 /* ---------- when the AI fails: what happened, what to do, and a report ---------- */
 // His words: never an error with no explanation, no help and no way to tell Studium. Each failure says which AI it
@@ -894,7 +1068,7 @@ function intro() {
   const notices = older ? [] : o.avisos;
   const reading = older ? o.avisos.map((x) => `- ${x}`).join('\n') : o.razonamiento;
   return `<section class="sec" id="cap-inicio" style="--c:var(--blue);--cs:var(--blue-s)">
-      <h2><span class="n">0</span>De qué se trata</h2>
+      <h2><span class="n">0</span>De qué se trata ${adjButton('esquema')}</h2>
       <div class="row"><div class="prose no-i18n">${md(o.de_que_trata || o.resumen)}
           ${o.diagrama ? `<figure class="diagram"><pre class="mermaid">${esc(o.diagrama)}</pre></figure>` : ''}</div>
         <div>${notices.length ? `<div class="trap"><b>Antes de empezar</b><ul class="tight">${notices.map((x) => `<li>${inline(x)}</li>`).join('')}</ul></div>` : ''}
@@ -955,7 +1129,7 @@ function stepHTML(s, step) {
       <table>${lines.map((line, i) => `<tr><td class="ln">${i + 1}</td><td class="cd">${esc(line) || ' '}</td><td class="ex">${expl.has(i + 1) ? inline(expl.get(i + 1)) : ''}</td></tr>`).join('')}</table></div>`;
   }).join('');
   return `<article class="step" id="paso-${esc(s.id)}" style="--pc:${colorOf(s.parte)}">
-      <h3><span class="num">${esc(s.num)}</span>${esc(s.titulo)} ${avatar(s.parte, holder ? nameOf(holder) : `Persona ${s.parte}`)}</h3>
+      <h3><span class="num">${esc(s.num)}</span>${esc(s.titulo)} ${avatar(s.parte, holder ? nameOf(holder) : `Persona ${s.parte}`)} ${step ? adjButton(`paso:${s.id}`) : ''}</h3>
       ${step ? `${step.clave ? `<p class="key no-i18n">${inline(step.clave)}</p>` : ''}<div class="row"><div class="prose no-i18n">${step.objetivo ? `<p class="lead">${inline(step.objetivo)}</p>` : ''}${md(step.teoria)}
           ${step.diagrama ? `<figure class="diagram"><pre class="mermaid">${esc(step.diagrama)}</pre></figure>` : ''}
           ${step.librerias.length ? `<p class="small mut">Usa ${step.librerias.map((l) => `<code title="${esc(l.para_que)}">${esc(l.nombre)}</code>`).join(', ')}.</p>` : ''}</div>
@@ -973,7 +1147,7 @@ function chapter(h, i) {
   const done = steps().filter((s) => s.hito === h.id && isDone(s.id)).length;
   const hue = ['--blue', '--green', '--orange', '--violet', '--rose', '--brown'][i % 6];
   return `<section class="sec" id="cap-${esc(h.id)}" style="--c:var(${hue});--cs:var(${hue}-s)">
-      <h2><span class="n">${i + 1}</span>${esc(h.titulo)}</h2>
+      <h2><span class="n">${i + 1}</span>${esc(h.titulo)} ${data ? adjButton(`hito:${h.id}`) : ''}</h2>
       <p class="lead">${h.entregable ? `Al terminar este capítulo tendrán ${esc(lower(h.entregable))}.` : ''} ${h.listo_cuando ? `Está listo cuando ${esc(lower(h.listo_cuando))}.` : ''}</p>
       ${data ? '' : `<div class="card soft"><p>Este capítulo todavía no está escrito. Sus pasos:</p><ol class="tight">${list.map((s) => `<li>${esc(s.titulo)} ${avatar(s.parte)}</li>`).join('')}</ol>${aiBlock('solution')}<p><button type="button" class="act" data-tj="gen" data-hito="${esc(h.id)}">Escribirlo con tu IA</button> <span class="mut" data-status="${esc(h.id)}"></span></p></div>`}
       ${data ? list.map((s) => stepHTML(s, byId.get(s.id))).join('') || '<p class="mut">Tu parte no tiene pasos en este capítulo.</p>' : ''}
@@ -1045,7 +1219,7 @@ function closing() {
       ${defense.length ? `<h3>Practicar la defensa</h3><p>Las preguntas que les podrían hacer. Respóndanlas en voz alta antes de abrir la respuesta.</p><div class="cols2">${defense.map((q) => `<details class="q"><summary class="qh">${inline(q.pregunta)}</summary><div class="ans">${md(q.respuesta)}</div></details>`).join('')}</div>` : ''}
       ${T.outline.glosario.length ? (T.prefs?.cards === false
     ? `<h3>Términos</h3><dl class="gloss">${T.outline.glosario.map((g) => `<dt>${esc(g.termino)}</dt><dd>${esc(g.definicion)}</dd>`).join('')}</dl>`
-    : `<h3>Tarjetas de términos</h3><p>Di en voz alta qué significa y voltea. <span class="mut small">Espacio voltea · 1 lo sabía · 2 repasar</span></p><div class="fc-trainer" data-fc>${flashHTML()}</div>
+    : `<h3>Tarjetas de términos ${adjButton('glosario')}</h3><p>Di en voz alta qué significa y voltea. <span class="mut small">Espacio voltea · 1 lo sabía · 2 repasar</span></p><div class="fc-trainer" data-fc>${flashHTML()}</div>
       <details class="q"><summary class="qh">Ver todos los términos</summary><dl class="gloss">${T.outline.glosario.map((g) => `<dt>${esc(g.termino)}</dt><dd>${esc(g.definicion)}</dd>`).join('')}</dl></details>`) : ''}
     </section>`;
 }
@@ -1063,6 +1237,7 @@ function paint() {
   gRoot().innerHTML = `<div class="tjg-app" data-template="${templateOf()}" ${theme ? `data-theme="${theme}"` : ''}>${topbar()}<div class="wrap">${hero()}${T.outline ? intro() + T.outline.hitos.map(chapter).join('') + closing() : noOutline()}</div></div>`;
   markChapter();
   drawDiagrams();
+  paintTray();
 }
 // Diagrams the AI wrote in Mermaid, drawn by Mermaid itself (jsDelivr, pinned), only when there are some. Each one is
 // drawn once and kept: the guide repaints whenever someone marks a step or takes a part, and redrawing every diagram
@@ -1234,7 +1409,10 @@ function download(name, text) {
 }
 
 function wire(root) {
+  root.addEventListener('mouseup', () => { if (T?.outline && root.querySelector('.tjg-app')) setTimeout(showSelButton, 0); });
+  root.addEventListener('mousedown', (e) => { if (!e.target.closest?.('.tj-selbtn')) hideSelButton(); });
   root.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && root.querySelector('.tj-adjpop')) { root.querySelector('.tj-adjpop').remove(); return; }
     if (!ev.target.closest?.('[data-fc]')) return;
     if (ev.key === ' ') { ev.preventDefault(); flashDo('flip'); } else if (ev.key === '1') flashDo('ok'); else if (ev.key === '2') flashDo('no');
   });
@@ -1245,6 +1423,18 @@ function wire(root) {
     const form = ev.target;
     ev.preventDefault();
     const button = form.querySelector('[type="submit"]');
+    if (form.matches('[data-adj-form]')) {
+      const f = new FormData(form);
+      const t = targetOf(form.dataset.key);
+      const c = { ...t, quote: String(f.get('quote') ?? ''), kinds: f.getAll('kinds').map(String), note: String(f.get('note') ?? '').trim(), at: Date.now() };
+      if (!c.kinds.length && !c.note) { form.querySelector('textarea').placeholder = 'Marca qué cambiar o escríbelo aquí'; form.querySelector('textarea').focus(); return; }
+      form.closest('.tj-adjpop')?.remove();
+      getSelection()?.removeAllRanges();
+      if (ev.submitter?.dataset.now) { await runAdjust([c], null); return; }
+      adjKeep([...adjList(), c]);
+      ctx.toast('Agregado a los cambios por aplicar.');
+      return;
+    }
     if (form.id === 'tj-wizard') {
       if (QUESTIONS[draft.at].input !== 'ready') { nextQuestion(); return; }
       const later = !!ev.submitter?.dataset.later;
@@ -1428,6 +1618,13 @@ function wire(root) {
       await busy(b, async () => { await ai.changeBridgeFolder(b.dataset.id, { remove: true }); if (draft) { if (draft.workspace === b.dataset.id) draft.workspace = 'temp'; keepAnswer(); renderDraft(); } else repaint(); }).catch(() => {});
       return;
     }
+    if (kind === 'adj') { adjOpen(b.dataset.key); return; }
+    if (kind === 'adj-close') { b.closest('.tj-adjpop')?.remove(); return; }
+    if (kind === 'tray-open' || kind === 'tray-close') { const pnl = gRoot().querySelector('.tj-traypanel'); if (pnl) pnl.hidden = kind === 'tray-close'; return; }
+    if (kind === 'adj-drop') { const l = adjList(); l.splice(Number(b.dataset.i), 1); adjKeep(l); const pnl = gRoot().querySelector('.tj-traypanel'); if (pnl && l.length) pnl.hidden = false; return; }
+    if (kind === 'adj-clear') { adjKeep([]); return; }
+    if (kind === 'adj-undo') { await busy(b, async () => { await undoAdjust(); repaint(); ctx.toast('Volvió como estaba antes del último ajuste.'); }).catch((e) => ctx.toast(e.message)); return; }
+    if (kind === 'adj-apply') { await runAdjust(adjList(), b); return; }
     if (kind === 'fc-flip' || kind === 'fc-ok' || kind === 'fc-no' || kind === 'fc-deal') { flashDo(kind.slice(3)); return; }
     if (kind === 'stop') {
       if (ctl && !ctl.signal.aborted) { ctl.abort(); b.disabled = true; b.textContent = 'Deteniendo…'; ctx.toast('Detenido. Tu IA se detuvo en tu computadora.'); }
