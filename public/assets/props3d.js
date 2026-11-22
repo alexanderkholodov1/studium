@@ -3,6 +3,8 @@
 // a secret has been found. One WebGL context draws every object: each canvas on the page gets a copy of its frame, so
 // the browser keeps one context however many objects there are. Each object moves only while it is on screen, and
 // stays still with reduced motion or the focus ambience.
+import { sfx } from './sfx.js';
+
 const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.160.0/+esm';
 const ROOM_URL = 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/environments/RoomEnvironment.js/+esm';
 
@@ -98,43 +100,51 @@ const PROPS = {
   // A chocolate cake on a porcelain plate: glossy ganache, a ring of cream dollops with a cherry on each, shavings on
   // the side, and one striped candle with a living flame that lights the top.
   cake() {
-    const scene = new T.Scene(); stage(scene, { key: [2.5, 5, 3] });
+    const scene = new T.Scene(); stage(scene, { key: [2.5, 5, 3.5], intensity: 2 });
     const g = new T.Group(); scene.add(g);
-    g.add(mesh(new T.CylinderGeometry(1.42, 1.32, 0.07, 72), phys(0xf4f1ec, { roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.1 }), { y: 0.035 }));
-    g.add(mesh(new T.CylinderGeometry(1, 1, 0.82, 72), std(0x3b1d12, 0.85), { y: 0.48 }));
-    g.add(mesh(new T.CylinderGeometry(1.02, 1.02, 0.08, 72), phys(0x24100a, { roughness: 0.28, clearcoat: 0.8 }), { y: 0.92 }));
-    const shav = std(0x2a140b, 0.7);
-    for (let i = 0; i < 90; i += 1) {
-      const a = Math.random() * Math.PI * 2; const y = 0.15 + Math.random() * 0.68;
-      g.add(mesh(new T.BoxGeometry(0.07, 0.025, 0.02), shav, { x: Math.cos(a) * 1.01, y, z: Math.sin(a) * 1.01, ry: -a, rz: Math.random() * 3, receive: false }));
+    // A porcelain plate, a chocolate sponge, a glossy ganache that drips over the edge, a ring of cream at the foot,
+    // rosettes of cream on top and a few small cherries.
+    g.add(mesh(new T.CylinderGeometry(1.45, 1.35, 0.06, 72), phys(0xf6f3ee, { roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.08 }), { y: 0.03 }));
+    g.add(mesh(new T.CylinderGeometry(1, 1, 0.8, 72), std(0x5a2e1c, 0.8), { y: 0.46 }));
+    const ganache = phys(0x3a1a0d, { roughness: 0.32, clearcoat: 0.55, clearcoatRoughness: 0.2, envMapIntensity: 0.45 });
+    g.add(mesh(new T.CylinderGeometry(1.025, 1.025, 0.1, 72), ganache, { y: 0.88 }));
+    g.add(mesh(new T.TorusGeometry(1.0, 0.05, 12, 72), ganache, { y: 0.88, rx: Math.PI / 2 }));
+    for (let i = 0; i < 26; i += 1) {
+      const a = (i / 26) * Math.PI * 2 + Math.sin(i * 7.1) * 0.05;
+      const len = 0.12 + ((i * 37) % 11) / 11 * 0.26;
+      g.add(mesh(new T.CapsuleGeometry(0.045, len, 6, 10), ganache, { x: Math.cos(a) * 1.02, y: 0.86 - len / 2, z: Math.sin(a) * 1.02, cast: false }));
     }
-    const cream = phys(0xfbf7f0, { roughness: 0.42, sheen: 0.6, sheenColor: new T.Color(0xffffff) });
-    const cherry = phys(0xa80d1a, { roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.05 });
+    const cream = phys(0xfbf7f0, { roughness: 0.45, sheen: 0.6, sheenColor: new T.Color(0xffffff) });
+    g.add(mesh(new T.TorusGeometry(1.0, 0.075, 14, 90), cream, { y: 0.1, rx: Math.PI / 2 }));
+    const cherry = phys(0xb3101f, { roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.04 });
     const stem = std(0x4a6a2a, 0.6);
     for (let i = 0; i < 10; i += 1) {
-      const a = (i / 10) * Math.PI * 2; const x = Math.cos(a) * 0.78; const z = Math.sin(a) * 0.78;
-      g.add(mesh(new T.SphereGeometry(0.16, 24, 16), cream, { x, y: 1.0, z, s: [1, 0.75, 1] }));
-      g.add(mesh(new T.ConeGeometry(0.12, 0.2, 18), cream, { x, y: 1.16, z, ry: a }));
-      g.add(mesh(new T.SphereGeometry(0.085, 24, 16), cherry, { x, y: 1.3, z }));
-      g.add(mesh(new T.CylinderGeometry(0.008, 0.008, 0.16, 6), stem, { x: x + 0.03, y: 1.42, z, rz: -0.4, cast: false }));
+      const a = (i / 10) * Math.PI * 2; const x = Math.cos(a) * 0.76; const z = Math.sin(a) * 0.76;
+      // A rosette: three rings of cream, each smaller, twisted, and a tip.
+      for (let k = 0; k < 3; k += 1) g.add(mesh(new T.TorusGeometry(0.1 - k * 0.028, 0.045 - k * 0.008, 10, 24), cream, { x, y: 0.97 + k * 0.055, z, rx: Math.PI / 2, rz: k * 0.6 }));
+      g.add(mesh(new T.ConeGeometry(0.035, 0.08, 12), cream, { x, y: 1.14, z }));
+      if (i % 2 === 0) {
+        g.add(mesh(new T.SphereGeometry(0.06, 20, 14), cherry, { x, y: 1.21, z }));
+        g.add(mesh(new T.CylinderGeometry(0.006, 0.006, 0.12, 6), stem, { x: x + 0.02, y: 1.3, z, rz: -0.35, cast: false }));
+      }
     }
     // The candle: a striped wax stick (a painted texture), a black wick, and the flame.
     const stripes = document.createElement('canvas'); stripes.width = 64; stripes.height = 256;
     const sx = stripes.getContext('2d'); sx.fillStyle = '#f6f1e8'; sx.fillRect(0, 0, 64, 256);
     sx.fillStyle = '#c8102e'; for (let k = -64; k < 256; k += 40) { sx.beginPath(); sx.moveTo(0, k); sx.lineTo(64, k + 30); sx.lineTo(64, k + 44); sx.lineTo(0, k + 14); sx.fill(); }
     const st = new T.CanvasTexture(stripes); st.colorSpace = T.SRGBColorSpace;
-    g.add(mesh(new T.CylinderGeometry(0.05, 0.05, 0.62, 24), std(0xffffff, 0.5, 0, { map: st }), { y: 1.27 }));
-    g.add(mesh(new T.CylinderGeometry(0.008, 0.008, 0.06, 6), std(0x111111), { y: 1.61, cast: false }));
-    const flame = new T.Group(); flame.position.set(0, 1.7, 0); g.add(flame);
+    g.add(mesh(new T.CylinderGeometry(0.04, 0.04, 0.5, 24), std(0xffffff, 0.5, 0, { map: st }), { y: 1.18 }));
+    g.add(mesh(new T.CylinderGeometry(0.007, 0.007, 0.05, 6), std(0x111111), { y: 1.455, cast: false }));
+    const flame = new T.Group(); flame.position.set(0, 1.53, 0); g.add(flame);
     const outer = mesh(new T.SphereGeometry(0.06, 20, 16), new T.MeshBasicMaterial({ color: 0xff9a2a, transparent: true, opacity: 0.85 }), { s: [1, 2.1, 1], cast: false, receive: false });
     const inner = mesh(new T.SphereGeometry(0.035, 16, 12), new T.MeshBasicMaterial({ color: 0xfff3c0 }), { y: -0.02, s: [1, 1.8, 1], cast: false, receive: false });
     const glow = new T.Sprite(new T.SpriteMaterial({ map: soft(), color: 0xffb04a, transparent: true, opacity: 0.55, blending: T.AdditiveBlending, depthWrite: false }));
-    glow.scale.setScalar(0.6);
+    glow.scale.setScalar(0.32);
     const light = new T.PointLight(0xffa040, 1.6, 3, 2); light.castShadow = false;
     flame.add(outer, inner, glow, light);
     let lit = true;
     return {
-      scene, camera: camera(32, [0, 2.4, 4.2], [0, 0.75, 0]),
+      scene, camera: camera(20, [0, 3.0, 7.4], [0, 0.6, 0]),
       update(t) {
         g.rotation.y = Math.sin(t * 0.25) * 0.5;
         const f = 1 + Math.sin(t * 23) * 0.06 + Math.sin(t * 37) * 0.04;
@@ -312,110 +322,165 @@ const PROPS = {
     };
   },
 
-  // The campfire at night, as a decoration for Inicio: the fire in a clearing of darkness, pines that grow around it
-  // over the days, pairs of eyes that open now and then in the dark behind, and something that peeks out from behind a
-  // tree. Poked, the fire flares up and whatever watches from the dark goes away. Original shapes.
+  // The campfire at night, a decoration for Inicio: a small floating island seen from a long lens (no fish-eye), in
+  // low-poly with flat facets, under a blue moonlight. A forest of pines that keeps growing over the days surrounds a
+  // clearing with the fire. Now and then (rarely) a pair of eyes opens between the trees at the back, or something
+  // peeks out from behind a trunk. Poked, the fire flares up with a whoosh: the eyes squeeze shut and sink into the
+  // dark, the thing ducks back behind its tree. Original shapes.
   campfire() {
-    const base = PROPS.fire();
-    const { scene } = base;
-    const light = scene.children.find((o) => o.isPointLight);
-    if (light) { light.distance = 9; }
-    // The night: a dark clearing that fades into the page at its edges.
-    const nightTex = (() => {
-      const c = document.createElement('canvas'); c.width = c.height = 128;
-      const x = c.getContext('2d'); const g = x.createRadialGradient(64, 64, 8, 64, 64, 64);
-      g.addColorStop(0, 'rgba(10,12,22,.95)'); g.addColorStop(0.6, 'rgba(8,10,20,.8)'); g.addColorStop(1, 'rgba(8,10,20,0)');
-      x.fillStyle = g; x.fillRect(0, 0, 128, 128);
-      return new T.CanvasTexture(c);
-    })();
-    const night = new T.Mesh(new T.CircleGeometry(4.2, 48), new T.MeshBasicMaterial({ map: nightTex, transparent: true, depthWrite: false }));
-    night.rotation.x = -Math.PI / 2; night.position.y = -0.01; night.renderOrder = -2; night.scale.setScalar(0.9); scene.add(night);
-    const back = new T.Sprite(new T.SpriteMaterial({ map: nightTex, transparent: true, depthWrite: false }));
-    back.scale.set(9.5, 5.2, 1); back.position.set(0, 1.4, -3.2); back.renderOrder = -3; scene.add(back);
-    const glow = new T.Sprite(new T.SpriteMaterial({ map: soft(), color: 0xff8a2a, transparent: true, opacity: 0.35, blending: T.AdditiveBlending, depthWrite: false }));
-    glow.scale.setScalar(3.4); glow.position.y = 0.6; scene.add(glow);
-    // The pines: each sprouts some minutes after the one before (counted from the first time the fire was lit here)
-    // and grows slowly; the forest keeps growing between visits.
+    const scene = new T.Scene();
+    const flat = (color, rough = 0.9) => std(color, rough, 0, { flatShading: true });
+    // Night light: a dim blue sky, a cold moon from the side, and the warm fire (no daylight reflections).
+    scene.add(new T.HemisphereLight(0x6a80d0, 0x3a3460, 1.2));
+    const moon = new T.DirectionalLight(0xa8baff, 1.5); moon.position.set(-5, 6, 5); moon.castShadow = true;
+    moon.shadow.mapSize.set(1024, 1024); Object.assign(moon.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5 }); scene.add(moon);
+    const fireLight = new T.PointLight(0xff8a2a, 14, 7, 1.5); fireLight.position.set(0, 0.7, 0); fireLight.castShadow = true;
+    fireLight.shadow.mapSize.set(512, 512); scene.add(fireLight);
+    const world = new T.Group(); scene.add(world);
+    // The island: a grassy top and a rocky underside, faceted.
+    const top = mesh(new T.CylinderGeometry(3.3, 3.1, 0.35, 14, 1), flat(0x2f5a3a), { y: -0.18 });
+    world.add(top);
+    const under = mesh(new T.ConeGeometry(3.1, 2.6, 14, 2), flat(0x6b5446), { y: -1.65, rx: Math.PI, cast: false });
+    const pos = under.geometry.attributes.position;
+    for (let i = 0; i < pos.count; i += 1) if (pos.getY(i) < 1.2 && pos.getY(i) > -1.2) { pos.setX(i, pos.getX(i) * (0.85 + Math.random() * 0.3)); pos.setZ(i, pos.getZ(i) * (0.85 + Math.random() * 0.3)); }
+    under.geometry.computeVertexNormals(); world.add(under);
+    const clearing = mesh(new T.CircleGeometry(1.25, 18), flat(0x4a3a2a, 1), { y: 0.002, rx: -Math.PI / 2, cast: false });
+    world.add(clearing);
+    // The fire: logs, a ring of stones, flames and sparks.
+    const bark = flat(0x4a2f1e);
+    for (let i = 0; i < 4; i += 1) world.add(mesh(new T.CylinderGeometry(0.07, 0.09, 1.0, 7), bark, { y: 0.1, rz: Math.PI / 2 - 0.25, ry: (i / 4) * Math.PI }));
+    const stone = flat(0x8a8580);
+    for (let i = 0; i < 10; i += 1) { const a = (i / 10) * Math.PI * 2; world.add(mesh(new T.DodecahedronGeometry(0.12 + Math.random() * 0.04), stone, { x: Math.cos(a) * 0.62, y: 0.07, z: Math.sin(a) * 0.62, rx: Math.random(), ry: Math.random() })); }
+    const flames = Array.from({ length: 7 }, (_, i) => {
+      const m = mesh(new T.ConeGeometry(0.13 - i * 0.008, 0.62 - i * 0.035, 7, 1, true), new T.MeshBasicMaterial({ color: i < 3 ? 0xff7a1a : 0xffc04a, transparent: true, opacity: 0.8, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }), { cast: false, receive: false });
+      m.userData = { a: (i / 7) * Math.PI * 2, r: i ? 0.09 : 0, p: Math.random() * 10 }; world.add(m); return m;
+    });
+    const sparks = Array.from({ length: 18 }, () => { const s = new T.Sprite(new T.SpriteMaterial({ map: soft(), color: 0xffa23a, transparent: true, blending: T.AdditiveBlending, depthWrite: false })); s.userData.p = Math.random(); world.add(s); return s; });
+    const glow = new T.Sprite(new T.SpriteMaterial({ map: soft(), color: 0xff8a2a, transparent: true, opacity: 0.4, blending: T.AdditiveBlending, depthWrite: false }));
+    glow.scale.setScalar(2.4); glow.position.y = 0.4; world.add(glow);
+    // The forest: pines and a few round bushes; a dense ring is there from the start, and more grow over the days.
     let born = Date.now();
     try { born = Number(localStorage.getItem('studium-campfire')) || born; localStorage.setItem('studium-campfire', String(born)); } catch { /* grows from now */ }
-    const bark = std(0x3b271a, 0.95);
-    const needles = [std(0x1f4a33, 0.85), std(0x24563a, 0.85), std(0x1a3f2c, 0.85)];
-    const SPOTS = [[-2.1, -1.4], [2.2, -1.2], [-1.1, -2.3], [1.0, -2.4], [-2.9, -0.2], [2.9, -0.3], [0, -2.9], [-2.4, -2.6], [2.5, -2.5]];
-    const trees = SPOTS.map(([x, z], i) => {
-      const tr = new T.Group(); tr.position.set(x, 0, z);
-      const h = 1.5 + ((i * 37) % 10) / 10;
-      tr.add(mesh(new T.CylinderGeometry(0.08, 0.12, h * 0.35, 8), bark, { y: h * 0.17 }));
-      for (let k = 0; k < 3; k += 1) tr.add(mesh(new T.ConeGeometry(0.62 - k * 0.15, h * 0.42, 9), needles[(i + k) % 3], { y: h * 0.32 + k * h * 0.22 }));
-      // The first ones are there almost at once; then one every few minutes, and the last ones days later.
-      tr.userData = { sprout: [0, 0.2, 0.8, 3, 8, 20, 60, 240, 1440][i] * 60000, grow: 90000, sway: Math.random() * 6 };
-      tr.scale.setScalar(0.001); scene.add(tr);
+    const greens = [flat(0x2a6a52), flat(0x2f7a5c), flat(0x235c47), flat(0x377f63)];
+    const trunk = flat(0x3b271a);
+    const trees = [];
+    const plant = (x, z, h, kind, sprout) => {
+      const tr = new T.Group(); tr.position.set(x, 0, z); tr.rotation.y = Math.random() * 6;
+      const g = greens[trees.length % greens.length];
+      if (kind === 'bush') tr.add(mesh(new T.IcosahedronGeometry(0.26, 0), g, { y: 0.18, s: [1.2, 0.8, 1.2] }));
+      else {
+        tr.add(mesh(new T.CylinderGeometry(0.05, 0.08, h * 0.3, 6), trunk, { y: h * 0.15 }));
+        for (let k = 0; k < 3; k += 1) tr.add(mesh(new T.ConeGeometry((0.42 - k * 0.1) * (h / 1.6), h * 0.38, 7), g, { y: h * 0.3 + k * h * 0.2 }));
+      }
+      tr.userData = { sprout, grow: 120000, sway: Math.random() * 6, h };
+      tr.scale.setScalar(0.001); world.add(tr); trees.push(tr);
       return tr;
-    });
-    // Eyes in the dark: a pair opens between the trees, blinks, looks, and closes.
-    const eyeMat = () => new T.SpriteMaterial({ map: soft(), color: 0xfff2a8, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false });
-    const pairs = Array.from({ length: 3 }, () => {
-      const p = new T.Group(); const l = new T.Sprite(eyeMat()); const r = new T.Sprite(eyeMat());
-      l.position.x = -0.11; r.position.x = 0.11; p.add(l, r); scene.add(p);
-      p.userData = { at: 4 + Math.random() * 12, life: 0, l, r };
-      return p;
-    });
-    const placeEyes = (p) => {
-      const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4;
-      p.position.set(Math.cos(a) * (3 + Math.random() * 0.6), 0.5 + Math.random() * 0.9, Math.sin(a) * (2.6 + Math.random() * 0.6) - 0.4);
-      p.userData.life = 2.6 + Math.random() * 2.4; p.userData.started = null;
     };
-    // Something behind a tree: a shadow with two small lights, that leans out and hides again.
+    // Rings: behind and on the sides (the front stays open, toward the person); random but always the same here.
+    let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    for (let i = 0; i < 34; i += 1) {
+      const a = Math.PI * (1.05 + rnd() * 0.9) + (i % 2 ? 0 : (rnd() - 0.5) * 0.6) - Math.PI * 0.03;
+      const ring = 1.6 + rnd() * 1.45;
+      const x = Math.cos(a) * ring; const z = Math.sin(a) * ring * 0.95;
+      if (Math.hypot(x, z) > 3.05) continue;
+      const h = 1.1 + rnd() * 1.1;
+      // Most are grown at once; the rest sprout over minutes, hours and days.
+      const sprout = i < 22 ? 0 : [2, 10, 30, 90, 240, 600, 1440, 2880, 4320, 7200, 10080, 14400][i - 22] * 60000;
+      plant(x, z, h, rnd() < 0.18 ? 'bush' : 'pine', sprout);
+    }
+    for (const [x, z] of [[2.4, 0.9], [-2.5, 0.8], [2.7, -0.2], [-2.8, -0.1]]) plant(x, z, 0.9, 'bush', 0);
+    // Eyes between the trees at the back: they open, blink, and close; a flare makes them squeeze shut and sink.
+    const eyeMat = () => new T.SpriteMaterial({ map: soft(), color: 0xfff2a8, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false });
+    const eyes = new T.Group(); const el = new T.Sprite(eyeMat()); const er = new T.Sprite(eyeMat());
+    el.position.x = -0.1; er.position.x = 0.1; eyes.add(el, er); world.add(eyes);
+    const watch = { at: 25 + Math.random() * 25, start: null, life: 4, flee: null };
+    // Something behind a tree: a shadow with two small lights.
     const peeker = new T.Group();
-    peeker.add(mesh(new T.SphereGeometry(0.32, 20, 16), new T.MeshBasicMaterial({ color: 0x07080d }), { s: [1, 1.25, 0.8], cast: false }));
-    const pe = [-0.1, 0.1].map((x) => { const s = new T.Sprite(eyeMat()); s.position.set(x, 0.1, 0.27); s.scale.setScalar(0.16); s.material.opacity = 1; s.material.color.set(0xd6f3ff); peeker.add(s); return s; });
-    peeker.visible = false; scene.add(peeker);
-    let peek = { next: 20 + Math.random() * 20, start: 0, tree: null, side: 1 };
+    peeker.add(mesh(new T.SphereGeometry(0.26, 14, 12), new T.MeshBasicMaterial({ color: 0x07080d }), { s: [1, 1.2, 0.8], cast: false }));
+    const pe = [-0.08, 0.08].map((x) => { const sp = new T.Sprite(eyeMat()); sp.position.set(x, 0.08, 0.22); sp.scale.setScalar(0.13); sp.material.color.set(0xd6f3ff); peeker.add(sp); return sp; });
+    peeker.visible = false; world.add(peeker);
+    const peek = { next: 60 + Math.random() * 60, start: 0, tree: null, side: 1, out: 0, rustled: false };
+    // Left alone, the fire slowly burns down to embers (over about twenty minutes, counted across visits); poked, it
+    // flares up again.
+    const POKED = 'studium-campfire-poked';
+    let poked = Date.now();
+    try { poked = Number(localStorage.getItem(POKED)) || poked; } catch { /* burns from now */ }
+    const strength = () => Math.max(0.3, 1 - (Date.now() - poked) / (20 * 60000) * 0.7);
     let flare = 0; let lastT = 0;
     return {
-      scene, camera: camera(40, [0, 2.7, 5.6], [0, 0.6, -0.6]),
-      update(t, dt) {
-        base.update(t, dt);
-        const step = Math.max(0, t - lastT); lastT = t;
-        flare = Math.max(0, flare - step * 0.6);
-        for (const f of scene.children) if (f.isMesh && f.geometry?.type === 'ConeGeometry' && f.material?.blending === T.AdditiveBlending) f.scale.multiplyScalar(1 + flare * 0.6);
-        if (light) light.intensity += flare * 8;
-        glow.material.opacity = 0.3 + flare * 0.5 + Math.sin(t * 11) * 0.04;
+      scene, camera: camera(21, [0, 5.4, 14.4], [0, -0.05, -0.3]),
+      update(t) {
+        const dt = Math.min(0.1, Math.max(0, t - lastT)); lastT = t;
+        flare = Math.max(0, flare - dt * 0.5);
+        world.rotation.y = Math.sin(t * 0.12) * 0.12;
+        world.position.y = Math.sin(t * 0.6) * 0.05;
+        for (const f of flames) {
+          const w = Math.sin(t * 9 + f.userData.p) * 0.05;
+          f.position.set(Math.cos(f.userData.a) * f.userData.r, 0.38 + w + flare * 0.15, Math.sin(f.userData.a) * f.userData.r);
+          const k = (0.35 + 0.65 * strength()) * (1 + flare * 1.2);
+          f.scale.set(k * 0.9 + flare * 0.3, k * (1 + Math.sin(t * 13 + f.userData.p) * 0.18), k * 0.9 + flare * 0.3);
+        }
+        for (const s of sparks) {
+          const k = (t * (0.5 + flare) + s.userData.p) % 1;
+          s.position.set(Math.sin(k * 9 + s.userData.p * 20) * 0.22, 0.35 + k * (1.6 + flare * 1.5), Math.cos(k * 7 + s.userData.p * 20) * 0.15);
+          s.scale.setScalar(0.05 * (1 - k)); s.material.opacity = 1 - k;
+        }
+        const st = strength();
+        fireLight.intensity = (2.5 + 5.5 * st) + Math.sin(t * 17) * 1.2 * st + Math.sin(t * 29) * 0.8 * st + flare * 18;
+        glow.material.opacity = 0.12 + 0.23 * st + flare * 0.5;
+        glow.scale.setScalar(2.4 + flare * 1.6);
         const age = Date.now() - born;
         for (const tr of trees) {
           const g = Math.min(1, Math.max(0, (age - tr.userData.sprout) / tr.userData.grow));
-          const s = g <= 0 ? 0.001 : 0.15 + 0.85 * (1 - (1 - g) ** 2);
+          const s = g <= 0 ? 0.001 : 0.12 + 0.88 * (1 - (1 - g) ** 2);
           tr.scale.setScalar(s);
-          tr.rotation.z = Math.sin(t * 0.8 + tr.userData.sway) * 0.02 * s;
+          tr.rotation.z = Math.sin(t * 0.8 + tr.userData.sway) * 0.015 * s;
         }
-        // The eyes: only when the fire is calm; a flare sends them away at once.
-        for (const p of pairs) {
-          const u = p.userData;
-          if (u.started === null && t > u.at && flare < 0.05) { placeEyes(p); u.started = t; }
-          if (u.started === null) continue;
-          const k = (t - u.started) / u.life;
-          const blink = Math.abs(Math.sin((t - u.started) * 2.3)) > 0.97 ? 0.1 : 1;
-          const o = flare > 0.05 ? 0 : Math.min(1, k * 6, (1 - k) * 6) * blink;
-          for (const e of [u.l, u.r]) { e.material.opacity = Math.max(0, o); e.scale.set(0.17, 0.11 * blink + 0.005, 1); }
-          p.position.x += Math.sin(t * 0.7) * 0.0015;
-          if (k >= 1 || flare > 0.05) { u.started = null; u.at = t + 8 + Math.random() * 16; for (const e of [u.l, u.r]) e.material.opacity = 0; }
+        // The eyes: rare; they open slowly, blink, close; fleeing, they squeeze shut and sink back into the dark.
+        if (watch.start === null && t > watch.at && flare < 0.05) {
+          const a = Math.PI * (1.25 + Math.random() * 0.5);
+          eyes.position.set(Math.cos(a) * 2.5, 0.55 + Math.random() * 0.5, Math.sin(a) * 2.3);
+          watch.start = t; watch.life = 3.5 + Math.random() * 2.5; watch.flee = null;
+          sfx.eerie();
         }
-        // The peeker: behind the nearest grown tree, it leans out, looks, and goes back.
-        const grown = trees.filter((tr) => tr.scale.x > 0.7);
+        if (watch.start !== null) {
+          const k = (t - watch.start) / watch.life;
+          if (flare > 0.3 && watch.flee === null) watch.flee = t;
+          let open = Math.min(1, k * 5, (1 - k) * 5);
+          let sink = 0;
+          if (watch.flee !== null) { const f = (t - watch.flee) / 0.6; open = Math.max(0, 1 - f * 1.6) * Math.min(1, open + 0.4); sink = f * 0.35; }
+          const blink = Math.abs(Math.sin((t - watch.start) * 2.1)) > 0.97 ? 0.1 : 1;
+          for (const e of [el, er]) { e.material.opacity = Math.max(0, open); e.scale.set(0.15, 0.1 * blink * Math.max(0.15, open) + 0.004, 1); }
+          eyes.position.y -= sink * dt * 2;
+          if (k >= 1 || (watch.flee !== null && t - watch.flee > 0.7)) { watch.start = null; watch.at = t + 45 + Math.random() * 60; for (const e of [el, er]) e.material.opacity = 0; }
+        }
+        // The peeker: rarer still; it leans out from a grown tree, looks, and goes back; a flare makes it duck fast.
+        const grown = trees.filter((tr) => tr.scale.x > 0.8 && tr.userData.h > 1.3 && tr.position.z < -0.8);
         if (!peeker.visible && t > peek.next && grown.length && flare < 0.05) {
-          peek = { next: 0, start: t, tree: grown[Math.floor(Math.random() * grown.length)], side: Math.random() < 0.5 ? -1 : 1 };
+          Object.assign(peek, { start: t, tree: grown[Math.floor(Math.random() * grown.length)], side: Math.random() < 0.5 ? -1 : 1, out: 0, rustled: false, ducking: false });
           peeker.visible = true;
         }
         if (peeker.visible) {
-          const k = (t - peek.start) / 4.5;
-          const out = flare > 0.05 ? 0 : Math.sin(Math.min(1, k) * Math.PI) ** 0.6;
+          const k = (t - peek.start) / 5;
+          if (flare > 0.3) peek.ducking = true;
+          const want = peek.ducking || k > 0.8 ? 0 : k < 0.15 ? 0 : 1;
+          peek.out += (want - peek.out) * Math.min(1, dt * (peek.ducking ? 14 : 3));
+          if (peek.out > 0.3 && !peek.rustled) { peek.rustled = true; sfx.rustle(); }
           const tp = peek.tree.position;
-          peeker.position.set(tp.x + peek.side * (0.05 + out * 0.42), 0.55 + out * 0.08, tp.z - 0.25);
-          peeker.rotation.z = -peek.side * out * 0.25;
-          for (const e of pe) e.material.opacity = out > 0.3 ? 1 : 0;
-          if (k >= 1 || flare > 0.05) { peeker.visible = false; peek.next = t + 25 + Math.random() * 30; }
+          peeker.position.set(tp.x + peek.side * (0.02 + peek.out * 0.34), 0.5 + peek.out * 0.06, tp.z - 0.2);
+          peeker.rotation.z = -peek.side * peek.out * 0.3;
+          for (const e of pe) e.material.opacity = peek.out > 0.4 ? 1 : 0;
+          if ((k > 1 || peek.ducking) && peek.out < 0.02) { peeker.visible = false; peek.next = t + 90 + Math.random() * 90; }
         }
       },
-      poke() { flare = 1; return true; },
+      poke() {
+        // Brought back from the embers: the satisfying sound, once; while it burns, only a soft crackle now and then.
+        if (strength() < 0.75) sfx.revive(); else sfx.crackle();
+        poked = Date.now();
+        try { localStorage.setItem(POKED, String(poked)); } catch { /* not remembered */ }
+        flare = 1;
+        return true;
+      },
     };
   },
 
@@ -612,6 +677,7 @@ void main(){
       dizzy: { dizzy: 1, mouth: 0.35, smile: -0.2 },
       wink: { shutR: 1, smile: 1, blush: 0.6 },
       scared: { wide: 0.7, brow: 0.85, mouth: 0.45, smile: -0.5, blush: 0.1 },
+      yawn: { shutL: 0.85, shutR: 0.85, mouth: 1, smile: 0, brow: 0.3 },
     };
     const now = { ...REST };
     let blinkAt = 2; let lastT = 0;

@@ -225,6 +225,59 @@ export const sfx = {
   // Letters of the wordmark: soft wooden notes.
   note(step = 0) { if (!audio()) return; body(note(step + 7), now(), { gain: 0.035, decay: 0.6, bright: 0.35, room: 0.4 }); },
   boing(step = 0) { this.note(step); },
+  // The campfire: it flares up (a whoosh and crackles), something rustles behind a tree, eyes open in the dark.
+  whoosh() {
+    if (!audio() || !limit('whoosh', 300)) return;
+    const t = now();
+    hiss(t, { gain: 0.06, attack: 0.04, decay: 0.55, freq: 500, q: 0.6, sweep: 4, room: 0.3 });
+    sine(90, t, { gain: 0.04, attack: 0.05, decay: 0.5, glide: 0.7, room: 0.2 });
+    for (let i = 0; i < 7; i += 1) hiss(t + 0.08 + Math.random() * 0.7, { gain: 0.03 + Math.random() * 0.03, decay: 0.02, freq: 2500 + Math.random() * 3000, q: 2, room: 0.15 });
+  },
+  // The fire brought back from its embers: a deep breath of flame and a warm rising chord. Once, not on every click.
+  revive() {
+    if (!audio() || !limit('revive', 4000)) return;
+    const t = now();
+    hiss(t, { gain: 0.07, attack: 0.12, decay: 0.9, freq: 300, q: 0.5, sweep: 6, room: 0.35 });
+    sine(70, t, { gain: 0.05, attack: 0.1, decay: 0.9, glide: 1.4, room: 0.3 });
+    [0, 2, 4, 7].forEach((st, i) => body(note(st + 5, 220), t + 0.18 + i * 0.09, { gain: 0.028, decay: 1.4, bright: 0.3, room: 0.6 }));
+    for (let i = 0; i < 9; i += 1) hiss(t + 0.2 + Math.random() * 1.1, { gain: 0.025 + Math.random() * 0.025, decay: 0.02, freq: 2500 + Math.random() * 3000, q: 2, room: 0.15 });
+  },
+  // A poke while it burns: a soft crackle, now and then only.
+  crackle() {
+    if (!audio() || !limit('crackle', 1500)) return;
+    const t = now();
+    for (let i = 0; i < 4; i += 1) hiss(t + Math.random() * 0.3, { gain: 0.025, decay: 0.02, freq: 2600 + Math.random() * 2500, q: 2, room: 0.15 });
+  },
+  rustle() {
+    if (!audio() || !limit('rustle', 800)) return;
+    const t = now();
+    for (let i = 0; i < 4; i += 1) hiss(t + i * 0.07, { gain: 0.018, attack: 0.02, decay: 0.12, freq: 3200 + Math.random() * 1500, q: 0.9, room: 0.25, pan: -0.2 });
+  },
+  eerie() {
+    if (!audio() || !limit('eerie', 2000)) return;
+    const t = now();
+    sine(196, t, { gain: 0.018, type: 'triangle', attack: 0.4, decay: 1.4, glide: 0.97, room: 0.7 });
+    sine(207.7, t + 0.15, { gain: 0.014, type: 'triangle', attack: 0.4, decay: 1.3, glide: 0.97, room: 0.7 });
+  },
+  // Specter's voice: a small sound of his own for each emotion, soft and short, never words.
+  voice(mood = 'glad') {
+    if (!audio() || !limit('voice', 260)) return;
+    const t = now(); const v = (f) => vary(f, 0.04); const k = { gain: 0.03, room: 0.35 };
+    const V = {
+      glad: () => { sine(v(620), t, { ...k, decay: 0.12, glide: 1.35 }); sine(v(780), t + 0.11, { ...k, decay: 0.16, glide: 1.3 }); },
+      surprised: () => sine(v(420), t, { ...k, gain: 0.035, decay: 0.22, glide: 2.6 }),
+      sad: () => sine(v(520), t, { ...k, type: 'triangle', attack: 0.06, decay: 0.7, glide: 0.62 }),
+      angry: () => { sine(v(170), t, { ...k, type: 'triangle', gain: 0.045, decay: 0.12, glide: 0.85 }); sine(v(150), t + 0.13, { ...k, type: 'triangle', gain: 0.045, decay: 0.16, glide: 0.8 }); },
+      love: () => [0, 1, 2].forEach((i) => sine(v(note(i * 2 + 7, 330)), t + i * 0.09, { ...k, decay: 0.3, room: 0.55 })),
+      dizzy: () => { sine(v(480), t, { ...k, decay: 0.3, glide: 1.6 }); sine(v(760), t + 0.22, { ...k, decay: 0.34, glide: 0.55 }); },
+      wink: () => sine(v(1180), t, { ...k, gain: 0.022, decay: 0.08, glide: 1.1 }),
+      scared: () => [0, 1, 2, 3].forEach((i) => sine(v(880 - i * 40), t + i * 0.05, { ...k, gain: 0.02, decay: 0.05 })),
+      yawn: () => sine(v(520), t, { ...k, type: 'triangle', attack: 0.15, decay: 0.9, glide: 0.45 }),
+      hum: () => [0, 2, 1, 3].forEach((s, i) => sine(note(s + 5, 330), t + i * 0.2, { ...k, gain: 0.022, attack: 0.03, decay: 0.22 })),
+      hop: () => sine(v(300), t, { ...k, gain: 0.025, decay: 0.12, glide: 1.8 }),
+    };
+    (V[mood] ?? V.glad)();
+  },
 
   /* ---------- moments ---------- */
   // A goal met: a soft rising figure, voiced differently each time, over a low note.

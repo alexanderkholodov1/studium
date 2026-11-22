@@ -2576,8 +2576,7 @@ canvas.prop { display: block; }
 .dash-grid > .tile.decor-tile > .tile-body { padding: 0; display: block; overflow: visible; position: relative; }
 .decor-obj { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: none; cursor: pointer; }
 .decor-obj canvas.prop { width: 100%; height: 100%; display: block; }
-/* A scene has no edges: it fades into the page. */
-canvas.prop[data-prop="campfire"] { -webkit-mask-image: radial-gradient(closest-side, #000 62%, transparent 100%); mask-image: radial-gradient(closest-side, #000 62%, transparent 100%); }
+
 .decor-obj.spun { animation: decor-spin .7s var(--spring, ease); }
 @keyframes decor-spin { 40% { transform: translateY(-10px) scale(1.04); } }
 .decor-empty { margin: 0; height: 100%; display: grid; place-items: center; text-align: center; padding: 20px; color: var(--muted); border-radius: 30px;
@@ -2607,6 +2606,11 @@ canvas.prop[data-prop="campfire"] { -webkit-mask-image: radial-gradient(closest-
 @media (prefers-reduced-motion: reduce) { .decor-offer, .decor-offer.out, .decor-obj.spun { animation: none; } }
 .dash-grid [data-tile="shelf"] .trinket.locked { width: 50px; min-width: 0; height: 76px; padding: 0; font-size: 22px; }
 .dash-grid [data-tile="shelf"] .shelf { gap: 10px; flex-wrap: nowrap; }
+/* Specter's song: notes that rise from him and fade. */
+.specter-note { position: absolute; z-index: 3; font: 800 20px var(--display); color: var(--blue); pointer-events: none; animation: specter-note 1.8s ease-out forwards; }
+@keyframes specter-note { from { opacity: 0; transform: translate(0, 0) scale(.6); } 15% { opacity: 1; } to { opacity: 0; transform: translate(18px, -70px) rotate(14deg) scale(1.1); } }
+@media (prefers-reduced-motion: reduce) { .specter-note { display: none; } }
+
 
 /* ---------- «Trabajos» (trabajos.js): a group assignment with its solution guide, read like a study guide ---------- */
 /* One reading column, one path (caspian-kb studium rules/one-path-step-by-step). */
