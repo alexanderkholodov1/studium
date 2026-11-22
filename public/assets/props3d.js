@@ -94,12 +94,329 @@ function stage(scene, { ground = true, key = [3, 5, 4], intensity = 2.2, warm = 
 }
 const camera = (fov, pos, look, aspect = 1) => { const c = new T.PerspectiveCamera(fov, aspect, 0.1, 50); c.position.set(...pos); c.lookAt(...look); return c; };
 
+// Specter's body and face, shared by his own canvas and by the scenes he walks into (as a billboard in 3D, lit by
+// the scene and hidden by what stands in front of him). uOutfit: 0 none, 2 apron, 3 backpack.
+const SPECTER_FRAG = (billboard) => `precision highp float;
+uniform vec2 uRes; uniform float uT, uYaw, uPitch, uRoll, uBlinkL, uBlinkR, uHappy, uWide, uHeart, uDizzy, uBrow, uSmile, uMouth, uBlush, uTear, uDoctor, uRed, uCream, uOutfit, uAlpha;
+uniform vec3 uTint;
+${billboard ? 'varying vec2 vUv;' : ''}
+mat3 rY(float a){ float c=cos(a), s=sin(a); return mat3(c,0.,s, 0.,1.,0., -s,0.,c); }
+mat3 rX(float a){ float c=cos(a), s=sin(a); return mat3(1.,0.,0., 0.,c,-s, 0.,s,c); }
+mat3 rZ(float a){ float c=cos(a), s=sin(a); return mat3(c,-s,0., s,c,0., 0.,0.,1.); }
+float smin(float a, float b, float k){ float h = clamp(.5 + .5*(b-a)/k, 0., 1.); return mix(b, a, h) - k*h*(1.-h); }
+float sdTorus(vec3 p, vec2 t){ vec2 q = vec2(length(p.xz) - t.x, p.y); return length(q) - t.y; }
+vec3 toObj(vec3 p){ p = rZ(uRoll) * rX(uPitch) * rY(uYaw) * p; return vec3(p.x, p.y, p.z*1.12); }
+// id 0: his body; 1: the band of the head mirror; 2: the mirror
+vec2 map(vec3 w){
+  vec3 q = toObj(w);
+  float head = length(q - vec3(0., .24, 0.)) - .6;
+  float ang = atan(q.z, q.x);
+  float r = .55 + .19*smoothstep(.15, -.62, q.y);
+  float hem = -.62 + .085*sin(ang*5. + uT*2.4) + .03*sin(ang*9. - uT*1.6);
+  float skirt = max(-smin(-(length(q.xz) - r), -(q.y - .05), .3), hem - q.y);
+  vec2 res = vec2(smin(head, skirt, .28) * .8, 0.);
+  if (uDoctor > .5){
+    vec3 b = rX(.35) * (q - vec3(0., .5, -.02));
+    float band = sdTorus(b, vec2(.56, .028));
+    if (band < res.x) res = vec2(band, 1.);
+    vec3 m = rX(-1.25) * (q - vec3(-.17, .62, .44));
+    float mirror = max(length(m.xz) - .13, abs(m.y) - .022);
+    if (mirror < res.x) res = vec2(mirror, 2.);
+  }
+  // the backpack (camping): a rounded bag on his back
+  if (uOutfit > 2.5){
+    vec3 bq = q - vec3(0., .02, -.5);
+    vec3 bd = abs(bq) - vec3(.3, .34, .16);
+    float bag = length(max(bd, 0.)) + min(max(bd.x, max(bd.y, bd.z)), 0.) - .07;
+    if (bag < res.x) res = vec2(bag, 3.);
+  }
+  return res;
+}
+vec3 nrm(vec3 p){ vec2 e = vec2(.0015, -.0015);
+  return normalize(e.xyy*map(p+e.xyy).x + e.yyx*map(p+e.yyx).x + e.yxy*map(p+e.yxy).x + e.xxx*map(p+e.xxx).x); }
+float seg(vec2 p, vec2 a, vec2 b){ vec2 pa = p-a, ba = b-a; float h = clamp(dot(pa,ba)/dot(ba,ba), 0., 1.); return length(pa - ba*h); }
+float heart(vec2 p){ p.x = abs(p.x); if (p.y + p.x > 1.) return sqrt(dot(p - vec2(.25,.75), p - vec2(.25,.75))) - sqrt(2.)/4.;
+  return sqrt(min(dot(p - vec2(0.,1.), p - vec2(0.,1.)), dot(p - .5*max(p.x+p.y,0.), p - .5*max(p.x+p.y,0.)))) * sign(p.x - p.y); }
+vec3 face(vec3 col, vec2 f, float dif){
+  vec3 ink = vec3(.05,.06,.12);
+  float side = f.x < 0. ? -1. : 1.;
+  float open = side < 0. ? uBlinkL : uBlinkR;
+  vec2 ec = vec2(abs(f.x), f.y) - vec2(.205, .3);
+  // a worried or angry look tilts the eyes a little
+  ec.y += ec.x * uBrow * .25;
+  float shape = max(max(uHappy, uHeart), uDizzy);
+  float o = open * clamp(1. - 2.*shape, 0., 1.);
+  vec2 esz = vec2(.088, .118) * (1. + .32*uWide);
+  vec2 e = ec / vec2(esz.x, max(.006, esz.y*o));
+  if (o > .02 && length(e) < 1.){
+    col = mix(ink, vec3(.16,.18,.36), smoothstep(.2, 1., -e.y)) * (.75 + .25*dif);
+    float pr = 1. - .45*uWide;
+    vec2 s1 = (vec2(abs(f.x), f.y) - vec2(.18, .34)) / (.032*pr);
+    if (length(s1) < 1. && o > .5) col = vec3(1.);
+    vec2 s2 = (vec2(abs(f.x), f.y) - vec2(.235, .265)) / (.016*pr);
+    if (length(s2) < 1. && o > .5) col = mix(col, vec3(1.), .8);
+  }
+  // asleep or winking: a closed eye is a soft line
+  if (o <= .02 && shape < .5 && abs(ec.y + .01 - ec.x*ec.x*2.2) < .016 && abs(ec.x) < .08) col = ink;
+  float k = clamp(2.*shape - 1., 0., 1.);
+  if (k > 0.){
+    if (uHappy >= uHeart && uHappy >= uDizzy){
+      // happy eyes: two arcs, ^ ^
+      float arc = abs(length(ec - vec2(0., -.05)) - .085);
+      if (arc < .022*k && ec.y > -.045) col = ink;
+    } else if (uHeart >= uDizzy){
+      vec2 hp = (ec + vec2(0., .1)) / (.2*k);
+      if (heart(hp) < 0.) col = mix(vec3(.95,.2,.38), vec3(1.,.55,.7), smoothstep(.0, .8, hp.y)) * (.8 + .3*dif);
+    } else {
+      // dizzy: spirals
+      float rr = length(ec); float a = atan(ec.y, ec.x*side);
+      float sp = abs(fract(rr*28. - a/6.2832 - uT*.8) - .5);
+      if (rr < .095*k && sp < .16) col = ink;
+    }
+  }
+  // brows, only when they say something: up in the middle when worried or sad, down when angry
+  float bw = abs(uBrow);
+  if (bw > .05){
+    vec2 bp = vec2(abs(f.x), f.y);
+    float tilt = uBrow * .09;
+    float d = seg(bp, vec2(.12, .46 + tilt), vec2(.3, .46 - tilt*.4));
+    if (d < .018) col = mix(col, ink, smoothstep(.05, .4, bw));
+  }
+  // the mouth: a curve that smiles or frowns, or open (talking, surprised)
+  if (uMouth > .08){
+    vec2 m = (f - vec2(0., .12 - .02*uSmile)) / vec2(.07 + .02*uSmile, .02 + .07*uMouth);
+    if (length(m) < 1.) col = mix(vec3(.24,.12,.27), vec3(.95,.45,.6), smoothstep(.2, 1., -m.y)) * (.6 + .4*dif);
+  } else {
+    float x = f.x;
+    if (abs(x) < .075 && abs(f.y - (.125 - .012*uSmile + uSmile*x*x*9.)) < .016) col = vec3(.24,.12,.27);
+  }
+  // cheeks: rosier when glad or in love, red when angry
+  float bl = length((vec2(abs(f.x), f.y) - vec2(.37, .17)) / vec2(.1, .055));
+  col = mix(col, mix(vec3(1.,.56,.72), vec3(1.,.3,.32), uRed), uBlush * (1. - smoothstep(.3, 1., bl)));
+  // cream on his face after a bite of the cake: a dab by the mouth and one on the cheek
+  if (uCream > .02){
+    float c1 = length((f - vec2(.11, .1)) / vec2(.085, .055));
+    float c2 = length((f - vec2(-.34, .25)) / vec2(.06, .045));
+    float cd = min(c1, c2);
+    // a soft rim of shade makes the white cream read on his white body
+    col = mix(col, col * vec3(.78, .74, .82), (1. - smoothstep(.95, 1.25, cd)) * uCream);
+    col = mix(col, vec3(1., .97, .9) * (.9 + .15*dif), (1. - smoothstep(.75, .95, cd)) * uCream);
+    if (cd < .45) col = mix(col, vec3(1.), .5 * uCream);
+  }
+  // a tear, falling slowly
+  if (uTear > .05){
+    float fall = fract(uT*.35) * .18;
+    vec2 tp = (f - vec2(-.25, .2 - fall)) / vec2(.03, .045);
+    tp.y += .35*abs(tp.x);
+    if (length(tp) < 1.) col = mix(col, vec3(.6,.82,1.), uTear * (1. - fall*3.));
+  }
+  return col;
+}
+void main(){
+  vec2 uv = ${billboard ? 'vUv - .5' : '(gl_FragCoord.xy - .5*uRes) / uRes.y'};
+  vec3 ro = vec3(0., .08, 3.55);
+  vec3 rd = normalize(vec3(uv, -1.62));
+  float t = 0.; vec2 h = vec2(1.); float dmin = 9.; bool hit = false;
+  for (int i = 0; i < 80; i++){
+    h = map(ro + rd*t);
+    dmin = min(dmin, h.x);
+    if (h.x < .0012){ hit = true; break; }
+    t += h.x;
+    if (t > 6.) break;
+  }
+  if (!hit){
+    float px = 3.55 / (uRes.y * 1.62);
+    float a = (1. - smoothstep(0., px*1.6, dmin)) * .9 * uAlpha;
+    ${billboard ? 'if (a < .02) discard;' : ''}
+    gl_FragColor = vec4(vec3(.48,.55,1.)*uTint*a, a);
+    return;
+  }
+  vec3 p = ro + rd*t; vec3 n = nrm(p); vec3 q = toObj(p); vec3 v = -rd;
+  vec3 L = normalize(vec3(-.55, .8, .7)); vec3 H = normalize(L + v);
+  float dif = clamp(dot(n, L)*.5 + .5, 0., 1.); dif *= dif;
+  float spec = pow(clamp(dot(n, H), 0., 1.), 42.);
+  float fres = pow(1. - clamp(dot(n, v), 0., 1.), 2.6);
+  float ao = clamp(map(p + n*.08).x / .08, .35, 1.);
+  vec3 col;
+  if (h.y > 2.5) {
+    // the backpack: canvas brown, with a lighter flap
+    col = mix(vec3(.42,.3,.2), vec3(.55,.4,.27), smoothstep(.1, .3, q.y)) * (.45 + .7*dif) + spec*.1;
+  } else if (h.y > 1.5) {
+    col = vec3(.78,.82,.88) * (.4 + .7*dif) + spec*1.4 + fres*.3;
+  } else if (h.y > .5) {
+    col = vec3(.16,.18,.24) * (.5 + .6*dif) + spec*.3;
+  } else {
+    vec3 base = mix(vec3(.72,.77,1.), vec3(1.,1.,1.), smoothstep(-.65, .8, q.y));
+    col = base * (.36 + .72*dif) * mix(.72, 1., ao) + vec3(.55,.5,1.)*fres*.8 + spec*.4;
+    col += vec3(.35,.4,1.) * .16 * smoothstep(-.2, -.6, q.y);
+    // the doctor's coat: white over his lower body, open in front, with a collar
+    if (uDoctor > .5){
+      float a = atan(q.x, q.z);
+      float coat = smoothstep(.14, .02, q.y) * smoothstep(.34, .46, abs(a));
+      col = mix(col, vec3(.98,.98,1.) * (.48 + .62*dif) * mix(.8, 1., ao) + spec*.25 + vec3(.5,.5,.8)*fres*.25, coat * .92);
+      if (abs(abs(a) - .42) < .035 && q.y < .1) col *= .86;
+    }
+    // the apron (the cake): pink with a white frill and a heart, over his lower body
+    if (uOutfit > 1.5 && uOutfit < 2.5 && q.z > 0.){
+      float ap = smoothstep(.02, -.03, q.y) * smoothstep(.44, .38, abs(q.x));
+      float frill = ap * step(q.y, -.5 + .025*sin(q.x*60.));
+      col = mix(col, vec3(1.,.78,.86) * (.5 + .6*dif) + spec*.15, ap * .95);
+      col = mix(col, vec3(1.) * (.6 + .5*dif), frill);
+      if (ap > .5 && length((q.xy - vec2(.0, -.22)) / vec2(.09, .07)) < 1.) col = vec3(.95,.45,.6) * (.6 + .4*dif);
+    }
+    // the backpack's straps over his shoulders
+    if (uOutfit > 2.5 && q.z > 0. && abs(abs(q.x) - .4) < .045 && q.y < .42 && q.y > -.3) col = vec3(.4,.28,.18) * (.5 + .6*dif);
+    if (q.z > .15) {
+      if (uDoctor < .5){
+        vec2 g = (q.xy - vec2(0., .64)) / vec2(.065, .08);
+        if (abs(g.x) + abs(g.y) < 1.) col = mix(vec3(.3,.36,1.), vec3(.75,.8,1.), smoothstep(.2, -1., g.x + g.y)) * (.6 + .5*dif) + spec*.6;
+      }
+      col = face(col, q.xy, dif);
+    }
+  }
+  gl_FragColor = vec4(col * uTint * uAlpha, uAlpha);
+}`;
+const specterUniforms = () => ({
+  uRes: { value: new T.Vector2(1, 1) }, uT: { value: 0 }, uYaw: { value: 0 }, uPitch: { value: 0 }, uRoll: { value: 0 },
+  uBlinkL: { value: 1 }, uBlinkR: { value: 1 }, uHappy: { value: 0 }, uWide: { value: 0 }, uHeart: { value: 0 }, uDizzy: { value: 0 },
+  uBrow: { value: 0 }, uSmile: { value: 0.35 }, uMouth: { value: 0 }, uBlush: { value: 0.4 }, uTear: { value: 0 }, uDoctor: { value: 0 }, uRed: { value: 0 }, uCream: { value: 0 },
+  uOutfit: { value: 0 }, uAlpha: { value: 1 }, uTint: { value: new T.Color(1, 1, 1) },
+});
+// What each emotion does to each feature; anything not named goes back to rest.
+const REST = { happy: 0, wide: 0, heart: 0, dizzy: 0, brow: 0, smile: 0.35, mouth: 0, blush: 0.4, tear: 0, red: 0, shutL: 0, shutR: 0 };
+const MOODS = {
+  glad: { happy: 1, smile: 1, blush: 0.75 },
+  shut: { shutL: 1, shutR: 1, smile: 0.15, blush: 0.3 },
+  sad: { brow: 0.9, smile: -0.8, tear: 1, blush: 0.15, shutL: 0.35, shutR: 0.35 },
+  surprised: { wide: 1, mouth: 0.9, brow: 0.55, smile: 0 },
+  angry: { brow: -1, smile: -0.6, blush: 0.9, red: 1 },
+  love: { heart: 1, smile: 1, blush: 1 },
+  dizzy: { dizzy: 1, mouth: 0.35, smile: -0.2 },
+  wink: { shutR: 1, smile: 1, blush: 0.6 },
+  scared: { wide: 0.7, brow: 0.85, mouth: 0.45, smile: -0.5, blush: 0.1 },
+  yawn: { shutL: 0.85, shutR: 0.85, mouth: 1, smile: 0, brow: 0.3 },
+};
+// His face from a state ({ mood, talk, look, cream, roll }): each feature eases toward the emotion; he blinks.
+function specterFace(U) {
+  const now = { ...REST };
+  let blinkAt = 2; let lastT = 0;
+  return (t, d) => {
+    const dt = Math.min(0.1, Math.max(0, t - lastT)); lastT = t;
+    const target = { ...REST, ...(MOODS[d.mood] ?? {}) };
+    const k = 1 - Math.exp(-dt * 9);
+    for (const key of Object.keys(now)) now[key] += (target[key] - now[key]) * k;
+    if (t > blinkAt) blinkAt = t + 2.5 + Math.random() * 3;
+    const blink = blinkAt - t > 2.38 ? 0.08 : 1;
+    U.uT.value = t;
+    const look = Number(d.look) || 0;
+    U.uYaw.value = Math.sin(t * 0.7) * 0.22 + look * 0.45;
+    U.uPitch.value = Math.sin(t * 1.1) * 0.06 - (d.mood === 'sad' ? 0.05 : 0);
+    U.uRoll.value = Math.sin(t * 0.9) * 0.05 + (d.mood === 'dizzy' ? Math.sin(t * 6) * 0.18 : 0) + (d.mood === 'scared' ? Math.sin(t * 40) * 0.03 : 0) + (Number(d.roll) || 0);
+    U.uBlinkL.value = Math.min(blink, 1 - now.shutL);
+    U.uBlinkR.value = Math.min(blink, 1 - now.shutR);
+    U.uHappy.value = now.happy; U.uWide.value = now.wide; U.uHeart.value = now.heart; U.uDizzy.value = now.dizzy;
+    U.uBrow.value = now.brow; U.uSmile.value = now.smile; U.uBlush.value = now.blush; U.uTear.value = now.tear; U.uRed.value = now.red;
+    // Talking, the mouth opens and closes with the syllables.
+    U.uMouth.value = Math.max(now.mouth, d.talk === '1' || d.talk === true ? 0.25 + 0.55 * Math.abs(Math.sin(t * 13) * Math.sin(t * 5.3)) : 0);
+    U.uDoctor.value = d.skin === 'doctor' ? 1 : 0;
+    U.uCream.value += ((d.cream === '1' || d.cream === true ? 1 : 0) - U.uCream.value) * k;
+  };
+}
+// Specter inside a scene: a billboard that always faces the camera, depth-tested against the scene.
+function specterActor(parent) {
+  const U = specterUniforms();
+  const mat = new T.ShaderMaterial({ uniforms: U, vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }', fragmentShader: SPECTER_FRAG(true), transparent: true, depthWrite: false });
+  mat.premultipliedAlpha = true;
+  const mesh = new T.Mesh(new T.PlaneGeometry(1, 1), mat);
+  mesh.visible = false; mesh.renderOrder = 5; parent.add(mesh);
+  const face = specterFace(U);
+  const state = { mood: '', talk: false, cream: false, roll: 0 };
+  const pq = new T.Quaternion();
+  return {
+    mesh, U, state,
+    update(t, cam, size) {
+      if (!mesh.visible) return;
+      mesh.parent.getWorldQuaternion(pq);
+      mesh.quaternion.copy(pq.invert()).multiply(cam.quaternion);
+      U.uRes.value.set(size, size);
+      face(t, state);
+    },
+  };
+}
+
+// Specter's stories inside a scene. He comes in already dressed for it, flies in from outside along an arc, circles
+// the scene once (what stands in front of him hides him), lands on his seat, lives the story (its events say words,
+// change his face, move his things), and flies away. `on(event)` tells the page: { say, x, y, ms } to show his words
+// where he is, { notes, x, y }, and { end } when he has left.
+function storyStage({ actor, look: { entry, exit, center, radius, height, seat, size }, project, warm = () => 1 }) {
+  const V = (a) => new T.Vector3(...a);
+  const E = V(entry); const X = V(exit); const S = V(seat);
+  const orbitAt = (a) => new T.Vector3(center[0] + Math.cos(a) * radius, height + Math.sin(a * 2) * 0.12, center[2] + Math.sin(a) * radius);
+  const A0 = 0.45;
+  const IN = 2.0; const AROUND = 3.2; const DOWN = 1.0; const OUT = 1.8;
+  let run = null;
+  const ease = (k) => (k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2);
+  const arc = (a, b, k, lift) => a.clone().lerp(b, ease(k)).add(new T.Vector3(0, Math.sin(k * Math.PI) * lift, 0));
+  function emit(ev) { if (!run?.on) return; const p = project(actor.mesh.position.x, actor.mesh.position.y + size * 0.45, actor.mesh.position.z); run.on({ ...ev, ...(p ? { x: p.x, y: p.y } : {}) }); }
+  const ctx = {
+    say: (text, ms = 1600) => emit({ say: text, ms }),
+    notes: (n = 3) => emit({ notes: n }),
+    mood: (m) => { actor.state.mood = m; },
+    talk: (on) => { actor.state.talk = on; },
+    cream: (on) => { actor.state.cream = on; },
+    hop: (h = 0.22) => { run.hop = { t0: run.now, h }; sfx.voice('hop'); },
+    sway: (on) => { run.sway = on; },
+    nod: (on) => { run.nod = on; },
+  };
+  return {
+    busy: () => !!run,
+    start(story, outfit, on) {
+      run = { story, on, t0: null, fired: 0, now: 0, hop: null, sway: false, nod: false };
+      actor.U.uOutfit.value = outfit;
+      Object.assign(actor.state, { mood: 'glad', talk: false, cream: false, roll: 0 });
+      return true;
+    },
+    stop() { if (run) { actor.mesh.visible = false; const on = run.on; run = null; on?.({ end: true }); } },
+    update(t, cam) {
+      if (!run) return;
+      if (run.t0 === null) run.t0 = t;
+      const e = t - run.t0; run.now = e;
+      const seated = IN + AROUND + DOWN;
+      const len = seated + run.story.seated;
+      let pos; let alpha = 1;
+      if (e < IN) { pos = arc(E, orbitAt(A0), e / IN, 0.8); alpha = Math.min(1, e / 0.4); }
+      else if (e < IN + AROUND) pos = orbitAt(A0 - ((e - IN) / AROUND) * Math.PI * 2);
+      else if (e < seated) pos = arc(orbitAt(A0), S, (e - IN - AROUND) / DOWN, 0.15);
+      else if (e < len) pos = S.clone();
+      else if (e < len + OUT) { pos = arc(S, X, (e - len) / OUT, 1.0); alpha = Math.min(1, (len + OUT - e) / 0.5); }
+      else { this.stop(); return; }
+      // Seated: hops, a sway, nodding off.
+      if (e >= seated && e < len) {
+        if (run.hop) { const k = (e - run.hop.t0) / 0.55; if (k < 1) pos.y += Math.sin(k * Math.PI) * run.hop.h; else run.hop = null; }
+        actor.state.roll = run.sway ? Math.sin(e * 3.2) * 0.16 : run.nod ? Math.sin(e * 2.4) * 0.12 : 0;
+        // The story's events, each once, at its time.
+        const se = e - seated;
+        while (run.fired < run.story.events.length && run.story.events[run.fired][0] <= se) { run.story.events[run.fired][1](ctx); run.fired += 1; }
+      } else actor.state.roll = 0;
+      pos.y += Math.sin(t * 2.1) * 0.03;
+      actor.mesh.visible = true;
+      actor.mesh.position.copy(pos);
+      actor.mesh.scale.setScalar(size);
+      actor.U.uAlpha.value = alpha;
+      // Warmer near the fire (or the candle), cooler away from it.
+      const w = warm(pos);
+      actor.U.uTint.value.setRGB(0.78 + 0.27 * w, 0.82 + 0.1 * w, 0.95 - 0.12 * w);
+      actor.update(t, cam, 160);
+    },
+  };
+}
+
 /* ---------- the props ---------- */
 // Each returns { scene, camera, update(t, dt), poke() }.
 const PROPS = {
   // A chocolate cake on a porcelain plate: glossy ganache, a ring of cream dollops with a cherry on each, shavings on
   // the side, and one striped candle with a living flame that lights the top.
-  cake() {
+  cake(canvas) {
     const scene = new T.Scene(); stage(scene, { key: [2.5, 5, 3.5], intensity: 2 });
     const g = new T.Group(); scene.add(g);
     // A porcelain plate, a chocolate sponge, a glossy ganache that drips over the edge, a ring of cream at the foot,
@@ -144,17 +461,76 @@ const PROPS = {
     glow.scale.setScalar(0.32);
     const light = new T.PointLight(0xffa040, 1.6, 3, 2); light.castShadow = false;
     flame.add(outer, inner, glow, light);
-    let lit = true;
+    let lit = true; let hold = false;
+    const proj = new T.Vector3(); const projUp = new T.Vector3();
+    const cam = camera(20, [0, 3.0, 7.4], [0, 0.6, 0]);
+    // Specter, when he comes for cake: an apron on, sitting on the top of the cake.
+    const actor = specterActor(g);
+    const projectLocal = (x, y, z) => {
+      const c = canvas?.getBoundingClientRect?.(); if (!c?.width) return null;
+      g.updateMatrixWorld(); proj.set(x, y, z); g.localToWorld(proj); cam.updateMatrixWorld(); proj.project(cam);
+      return { x: c.left + ((proj.x + 1) / 2) * c.width, y: c.top + ((1 - proj.y) / 2) * c.height };
+    };
+    const stage3 = storyStage({ actor, project: projectLocal,
+      look: { entry: [2.6, 2.8, 2.4], exit: [-2.8, 3, 1.6], center: [0, 0, 0], radius: 1.7, height: 1.5, seat: [0.42, 1.22, 0.42], size: 0.62 },
+      warm: (p) => (lit ? Math.max(0, 1 - Math.hypot(p.x, p.y - 1.5, p.z) / 1.4) * 0.6 : 0) });
+    const eatCherry = () => {
+      const left = cherries.filter(([c]) => c.visible);
+      if (!left.length) return false;
+      const pair = left[Math.floor(Math.random() * left.length)];
+      for (const m of pair) m.visible = false;
+      setTimeout(() => { for (const m of pair) m.visible = true; }, 4 * 60000);
+      return true;
+    };
+    const STORIES = {
+      cherry: { seated: 6, events: [
+        [0.2, (c) => { c.mood('surprised'); sfx.voice('surprised'); c.say('¡Una cereza!', 1300); }],
+        [1.4, (c) => { eatCherry(); c.mood('love'); c.cream(true); sfx.voice('glad'); c.hop(0.12); }],
+        [2.4, (c) => { c.talk(true); c.say('Mmm.', 1300); }],
+        [3.6, (c) => { c.talk(false); c.mood('glad'); }],
+      ] },
+      wish: { seated: 6.5, events: [
+        [0.2, (c) => { c.mood('shut'); c.say('Pido un deseo…', 1800); }],
+        [2.2, (c) => { c.say('Fuuu…', 900); if (lit) { lit = false; flame.visible = false; sfx.blow(); setTimeout(() => { lit = true; flame.visible = true; }, 30000); } }],
+        [3.4, (c) => { c.mood('wink'); c.say('¡No te lo digo!', 1500); }],
+      ] },
+      taste: { seated: 6, events: [
+        [0.2, (c) => { c.mood('wink'); c.say('Nadie está mirando…', 1500); c.sway(true); }],
+        [2.0, (c) => { c.sway(false); c.cream(true); c.mood('love'); sfx.voice('glad'); }],
+        [2.6, (c) => { c.say('Solo una probadita.', 1500); }],
+      ] },
+      dance: { seated: 5, events: [
+        [0.2, (c) => { c.mood('glad'); c.say('¡Torta, torta!', 1600); c.hop(0.14); }],
+        [0.9, (c) => c.hop(0.18)],
+        [1.6, (c) => c.hop(0.24)],
+        [2.6, (c) => { c.mood('love'); c.sway(true); }],
+        [4.2, (c) => c.sway(false)],
+      ] },
+    };
     return {
-      scene, camera: camera(20, [0, 3.0, 7.4], [0, 0.6, 0]),
+      scene, camera: cam,
+      project(x, y, z) {
+        const c = canvas?.getBoundingClientRect?.();
+        if (!c?.width) return null;
+        g.updateMatrixWorld();
+        proj.set(x, y, z); g.localToWorld(proj); projUp.set(x, y + 1, z); g.localToWorld(projUp);
+        this.camera.updateMatrixWorld(); proj.project(this.camera); projUp.project(this.camera);
+        return { x: c.left + ((proj.x + 1) / 2) * c.width, y: c.top + ((1 - proj.y) / 2) * c.height, unit: Math.abs(projUp.y - proj.y) / 2 * c.height };
+      },
       update(t) {
-        g.rotation.y = Math.sin(t * 0.25) * 0.5;
+        g.rotation.y += ((hold || stage3.busy() ? 0 : Math.sin(t * 0.25) * 0.5) - g.rotation.y) * 0.08;
+        stage3.update(t, cam);
         const f = 1 + Math.sin(t * 23) * 0.06 + Math.sin(t * 37) * 0.04;
         flame.scale.set(1, f, 1); light.intensity = lit ? 1.4 * f : 0;
       },
       poke() { lit = !lit; flame.visible = lit; return lit; },
       // Specter eats a cherry: it is gone from the top, and grows back a few minutes later.
-      act(name) {
+      act(name, arg) {
+        // Specter comes for cake: one of his stories (`arg`: { story, on }).
+        if (name === 'story') { if (stage3.busy() || !STORIES[arg?.story]) return 0; return stage3.start(STORIES[arg.story], 2, arg.on); }
+        if (name === 'stop') { stage3.stop(); return 1; }
+        if (name === 'hold') { hold = true; return 1; }
+        if (name === 'free') { hold = false; return 1; }
         // He blows the candle out (a wish); it lights again half a minute later.
         if (name === 'blow') { if (!lit) return false; lit = false; flame.visible = false; setTimeout(() => { lit = true; flame.visible = true; }, 30000); return true; }
         if (name !== 'eat') return false;
@@ -341,7 +717,7 @@ const PROPS = {
   // clearing with the fire. Now and then (rarely) a pair of eyes opens between the trees at the back, or something
   // peeks out from behind a trunk. Poked, the fire flares up with a whoosh: the eyes squeeze shut and sink into the
   // dark, the thing ducks back behind its tree. Original shapes.
-  campfire() {
+  campfire(canvas) {
     const scene = new T.Scene();
     const flat = (color, rough = 0.9) => std(color, rough, 0, { flatShading: true });
     // Night light: a dim blue sky, a cold moon from the side, and the warm fire (no daylight reflections).
@@ -420,31 +796,92 @@ const PROPS = {
     let poked = Date.now();
     try { poked = Number(localStorage.getItem(POKED)) || poked; } catch { /* burns from now */ }
     const strength = () => Math.max(0.3, 1 - (Date.now() - poked) / (20 * 60000) * 0.7);
-    // A marshmallow on a stick, held out over the fire from the right (Specter's visit): it toasts and is eaten.
+    // Specter's marshmallow: a stick from where he sits (SEAT, right of the fire) to over the flames. It slides out of
+    // his hands, toasts while it is over the fire, catches fire if left too long, is blown out, charred, and put away.
+    const SEAT = new T.Vector3(1.85, 0.42, 0.95);
+    const TIP = new T.Vector3(0.32, 0.92, 0.25);
+    const HAND = new T.Vector3(1.6, 0.62, 0.85);
     const stick = new T.Group(); stick.visible = false; world.add(stick);
-    stick.add(mesh(new T.CylinderGeometry(0.028, 0.034, 2.2, 6), flat(0x8a6038), { y: 0, rz: Math.PI / 2, cast: false }));
+    const along = HAND.clone().sub(TIP); const L = along.length();
+    stick.position.copy(TIP);
+    stick.rotation.set(0, -Math.atan2(along.z, along.x), Math.atan2(along.y, Math.hypot(along.x, along.z)));
+    const rod = new T.Group(); stick.add(rod);
+    rod.add(mesh(new T.CylinderGeometry(0.022, 0.03, L + 0.25, 6), flat(0x8a6038), { x: (L + 0.25) / 2 - 0.05, rz: Math.PI / 2, cast: false }));
     const mallowMat = phys(0xfffaf2, { roughness: 0.75, sheen: 0.5 });
-    const mallow = mesh(new T.CapsuleGeometry(0.15, 0.16, 6, 14), mallowMat, { x: -1.2, rz: Math.PI / 2, cast: false });
-    stick.add(mallow);
-    const roast = { start: -1 };
-    const RAW = new T.Color(0xfffaf2); const GOLD = new T.Color(0xe7a64a); const BROWN = new T.Color(0x9a5a2a);
+    const mallow = mesh(new T.CapsuleGeometry(0.13, 0.14, 6, 14), mallowMat, { rz: Math.PI / 2, cast: false });
+    rod.add(mallow);
+    const mFlame = new T.Group(); mFlame.visible = false; rod.add(mFlame);
+    for (let i = 0; i < 3; i += 1) mFlame.add(mesh(new T.ConeGeometry(0.07 - i * 0.015, 0.3 - i * 0.06, 8, 1, true), new T.MeshBasicMaterial({ color: i ? 0xffc04a : 0xff6a1a, transparent: true, opacity: 0.85, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }), { y: 0.16, cast: false, receive: false }));
+    const RAW = new T.Color(0xfffaf2); const GOLD = new T.Color(0xe7a64a); const BROWN = new T.Color(0x9a5a2a); const CHAR = new T.Color(0x1c1612);
+    const roast = { out: 0, want: 0, toast: 0, burning: false, charred: false };
+    let hold = false;
+    const proj = new T.Vector3(); const projUp = new T.Vector3();
     let flare = 0; let lastT = 0;
+    // Specter, when he comes camping: a backpack on, sitting right of the fire.
+    const actor = specterActor(world);
+    const cam = camera(21, [0, 5.4, 14.4], [0, -0.05, -0.3]);
+    const projectLocal = (x, y, z) => {
+      const c = canvas?.getBoundingClientRect?.(); if (!c?.width) return null;
+      world.updateMatrixWorld(); proj.set(x, y, z); world.localToWorld(proj); cam.updateMatrixWorld(); proj.project(cam);
+      return { x: c.left + ((proj.x + 1) / 2) * c.width, y: c.top + ((1 - proj.y) / 2) * c.height };
+    };
+    const stage3 = storyStage({ actor, project: projectLocal,
+      look: { entry: [4.5, 3.6, 3], exit: [-4.5, 4.2, 2.2], center: [0, 0, 0], radius: 2.75, height: 1.35, seat: [SEAT.x + 0.1, SEAT.y + 0.05, SEAT.z], size: 1.0 },
+      warm: (p) => Math.max(0, 1 - Math.hypot(p.x, p.z) / 3) * strength() });
+    const STORIES = {
+      // The marshmallow: toasted, forgotten while he dozes, on fire, blown out, charred.
+      mallow: { seated: 14.5, events: [
+        [0.2, (c) => { c.mood('glad'); c.say('¿Un malvavisco?', 1500); }],
+        [1.4, () => { Object.assign(roast, { want: 1, toast: 0, burning: false, charred: false }); }],
+        [2.0, (c) => { c.talk(true); c.sway(true); c.notes(3); sfx.voice('hum'); }],
+        [4.6, (c) => { c.talk(false); c.sway(false); c.mood('shut'); c.nod(true); c.say('zz…', 1600); }],
+        [7.2, () => { roast.burning = true; sfx.whoosh(); }],
+        [8.6, (c) => { c.nod(false); c.mood('surprised'); sfx.voice('surprised'); c.say('¡Ay! ¡Se quema!', 1400); c.hop(0.3); }],
+        [9.6, (c) => { c.say('Fuuu…', 900); sfx.blow(); roast.burning = false; roast.charred = true; }],
+        [10.8, (c) => { c.mood('sad'); sfx.voice('sad'); c.say('Quedó carbonizado…', 1700); }],
+        [12.6, (c) => { c.mood('wink'); c.say('Igual me lo como.', 1500); }],
+        [13.8, () => { roast.want = 0; }],
+      ] },
+      // Warming up: eyes closed, the fire rises a little.
+      warm: { seated: 5, events: [
+        [0.3, (c) => { flare = Math.max(flare, 0.45); c.mood('shut'); c.say('Qué calentito…', 1800); c.sway(true); }],
+        [3.6, (c) => { c.sway(false); c.mood('glad'); sfx.voice('glad'); }],
+      ] },
+      // A scary story: the eyes open in the dark behind him; he jumps, and laughs.
+      story: { seated: 9.5, events: [
+        [0.2, (c) => { c.mood('wink'); c.say('Te cuento una historia de miedo…', 2000); }],
+        [2.3, (c) => { c.talk(true); c.say('Había una vez, en este mismo bosque…', 2000); }],
+        [4.3, (c) => { c.talk(false); if (watch.start === null) watch.at = lastT; }],
+        [5.5, (c) => { c.mood('scared'); sfx.voice('scared'); c.say('¿…Escuchaste eso?', 1600); c.hop(0.18); }],
+        [7.4, (c) => { c.mood('glad'); c.say('Jaja, era broma. Creo.', 1600); }],
+      ] },
+      // A song by the fire: he sways, notes rise.
+      song: { seated: 6, events: [
+        [0.2, (c) => { c.mood('glad'); c.talk(true); c.sway(true); c.notes(3); sfx.voice('hum'); }],
+        [2.0, (c) => { c.notes(3); sfx.voice('hum'); }],
+        [3.8, (c) => { c.notes(2); sfx.voice('hum'); }],
+        [5.2, (c) => { c.talk(false); c.sway(false); c.mood('wink'); }],
+      ] },
+    };
     return {
-      scene, camera: camera(21, [0, 5.4, 14.4], [0, -0.05, -0.3]),
+      scene, camera: cam,
       update(t) {
         const dt = Math.min(0.1, Math.max(0, t - lastT)); lastT = t;
         flare = Math.max(0, flare - dt * 0.5);
-        world.rotation.y = Math.sin(t * 0.12) * 0.12;
-        if (roast.start >= 0) {
-          const e = t - roast.start;
-          const slide = e < 0.8 ? 1 - e / 0.8 : e > 6.2 ? (e - 6.2) / 0.8 : 0;
-          stick.position.set(1.5 + slide * 1.6, 0.95 + Math.sin(t * 3) * 0.02, 0.45);
-          stick.rotation.z = 0.18;
-          const k = Math.min(1, Math.max(0, (e - 0.8) / 4.6));
-          mallowMat.color.copy(RAW).lerp(GOLD, Math.min(1, k * 1.6)).lerp(BROWN, Math.max(0, k * 1.6 - 1) * 0.7);
-          mallow.rotation.x = e * 1.4; // turned over the fire
-          if (e > 5.6) mallow.visible = false; // eaten
-          if (e > 7) { roast.start = -1; stick.visible = false; }
+        // While Specter is in the scene, it holds still, so he stays where he sits.
+        world.rotation.y += ((hold || stage3.busy() ? 0 : Math.sin(t * 0.12) * 0.12) - world.rotation.y) * Math.min(1, dt * 3);
+        stage3.update(t, cam);
+        roast.out += (roast.want - roast.out) * Math.min(1, dt * 3.2);
+        stick.visible = roast.out > 0.02;
+        rod.position.x = (1 - roast.out) * (L - 0.1); // it slides from his hands toward the fire
+        if (stick.visible) {
+          rod.rotation.x = t * 1.2; // turned over the flames
+          if (roast.out > 0.9 && !roast.charred && !roast.burning) roast.toast = Math.min(1, roast.toast + dt / 5);
+          mallowMat.color.copy(RAW).lerp(GOLD, Math.min(1, roast.toast * 1.6)).lerp(BROWN, Math.max(0, roast.toast * 1.6 - 1) * 0.8);
+          if (roast.charred || roast.burning) mallowMat.color.copy(CHAR);
+          mFlame.visible = roast.burning;
+          mFlame.rotation.x = -rod.rotation.x; // the little flame stays upright
+          for (const [i, f] of mFlame.children.entries()) f.scale.set(1, 1 + Math.sin(t * 15 + i) * 0.2, 1);
         }
         world.position.y = Math.sin(t * 0.6) * 0.05;
         for (const f of flames) {
@@ -506,15 +943,34 @@ const PROPS = {
           if ((k > 1 || peek.ducking) && peek.out < 0.02) { peeker.visible = false; peek.next = t + 90 + Math.random() * 90; }
         }
       },
-      act(name) {
+      act(name, arg) {
         // A scary story: the eyes open in the dark right away.
         if (name === 'eyes') { if (watch.start !== null) return 0; watch.at = lastT; return 4000; }
         // He warms up by it: the fire rises a little, quietly.
         if (name === 'warm') { flare = Math.max(flare, 0.45); return 3000; }
-        if (name !== 'marshmallow' || roast.start >= 0) return 0;
-        roast.start = lastT; stick.visible = true; mallow.visible = true;
-        return 7000;
+        // Specter comes camping: one of his stories (`arg`: { story, on }).
+        if (name === 'story') { if (stage3.busy() || !STORIES[arg?.story]) return 0; return stage3.start(STORIES[arg.story], 3, arg.on); }
+        if (name === 'stop') { stage3.stop(); return 1; }
+        if (name === 'hold') { hold = true; return 1; }
+        if (name === 'free') { hold = false; return 1; }
+        if (name === 'stick') { Object.assign(roast, { want: 1, toast: 0, burning: false, charred: false }); return 1; }
+        if (name === 'burn') { roast.burning = true; sfx.whoosh(); return 1; }
+        if (name === 'blowout') { roast.burning = false; roast.charred = true; return 1; }
+        if (name === 'away') { roast.want = 0; return 1; }
+        return 0;
       },
+      // Where a point of the scene falls on the screen, and how many pixels one unit measures there.
+      project(x, y, z) {
+        const c = canvas?.getBoundingClientRect?.();
+        if (!c?.width) return null;
+        world.updateMatrixWorld();
+        proj.set(x, y, z); world.localToWorld(proj);
+        projUp.set(x, y + 1, z); world.localToWorld(projUp);
+        const cam = this.camera; cam.updateMatrixWorld();
+        proj.project(cam); projUp.project(cam);
+        return { x: c.left + ((proj.x + 1) / 2) * c.width, y: c.top + ((1 - proj.y) / 2) * c.height, unit: Math.abs(projUp.y - proj.y) / 2 * c.height };
+      },
+      seat: SEAT,
       poke() {
         // Brought back from the embers: the satisfying sound, once; while it burns, only a soft crackle now and then.
         if (strength() < 0.75) sfx.revive(); else sfx.crackle();
@@ -550,213 +1006,19 @@ const PROPS = {
   // canvas.dataset.skin: '' | 'doctor' (an original doctor's look: a head mirror on a band and a white coat).
   specter(canvas) {
     const scene = new T.Scene();
-    const U = {
-      uRes: { value: new T.Vector2(1, 1) }, uT: { value: 0 }, uYaw: { value: 0 }, uPitch: { value: 0 }, uRoll: { value: 0 },
-      uBlinkL: { value: 1 }, uBlinkR: { value: 1 }, uHappy: { value: 0 }, uWide: { value: 0 }, uHeart: { value: 0 }, uDizzy: { value: 0 },
-      uBrow: { value: 0 }, uSmile: { value: 0.35 }, uMouth: { value: 0 }, uBlush: { value: 0.4 }, uTear: { value: 0 }, uDoctor: { value: 0 }, uRed: { value: 0 }, uCream: { value: 0 },
-    };
-    const frag = `precision highp float;
-uniform vec2 uRes; uniform float uT, uYaw, uPitch, uRoll, uBlinkL, uBlinkR, uHappy, uWide, uHeart, uDizzy, uBrow, uSmile, uMouth, uBlush, uTear, uDoctor, uRed, uCream;
-mat3 rY(float a){ float c=cos(a), s=sin(a); return mat3(c,0.,s, 0.,1.,0., -s,0.,c); }
-mat3 rX(float a){ float c=cos(a), s=sin(a); return mat3(1.,0.,0., 0.,c,-s, 0.,s,c); }
-mat3 rZ(float a){ float c=cos(a), s=sin(a); return mat3(c,-s,0., s,c,0., 0.,0.,1.); }
-float smin(float a, float b, float k){ float h = clamp(.5 + .5*(b-a)/k, 0., 1.); return mix(b, a, h) - k*h*(1.-h); }
-float sdTorus(vec3 p, vec2 t){ vec2 q = vec2(length(p.xz) - t.x, p.y); return length(q) - t.y; }
-vec3 toObj(vec3 p){ p = rZ(uRoll) * rX(uPitch) * rY(uYaw) * p; return vec3(p.x, p.y, p.z*1.12); }
-// id 0: his body; 1: the band of the head mirror; 2: the mirror
-vec2 map(vec3 w){
-  vec3 q = toObj(w);
-  float head = length(q - vec3(0., .24, 0.)) - .6;
-  float ang = atan(q.z, q.x);
-  float r = .55 + .19*smoothstep(.15, -.62, q.y);
-  float hem = -.62 + .085*sin(ang*5. + uT*2.4) + .03*sin(ang*9. - uT*1.6);
-  float skirt = max(-smin(-(length(q.xz) - r), -(q.y - .05), .3), hem - q.y);
-  vec2 res = vec2(smin(head, skirt, .28) * .8, 0.);
-  if (uDoctor > .5){
-    vec3 b = rX(.35) * (q - vec3(0., .5, -.02));
-    float band = sdTorus(b, vec2(.56, .028));
-    if (band < res.x) res = vec2(band, 1.);
-    vec3 m = rX(-1.25) * (q - vec3(-.17, .62, .44));
-    float mirror = max(length(m.xz) - .13, abs(m.y) - .022);
-    if (mirror < res.x) res = vec2(mirror, 2.);
-  }
-  return res;
-}
-vec3 nrm(vec3 p){ vec2 e = vec2(.0015, -.0015);
-  return normalize(e.xyy*map(p+e.xyy).x + e.yyx*map(p+e.yyx).x + e.yxy*map(p+e.yxy).x + e.xxx*map(p+e.xxx).x); }
-float seg(vec2 p, vec2 a, vec2 b){ vec2 pa = p-a, ba = b-a; float h = clamp(dot(pa,ba)/dot(ba,ba), 0., 1.); return length(pa - ba*h); }
-float heart(vec2 p){ p.x = abs(p.x); if (p.y + p.x > 1.) return sqrt(dot(p - vec2(.25,.75), p - vec2(.25,.75))) - sqrt(2.)/4.;
-  return sqrt(min(dot(p - vec2(0.,1.), p - vec2(0.,1.)), dot(p - .5*max(p.x+p.y,0.), p - .5*max(p.x+p.y,0.)))) * sign(p.x - p.y); }
-vec3 face(vec3 col, vec2 f, float dif){
-  vec3 ink = vec3(.05,.06,.12);
-  float side = f.x < 0. ? -1. : 1.;
-  float open = side < 0. ? uBlinkL : uBlinkR;
-  vec2 ec = vec2(abs(f.x), f.y) - vec2(.205, .3);
-  // a worried or angry look tilts the eyes a little
-  ec.y += ec.x * uBrow * .25;
-  float shape = max(max(uHappy, uHeart), uDizzy);
-  float o = open * clamp(1. - 2.*shape, 0., 1.);
-  vec2 esz = vec2(.088, .118) * (1. + .32*uWide);
-  vec2 e = ec / vec2(esz.x, max(.006, esz.y*o));
-  if (o > .02 && length(e) < 1.){
-    col = mix(ink, vec3(.16,.18,.36), smoothstep(.2, 1., -e.y)) * (.75 + .25*dif);
-    float pr = 1. - .45*uWide;
-    vec2 s1 = (vec2(abs(f.x), f.y) - vec2(.18, .34)) / (.032*pr);
-    if (length(s1) < 1. && o > .5) col = vec3(1.);
-    vec2 s2 = (vec2(abs(f.x), f.y) - vec2(.235, .265)) / (.016*pr);
-    if (length(s2) < 1. && o > .5) col = mix(col, vec3(1.), .8);
-  }
-  // asleep or winking: a closed eye is a soft line
-  if (o <= .02 && shape < .5 && abs(ec.y + .01 - ec.x*ec.x*2.2) < .016 && abs(ec.x) < .08) col = ink;
-  float k = clamp(2.*shape - 1., 0., 1.);
-  if (k > 0.){
-    if (uHappy >= uHeart && uHappy >= uDizzy){
-      // happy eyes: two arcs, ^ ^
-      float arc = abs(length(ec - vec2(0., -.05)) - .085);
-      if (arc < .022*k && ec.y > -.045) col = ink;
-    } else if (uHeart >= uDizzy){
-      vec2 hp = (ec + vec2(0., .1)) / (.2*k);
-      if (heart(hp) < 0.) col = mix(vec3(.95,.2,.38), vec3(1.,.55,.7), smoothstep(.0, .8, hp.y)) * (.8 + .3*dif);
-    } else {
-      // dizzy: spirals
-      float rr = length(ec); float a = atan(ec.y, ec.x*side);
-      float sp = abs(fract(rr*28. - a/6.2832 - uT*.8) - .5);
-      if (rr < .095*k && sp < .16) col = ink;
-    }
-  }
-  // brows, only when they say something: up in the middle when worried or sad, down when angry
-  float bw = abs(uBrow);
-  if (bw > .05){
-    vec2 bp = vec2(abs(f.x), f.y);
-    float tilt = uBrow * .09;
-    float d = seg(bp, vec2(.12, .46 + tilt), vec2(.3, .46 - tilt*.4));
-    if (d < .018) col = mix(col, ink, smoothstep(.05, .4, bw));
-  }
-  // the mouth: a curve that smiles or frowns, or open (talking, surprised)
-  if (uMouth > .08){
-    vec2 m = (f - vec2(0., .12 - .02*uSmile)) / vec2(.07 + .02*uSmile, .02 + .07*uMouth);
-    if (length(m) < 1.) col = mix(vec3(.24,.12,.27), vec3(.95,.45,.6), smoothstep(.2, 1., -m.y)) * (.6 + .4*dif);
-  } else {
-    float x = f.x;
-    if (abs(x) < .075 && abs(f.y - (.125 - .012*uSmile + uSmile*x*x*9.)) < .016) col = vec3(.24,.12,.27);
-  }
-  // cheeks: rosier when glad or in love, red when angry
-  float bl = length((vec2(abs(f.x), f.y) - vec2(.37, .17)) / vec2(.1, .055));
-  col = mix(col, mix(vec3(1.,.56,.72), vec3(1.,.3,.32), uRed), uBlush * (1. - smoothstep(.3, 1., bl)));
-  // cream on his face after a bite of the cake: a dab by the mouth and one on the cheek
-  if (uCream > .02){
-    float c1 = length((f - vec2(.11, .1)) / vec2(.085, .055));
-    float c2 = length((f - vec2(-.34, .25)) / vec2(.06, .045));
-    float cd = min(c1, c2);
-    // a soft rim of shade makes the white cream read on his white body
-    col = mix(col, col * vec3(.78, .74, .82), (1. - smoothstep(.95, 1.25, cd)) * uCream);
-    col = mix(col, vec3(1., .97, .9) * (.9 + .15*dif), (1. - smoothstep(.75, .95, cd)) * uCream);
-    if (cd < .45) col = mix(col, vec3(1.), .5 * uCream);
-  }
-  // a tear, falling slowly
-  if (uTear > .05){
-    float fall = fract(uT*.35) * .18;
-    vec2 tp = (f - vec2(-.25, .2 - fall)) / vec2(.03, .045);
-    tp.y += .35*abs(tp.x);
-    if (length(tp) < 1.) col = mix(col, vec3(.6,.82,1.), uTear * (1. - fall*3.));
-  }
-  return col;
-}
-void main(){
-  vec2 uv = (gl_FragCoord.xy - .5*uRes) / uRes.y;
-  vec3 ro = vec3(0., .08, 3.55);
-  vec3 rd = normalize(vec3(uv, -1.62));
-  float t = 0.; vec2 h = vec2(1.); float dmin = 9.; bool hit = false;
-  for (int i = 0; i < 80; i++){
-    h = map(ro + rd*t);
-    dmin = min(dmin, h.x);
-    if (h.x < .0012){ hit = true; break; }
-    t += h.x;
-    if (t > 6.) break;
-  }
-  if (!hit){
-    float px = 3.55 / (uRes.y * 1.62);
-    float a = (1. - smoothstep(0., px*1.6, dmin)) * .9;
-    gl_FragColor = vec4(vec3(.48,.55,1.)*a, a);
-    return;
-  }
-  vec3 p = ro + rd*t; vec3 n = nrm(p); vec3 q = toObj(p); vec3 v = -rd;
-  vec3 L = normalize(vec3(-.55, .8, .7)); vec3 H = normalize(L + v);
-  float dif = clamp(dot(n, L)*.5 + .5, 0., 1.); dif *= dif;
-  float spec = pow(clamp(dot(n, H), 0., 1.), 42.);
-  float fres = pow(1. - clamp(dot(n, v), 0., 1.), 2.6);
-  float ao = clamp(map(p + n*.08).x / .08, .35, 1.);
-  vec3 col;
-  if (h.y > 1.5) {
-    col = vec3(.78,.82,.88) * (.4 + .7*dif) + spec*1.4 + fres*.3;
-  } else if (h.y > .5) {
-    col = vec3(.16,.18,.24) * (.5 + .6*dif) + spec*.3;
-  } else {
-    vec3 base = mix(vec3(.72,.77,1.), vec3(1.,1.,1.), smoothstep(-.65, .8, q.y));
-    col = base * (.36 + .72*dif) * mix(.72, 1., ao) + vec3(.55,.5,1.)*fres*.8 + spec*.4;
-    col += vec3(.35,.4,1.) * .16 * smoothstep(-.2, -.6, q.y);
-    // the doctor's coat: white over his lower body, open in front, with a collar
-    if (uDoctor > .5){
-      float a = atan(q.x, q.z);
-      float coat = smoothstep(.14, .02, q.y) * smoothstep(.34, .46, abs(a));
-      col = mix(col, vec3(.98,.98,1.) * (.48 + .62*dif) * mix(.8, 1., ao) + spec*.25 + vec3(.5,.5,.8)*fres*.25, coat * .92);
-      if (abs(abs(a) - .42) < .035 && q.y < .1) col *= .86;
-    }
-    if (q.z > .15) {
-      if (uDoctor < .5){
-        vec2 g = (q.xy - vec2(0., .64)) / vec2(.065, .08);
-        if (abs(g.x) + abs(g.y) < 1.) col = mix(vec3(.3,.36,1.), vec3(.75,.8,1.), smoothstep(.2, -1., g.x + g.y)) * (.6 + .5*dif) + spec*.6;
-      }
-      col = face(col, q.xy, dif);
-    }
-  }
-  gl_FragColor = vec4(col, 1.);
-}`;
+    const U = specterUniforms();
+    const frag = SPECTER_FRAG(false);
     const mat = new T.ShaderMaterial({ uniforms: U, vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0., 1.); }', fragmentShader: frag, transparent: true, depthTest: false, depthWrite: false });
     mat.premultipliedAlpha = true;
     const tri = new T.BufferGeometry();
     tri.setAttribute('position', new T.Float32BufferAttribute([-1, -1, 0, 3, -1, 0, -1, 3, 0], 3));
     const quad = new T.Mesh(tri, mat); quad.frustumCulled = false; scene.add(quad);
-    // What each emotion does to each feature; anything not named goes back to rest.
-    const REST = { happy: 0, wide: 0, heart: 0, dizzy: 0, brow: 0, smile: 0.35, mouth: 0, blush: 0.4, tear: 0, red: 0, shutL: 0, shutR: 0 };
-    const MOODS = {
-      glad: { happy: 1, smile: 1, blush: 0.75 },
-      shut: { shutL: 1, shutR: 1, smile: 0.15, blush: 0.3 },
-      sad: { brow: 0.9, smile: -0.8, tear: 1, blush: 0.15, shutL: 0.35, shutR: 0.35 },
-      surprised: { wide: 1, mouth: 0.9, brow: 0.55, smile: 0 },
-      angry: { brow: -1, smile: -0.6, blush: 0.9, red: 1 },
-      love: { heart: 1, smile: 1, blush: 1 },
-      dizzy: { dizzy: 1, mouth: 0.35, smile: -0.2 },
-      wink: { shutR: 1, smile: 1, blush: 0.6 },
-      scared: { wide: 0.7, brow: 0.85, mouth: 0.45, smile: -0.5, blush: 0.1 },
-      yawn: { shutL: 0.85, shutR: 0.85, mouth: 1, smile: 0, brow: 0.3 },
-    };
-    const now = { ...REST };
-    let blinkAt = 2; let lastT = 0;
+    const face = specterFace(U);
     return {
       scene, camera: camera(30, [0, 0, 5], [0, 0, 0]),
       update(t) {
-        const d = canvas?.dataset ?? {};
-        const dt = Math.min(0.1, Math.max(0, t - lastT)); lastT = t;
-        const target = { ...REST, ...(MOODS[d.mood] ?? {}) };
-        const k = 1 - Math.exp(-dt * 9);
-        for (const key of Object.keys(now)) now[key] += (target[key] - now[key]) * k;
-        if (t > blinkAt) blinkAt = t + 2.5 + Math.random() * 3;
-        const blink = blinkAt - t > 2.38 ? 0.08 : 1;
         U.uRes.value.set(Math.min(gl.w, canvas?.width || 160), Math.min(gl.h, canvas?.height || 160));
-        U.uT.value = t;
-        const look = Number(d.look) || 0;
-        U.uYaw.value = Math.sin(t * 0.7) * 0.22 + look * 0.45;
-        U.uPitch.value = Math.sin(t * 1.1) * 0.06 - (d.mood === 'sad' ? 0.05 : 0);
-        U.uRoll.value = Math.sin(t * 0.9) * 0.05 + (d.mood === 'dizzy' ? Math.sin(t * 6) * 0.18 : 0) + (d.mood === 'scared' ? Math.sin(t * 40) * 0.03 : 0);
-        U.uBlinkL.value = Math.min(blink, 1 - now.shutL);
-        U.uBlinkR.value = Math.min(blink, 1 - now.shutR);
-        U.uHappy.value = now.happy; U.uWide.value = now.wide; U.uHeart.value = now.heart; U.uDizzy.value = now.dizzy;
-        U.uBrow.value = now.brow; U.uSmile.value = now.smile; U.uBlush.value = now.blush; U.uTear.value = now.tear; U.uRed.value = now.red;
-        // Talking, the mouth opens and closes with the syllables.
-        U.uMouth.value = Math.max(now.mouth, d.talk === '1' ? 0.25 + 0.55 * Math.abs(Math.sin(t * 13) * Math.sin(t * 5.3)) : 0);
-        U.uDoctor.value = d.skin === 'doctor' ? 1 : 0;
-        U.uCream.value += ((d.cream === '1' ? 1 : 0) - U.uCream.value) * k;
+        face(t, canvas?.dataset ?? {});
       },
     };
   },
@@ -842,7 +1104,7 @@ export async function prop(canvas, kind) {
   const drawn = new Promise((resolve) => { p.ready = resolve; });
   live.add(p); seen.observe(canvas);
   last = 0; schedule();
-  return { poke: () => { const out = p.prop.poke?.(); schedule(); return out; }, act: (name) => { const out = p.prop.act?.(name); schedule(); return out; }, drawn };
+  return { poke: () => { const out = p.prop.poke?.(); schedule(); return out; }, act: (name, arg) => { const out = p.prop.act?.(name, arg); schedule(); return out; }, project: (x, y, z) => p.prop.project?.(x, y, z), drawn };
 }
 // Every canvas with data-prop="kind" inside root gets its object (once). Returns a promise kept when all of them are
 // drawn (or failed: the page never waits on a 3D object that cannot be drawn).
@@ -856,4 +1118,6 @@ export function props(root = document) {
 }
 export const pokeProp = (canvas) => canvas?._prop?.poke();
 // Something done to an object from outside (Specter eats a cherry of the cake, toasts a marshmallow at the fire).
-export const actProp = (canvas, name) => canvas?._prop?.act?.(name);
+export const actProp = (canvas, name, arg) => canvas?._prop?.act?.(name, arg);
+// Where a point of an object's scene falls on the screen (for Specter to walk into it).
+export const projectProp = (canvas, x, y, z) => canvas?._prop?.project?.(x, y, z);
