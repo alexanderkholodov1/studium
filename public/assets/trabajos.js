@@ -658,7 +658,7 @@ function newRepoHTML() {
     ${opt('bridge', 'Mi computadora, con el puente', 'GitHub CLI (gh) lo crea a tu nombre; necesitas gh con tu sesión iniciada')}
     ${by === 'token' && !has ? `<div class="tj-ghkey"><ol class="tight"><li>Abre <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">una clave nueva en GitHub</a>.</li>
       <li>En «Repository access», <b>All repositories</b>; en «Permissions», <b>Administration: Read and write</b>. Es amplia: puede administrar todos tus repos. Puedes borrarla al terminar.</li>
-      <li>Genérala y pégala aquí.</li></ol><input class="tj-input" name="ghCreate" type="password" autocomplete="off" placeholder="github_pat_…" aria-label="Clave de GitHub que puede crear repos"></div>` : ''}
+      <li>Genérala y pégala aquí.</li></ol><input class="tj-input" name="ghCreate" type="password" autocomplete="off" placeholder="${PAT}…" aria-label="Clave de GitHub que puede crear repos"></div>` : ''}
     ${by === 'bridge' && !ai.connected().some((w) => w.startsWith('bridge:')) ? '<p class="tj-warn">Primero conecta el puente (en «Tu IA», la pregunta siguiente).</p>' : ''}
     <p class="fine">Se crea <b>privado</b> al crear el trabajo, y la guía usa sus comandos.</p>`;
 }
