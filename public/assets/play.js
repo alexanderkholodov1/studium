@@ -108,7 +108,7 @@ function makeNodo() {
   const face = el.querySelector('canvas');
   face.dataset.skin = specterSkin();
   front.append(el);
-  const r = W < 720 ? 30 : 38;
+  const r = W < 720 ? 40 : 54;
   el.style.width = el.style.height = `${r * 2}px`;
   nodo = { el, x: Math.min(W - r - 20, Math.max(r + 20, W * 0.12)), y: H - r - 34, vx: 0, vy: 0, r, m: r * r * 1.4, a: 0, va: 0, tier: 0, phase: 0, sq: 0, sqa: 0, kind: 'nodo',
     hop: performance.now() + rand(3000, 6000), blink: performance.now() + rand(1500, 4000), mood: '', moodUntil: 0, face };
@@ -117,10 +117,16 @@ function makeNodo() {
   props(el);
   try { if (!localStorage.getItem('studium-specter-hello')) { localStorage.setItem('studium-specter-hello', '1'); setTimeout(() => say('Hola, soy Specter. Puedes moverme.'), 1600); } } catch { /* not remembered */ }
 }
-const POKES = ['¡Hey!', 'Jaja, cosquillas.', '¿Estudiamos un rato?', 'Tírame contra algo.', 'Boo.', '¡Otra vez!'];
+// Poked, he answers with a face and a few words; poked many times in a row, he gets dizzy, then a bit annoyed.
+const POKES = [['glad', '¡Hey!'], ['glad', 'Jaja, cosquillas.'], ['wink', '¿Estudiamos un rato?'], ['surprised', '¡Uy!'], ['love', 'Aww.'], ['glad', 'Tírame contra algo.'], ['wink', 'Boo.']];
+let pokes = []; 
 function poked(b) {
-  b.vy -= 260; b.spin = performance.now();
-  say(POKES[Math.floor(Math.random() * POKES.length)], 1800);
+  const now = performance.now();
+  pokes = [...pokes.filter((x) => now - x < 4000), now];
+  b.vy -= 260; b.spin = now;
+  const [face, words] = pokes.length >= 7 ? ['angry', '¡Ya, ya! Basta.'] : pokes.length >= 4 ? ['dizzy', 'Todo da vueltas…'] : POKES[Math.floor(Math.random() * POKES.length)];
+  mood(face, 1800);
+  say(words, 1800);
   sfx.boing(Math.floor(rand(0, 5)));
   wake();
 }
@@ -128,8 +134,10 @@ function mood(name, ms) {
   if (!nodo) return;
   nodo.mood = name; nodo.moodUntil = performance.now() + ms;
   nodo.el.dataset.mood = name;
-  nodo.face.dataset.mood = name === 'sleep' ? 'shut' : name ? 'glad' : '';
+  nodo.face.dataset.mood = name === 'sleep' ? 'shut' : FACES.includes(name) ? name : name ? 'glad' : '';
 }
+// The faces his canvas knows (props3d.js).
+const FACES = ['glad', 'shut', 'sad', 'surprised', 'angry', 'love', 'dizzy', 'wink', 'scared'];
 export function say(text, ms = 2600) {
   if (!nodo) return;
   front.querySelector('.speech')?.remove();
@@ -138,6 +146,10 @@ export function say(text, ms = 2600) {
   el.textContent = text;
   front.append(el);
   nodo.speech = el;
+  // He moves his mouth while the words are on screen (about the time it takes to say them).
+  nodo.face.dataset.talk = '1';
+  clearTimeout(nodo.talking);
+  nodo.talking = setTimeout(() => { if (nodo) nodo.face.dataset.talk = ''; }, Math.min(ms, 500 + text.length * 55));
   setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 300); if (nodo?.speech === el) nodo.speech = null; }, ms);
   render();
 }
@@ -223,7 +235,7 @@ function hit(x, y) {
 function grab(b, e) {
   drag = { body: b, id: e.pointerId, ox: e.clientX - b.x, oy: e.clientY - b.y, moved: 0 };
   root.classList.add('grabbing');
-  if (b.kind === 'nodo') { mood('glad', 99999); b.fly = null; }
+  if (b.kind === 'nodo') { mood('surprised', 99999); b.fly = null; }
   sfx.grab(b.r * 2);
   idleSince = performance.now();
   wake();
@@ -235,7 +247,8 @@ function release() {
   const k = speed > 1100 ? 1100 / speed : 1;
   b.vx = pointer.vx * k * 0.8; b.vy = pointer.vy * k * 0.8;
   b.va += (pointer.vx / b.r) * 0.004;
-  if (b.kind === 'nodo') { mood('glad', 900); if (drag.moved < 4) poked(b); }
+  // Thrown hard he gets dizzy; let go gently, glad.
+  if (b.kind === 'nodo') { if (drag.moved < 4) poked(b); else if (speed > 900) { mood('dizzy', 2200); say(['¡Wiii!', 'Mareado…', '¡Otra vez!'][Math.floor(Math.random() * 3)], 1500); } else mood('glad', 900); }
   else if (drag.moved < 4) { b.vy -= 160; b.va += rand(-1, 1); }
   sfx.release(drag.moved < 4 ? 600 : speed, b.r * 2);
   drag = null;
@@ -296,6 +309,7 @@ function squashed(b, speed, angle) {
   if (flat <= (b.flat ?? 0)) return;
   b.flat = flat; b.flata = angle; b.flatUntil = performance.now() + 650; // it stays flat a moment, then recovers
   sfx.impact(b.r * 3, speed);
+  if (nodo) mood(Math.random() < 0.5 ? 'dizzy' : 'surprised', 1400);
   if (nodo && Math.random() < 0.35) say(['¡Plaf!', '¡Aplastado!', 'Ups.'][Math.floor(Math.random() * 3)], 1200);
 }
 function step(h, now) {
@@ -461,7 +475,7 @@ export const specter = {
   // Out of the screen, waving, with a loop; `back` in a while, flying in from the other side.
   away(backIn = 0) {
     if (!nodo) return;
-    mood('glad', 1400);
+    mood('wink', 1400);
     const right = nodo.x > W / 2;
     flyTo(right ? W + 120 : -120, -100, { ms: 1300, loops: 1, arc: 90, out: true, then: () => { nodo.gone = true; nodo.el.style.visibility = 'hidden'; } });
     if (backIn) setTimeout(() => specter.back(), backIn);

@@ -327,73 +327,209 @@ const PROPS = {
     };
   },
 
-  // Specter, Studium's mascot: a small ghost of soft, glowing, half-translucent material, with a hem that ripples,
-  // eyes that blink and follow (canvas.dataset.look: -1 to 1), blushing cheeks and little arms. canvas.dataset.mood:
-  // '' | 'glad' (eyes smiling) | 'shut'; canvas.dataset.skin: '' | 'doctor' (an original doctor's look: a head
-  // mirror on a band, a stethoscope, a white collar and a pocket with a pen). Not any other work's character.
+  // Specter, Studium's mascot, the same ghost as Spectre's: one soft body (a round head that flows into a skirt with
+  // a wavy hem), raymarched in the shader with light, a glowing rim and a soft outline, so he has real volume from
+  // every angle. His face shows every emotion (canvas.dataset.mood): '' | 'glad' | 'shut' (asleep) | 'sad' |
+  // 'surprised' | 'angry' | 'love' | 'dizzy' | 'wink' | 'scared'; canvas.dataset.talk = '1' moves his mouth;
+  // canvas.dataset.look (-1 to 1) turns him toward the pointer. Each feature eases from one emotion to the next.
+  // canvas.dataset.skin: '' | 'doctor' (an original doctor's look: a head mirror on a band and a white coat).
   specter(canvas) {
-    const scene = new T.Scene(); stage(scene, { key: [2, 4, 5], ground: false, intensity: 1.6 });
-    const g = new T.Group(); scene.add(g);
-    const P = (x, y) => new T.Vector2(x, y);
-    const profile = [P(0, 1.55)];
-    for (let i = 1; i <= 14; i += 1) { const a = (i / 14) * (Math.PI / 2); profile.push(P(Math.sin(a) * 0.82, 0.75 + Math.cos(a) * 0.8)); }
-    profile.push(P(0.86, 0.3), P(0.9, 0), P(0.84, -0.04), P(0.6, 0.02), P(0, 0.06));
-    const geo = new T.LatheGeometry(profile, 96);
-    const base = geo.attributes.position.array.slice();
-    const body = mesh(geo, phys(0xf2f6ff, { roughness: 0.3, sheen: 1, sheenColor: new T.Color(0xa9bdff), sheenRoughness: 0.4, clearcoat: 0.8, emissive: 0x6f8cff, emissiveIntensity: 0.06 }), { cast: false });
-    g.add(body);
-    const glow = new T.Sprite(new T.SpriteMaterial({ map: soft(), color: 0x7f9dff, transparent: true, opacity: 0.6, depthWrite: false }));
-    glow.scale.setScalar(3.4); glow.position.y = 0.8; glow.renderOrder = -1; g.add(glow);
-    const ink = phys(0x0b1020, { roughness: 0.15, clearcoat: 1 });
-    const eyes = [-0.27, 0.27].map((x) => {
-      const e = new T.Group(); e.position.set(x, 1.0, 0.8); g.add(e);
-      e.add(mesh(new T.SphereGeometry(0.11, 24, 18), ink, { s: [1, 1.45, 0.55], cast: false }));
-      e.add(mesh(new T.SphereGeometry(0.035, 12, 10), new T.MeshBasicMaterial({ color: 0xffffff }), { x: 0.035, y: 0.07, z: 0.06, cast: false }));
-      return e;
-    });
-    const blush = phys(0xff7a8a, { roughness: 0.6, transparent: true, opacity: 0.55 });
-    for (const x of [-0.45, 0.45]) g.add(mesh(new T.SphereGeometry(0.09, 16, 12), blush, { x, y: 0.82, z: 0.7, s: [1.3, 0.6, 0.4], cast: false }));
-    const mouth = mesh(new T.TorusGeometry(0.07, 0.022, 10, 24, Math.PI), ink, { y: 0.84, z: 0.82, rz: Math.PI, cast: false });
-    g.add(mouth);
-    const arms = [-1, 1].map((s) => { const a = mesh(new T.CapsuleGeometry(0.1, 0.22, 8, 16), body.material, { x: s * 0.86, y: 0.62, rz: s * 0.9, cast: false }); g.add(a); return a; });
-    // The doctor's look.
-    const doctor = new T.Group(); doctor.visible = false; g.add(doctor);
-    const steel = std(0xd9dde3, 0.15, 1);
-    doctor.add(mesh(new T.TorusGeometry(0.79, 0.04, 12, 64), std(0x2b2f3a, 0.5), { y: 1.22, rx: Math.PI / 2 - 0.6, rz: 0.15 }));
-    doctor.add(mesh(new T.CylinderGeometry(0.24, 0.24, 0.035, 40), steel, { x: -0.18, y: 1.4, z: 0.62, rx: Math.PI / 2 - 0.55, rz: 0.15 }));
-    doctor.add(mesh(new T.CylinderGeometry(0.07, 0.07, 0.04, 20), ink, { x: -0.18, y: 1.4, z: 0.645, rx: Math.PI / 2 - 0.55, rz: 0.15 }));
-    const tube = new T.CatmullRomCurve3([new T.Vector3(-0.62, 0.55, 0.45), new T.Vector3(-0.35, 0.3, 0.78), new T.Vector3(0, 0.25, 0.86), new T.Vector3(0.3, 0.32, 0.8), new T.Vector3(0.45, 0.12, 0.8)]);
-    doctor.add(mesh(new T.TubeGeometry(tube, 40, 0.03, 10), phys(0x22252c, { roughness: 0.35, clearcoat: 0.6 })));
-    doctor.add(mesh(new T.CylinderGeometry(0.1, 0.1, 0.05, 28), steel, { x: 0.45, y: 0.08, z: 0.82, rx: Math.PI / 2 }));
-    const coat = phys(0xffffff, { roughness: 0.55, sheen: 0.4 });
-    // An open white coat: two halves wrapped around his lower body, parted in front, with a pocket and a pen.
-    const coatProfile = profile.filter((q) => q.y < 0.8).map((q) => P(q.x * 1.04 + 0.01, q.y));
-    for (const [start, len] of [[0.16, 1.9], [-2.06, 1.9]]) doctor.add(mesh(new T.LatheGeometry(coatProfile, 48, start, len), phys(0xffffff, { roughness: 0.6, sheen: 0.5, side: T.DoubleSide }), { cast: false }));
-    doctor.add(mesh(new T.BoxGeometry(0.2, 0.16, 0.03), coat, { x: -0.5, y: 0.26, z: 0.72, ry: -0.6 }));
-    doctor.add(mesh(new T.CylinderGeometry(0.014, 0.014, 0.2, 10), std(0x3d7bff, 0.3, 0.4), { x: -0.46, y: 0.36, z: 0.76 }));
-    let blinkAt = 2;
+    const scene = new T.Scene();
+    const U = {
+      uRes: { value: new T.Vector2(1, 1) }, uT: { value: 0 }, uYaw: { value: 0 }, uPitch: { value: 0 }, uRoll: { value: 0 },
+      uBlinkL: { value: 1 }, uBlinkR: { value: 1 }, uHappy: { value: 0 }, uWide: { value: 0 }, uHeart: { value: 0 }, uDizzy: { value: 0 },
+      uBrow: { value: 0 }, uSmile: { value: 0.35 }, uMouth: { value: 0 }, uBlush: { value: 0.4 }, uTear: { value: 0 }, uDoctor: { value: 0 }, uRed: { value: 0 },
+    };
+    const frag = `precision highp float;
+uniform vec2 uRes; uniform float uT, uYaw, uPitch, uRoll, uBlinkL, uBlinkR, uHappy, uWide, uHeart, uDizzy, uBrow, uSmile, uMouth, uBlush, uTear, uDoctor, uRed;
+mat3 rY(float a){ float c=cos(a), s=sin(a); return mat3(c,0.,s, 0.,1.,0., -s,0.,c); }
+mat3 rX(float a){ float c=cos(a), s=sin(a); return mat3(1.,0.,0., 0.,c,-s, 0.,s,c); }
+mat3 rZ(float a){ float c=cos(a), s=sin(a); return mat3(c,-s,0., s,c,0., 0.,0.,1.); }
+float smin(float a, float b, float k){ float h = clamp(.5 + .5*(b-a)/k, 0., 1.); return mix(b, a, h) - k*h*(1.-h); }
+float sdTorus(vec3 p, vec2 t){ vec2 q = vec2(length(p.xz) - t.x, p.y); return length(q) - t.y; }
+vec3 toObj(vec3 p){ p = rZ(uRoll) * rX(uPitch) * rY(uYaw) * p; return vec3(p.x, p.y, p.z*1.12); }
+// id 0: his body; 1: the band of the head mirror; 2: the mirror
+vec2 map(vec3 w){
+  vec3 q = toObj(w);
+  float head = length(q - vec3(0., .24, 0.)) - .6;
+  float ang = atan(q.z, q.x);
+  float r = .55 + .19*smoothstep(.15, -.62, q.y);
+  float hem = -.62 + .085*sin(ang*5. + uT*2.4) + .03*sin(ang*9. - uT*1.6);
+  float skirt = max(-smin(-(length(q.xz) - r), -(q.y - .05), .3), hem - q.y);
+  vec2 res = vec2(smin(head, skirt, .28) * .8, 0.);
+  if (uDoctor > .5){
+    vec3 b = rX(.35) * (q - vec3(0., .5, -.02));
+    float band = sdTorus(b, vec2(.56, .028));
+    if (band < res.x) res = vec2(band, 1.);
+    vec3 m = rX(-1.25) * (q - vec3(-.17, .62, .44));
+    float mirror = max(length(m.xz) - .13, abs(m.y) - .022);
+    if (mirror < res.x) res = vec2(mirror, 2.);
+  }
+  return res;
+}
+vec3 nrm(vec3 p){ vec2 e = vec2(.0015, -.0015);
+  return normalize(e.xyy*map(p+e.xyy).x + e.yyx*map(p+e.yyx).x + e.yxy*map(p+e.yxy).x + e.xxx*map(p+e.xxx).x); }
+float seg(vec2 p, vec2 a, vec2 b){ vec2 pa = p-a, ba = b-a; float h = clamp(dot(pa,ba)/dot(ba,ba), 0., 1.); return length(pa - ba*h); }
+float heart(vec2 p){ p.x = abs(p.x); if (p.y + p.x > 1.) return sqrt(dot(p - vec2(.25,.75), p - vec2(.25,.75))) - sqrt(2.)/4.;
+  return sqrt(min(dot(p - vec2(0.,1.), p - vec2(0.,1.)), dot(p - .5*max(p.x+p.y,0.), p - .5*max(p.x+p.y,0.)))) * sign(p.x - p.y); }
+vec3 face(vec3 col, vec2 f, float dif){
+  vec3 ink = vec3(.05,.06,.12);
+  float side = f.x < 0. ? -1. : 1.;
+  float open = side < 0. ? uBlinkL : uBlinkR;
+  vec2 ec = vec2(abs(f.x), f.y) - vec2(.205, .3);
+  // a worried or angry look tilts the eyes a little
+  ec.y += ec.x * uBrow * .25;
+  float shape = max(max(uHappy, uHeart), uDizzy);
+  float o = open * clamp(1. - 2.*shape, 0., 1.);
+  vec2 esz = vec2(.088, .118) * (1. + .32*uWide);
+  vec2 e = ec / vec2(esz.x, max(.006, esz.y*o));
+  if (o > .02 && length(e) < 1.){
+    col = mix(ink, vec3(.16,.18,.36), smoothstep(.2, 1., -e.y)) * (.75 + .25*dif);
+    float pr = 1. - .45*uWide;
+    vec2 s1 = (vec2(abs(f.x), f.y) - vec2(.18, .34)) / (.032*pr);
+    if (length(s1) < 1. && o > .5) col = vec3(1.);
+    vec2 s2 = (vec2(abs(f.x), f.y) - vec2(.235, .265)) / (.016*pr);
+    if (length(s2) < 1. && o > .5) col = mix(col, vec3(1.), .8);
+  }
+  // asleep or winking: a closed eye is a soft line
+  if (o <= .02 && shape < .5 && abs(ec.y + .01 - ec.x*ec.x*2.2) < .016 && abs(ec.x) < .08) col = ink;
+  float k = clamp(2.*shape - 1., 0., 1.);
+  if (k > 0.){
+    if (uHappy >= uHeart && uHappy >= uDizzy){
+      // happy eyes: two arcs, ^ ^
+      float arc = abs(length(ec - vec2(0., -.05)) - .085);
+      if (arc < .022*k && ec.y > -.045) col = ink;
+    } else if (uHeart >= uDizzy){
+      vec2 hp = (ec + vec2(0., .1)) / (.2*k);
+      if (heart(hp) < 0.) col = mix(vec3(.95,.2,.38), vec3(1.,.55,.7), smoothstep(.0, .8, hp.y)) * (.8 + .3*dif);
+    } else {
+      // dizzy: spirals
+      float rr = length(ec); float a = atan(ec.y, ec.x*side);
+      float sp = abs(fract(rr*28. - a/6.2832 - uT*.8) - .5);
+      if (rr < .095*k && sp < .16) col = ink;
+    }
+  }
+  // brows, only when they say something: up in the middle when worried or sad, down when angry
+  float bw = abs(uBrow);
+  if (bw > .05){
+    vec2 bp = vec2(abs(f.x), f.y);
+    float tilt = uBrow * .09;
+    float d = seg(bp, vec2(.12, .46 + tilt), vec2(.3, .46 - tilt*.4));
+    if (d < .018) col = mix(col, ink, smoothstep(.05, .4, bw));
+  }
+  // the mouth: a curve that smiles or frowns, or open (talking, surprised)
+  if (uMouth > .08){
+    vec2 m = (f - vec2(0., .12 - .02*uSmile)) / vec2(.07 + .02*uSmile, .02 + .07*uMouth);
+    if (length(m) < 1.) col = mix(vec3(.24,.12,.27), vec3(.95,.45,.6), smoothstep(.2, 1., -m.y)) * (.6 + .4*dif);
+  } else {
+    float x = f.x;
+    if (abs(x) < .075 && abs(f.y - (.125 - .012*uSmile + uSmile*x*x*9.)) < .016) col = vec3(.24,.12,.27);
+  }
+  // cheeks: rosier when glad or in love, red when angry
+  float bl = length((vec2(abs(f.x), f.y) - vec2(.37, .17)) / vec2(.1, .055));
+  col = mix(col, mix(vec3(1.,.56,.72), vec3(1.,.3,.32), uRed), uBlush * (1. - smoothstep(.3, 1., bl)));
+  // a tear, falling slowly
+  if (uTear > .05){
+    float fall = fract(uT*.35) * .18;
+    vec2 tp = (f - vec2(-.25, .2 - fall)) / vec2(.03, .045);
+    tp.y += .35*abs(tp.x);
+    if (length(tp) < 1.) col = mix(col, vec3(.6,.82,1.), uTear * (1. - fall*3.));
+  }
+  return col;
+}
+void main(){
+  vec2 uv = (gl_FragCoord.xy - .5*uRes) / uRes.y;
+  vec3 ro = vec3(0., .08, 3.55);
+  vec3 rd = normalize(vec3(uv, -1.62));
+  float t = 0.; vec2 h = vec2(1.); float dmin = 9.; bool hit = false;
+  for (int i = 0; i < 80; i++){
+    h = map(ro + rd*t);
+    dmin = min(dmin, h.x);
+    if (h.x < .0012){ hit = true; break; }
+    t += h.x;
+    if (t > 6.) break;
+  }
+  if (!hit){
+    float px = 3.55 / (uRes.y * 1.62);
+    float a = (1. - smoothstep(0., px*1.6, dmin)) * .9;
+    gl_FragColor = vec4(vec3(.48,.55,1.)*a, a);
+    return;
+  }
+  vec3 p = ro + rd*t; vec3 n = nrm(p); vec3 q = toObj(p); vec3 v = -rd;
+  vec3 L = normalize(vec3(-.55, .8, .7)); vec3 H = normalize(L + v);
+  float dif = clamp(dot(n, L)*.5 + .5, 0., 1.); dif *= dif;
+  float spec = pow(clamp(dot(n, H), 0., 1.), 42.);
+  float fres = pow(1. - clamp(dot(n, v), 0., 1.), 2.6);
+  float ao = clamp(map(p + n*.08).x / .08, .35, 1.);
+  vec3 col;
+  if (h.y > 1.5) {
+    col = vec3(.78,.82,.88) * (.4 + .7*dif) + spec*1.4 + fres*.3;
+  } else if (h.y > .5) {
+    col = vec3(.16,.18,.24) * (.5 + .6*dif) + spec*.3;
+  } else {
+    vec3 base = mix(vec3(.72,.77,1.), vec3(1.,1.,1.), smoothstep(-.65, .8, q.y));
+    col = base * (.36 + .72*dif) * mix(.72, 1., ao) + vec3(.55,.5,1.)*fres*.8 + spec*.4;
+    col += vec3(.35,.4,1.) * .16 * smoothstep(-.2, -.6, q.y);
+    // the doctor's coat: white over his lower body, open in front, with a collar
+    if (uDoctor > .5){
+      float a = atan(q.x, q.z);
+      float coat = smoothstep(.14, .02, q.y) * smoothstep(.34, .46, abs(a));
+      col = mix(col, vec3(.98,.98,1.) * (.48 + .62*dif) * mix(.8, 1., ao) + spec*.25 + vec3(.5,.5,.8)*fres*.25, coat * .92);
+      if (abs(abs(a) - .42) < .035 && q.y < .1) col *= .86;
+    }
+    if (q.z > .15) {
+      if (uDoctor < .5){
+        vec2 g = (q.xy - vec2(0., .64)) / vec2(.065, .08);
+        if (abs(g.x) + abs(g.y) < 1.) col = mix(vec3(.3,.36,1.), vec3(.75,.8,1.), smoothstep(.2, -1., g.x + g.y)) * (.6 + .5*dif) + spec*.6;
+      }
+      col = face(col, q.xy, dif);
+    }
+  }
+  gl_FragColor = vec4(col, 1.);
+}`;
+    const mat = new T.ShaderMaterial({ uniforms: U, vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0., 1.); }', fragmentShader: frag, transparent: true, depthTest: false, depthWrite: false });
+    mat.premultipliedAlpha = true;
+    const tri = new T.BufferGeometry();
+    tri.setAttribute('position', new T.Float32BufferAttribute([-1, -1, 0, 3, -1, 0, -1, 3, 0], 3));
+    const quad = new T.Mesh(tri, mat); quad.frustumCulled = false; scene.add(quad);
+    // What each emotion does to each feature; anything not named goes back to rest.
+    const REST = { happy: 0, wide: 0, heart: 0, dizzy: 0, brow: 0, smile: 0.35, mouth: 0, blush: 0.4, tear: 0, red: 0, shutL: 0, shutR: 0 };
+    const MOODS = {
+      glad: { happy: 1, smile: 1, blush: 0.75 },
+      shut: { shutL: 1, shutR: 1, smile: 0.15, blush: 0.3 },
+      sad: { brow: 0.9, smile: -0.8, tear: 1, blush: 0.15, shutL: 0.35, shutR: 0.35 },
+      surprised: { wide: 1, mouth: 0.9, brow: 0.55, smile: 0 },
+      angry: { brow: -1, smile: -0.6, blush: 0.9, red: 1 },
+      love: { heart: 1, smile: 1, blush: 1 },
+      dizzy: { dizzy: 1, mouth: 0.35, smile: -0.2 },
+      wink: { shutR: 1, smile: 1, blush: 0.6 },
+      scared: { wide: 0.7, brow: 0.85, mouth: 0.45, smile: -0.5, blush: 0.1 },
+    };
+    const now = { ...REST };
+    let blinkAt = 2; let lastT = 0;
     return {
-      scene, camera: camera(30, [0, 0.9, 5.2], [0, 0.78, 0]),
+      scene, camera: camera(30, [0, 0, 5], [0, 0, 0]),
       update(t) {
         const d = canvas?.dataset ?? {};
-        doctor.visible = d.skin === 'doctor';
-        g.position.y = Math.sin(t * 1.6) * 0.06;
-        g.rotation.y = Math.sin(t * 0.7) * 0.18 + (Number(d.look) || 0) * 0.35;
-        const pos = geo.attributes.position;
-        for (let i = 0; i < pos.count; i += 1) {
-          const y = base[i * 3 + 1];
-          if (y < 0.35) {
-            const x = base[i * 3]; const z = base[i * 3 + 2]; const a = Math.atan2(z, x);
-            pos.array[i * 3 + 1] = y + Math.sin(a * 6 + t * 3) * 0.07 * (1 - y / 0.35);
-          }
-        }
-        pos.needsUpdate = true; geo.computeVertexNormals();
+        const dt = Math.min(0.1, Math.max(0, t - lastT)); lastT = t;
+        const target = { ...REST, ...(MOODS[d.mood] ?? {}) };
+        const k = 1 - Math.exp(-dt * 9);
+        for (const key of Object.keys(now)) now[key] += (target[key] - now[key]) * k;
         if (t > blinkAt) blinkAt = t + 2.5 + Math.random() * 3;
-        const blinking = blinkAt - t > 2.38 || d.mood === 'shut';
-        const sy = blinking ? 0.12 : d.mood === 'glad' ? 0.45 : 1;
-        for (const e of eyes) e.scale.y = sy;
-        mouth.scale.setScalar(d.mood === 'glad' ? 1.6 : 1);
-        arms[0].rotation.z = -0.9 - Math.sin(t * 2.2) * 0.25; arms[1].rotation.z = 0.9 + Math.sin(t * 2.2 + 1) * 0.25;
+        const blink = blinkAt - t > 2.38 ? 0.08 : 1;
+        U.uRes.value.set(Math.min(gl.w, canvas?.width || 160), Math.min(gl.h, canvas?.height || 160));
+        U.uT.value = t;
+        const look = Number(d.look) || 0;
+        U.uYaw.value = Math.sin(t * 0.7) * 0.22 + look * 0.45;
+        U.uPitch.value = Math.sin(t * 1.1) * 0.06 - (d.mood === 'sad' ? 0.05 : 0);
+        U.uRoll.value = Math.sin(t * 0.9) * 0.05 + (d.mood === 'dizzy' ? Math.sin(t * 6) * 0.18 : 0) + (d.mood === 'scared' ? Math.sin(t * 40) * 0.03 : 0);
+        U.uBlinkL.value = Math.min(blink, 1 - now.shutL);
+        U.uBlinkR.value = Math.min(blink, 1 - now.shutR);
+        U.uHappy.value = now.happy; U.uWide.value = now.wide; U.uHeart.value = now.heart; U.uDizzy.value = now.dizzy;
+        U.uBrow.value = now.brow; U.uSmile.value = now.smile; U.uBlush.value = now.blush; U.uTear.value = now.tear; U.uRed.value = now.red;
+        // Talking, the mouth opens and closes with the syllables.
+        U.uMouth.value = Math.max(now.mouth, d.talk === '1' ? 0.25 + 0.55 * Math.abs(Math.sin(t * 13) * Math.sin(t * 5.3)) : 0);
+        U.uDoctor.value = d.skin === 'doctor' ? 1 : 0;
       },
     };
   },
