@@ -489,7 +489,12 @@ async function route() {
   }
   // The link the local bridge prints: pair it, then show the settings.
   const bridgeLink = location.hash.match(/^#\/ajustes\?puente=([\w.-]+)$/);
-  if (bridgeLink) { history.replaceState(null, '', `${location.pathname}#/ajustes`); pairBridge(bridgeLink[1]); return route(); }
+  // Once paired, back to where the person was when they went to connect it («Trabajos» keeps that place).
+  if (bridgeLink) {
+    history.replaceState(null, '', `${location.pathname}#/ajustes`);
+    pairBridge(bridgeLink[1]).then((ok) => { const back = sessionStorage.getItem('studium-return'); if (ok && back) { sessionStorage.removeItem('studium-return'); location.hash = back; } });
+    return route();
+  }
   showAnnouncement();
   try {
     if (page === 'guia' && arg[0]) {

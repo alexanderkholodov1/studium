@@ -2785,3 +2785,10 @@ canvas.prop { display: block; }
 .tj-when input { font-size: 19px; padding: 12px 14px; }
 .tj-glow { animation: tj-glow 2.6s ease; border-radius: 18px; }
 @keyframes tj-glow { 0%, 60% { box-shadow: 0 0 0 4px color-mix(in oklab, var(--blue) 55%, transparent); } 100% { box-shadow: none; } }
+/* The bridge (space.js «Tu IA», and inline in «Trabajos»): Claude's accounts, the command, the optional password. */
+.bridge-accounts { display: grid; gap: 6px; margin: 8px 0 4px 4px; }
+.bridge-accounts small { color: var(--muted); }
+.bridge-cmd { user-select: all; }
+.tj-bridge { margin: 4px 0 6px; padding: 14px 18px; border-radius: 16px; background: color-mix(in oklab, var(--blue) 6%, transparent); }
+.tj-bridge .howto { margin: 0 0 10px; }
+.vault-more > summary { cursor: pointer; color: var(--ink-2); font-weight: 650; }

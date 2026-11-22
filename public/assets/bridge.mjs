@@ -9,11 +9,11 @@
 import { createServer } from 'node:http';
 import { execFile, spawn } from 'node:child_process';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
-import { chmodSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { homedir, platform, tmpdir } from 'node:os';
 import path from 'node:path';
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const NAME = 'studium-bridge';
 const DEFAULT_PORT = 41730;
 const MAX_BODY = 64 * 1024 * 1024;
@@ -153,9 +153,9 @@ function killTree(child) {
   } catch { /* already gone */ }
 }
 // Runs a CLI without a shell. Resolves with its exit code and output; a timeout kills its whole process tree.
-function runCli(b, args, { cwd, input = null, timeoutMs = DEFAULT_TIMEOUT } = {}) {
+function runCli(b, args, { cwd, input = null, timeoutMs = DEFAULT_TIMEOUT, env = null } = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(b.cmd, [...b.pre, ...args], { cwd, shell: false, windowsHide: true, detached: !WIN, stdio: [input == null ? 'ignore' : 'pipe', 'pipe', 'pipe'] });
+    const child = spawn(b.cmd, [...b.pre, ...args], { cwd, shell: false, windowsHide: true, detached: !WIN, ...(env ? { env: { ...process.env, ...env } } : {}), stdio: [input == null ? 'ignore' : 'pipe', 'pipe', 'pipe'] });
     let out = ''; let err = '';
     let done = false;
     // On a timeout the whole tree ends, and the answer waits until it has ended, so its folder can be removed.
@@ -236,20 +236,38 @@ function failureOf(engine, text) {
   return new Failure(502, 'failed', `${name} terminó con un error: ${lastLine(t) || 'sin detalle'}`);
 }
 
+/* ---------- Claude's accounts on this computer ---------- */
+async function claudeAccounts(b) {
+  let names = [];
+  try { names = readdirSync(homedir()).filter((n) => /^\.claude(-[\w.-]+)?$/.test(n) && statSync(path.join(homedir(), n)).isDirectory()); } catch { /* none */ }
+  if (!names.includes('.claude')) names.unshift('.claude');
+  const found = await Promise.all(names.map(async (id) => {
+    const env = id === '.claude' ? null : { CLAUDE_CONFIG_DIR: path.join(homedir(), id) };
+    if (env && !existsSync(env.CLAUDE_CONFIG_DIR)) return null;
+    const r = await runCli(b, ['auth', 'status'], { timeoutMs: 15000, env }).catch(() => null);
+    let info = null;
+    try { info = JSON.parse(r?.out ?? ''); } catch { /* an older Claude Code */ }
+    const ready = info ? info.loggedIn === true : r?.code === 0;
+    return { id, env, ready, email: String(info?.email ?? ''), plan: String(info?.subscriptionType ?? '') };
+  }));
+  return found.filter(Boolean).filter((a) => a.ready || a.id === '.claude');
+}
+
 /* ---------- the three CLIs ---------- */
 const tierOf = (id) => (/opus/i.test(id) ? 'strong' : /flash-low|haiku|mini|nano|gpt-oss|lite/i.test(id) ? 'light' : 'mid');
 const ENGINES = {
   claude: {
     name: 'Claude Code', reads: { pdf: true, images: true },
+    // Each Claude account of this computer: Claude Code keeps one per folder («~/.claude», and «~/.claude-<name>» for
+    // others, chosen with CLAUDE_CONFIG_DIR). Each is read with «claude auth status», which calls no model.
     async detect(b) {
-      const auth = await runCli(b, ['auth', 'status'], { timeoutMs: 15000 }).catch(() => null);
-      let info = null;
-      try { info = JSON.parse(auth?.out ?? ''); } catch { /* an older Claude Code */ }
-      const ready = info ? info.loggedIn === true : auth?.code === 0;
-      const allowed = claudeAllowed(info?.subscriptionType ?? '');
+      const accounts = await claudeAccounts(b);
+      const signed = accounts.filter((a) => a.ready);
+      const ready = signed.length > 0;
+      const allowed = claudeAllowed(signed[0]?.plan ?? '');
       return {
-        ready, detail: ready ? `con tu sesión de ${info?.authMethod === 'claude.ai' ? 'claude.ai' : 'Claude'}${info?.subscriptionType ? `, plan ${info.subscriptionType}` : ''}` : 'sin sesión iniciada: abre claude una vez e inicia sesión',
-        plan: String(info?.subscriptionType ?? ''),
+        ready, detail: ready ? `${signed.length === 1 ? 'una cuenta' : `${signed.length} cuentas`} con sesión iniciada` : 'sin sesión iniciada: abre claude una vez e inicia sesión',
+        plan: String(signed[0]?.plan ?? ''), accounts,
         allowed: { families: [...allowed.families], source: allowed.source },
         // Only the models the plan includes, by the verified table; Studium offers nothing else.
         models: [
@@ -267,7 +285,9 @@ const ENGINES = {
     async run(b, dir, body, names, timeoutMs) {
       // Never the default model: only a model the person's plan includes (by the verified catalog), named explicitly.
       const st = (await detectAll(true)).find((e) => e.id === 'claude'); // the plan right now, never a cached one
-      const allowed = claudeAllowed(st?.plan);
+      const account = (st?.accounts ?? []).find((a) => a.id === (body.account || st?.accounts?.find((x) => x.ready)?.id));
+      if (!account?.ready) throw new Failure(424, 'not-signed-in', `Esa cuenta de Claude no tiene una sesión iniciada en esta computadora${body.account ? ` (${body.account})` : ''}.`);
+      const allowed = claudeAllowed(account.plan);
       const fam = CLAUDE_FAMILY(body.model);
       if (!CLAUDE_INCLUDED.has(String(body.model ?? '')) || fam === 'fable' || !allowed.families.has(fam)) {
         throw new Failure(400, 'paid', `El puente solo usa modelos de Claude incluidos en tu plan, nombrados uno por uno (según ${allowed.source}). Elige uno en Studium.`);
@@ -276,7 +296,7 @@ const ENGINES = {
         '--disallowedTools', 'Bash', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'WebFetch', 'WebSearch', 'Task', 'Agent',
         '--model', String(body.model)];
       if (body.effort) args.push('--effort', String(body.effort));
-      const r = await runCli(b, args, { cwd: dir, timeoutMs });
+      const r = await runCli(b, args, { cwd: dir, timeoutMs, env: account.env });
       let result = null;
       try { result = JSON.parse(r.out.trim()); } catch { /* not the JSON result */ }
       if (result && !result.is_error && result.subtype !== 'error' && typeof result.result === 'string') return result.result;
@@ -291,6 +311,7 @@ const ENGINES = {
       const ready = /logged in/i.test(said) && !/not logged in/i.test(said);
       return {
         ready, detail: ready ? (/chatgpt/i.test(said) ? 'con tu cuenta de ChatGPT' : 'con tu cuenta') : 'sin sesión iniciada: escribe codex login',
+        paused: 'en pausa en Studium hasta verificar que no cobre aparte de tu plan',
         // The model and effort the student set in Codex; the account decides which models it accepts.
         models: [{ id: 'default', label: 'El modelo de tu Codex', tier: 'mid' }],
         efforts: ['low', 'medium', 'high'],
@@ -324,6 +345,7 @@ const ENGINES = {
         .map(([id, label]) => ({ id: id.trim(), label: label.trim(), tier: tierOf(id) }));
       return {
         ready: models.length > 0, detail: models.length ? 'lee texto; para fotos y escaneos usa otra IA' : 'sin modelos: abre agy una vez e inicia sesión',
+        paused: 'en pausa en Studium hasta verificar qué incluye tu plan',
         // The effort is part of each model's name («Flash (Low)»); agy refuses --effort for some models.
         models, efforts: [],
       };
@@ -543,7 +565,7 @@ const server = createServer(async (req, res) => {
   if (req.method === 'GET' && pathname === '/v1/hello') return send(res, 200, { name: NAME, version: VERSION }, ok);
   if (!tokenValid(req.headers.authorization)) return fail(res, new Failure(401, 'token', 'El código de enlace no coincide. Vuelve a enlazar el puente en Ajustes.'), ok);
   try {
-    if (req.method === 'GET' && pathname === '/v1/status') return send(res, 200, { name: NAME, version: VERSION, engines: await detectAll() }, ok);
+    if (req.method === 'GET' && pathname === '/v1/status') return send(res, 200, { name: NAME, version: VERSION, engines: (await detectAll()).map((e) => ({ ...e, accounts: e.accounts?.map(({ env, ...a }) => a) })) }, ok);
     if (req.method === 'POST' && pathname === '/v1/verify') {
       let body = {};
       try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}'); } catch { /* the whole check */ }
@@ -567,10 +589,20 @@ server.on('error', (e) => {
   process.exit(1);
 });
 server.listen(port, '127.0.0.1', async () => {
-  console.log(`\nEl puente de Studium está abierto en este computador (puerto ${port}).\n`);
-  for (const e of await detectAll()) console.log(`  ${e.ready ? '✓' : '·'} ${e.name}: ${e.ready ? `lista, ${e.detail}` : e.detail}`);
-  console.log('\nPara enlazarlo, abre este enlace con tu sesión de Studium iniciada:');
-  console.log(`  ${SITE}/studium/#/ajustes?puente=${port}.${TOKEN}`);
-  if (dev) console.log(`  http://localhost:5173/studium/#/ajustes?puente=${port}.${TOKEN}`);
-  console.log('\nDéjalo abierto mientras Studium usa tu IA. Al cerrar esta ventana, el puente se apaga.\n');
+  // First what the person needs (the code, the link), at once; then the AIs, one line each as soon as they are found.
+  const code = `${port}.${TOKEN}`;
+  const links = [...extraOrigins, SITE, ...(dev ? ['http://localhost:5173'] : [])].map((o) => `${o}/studium/#/ajustes?puente=${code}`);
+  console.log(`\nEl puente de Studium está abierto en este computador (puerto ${port}, versión ${VERSION}).\n`);
+  console.log('Para enlazarlo, copia este código y pégalo en Studium, en «Código de enlace del puente»:\n');
+  console.log(`    ${code}\n`);
+  console.log('O abre este enlace en el navegador donde tienes Studium abierto:');
+  for (const l of links) console.log(`    ${l}`);
+  console.log('\nBuscando tus IA en este computador (tarda unos segundos; puedes enlazar mientras tanto)...');
+  const all = await detectAll();
+  for (const e of all) {
+    const state = e.ready && e.paused ? `instalado, ${e.paused}` : e.ready ? `lista, ${e.detail}` : e.detail;
+    console.log(`  ${e.ready && !e.paused ? '✓' : '·'} ${e.name}: ${state}`);
+    for (const a of e.accounts ?? []) if (a.ready) console.log(`      cuenta ${a.email || a.id}${a.plan ? ` (plan ${a.plan})` : ''} · carpeta ${a.id}`);
+  }
+  console.log('\nListo. Déjalo abierto mientras Studium usa tu IA; al cerrar esta ventana (o con Ctrl+C), el puente se apaga.\n');
 });

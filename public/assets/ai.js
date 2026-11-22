@@ -142,7 +142,7 @@ export function connected() {
   return Object.keys(WAYS).filter((way) => {
     if (!offered(way)) return false;
     if (way === 'puter') return !!s.puter;
-    if (way.startsWith('bridge:')) return !!s.bridge?.token && !!engineOf(way)?.ready;
+    if (way.startsWith('bridge:')) { const e = engineOf(way); return !!s.bridge?.token && !!e?.ready && !e.paused && !(s.bridge.off ?? []).includes(e.id); }
     return !!s.keys[way];
   });
 }
@@ -501,11 +501,37 @@ async function bridgeFetch(path, init = {}, b = bridgeOf()) {
 export async function findBridge(port = BRIDGE_PORT) {
   try { const r = await fetch(`http://127.0.0.1:${port}/v1/hello`); return r.ok ? await r.json() : null; } catch { return null; }
 }
+// The bridge's version this page expects (bridge.mjs, VERSION): an older one is downloaded again.
+export const BRIDGE_VERSION = '1.1.0';
+// The addresses the bridge answers without --origin (bridge.mjs, ORIGINS and PREVIEW).
+export function bridgeKnowsThisPage() {
+  const o = location.origin;
+  return ['https://alexanderkholodov.web.app', 'http://localhost:5173', 'http://127.0.0.1:5173'].includes(o)
+    || /^https:\/\/(?:alexanderkholodov--studium-pr-\d+-[a-z0-9]+|studium101--[a-z0-9-]+)\.web\.app$/.test(o);
+}
+export const bridgeCommand = () => `node studium-bridge.mjs${bridgeKnowsThisPage() ? '' : ` --origin ${location.origin}`}`;
+// Which Claude account and which of the bridge's AIs Studium uses: chosen by the person.
+export function setBridgeAccount(id) { patch((s) => { if (s.bridge) s.bridge.account = String(id ?? ''); }); }
+export function setBridgeUse(engine, on) {
+  patch((s) => {
+    if (!s.bridge) return;
+    const off = new Set(s.bridge.off ?? []);
+    if (on) off.delete(engine); else off.add(engine);
+    s.bridge.off = [...off];
+  });
+}
 // The link the bridge prints: «#/ajustes?puente=<port>.<code>».
 export async function pairBridge(port, token) {
-  const b = { port: Number(port) || BRIDGE_PORT, token: String(token), engines: [], at: 0 };
+  const b = { port: Number(port) || BRIDGE_PORT, token: String(token), engines: [], at: 0, account: '', off: [] };
   patch((s) => { s.bridge = b; });
-  return bridgeStatus();
+  try { return await bridgeStatus(); } catch (e) {
+    patch((s) => { s.bridge = null; });
+    // A browser says nothing more than «Failed to fetch» when the bridge is closed or does not accept this page.
+    if (e instanceof AIError && !/El puente no responde|conexión/.test(e.message)) throw e;
+    throw new AIError(bridgeKnowsThisPage()
+      ? 'El puente no respondió. ¿Sigue abierta su ventana? Si la cerraste, vuelve a abrirlo y pega el código nuevo.'
+      : `El puente no respondió a esta página (${location.origin}). Ciérralo con Ctrl+C y ábrelo con: ${bridgeCommand()}`, { kind: 'account', way: 'bridge:claude' });
+  }
 }
 // What the bridge has: its engines, whether each is signed in, their models, efforts and what they read.
 export async function bridgeStatus() {
@@ -515,6 +541,10 @@ export async function bridgeStatus() {
     if (!s.bridge) return;
     s.bridge.engines = engines; s.bridge.at = Date.now();
     for (const e of engines) s.models[`bridge:${e.id}`] = (e.models ?? []).map((m) => m.id);
+    // The Claude account: the one chosen, while it still has its session; else the first signed in.
+    const claude = engines.find((e) => e.id === 'claude');
+    const signed = (claude?.accounts ?? []).filter((a) => a.ready);
+    if (!signed.some((a) => a.id === s.bridge.account)) s.bridge.account = signed[0]?.id ?? '';
   });
   return engines;
 }
@@ -862,7 +892,7 @@ async function send({ way, model, effort, system, text, files, maxTokens, onProg
   const engine = WAYS[way].engine;
   const body = await bridgeFetch('/v1/run', {
     method: 'POST', signal, engine,
-    body: JSON.stringify({ engine, model, effort, system, text, files: files.map((f) => (f.data ? { name: f.name, type: f.type, data: f.data } : { name: f.name, type: 'text/plain', text: f.text })) }),
+    body: JSON.stringify({ engine, account: engine === 'claude' ? load().bridge?.account ?? '' : '', model, effort, system, text, files: files.map((f) => (f.data ? { name: f.name, type: f.type, data: f.data } : { name: f.name, type: 'text/plain', text: f.text })) }),
   });
   return { text: String(body.text ?? '') };
 }

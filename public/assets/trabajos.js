@@ -12,6 +12,7 @@ import {
 import { db, auth, gzip, gunzip, loadProfile } from './data.js';
 import * as ai from './ai.js';
 import { prepare } from './files.js';
+import { bridgeSteps, pairBridge, findBridgeSay } from './space.js';
 import { LETTERS, outlinePrompt, milestonePrompt, TUTOR, parseJSON, cleanOutline, cleanMilestone } from './trabajo-prompts.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -153,6 +154,7 @@ async function askAI(task, system, text, files = [], label = '') {
 }
 // «Conectar» opens exactly the recommended option in the settings, and the answers given so far wait here.
 async function connectWay(vendor, bridge) {
+  try { sessionStorage.setItem('studium-return', location.hash); } catch { /* back by hand */ }
   try { localStorage.setItem('studium-ai-vendor', vendor); } catch { /* the settings open on their default */ }
   location.hash = '#/ajustes';
   for (let i = 0; i < 40 && !document.querySelector('#set-ai'); i += 1) await new Promise((r) => setTimeout(r, 100));
@@ -235,7 +237,8 @@ function renderDraft(error = '') {
     const ready = opts.find(usable);
     control = `<div class="tj-ways">${opts.map((o, i) => `<div class="tj-way glass ${i === 0 ? 'rec' : ''}">
         <div><b>${esc(o.name)}</b>${i === 0 ? ' <span class="tag rec">Recomendado</span>' : ''}<p>${esc(o.why)}</p><p class="fine">${esc(o.how)}</p></div>
-        ${usable(o) ? '<span class="tj-ok">Conectada ✓</span>' : `<button type="button" class="button ${i === 0 ? 'primary' : 'ghost'} small" data-tj="connect" data-vendor="${o.vendor}" data-bridge="${o.bridge ? '1' : ''}">Conectar</button>`}</div>`).join('')}</div>
+        ${usable(o) ? '<span class="tj-ok">Conectada ✓</span>' : o.id === 'bridge' ? `<button type="button" class="button ${i === 0 ? 'primary' : 'ghost'} small" data-tj="pair-here">Conectar aquí</button>` : `<button type="button" class="button ${i === 0 ? 'primary' : 'ghost'} small" data-tj="connect" data-vendor="${o.vendor}" data-bridge="${o.bridge ? '1' : ''}">Conectar</button>`}</div>
+        ${o.id === 'bridge' && draft.pairing && !usable(o) ? `<div class="tj-bridge ai-bridge">${bridgeSteps().replace('data-ai-pair>', 'data-tj="pair-code">')}</div>` : ''}`).join('')}</div>
       ${ready ? ai.pickerHTML('solution') : '<p class="fine">Puedes seguir sin conectar ninguna y escribir la guía después.</p>'}`;
   }
   if (q.input === 'ready') {
@@ -705,6 +708,12 @@ function wire(root) {
     if (kind === 'back') { keepAnswer(); draft.at = Math.max(0, draft.at - 1); renderDraft(); return; }
     if (kind === 'skip') { const k = QUESTIONS[draft.at].key; if (k === 'deadline') { draft.date = ''; draft.time = ''; } else draft[k] = ''; draft.at += 1; renderDraft(); return; }
     if (kind === 'count') { draft.parts = Number(b.dataset.n); draft.at += 1; renderDraft(); return; }
+    if (kind === 'pair-code') {
+      const code = b.closest('.tj-bridge')?.querySelector('[data-ai-pair-code]')?.value;
+      await busy(b, async () => { if (await pairBridge(code)) { draft.pairing = false; renderDraft(); } }).catch(() => {});
+      return;
+    }
+    if (kind === 'pair-here') { keepAnswer(); draft.pairing = true; renderDraft(); return; }
     if (kind === 'drop-file') { keepAnswer(); draft.files.splice(Number(b.dataset.i), 1); renderDraft(); return; }
     if (kind === 'connect') { if (draft) keepAnswer(); await connectWay(b.dataset.vendor, !!b.dataset.bridge); return; }
     if (kind === 'paste') { draft.pasting = true; renderDraft(); return; }

@@ -653,21 +653,33 @@ function bridgeAdvanced() {
         <li><b>Cómo apagarlo:</b> cierra la ventana de la terminal, o pulsa Ctrl+C en ella.</li>
         <li><b>Para quién:</b> si nunca abriste una terminal, mejor usa la forma por chat: hace lo mismo, solo que a mano.</li>
       </ul>
-      ${b?.token ? `<p><b>Tus suscripciones en esta computadora.</b> Elige cuál usa Studium:</p>
-        <ul class="engines">${engines.length ? engines.map((e) => `<li class="${e.ready ? 'ok' : ''}"><strong>${esc(names[e.id] ?? e.name)}</strong>
-          <span>${esc(e.ready ? `lista · ${count((e.models ?? []).length, 'modelo', 'modelos')}` : e.detail || 'no está lista')}</span>
-          ${e.ready ? (ai.defaultWay() === `bridge:${e.id}` ? '<span class="badge">la que usa Studium</span>' : `<button class="button ghost small" data-ai-default="bridge:${e.id}">Usar esta</button>`) : ''}</li>`).join('') : '<li>Pulsa «Revisar» con el puente abierto.</li>'}</ul>
+      ${b?.token ? `<p><b>Tus IA en esta computadora.</b> Elige cuáles usa Studium y, en Claude, con qué cuenta:</p>
+        <ul class="engines">${engines.length ? engines.map((e) => {
+          const usable = e.ready && !e.paused;
+          const on = usable && !(b.off ?? []).includes(e.id);
+          const accounts = (e.accounts ?? []).filter((a) => a.ready);
+          return `<li class="${on ? 'ok' : ''}"><strong>${esc(names[e.id] ?? e.name)}</strong>
+          <span>${esc(e.ready && e.paused ? e.paused : e.ready ? `lista · ${count((e.models ?? []).length, 'modelo', 'modelos')}` : e.detail || 'no está lista')}</span>
+          ${usable ? `<label class="check"><input type="checkbox" data-ai-bridge-use="${esc(e.id)}" ${on ? 'checked' : ''}> Usar en Studium</label>` : ''}
+          ${on && accounts.length ? `<div class="bridge-accounts" role="radiogroup" aria-label="Cuenta de ${esc(names[e.id] ?? e.name)}">${accounts.map((a) => `<label class="check"><input type="radio" name="bridge-account" data-ai-bridge-account="${esc(a.id)}" ${a.id === b.account ? 'checked' : ''}> ${esc(a.email || a.id)}${a.plan ? ` <small>plan ${esc(a.plan)}</small>` : ''} <small>· carpeta ${esc(a.id)}</small></label>`).join('')}</div>` : ''}
+          ${on ? (ai.defaultWay() === `bridge:${e.id}` ? '<span class="badge">la que usa Studium</span>' : `<button class="button ghost small" data-ai-default="bridge:${e.id}">Usar esta para todo</button>`) : ''}</li>`;
+        }).join('') : '<li>Pulsa «Revisar» con el puente abierto.</li>'}</ul>
         <div class="actions"><button class="button ghost small" data-ai-bridge-check>Revisar</button><button class="link" data-ai-forget="bridge">Desenlazar</button></div>`
-      : `<ol class="howto">
-        <li>Necesitas <a href="https://nodejs.org/" target="_blank" rel="noopener noreferrer">Node</a> 20 o más nuevo.</li>
-        <li><a href="${esc(ai.BRIDGE_URL)}" download="studium-bridge.mjs">Descarga el puente</a>.</li>
-        <li>Abre una terminal en la carpeta donde lo guardaste y escribe <code>node studium-bridge.mjs</code>.</li>
-        <li>Abre el enlace que te muestra (o pega aquí su código). Chrome te pedirá permiso para que Studium hable con tu computadora.</li>
-      </ol>
-      <label class="field"><span>Código de enlace del puente</span><input data-ai-pair-code placeholder="41730.…" autocomplete="off" spellcheck="false"></label>
-      <div class="actions"><button class="button ghost small" data-ai-pair>Enlazar</button></div>`}
+      : bridgeSteps()}
       ${aiMsg('bridge')}
     </div></details>`;
+}
+// How to open and pair the bridge, step by step; also used by «Trabajos» (trabajos.js).
+export function bridgeSteps() {
+  return `<ol class="howto">
+        <li>Necesitas <a href="https://nodejs.org/" target="_blank" rel="noopener noreferrer">Node</a> 20 o más nuevo.</li>
+        <li><a href="${esc(ai.BRIDGE_URL)}" download="studium-bridge.mjs">Descarga el puente</a> y guárdalo donde quieras (por ejemplo, en la carpeta de tu trabajo).</li>
+        <li>Abre una terminal en esa carpeta y escribe: <code class="bridge-cmd">${esc(ai.bridgeCommand())}</code> <button type="button" class="link" data-ai-copy="${esc(ai.bridgeCommand())}">copiar</button></li>
+        <li>Al instante te muestra un <b>código</b> que empieza con <code>41730.</code> seguido de letras. Cópialo entero y pégalo aquí abajo.</li>
+      </ol>
+      <label class="field"><span>Código de enlace del puente</span><input data-ai-pair-code placeholder="41730.AbCd…" autocomplete="off" spellcheck="false"></label>
+      <div class="actions"><button class="button primary small" data-ai-pair>Enlazar</button><button class="link" data-ai-bridge-find>¿Está abierto? Comprobar</button></div>
+      <p class="msg" data-ai-msg="bridge-find"></p>`;
 }
 function aiSettings() {
   const now = ai.connected();
@@ -690,8 +702,10 @@ function vaultHTML() {
   const v = vault.state();
   const note = v.note ? `<p class="msg">${esc(v.note)}</p>` : '';
   if (v.synced) return `${note}<p class="vault-on"><b>🔒 Tus claves están cifradas</b>, en este dispositivo y en tu cuenta. Solo tu contraseña de Studium las abre: ni Studium ni sus admins pueden leerlas. En tu celular aparecen al iniciar sesión; al cerrar sesión se borran de aquí y vuelven cuando entras.</p>`;
-  return `${note}<p><b>🔒 Tus claves están cifradas en este dispositivo.</b> Para tenerlas también en tu celular y tus otros dispositivos, confirma tu contraseña de Studium una vez: con ella se cifran en tu cuenta, y nadie más puede abrirlas, ni Studium ni sus admins.</p>
-    <form class="vault-confirm" data-vault-confirm><label class="field"><span>Tu contraseña de Studium</span><input type="password" name="password" autocomplete="current-password" required></label><button class="button ghost small">Llevar mis claves a mis dispositivos</button></form><p class="msg" data-vault-msg></p>`;
+  return `${note}<p><b>🔒 Tus claves están cifradas en este dispositivo.</b> No necesitas hacer nada más para usarlas aquí.</p>
+    <details class="vault-more"><summary>Opcional: llevarlas también a tu celular y tus otros dispositivos</summary>
+    <p class="fine">Para eso, confirma tu contraseña de Studium una vez: con ella se cifran en tu cuenta, y nadie más puede abrirlas, ni Studium ni sus admins.</p>
+    <form class="vault-confirm" data-vault-confirm><label class="field"><span>Tu contraseña de Studium</span><input type="password" name="password" autocomplete="current-password" required></label><button class="button ghost small">Llevar mis claves a mis dispositivos</button></form></details><p class="msg" data-vault-msg></p>`;
 }
 // What «Revisar el estado» found: per AI, the lines it checked, its models with their cost and whether they answered.
 function statusHTML(st) {
@@ -751,6 +765,18 @@ async function testAI(way) {
     sfx.chime();
   } catch (error) { msg.textContent = error.message; }
 }
+// «¿Está abierto?»: asks the bridge without its code, and says what to do next.
+export async function findBridgeSay(scope = document) {
+  const msg = scope.querySelector('[data-ai-msg="bridge-find"]');
+  if (msg) msg.textContent = 'Buscando el puente…';
+  const hello = await ai.findBridge();
+  const say = !hello
+    ? (ai.bridgeKnowsThisPage() ? 'No encuentro el puente abierto. ¿Escribiste el comando en la terminal? Si ya lo hiciste, espera un par de segundos y vuelve a comprobar.' : `No encuentro el puente, o no acepta esta página. Ábrelo con: ${ai.bridgeCommand()}`)
+    : String(hello.version ?? '0') < ai.BRIDGE_VERSION ? `Tienes abierta una versión anterior del puente (${hello.version ?? '?'}). Ciérralo, descárgalo de nuevo y ábrelo otra vez.`
+      : 'El puente está abierto. Ahora pega aquí el código que te muestra y pulsa «Enlazar».';
+  if (msg) msg.textContent = say; else ctx?.toast(say);
+  return !!hello;
+}
 // The bridge's link («#/ajustes?puente=41730.code») or its code, pasted.
 export async function pairBridge(text) {
   const m = String(text ?? '').trim().match(/(?:puente=)?(\d{2,5})\.([A-Za-z0-9_-]{16,})/);
@@ -772,6 +798,7 @@ async function aiAction(t) {
     return;
   }
   if (t.dataset.aiPair !== undefined) { await pairBridge($('[data-ai-pair-code]')?.value); return; }
+  if (t.dataset.aiBridgeFind !== undefined) { await findBridgeSay(t.closest('.ai-bridge, .tj-bridge') ?? document); return; }
   if (t.dataset.aiBridgeCheck !== undefined) {
     const msg = $('[data-ai-msg="bridge"]');
     if (msg) msg.textContent = 'Revisando…';
@@ -831,7 +858,8 @@ export function mountSpace(context) {
       ai.forget(way); renderSettings();
       ctx?.toast(way === 'bridge' ? 'El puente quedó desenlazado.' : way === 'puter' || way === 'openrouter' ? 'Se desconectó de este navegador.' : 'La clave se borró de este navegador.');
     }
-    if (t.dataset.aiLogin || t.dataset.aiPair !== undefined || t.dataset.aiBridgeCheck !== undefined) aiAction(t);
+    if (t.dataset.aiLogin || t.dataset.aiPair !== undefined || t.dataset.aiBridgeCheck !== undefined || t.dataset.aiBridgeFind !== undefined) aiAction(t);
+    if (t.dataset.aiCopy) { navigator.clipboard.writeText(t.dataset.aiCopy).then(() => ctx?.toast('Copiado.'), () => {}); }
     if (t.dataset.soundTest !== undefined) { sfx.enable(true); sfx.chime(); if (!prefs.get().sound) setTimeout(() => sfx.enable(false), 900); }
     if (t.id === 'timer-go') {
       timer.running = !timer.running;
@@ -871,6 +899,9 @@ export function mountSpace(context) {
   document.addEventListener('change', (e) => {
     const t = e.target;
     if (t.dataset.specterSkin !== undefined) setSpecterSkin(t.value);
+    // The bridge: which of its AIs Studium uses, and with which Claude account.
+    if (t.dataset.aiBridgeUse) { ai.setBridgeUse(t.dataset.aiBridgeUse, t.checked); renderSettings(); return; }
+    if (t.dataset.aiBridgeAccount) { ai.setBridgeAccount(t.dataset.aiBridgeAccount); ctx?.toast('Studium usará esa cuenta de Claude.'); renderSettings(); return; }
     if (t.dataset.goalCheck) {
       const goals = prefs.get().goals.map((g) => (g.id === t.dataset.goalCheck ? { ...g, done: t.checked } : g));
       prefs.set({ goals });
