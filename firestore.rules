@@ -520,6 +520,35 @@ service cloud.firestore {
           && request.resource.data.steps.size() <= 600 && request.resource.data.updated == request.time;
         allow delete: if member() && (uid == request.auth.uid || ownsTrabajo(tid));
       }
+      // «¿Cuándo nos reunimos?» (reunion.js): each member's free half hours per week, written only by them; proposals
+      // anyone makes, where each member adds or removes only their own yes or no.
+      match /disponible/{uid} {
+        allow get, list: if member() && inTrabajo(tid);
+        allow create, update: if member() && inTrabajo(tid) && uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['weeks', 'updated']) && request.resource.data.weeks is map
+          && request.resource.data.weeks.size() <= 8 && request.resource.data.updated == request.time;
+        allow delete: if member() && (uid == request.auth.uid || ownsTrabajo(tid));
+      }
+      match /reunion/{pid} {
+        allow get, list: if member() && inTrabajo(tid);
+        allow create: if member() && inTrabajo(tid)
+          && request.resource.data.keys().hasOnly(['week', 'slot', 'len', 'by', 'si', 'no', 'updated'])
+          && request.resource.data.week is string && request.resource.data.week.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+          && request.resource.data.slot is int && request.resource.data.slot >= 0 && request.resource.data.slot < 210
+          && request.resource.data.len is int && request.resource.data.len >= 1 && request.resource.data.len <= 8
+          && request.resource.data.by == request.auth.uid && request.resource.data.si == [request.auth.uid]
+          && request.resource.data.no == [] && request.resource.data.updated == request.time;
+        allow update: if member() && inTrabajo(tid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['si', 'no', 'updated'])
+          && request.resource.data.si is list && request.resource.data.no is list
+          && request.resource.data.si.size() <= 8 && request.resource.data.no.size() <= 8
+          && request.resource.data.si.toSet().difference(resource.data.si.toSet()).hasOnly([request.auth.uid])
+          && resource.data.si.toSet().difference(request.resource.data.si.toSet()).hasOnly([request.auth.uid])
+          && request.resource.data.no.toSet().difference(resource.data.no.toSet()).hasOnly([request.auth.uid])
+          && resource.data.no.toSet().difference(request.resource.data.no.toSet()).hasOnly([request.auth.uid])
+          && request.resource.data.updated == request.time;
+        allow delete: if member() && (resource.data.by == request.auth.uid || ownsTrabajo(tid));
+      }
       match /ia/{uid} {
         allow get, list: if member() && inTrabajo(tid);
         allow create, update: if member() && inTrabajo(tid) && uid == request.auth.uid

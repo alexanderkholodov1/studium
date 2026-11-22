@@ -662,6 +662,16 @@ try {
     expect('classmate cannot write the progress of someone else', await commit(c.token, [put(`trabajos/${tid}/avance/${s.uid}`, { steps: {} })]), 403);
     expect('student reads the progress of the group', await status(s.token, 'GET', at(`/avance/${c.uid}`)), 200);
     expect('classmate keeps their own log of AI use', await commit(c.token, [put(`trabajos/${tid}/ia/${c.uid}`, { log: [{ step: 'H1', prompt: 'x' }] })]), 200);
+    expect('classmate marks when they can meet', await commit(c.token, [put(`trabajos/${tid}/disponible/${c.uid}`, { weeks: { '2026-11-23': [1, 2, 3] } })]), 200);
+    expect('nobody marks the availability of someone else', await commit(c.token, [put(`trabajos/${tid}/disponible/${s.uid}`, { weeks: {} })]), 403);
+    const pid = appId();
+    const meet = { week: '2026-11-23', slot: 40, len: 2 };
+    expect('a proposal with someone else’s yes is refused', await commit(c.token, [stamped(`trabajos/${tid}/reunion/${pid}`, { ...meet, by: c.uid, si: [s.uid], no: [] }, ['updated'], true)]), 403);
+    expect('classmate proposes an hour', await commit(c.token, [stamped(`trabajos/${tid}/reunion/${pid}`, { ...meet, by: c.uid, si: [c.uid], no: [] }, ['updated'], true)]), 200);
+    expect('student says yes for themself', await commit(s.token, [stamped(`trabajos/${tid}/reunion/${pid}`, { ...meet, by: c.uid, si: [c.uid, s.uid], no: [] }, ['updated'])]), 200);
+    expect('student cannot remove the classmate’s yes', await commit(s.token, [stamped(`trabajos/${tid}/reunion/${pid}`, { ...meet, by: c.uid, si: [s.uid], no: [] }, ['updated'])]), 403);
+    expect('student cannot move the hour', await commit(s.token, [stamped(`trabajos/${tid}/reunion/${pid}`, { ...meet, slot: 41, by: c.uid, si: [c.uid, s.uid], no: [] }, ['updated'])]), 403);
+    expect('otherDomain cannot read the proposals', await status(accounts.otherDomain.token, 'GET', at('/reunion')), 403);
     expect('classmate keeps their list of trabajos', await commit(c.token, [put(`misTrabajos/${c.uid}`, { ids: [tid] })]), 200);
     expect('student cannot read the list of someone else', await status(s.token, 'GET', `/misTrabajos/${c.uid}`), 403);
     expect('classmate cannot delete the progress of someone else', await commit(c.token, [remove(`trabajos/${tid}/avance/${s.uid}`)]), 403);

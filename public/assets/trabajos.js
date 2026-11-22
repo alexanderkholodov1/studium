@@ -13,6 +13,7 @@ import { db, auth, gzip, gunzip, loadProfile } from './data.js';
 import * as ai from './ai.js';
 import { prepare } from './files.js';
 import * as amigos from './amigos.js';
+import { reunionSection, wireReunion, resetReunion } from './reunion.js';
 import { bridgeSteps, pairBridge, findBridgeSay } from './space.js';
 import { LETTERS, outlinePrompt, milestonePrompt, wholePrompt, adjustPrompt, ADJUST_KINDS, TUTOR, parseJSON, cleanOutline, cleanMilestone } from './trabajo-prompts.js';
 
@@ -607,7 +608,7 @@ let listRows = [];
 function cardExtra(id, html) { const el = root.querySelector(`.tj-card[data-id="${CSS.escape(id)}"] [data-extra]`); if (el) el.innerHTML = html; root.querySelectorAll('.tj-menu[open]').forEach((m) => { m.open = false; }); }
 // Deleting a trabajo: its parts the owner may remove first (the rules let the owner clean them), then the trabajo.
 async function deleteTrabajo(id) {
-  for (const sub of ['hitos', 'partes', 'avance', 'ia', 'miembros']) {
+  for (const sub of ['hitos', 'partes', 'avance', 'ia', 'disponible', 'reunion', 'miembros']) {
     const snap = await getDocs(collection(db, 'trabajos', id, sub)).catch(() => null);
     for (const d of snap?.docs ?? []) if (sub !== 'miembros' || d.id !== uid()) await deleteDoc(d.ref).catch(() => {});
   }
@@ -1174,7 +1175,7 @@ function templateSample(id) {
 function topbar() {
   const all = steps();
   const total = pct(all.filter((s) => isDone(s.id)).length, all.length);
-  const caps = T.outline ? [['inicio', '0 · El trabajo'], ...T.outline.hitos.map((h, i) => [h.id, `${i + 1} · ${short(h.titulo)}`]), ['entrega', '✓ · Entregar']] : [];
+  const caps = T.outline ? [['inicio', '0 · El trabajo'], ['reunion', '◷ · Reunirse'], ...T.outline.hitos.map((h, i) => [h.id, `${i + 1} · ${short(h.titulo)}`]), ['entrega', '✓ · Entregar']] : [];
   return `<nav class="top"><div class="in">
       <a class="back" href="#/trabajos" title="Volver a Studium">← Studium</a>
       <span class="brand">${esc(short((T.course || T.title).toUpperCase(), 26))} · GUÍA DE SOLUCIÓN</span>
@@ -1397,7 +1398,8 @@ function paint() {
   if (!T) return;
   prepareTerms();
   const theme = localStorage.getItem(THEME) ?? '';
-  gRoot().innerHTML = `<div class="tjg-app" data-template="${templateOf()}" ${theme ? `data-theme="${theme}"` : ''}>${topbar()}<div class="wrap">${hero()}${T.outline ? intro() + T.outline.hitos.map(chapter).join('') + closing() : noOutline()}</div></div>`;
+  const meet = reunionSection(T, { repaint, ref: tRef, people: () => T?.members ?? [] });
+  gRoot().innerHTML = `<div class="tjg-app" data-template="${templateOf()}" ${theme ? `data-theme="${theme}"` : ''}>${topbar()}<div class="wrap">${hero()}${T.outline ? intro() + meet + T.outline.hitos.map(chapter).join('') + closing() : noOutline() + meet}</div></div>`;
   markChapter();
   drawDiagrams();
   paintTray();
@@ -1476,6 +1478,7 @@ async function openTrabajo(tid) {
     gRoot().innerHTML = '<p class="tjg-status">Abriendo el trabajo…</p>';
     T = await loadTrabajo(tid);
     asking.clear();
+    resetReunion();
     if (!T) { gRoot().innerHTML = '<p class="tjg-status">Ese trabajo no existe, o no eres parte de él. <a href="#/trabajos">Volver</a></p>'; return; }
   }
   paint();
@@ -1547,7 +1550,7 @@ async function checkGitHub() {
   T.avance[uid()] = mine;
   if (marked) await saveAvance();
   repaint();
-  say('#tj-gh-status', marked ? `Listo: ${marked} ${marked === 1 ? 'paso marcado' : 'pasos marcados'} como hechos.` : 'No hay pasos nuevos en tus commits.');
+  say('#tj-gh-status', marked ? `Listo: ${marked} ${marked === 1 ? 'paso marcado como hecho' : 'pasos marcados como hechos'}.` : 'No hay pasos nuevos en tus commits.');
 }
 
 function citation() {
@@ -1890,6 +1893,7 @@ export function mountTrabajos(context) {
   root = $('#tj-body');
   wire(root);
   wire($('#tjg-body'));
+  wireReunion($('#tjg-body'), (t) => ctx.toast(t));
   $('#view-trabajo').addEventListener('scroll', () => requestAnimationFrame(markChapter), { passive: true });
 }
 

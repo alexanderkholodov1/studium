@@ -102,13 +102,14 @@ export const dropInvitation = (tid) => deleteDoc(doc(db, 'amigos', uid(), 'invit
 
 /* ---------- the panel, on top of «Comunidad» ---------- */
 let mount = null;
-let state = { code: '', name: '', friends: [], offer: null, error: '', ending: '' };
+let state = { code: '', name: '', friends: [], offer: null, error: '', note: '', ending: '' };
 const since = (d) => (d ? d.toLocaleDateString('es', { day: 'numeric', month: 'long' }) : '');
 const initial = (n) => esc(String(n || '?').trim()[0]?.toUpperCase() ?? '?');
 
 function html() {
-  const { code, name, friends, offer, error } = state;
+  const { code, name, friends, offer, error, note } = state;
   return `<section class="am-panel glass" aria-labelledby="am-title">
+    ${note ? `<p class="am-note" role="status">${esc(note)}</p>` : ''}
     ${offer ? `<div class="am-offer" role="alert">${offer.self
     ? '<p><b>Ese es tu propio enlace.</b> Compártelo con quien quieras agregar.</p><p><button type="button" class="link" data-am="offer-close">Entendido</button></p>'
     : offer.bad
@@ -137,7 +138,7 @@ const paint = () => { if (mount?.isConnected) mount.innerHTML = html(); };
 
 export async function renderFriends(box, offerCode = '') {
   mount = box;
-  state = { ...state, offer: null, error: '', ending: '' };
+  state = { ...state, offer: null, error: '', note: '', ending: '' };
   box.innerHTML = '<p class="status">Cargando tus amigos…</p>';
   try {
     const [mine, friends] = await Promise.all([myCode(), listFriends()]);
@@ -146,7 +147,7 @@ export async function renderFriends(box, offerCode = '') {
   if (offerCode) {
     const who = await codeInfo(offerCode);
     state.offer = !who ? { bad: true } : who.uid === uid() ? { self: true } : state.friends.some((f) => f.uid === who.uid) ? null : who;
-    if (who && state.friends.some((f) => f.uid === who.uid)) state.error = '';
+    if (who && state.friends.some((f) => f.uid === who.uid)) state.note = `Ya eres amigo de ${who.name}.`;
   }
   paint();
   if (offerCode) box.scrollIntoView?.({ block: 'start' });
@@ -184,7 +185,7 @@ export function mountFriends(toast) {
     const who = await codeInfo(code);
     state.error = '';
     state.offer = !who ? { bad: true } : who.uid === uid() ? { self: true } : who;
-    if (who && state.friends.some((f) => f.uid === who.uid)) { state.offer = null; state.error = `Ya eres amigo de ${who.name}.`; }
+    if (who && state.friends.some((f) => f.uid === who.uid)) { state.offer = null; state.note = `Ya eres amigo de ${who.name}.`; }
     paint();
   });
 }

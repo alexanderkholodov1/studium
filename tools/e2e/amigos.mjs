@@ -127,7 +127,8 @@ try {
   ok('the same trabajo is changed (group «Grupo 7»), not a new one', after.group === 'Grupo 7' && (await trabajoIds(A)).length === before + 1, JSON.stringify(after));
   ok('…and the guide is asked again', runs.length > runsBefore);
 
-  // --- 2. Friends
+  // --- 2. Friends (starting as strangers: an earlier run may have left them friends)
+  await A.js(`const am = await import('/studium/assets/amigos.js'); for (const f of await am.listFriends()) await am.end(f.uid);`);
   await A.js(`location.hash = '#/comunidad';`);
   await A.wait(`document.querySelector('.am-link code')`, 15000);
   const link = await A.js(`return document.querySelector('.am-link code').textContent`);
@@ -162,6 +163,83 @@ try {
   await W(1000);
   ok('B enters the trabajo', /Lab de Redes/.test(await B.js(`return document.querySelector('#tjg-body').innerText`)));
   await B.shot('b6-b-en-el-trabajo');
+  // Reading and progress: a small written guide (no AI runs in tests: it is built with the same functions that clean
+  // what an AI writes), each one takes a part and marks; each sees the other's progress. Then GitHub: a real request
+  // to a public repository (the connection), and a commit that names a step marking it done (GitHub's answer stubbed).
+  await A.js(`const P = await import('/studium/assets/trabajo-prompts.js'); const D = await import('/studium/assets/data.js');
+    const F = await import('https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-lite.js');
+    const pack = async (x) => F.Bytes.fromUint8Array(await D.gzip(JSON.stringify(x)));
+    const o = P.cleanOutline({ titulo: 'Lab 4', de_que_trata: 'Configurar **OSPF** multiárea.', glosario: [{ termino: 'OSPF', definicion: 'Protocolo de enrutamiento por estado de enlace.' }],
+      hitos: [{ id: 'H1', titulo: 'La topología', pasos: [{ id: 'H1.1', titulo: 'Armar la topología', parte: 'A' }, { id: 'H1.2', titulo: 'Configurar OSPF', parte: 'B' }] }] }, 3);
+    const step = (id, t) => ({ id, objetivo: t, clave: 'La idea: **cada área** resume sus rutas.', teoria: 'Un **área** agrupa routers.', codigo: [{ lenguaje: 'bash', codigo: 'router ospf 1', lineas: [{ n: 1, explicacion: 'Activa OSPF con el proceso 1.' }] }], comprueba: [{ pregunta: '¿Qué es un área?', respuesta: 'Un grupo de routers.' }], commit: '[' + id + '] ' + t });
+    const m = P.cleanMilestone({ pasos: [step('H1.1', 'Armar la topología'), step('H1.2', 'Configurar OSPF')] }, o.hitos[0]);
+    const t = F.doc(D.db, 'trabajos', ${JSON.stringify(tid)});
+    await F.setDoc(t, { outline: await pack(o), updated: F.serverTimestamp() }, { merge: true });
+    await F.setDoc(F.doc(t, 'hitos', 'H1'), { data: await pack(m), encoding: 'gzip', by: D.auth.currentUser.uid, updated: F.serverTimestamp() });`);
+  await A.js(`location.hash = '#/trabajos/${tid}'; location.reload();`); await B.js(`location.reload();`);
+  await W(3000);
+  await A.wait(`document.querySelector('[data-tj="take"][data-part="A"]')`, 15000);
+  await A.js(`document.querySelector('[data-tj="take"][data-part="A"]').click();`); await W(1500);
+  await B.js(`location.reload();`); await W(3000);
+  await B.wait(`document.querySelector('[data-tj="take"][data-part="B"]')`, 15000);
+  await B.js(`document.querySelector('[data-tj="take"][data-part="B"]').click();`); await W(1500);
+  ok('both read the guide and take their parts', /Configurar OSPF/.test(await B.js(`return document.querySelector('#tjg-body').innerText`)));
+  await B.js(`document.querySelector('[data-tj="d"][data-key="H1.2"]').click();`); await W(1200);
+  await B.js(`document.querySelector('[data-tj="u"][data-key="H1.1"]').click();`); await W(1200);
+  await A.js(`location.reload();`); await W(3000);
+  await A.wait(`document.querySelector('.progress .prow')`, 15000);
+  const prog = await A.js(`return document.querySelector('.progress').innerText`);
+  ok('A sees B’s progress (B did their part, understands half the guide)', /hizo 100% de su parte/.test(prog) && /entiende 50% de la gu/.test(prog), prog.replace(/\s+/g, ' ').slice(0, 200));
+  ok('…and on the step itself, who did it', /Ya lo hizo/.test(await A.js(`return document.querySelector('#paso-H1\\\\.2, [id="paso-H1.2"]')?.innerText ?? document.body.innerText`)));
+  await A.js(`document.querySelector('.progress').scrollIntoView({ block: 'center' });`); await W(300);
+  await A.shot('d1-a-progreso-del-grupo');
+  // GitHub, for real: a public repository, read without a key.
+  await A.js(`const D = await import('/studium/assets/data.js'); const F = await import('https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-lite.js');
+    await F.setDoc(F.doc(D.db, 'trabajos', ${JSON.stringify(tid)}), { repo: { owner: 'octocat', name: 'Hello-World' }, updated: F.serverTimestamp() }, { merge: true }); location.reload();`);
+  await W(3000);
+  await A.wait(`document.querySelector('[data-tj="check-gh"]')`, 15000);
+  await A.js(`document.querySelector('[data-tj="check-gh"]').click();`);
+  await A.wait(`/Listo|No hay pasos|GitHub/.test(document.querySelector('#tj-gh-status')?.textContent ?? '')`, 20000);
+  const real = await A.js(`return document.querySelector('#tj-gh-status').textContent`);
+  ok('GitHub answers for real (a public repo, no key): nothing to mark there', /No hay pasos nuevos/.test(real), real);
+  // A commit that names A's step marks it done (GitHub's answer stubbed for this one request).
+  await A.js(`const real = window.fetch; window.fetch = (u, o) => String(u).includes('api.github.com/repos/octocat/Hello-World/commits') ? Promise.resolve(new Response(JSON.stringify([{ sha: 'abc1234def5678', commit: { message: '[H1.1] topología lista' } }, { sha: 'fff0000', commit: { message: '[H1.2] no es mi parte' } }]), { status: 200 })) : real(u, o);
+    document.querySelector('[data-tj="check-gh"]').click();`);
+  await A.wait(`/Listo/.test(document.querySelector('#tj-gh-status')?.textContent ?? '')`, 15000);
+  const marked = await A.js(`return document.querySelector('#tj-gh-status').textContent`);
+  ok('a commit that names A’s step marks only that step', /1 paso marcado como hecho./.test(marked), marked);
+  ok('…and the step shows its commit', /commit abc1234/.test(await A.js(`return document.body.innerText`)));
+  // «¿Cuándo nos reunimos?»: both paint when they can (dragging), the group's best hour is everyone's, A proposes it,
+  // B says yes, it is fixed, and B adds it to their dates.
+  const paint = (P, from, to) => P.js(`const cells = [...document.querySelectorAll('[data-rn-grid="me"] [data-rn-slot]')].filter((c) => +c.dataset.rnSlot >= ${from} && +c.dataset.rnSlot <= ${to});
+    const ev = (t) => new PointerEvent(t, { bubbles: true, pointerId: 1 });
+    cells[0].dispatchEvent(ev('pointerdown')); for (const c of cells.slice(1)) c.dispatchEvent(ev('pointerover')); window.dispatchEvent(ev('pointerup')); return cells.length;`);
+  await A.js(`location.hash = '#/trabajos/${tid}';`);
+  await A.wait(`document.querySelector('[data-rn-grid="me"]')`, 15000);
+  await B.wait(`document.querySelector('[data-rn-grid="me"]')`, 15000);
+  ok('the meeting section is in the guide', true);
+  // Tuesday 15:00–18:00 for A (slots 46–51), Tuesday 16:00–19:00 for B (48–53): together 16:00–18:00.
+  await paint(A, 46, 51); await W(1800);
+  await paint(B, 48, 53); await W(1800);
+  ok('each one’s hours are saved', /Guardado/.test(await B.js(`return document.querySelector('[data-rn-status]')?.textContent ?? ''`)));
+  await A.js(`location.reload();`); await W(3000);
+  await A.wait(`document.querySelector('.rn-best li')`, 15000);
+  const bestA = await A.js(`return document.querySelector('.rn-best li')?.innerText ?? ''`);
+  ok('the best hour is the one both can', /martes/.test(bestA) && /16:00–17:00/.test(bestA) && /pueden todos/.test(bestA), bestA.replace(/\s+/g, ' '));
+  await A.js(`document.querySelector('#cap-reunion').scrollIntoView();`); await W(300);
+  await A.shot('c1-a-reunion');
+  await A.js(`document.querySelector('.rn-best [data-rn="propose"]').click();`);
+  await A.wait(`document.querySelector('.rn-prop')`, 10000);
+  await B.js(`location.reload();`); await W(3000);
+  await B.wait(`document.querySelector('.rn-prop [data-rn="si"]')`, 15000);
+  await B.js(`document.querySelector('.rn-prop [data-rn="si"]').click();`);
+  await B.wait(`document.querySelector('.rn-prop.fixed')`, 10000);
+  ok('B says yes: the hour is fixed', true);
+  await B.js(`document.querySelector('[data-rn="add-date"]').click();`); await W(1200);
+  const dates = await B.js(`const { prefs } = await import('/studium/assets/prefs.js'); return prefs.get().deadlines.map((d) => d.text + ' ' + d.date);`);
+  ok('…and B adds it to «Fechas y entregas»', dates.some((d) => /Reunión 16:00/.test(d)), dates.join(' | '));
+  await B.js(`document.querySelector('#cap-reunion').scrollIntoView();`); await W(300);
+  await B.shot('c2-b-reunion-fijada');
   // A ends the friendship.
   await A.js(`location.hash = '#/comunidad';`);
   await A.wait(`document.querySelector('[data-am="end-ask"]')`, 15000);
