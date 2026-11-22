@@ -50,7 +50,7 @@ const stat = (label, value, note = '') => `<div class="stat"><span>${esc(label)}
 const meter = (label, used, max, fmt = n) => {
   const p = used == null ? 0 : Math.min(100, (used / max) * 100);
   return `<div class="meter ${p > 80 ? 'high' : p > 50 ? 'mid' : ''}"><div class="meter-head"><span>${esc(label)}</span><b>${used == null ? '—' : fmt(used)} <small>de ${fmt(max)}</small></b></div>
-    <i style="--p:${p.toFixed(1)}%"></i></div>`;
+    <i style="--pct:${p.toFixed(1)}%"></i></div>`;
 };
 const email = () => auth.currentUser?.email ?? '';
 

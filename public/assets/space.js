@@ -334,7 +334,8 @@ export function renderHome() {
   $('#dash').innerHTML = `${top}${editing ? trayTile() : ''}<div class="dash-grid" id="dash-grid" style="--rows:${grid.rows(items)}">${tiles}</div>`;
   placeRadio();
   props($('#dash'));
-  renderHomeSchedule($('#dash [data-home-schedule]'));
+  renderHomeSchedule($('#dash [data-home-schedule]')).then?.(() => fitTiles());
+  fitTiles();
   $('#dash').classList.toggle('editing', editing);
   $('#home-edit').textContent = editing ? 'Listo' : 'Personalizar';
   $('#home-edit').setAttribute('aria-pressed', String(editing));
@@ -342,6 +343,41 @@ export function renderHome() {
   syncTimer();
   rise($('#dash'));
 }
+// No tile scrolls inside: when its content is taller than the tile, first the descriptions go and the spacing
+// tightens, then each list shows only what fits, with «+N más», which makes the tile taller.
+const LISTS = '.pi-list > li, .goals > li, .dlist > li, .qlinks > li, .mini-guides > .mini-guide, .hs-today > li, .shelf > .trinket.locked';
+export function fitTiles(root = document) {
+  for (const t of root.querySelectorAll('#dash .dash-grid > .tile[data-tile]')) {
+    const body = t.querySelector('.tile-body');
+    if (!body || t.dataset.tile === 'decor') continue;
+    t.classList.remove('tight', 'tiny');
+    for (const el of body.querySelectorAll('[data-fit-hidden]')) el.removeAttribute('data-fit-hidden');
+    body.querySelector('.tile-more')?.remove();
+    const box = t.classList.contains('postit') ? body.querySelector('.pi-paper') : body;
+    if (!box) continue;
+    const over = () => box.scrollHeight > box.clientHeight + 1 || box.scrollWidth > box.clientWidth + 1;
+    if (!over()) continue;
+    t.classList.add('tight');
+    if (!over()) continue;
+    const items = [...body.querySelectorAll(LISTS)];
+    let hidden = 0;
+    let more = null;
+    while (over() && hidden < items.length) {
+      items[items.length - 1 - hidden].setAttribute('data-fit-hidden', '');
+      hidden += 1;
+      // Secrets still to find just step aside; real things get «+N más».
+      if (!more && !items[0].matches('.locked')) {
+        more = document.createElement('button');
+        more.type = 'button'; more.className = 'tile-more'; more.dataset.tileGrow = t.dataset.tile;
+        const list = items[0].parentElement; list.after(more);
+      }
+      if (more) more.textContent = `+${hidden} más`;
+    }
+    if (over()) t.classList.add('tiny');
+  }
+}
+let fitTimer = 0;
+addEventListener('resize', () => { clearTimeout(fitTimer); fitTimer = setTimeout(() => fitTiles(), 150); });
 // One tile drawn again, in its place, without redrawing (and re-animating) the whole home page: the radio turned on
 // or off, a find pressed.
 export function refreshTile(id) {
@@ -355,6 +391,7 @@ export function refreshTile(id) {
   const fresh = document.querySelector(`#dash [data-tile="${id}"]`);
   placeRadio();
   if (fresh) props(fresh);
+  fitTiles();
 }
 // Changing the tiles: from then on the home page keeps the person's own list.
 function setTiles(items, focus) {
@@ -848,6 +885,11 @@ export function mountSpace(context) {
       setTiles(items);
       ctx.toast(`${TILE_NAMES[t.dataset.tileAdd]}: en tu inicio.`);
       requestAnimationFrame(() => document.querySelector(`[data-tile="${t.dataset.tileAdd}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+    }
+    if (t.dataset.tileGrow) {
+      const items = layout(); const it = items.find((x) => x.id === t.dataset.tileGrow);
+      if (it) { it.h = Math.min(12, it.h + 2); for (const o of items) if (o !== it && o.x < it.x + it.w && it.x < o.x + o.w && o.y >= it.y && o.y < it.y + it.h) o.y = it.y + it.h; setTiles(grid.compact(items, it)); }
+      return;
     }
     if (t.dataset.tileHide) {
       const id = t.dataset.tileHide;

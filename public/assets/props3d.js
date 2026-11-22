@@ -13,7 +13,8 @@ let gl = null; // { renderer, env, w, h }
 let loading = null;
 const live = new Set(); // { canvas, ctx, prop, on }
 const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.ambience === 'enfoque';
-const DPR = () => Math.min(2, devicePixelRatio || 1);
+// Sharp enough on any screen, and not more: every pixel of every object is drawn about thirty times a second.
+const DPR = () => Math.min(1.5, devicePixelRatio || 1);
 const MAX_W = 560;
 const MAX_H = 460;
 
@@ -98,7 +99,7 @@ const camera = (fov, pos, look, aspect = 1) => { const c = new T.PerspectiveCame
 // the scene and hidden by what stands in front of him). uOutfit: 0 none, 2 apron, 3 backpack.
 const SPECTER_FRAG = (billboard) => `precision highp float;
 uniform vec2 uRes; uniform float uT, uYaw, uPitch, uRoll, uBlinkL, uBlinkR, uHappy, uWide, uHeart, uDizzy, uBrow, uSmile, uMouth, uBlush, uTear, uDoctor, uRed, uCream, uOutfit, uAlpha;
-uniform vec3 uTint;
+uniform vec3 uTint, uHandL, uHandR;
 ${billboard ? 'varying vec2 vUv;' : ''}
 mat3 rY(float a){ float c=cos(a), s=sin(a); return mat3(c,0.,s, 0.,1.,0., -s,0.,c); }
 mat3 rX(float a){ float c=cos(a), s=sin(a); return mat3(1.,0.,0., 0.,c,-s, 0.,s,c); }
@@ -123,13 +124,21 @@ vec2 map(vec3 w){
     float mirror = max(length(m.xz) - .13, abs(m.y) - .022);
     if (mirror < res.x) res = vec2(mirror, 2.);
   }
-  // the backpack (camping): a rounded bag on his back
+  // the backpack (camping): a rounded bag on his back, with a rolled blanket on top
   if (uOutfit > 2.5){
-    vec3 bq = q - vec3(0., .02, -.5);
-    vec3 bd = abs(bq) - vec3(.3, .34, .16);
-    float bag = length(max(bd, 0.)) + min(max(bd.x, max(bd.y, bd.z)), 0.) - .07;
+    vec3 bq = q - vec3(0., .0, -.52);
+    vec3 bd = abs(bq) - vec3(.34, .36, .17);
+    float bag = length(max(bd, 0.)) + min(max(bd.x, max(bd.y, bd.z)), 0.) - .08;
+    vec3 rq = q - vec3(0., .5, -.5);
+    float roll = length(vec2(length(rq.yz) - .0, 0.)) - .11; roll = max(roll, abs(rq.x) - .36);
+    bag = min(bag, roll);
     if (bag < res.x) res = vec2(bag, 3.);
   }
+  // his hands: two small round mittens that float by his sides (no arms, like a cartoon)
+  float hl = (length((q - uHandL) / vec3(.13, .11, .1)) - 1.) * .1;
+  float hr = (length((q - uHandR) / vec3(.13, .11, .1)) - 1.) * .1;
+  float hd = min(hl, hr);
+  if (hd < res.x) res = vec2(hd, 4.);
   return res;
 }
 vec3 nrm(vec3 p){ vec2 e = vec2(.0015, -.0015);
@@ -201,7 +210,17 @@ vec3 face(vec3 col, vec2 f, float dif){
     // a soft rim of shade makes the white cream read on his white body
     col = mix(col, col * vec3(.78, .74, .82), (1. - smoothstep(.95, 1.25, cd)) * uCream);
     col = mix(col, vec3(1., .97, .9) * (.9 + .15*dif), (1. - smoothstep(.75, .95, cd)) * uCream);
-    if (cd < .45) col = mix(col, vec3(1.), .5 * uCream);
+    if (cd < .45) col = mix(col, vec3(1.), .5 * min(uCream, 1.));
+    // all messy: more cream on his forehead and chin, and chocolate smudges
+    float m2 = clamp(uCream - 1., 0., 1.);
+    if (m2 > .02){
+      float c3 = length((f - vec2(.24, .55)) / vec2(.1, .06));
+      float c4 = length((f - vec2(-.05, -.02)) / vec2(.12, .06));
+      float cc = min(c3, c4);
+      col = mix(col, vec3(1., .97, .9) * (.9 + .15*dif), (1. - smoothstep(.75, .95, cc)) * m2);
+      float ch = min(length((f - vec2(-.2, .05)) / vec2(.07, .04)), length((f - vec2(.36, .38)) / vec2(.05, .035)));
+      col = mix(col, vec3(.3, .15, .08) * (.6 + .4*dif), (1. - smoothstep(.7, .95, ch)) * m2);
+    }
   }
   // a tear, falling slowly
   if (uTear > .05){
@@ -238,9 +257,15 @@ void main(){
   float fres = pow(1. - clamp(dot(n, v), 0., 1.), 2.6);
   float ao = clamp(map(p + n*.08).x / .08, .35, 1.);
   vec3 col;
-  if (h.y > 2.5) {
-    // the backpack: canvas brown, with a lighter flap
-    col = mix(vec3(.42,.3,.2), vec3(.55,.4,.27), smoothstep(.1, .3, q.y)) * (.45 + .7*dif) + spec*.1;
+  if (h.y > 3.5) {
+    // his hands: the same soft body
+    vec3 base = vec3(.86,.89,1.);
+    col = base * (.4 + .7*dif) + vec3(.55,.5,1.)*fres*.7 + spec*.4;
+  } else if (h.y > 2.5) {
+    // the backpack: canvas green-brown, a lighter flap, a pocket, the blanket roll red
+    col = mix(vec3(.36,.4,.26), vec3(.46,.5,.32), smoothstep(.12, .3, q.y)) * (.45 + .7*dif) + spec*.1;
+    if (q.y > .38) col = vec3(.72,.2,.2) * (.45 + .7*dif);
+    if (abs(q.x) < .2 && q.y < -.05 && q.y > -.3 && q.z < -.62) col *= .78;
   } else if (h.y > 1.5) {
     col = vec3(.78,.82,.88) * (.4 + .7*dif) + spec*1.4 + fres*.3;
   } else if (h.y > .5) {
@@ -277,6 +302,7 @@ void main(){
   gl_FragColor = vec4(col * uTint * uAlpha, uAlpha);
 }`;
 const specterUniforms = () => ({
+  uHandL: { value: new T.Vector3(-0.66, -0.12, 0.12) }, uHandR: { value: new T.Vector3(0.66, -0.12, 0.12) },
   uRes: { value: new T.Vector2(1, 1) }, uT: { value: 0 }, uYaw: { value: 0 }, uPitch: { value: 0 }, uRoll: { value: 0 },
   uBlinkL: { value: 1 }, uBlinkR: { value: 1 }, uHappy: { value: 0 }, uWide: { value: 0 }, uHeart: { value: 0 }, uDizzy: { value: 0 },
   uBrow: { value: 0 }, uSmile: { value: 0.35 }, uMouth: { value: 0 }, uBlush: { value: 0.4 }, uTear: { value: 0 }, uDoctor: { value: 0 }, uRed: { value: 0 }, uCream: { value: 0 },
@@ -296,9 +322,28 @@ const MOODS = {
   scared: { wide: 0.7, brow: 0.85, mouth: 0.45, smile: -0.5, blush: 0.1 },
   yawn: { shutL: 0.85, shutR: 0.85, mouth: 1, smile: 0, brow: 0.3 },
 };
-// His face from a state ({ mood, talk, look, cream, roll }): each feature eases toward the emotion; he blinks.
+// His hands, in his own space (x to his left as you look at him, y up, z toward you), for each gesture.
+const HANDS = {
+  rest: [[-0.66, -0.14, 0.12], [0.66, -0.14, 0.12]],
+  wave: [[-0.66, -0.14, 0.12], [0.6, 0.5, 0.25]],
+  hold: [[-0.66, -0.14, 0.12], [0.46, 0.02, 0.5]],
+  cheeks: [[-0.5, 0.18, 0.48], [0.5, 0.18, 0.48]],
+  mouth: [[-0.66, -0.14, 0.12], [0.1, 0.1, 0.66]],
+  up: [[-0.62, 0.66, 0.12], [0.62, 0.66, 0.12]],
+  rub: [[-0.22, 0.3, 0.64], [0.66, -0.14, 0.12]],
+  rummage: [[-0.3, 0.05, -0.78], [0.3, 0.1, -0.78]],
+  shrug: [[-0.74, 0.26, 0.14], [0.74, 0.26, 0.14]],
+  blow: [[-0.2, 0.08, 0.62], [0.2, 0.08, 0.62]],
+  eat: [[-0.66, -0.14, 0.12], [0.08, 0.16, 0.66]],
+  hips: [[-0.6, -0.02, 0.05], [0.6, -0.02, 0.05]],
+  shake: [[-0.66, -0.14, 0.12], [0.5, 0.2, 0.45]],
+};
+// His face and hands from a state ({ mood, talk, look, yaw, cream, roll, hands }): each feature eases toward the
+// emotion; he blinks now and then.
 function specterFace(U) {
   const now = { ...REST };
+  const hl = new T.Vector3(...HANDS.rest[0]); const hr = new T.Vector3(...HANDS.rest[1]);
+  const tl = new T.Vector3(); const tr = new T.Vector3();
   let blinkAt = 2; let lastT = 0;
   return (t, d) => {
     const dt = Math.min(0.1, Math.max(0, t - lastT)); lastT = t;
@@ -309,7 +354,19 @@ function specterFace(U) {
     const blink = blinkAt - t > 2.38 ? 0.08 : 1;
     U.uT.value = t;
     const look = Number(d.look) || 0;
-    U.uYaw.value = Math.sin(t * 0.7) * 0.22 + look * 0.45;
+    U.uYaw.value = d.yaw !== undefined && d.yaw !== '' ? Number(d.yaw) + Math.sin(t * 0.7) * 0.06 : Math.sin(t * 0.7) * 0.22 + look * 0.45;
+    // The hands: toward the gesture, with a little life of their own; waving and shaking move them.
+    const pose = HANDS[d.hands] ?? HANDS.rest;
+    tl.set(...pose[0]); tr.set(...pose[1]);
+    const bob = Math.sin(t * 2.4) * 0.03;
+    tl.y += bob; tr.y += Math.sin(t * 2.4 + 1) * 0.03;
+    if (d.hands === 'wave') { tr.x += Math.sin(t * 11) * 0.1; tr.y += Math.abs(Math.sin(t * 11)) * 0.04; }
+    if (d.hands === 'shake') { tr.x += Math.sin(t * 22) * 0.16; tr.y += Math.cos(t * 22) * 0.06; }
+    if (d.hands === 'rub') { tl.x += Math.sin(t * 9) * 0.05; tl.y += Math.cos(t * 9) * 0.04; }
+    if (d.hands === 'rummage') { tl.y += Math.sin(t * 8) * 0.08; tr.y += Math.cos(t * 7) * 0.08; }
+    const kh = 1 - Math.exp(-dt * 10);
+    hl.lerp(tl, kh); hr.lerp(tr, kh);
+    U.uHandL.value.copy(hl); U.uHandR.value.copy(hr);
     U.uPitch.value = Math.sin(t * 1.1) * 0.06 - (d.mood === 'sad' ? 0.05 : 0);
     U.uRoll.value = Math.sin(t * 0.9) * 0.05 + (d.mood === 'dizzy' ? Math.sin(t * 6) * 0.18 : 0) + (d.mood === 'scared' ? Math.sin(t * 40) * 0.03 : 0) + (Number(d.roll) || 0);
     U.uBlinkL.value = Math.min(blink, 1 - now.shutL);
@@ -319,7 +376,7 @@ function specterFace(U) {
     // Talking, the mouth opens and closes with the syllables.
     U.uMouth.value = Math.max(now.mouth, d.talk === '1' || d.talk === true ? 0.25 + 0.55 * Math.abs(Math.sin(t * 13) * Math.sin(t * 5.3)) : 0);
     U.uDoctor.value = d.skin === 'doctor' ? 1 : 0;
-    U.uCream.value += ((d.cream === '1' || d.cream === true ? 1 : 0) - U.uCream.value) * k;
+    U.uCream.value += ((d.cream === 'messy' ? 2 : d.cream === '1' || d.cream === true ? 1 : 0) - U.uCream.value) * k;
   };
 }
 // Specter inside a scene: a billboard that always faces the camera, depth-tested against the scene.
@@ -345,65 +402,125 @@ function specterActor(parent) {
 }
 
 // Specter's stories inside a scene. He comes in already dressed for it, flies in from outside along an arc, circles
-// the scene once (what stands in front of him hides him), lands on his seat, lives the story (its events say words,
-// change his face, move his things), and flies away. `on(event)` tells the page: { say, x, y, ms } to show his words
-// where he is, { notes, x, y }, and { end } when he has left.
-function storyStage({ actor, look: { entry, exit, center, radius, height, seat, size }, project, warm = () => 1 }) {
+// the scene once (what stands in front of him hides him, and he turns the way he flies, so you see his back and his
+// side), and then lives the story: a list of steps, each one long enough to be read, with a place to go (hopping or
+// flying), where to look, his hands, his face, a stretch or a squash, and what happens in the world. Then he flies
+// away. `on(event)` tells the page: { say, x, y, ms }, { mark: '!' | '?' | 'z', x, y }, { notes, x, y }, { end }.
+// A billboard's own space: one unit of his body is `size / 2.19` of the scene's.
+const BODY = 1 / 2.19;
+function storyStage({ actor, cam, look: { entry, exit, center, radius, height, size }, project, warm = () => 1 }) {
   const V = (a) => new T.Vector3(...a);
-  const E = V(entry); const X = V(exit); const S = V(seat);
+  const E = V(entry); const X = V(exit);
   const orbitAt = (a) => new T.Vector3(center[0] + Math.cos(a) * radius, height + Math.sin(a * 2) * 0.12, center[2] + Math.sin(a) * radius);
-  const A0 = 0.45;
-  const IN = 2.0; const AROUND = 3.2; const DOWN = 1.0; const OUT = 1.8;
-  let run = null;
+  const A0 = 0.45; const IN = 2.2; const AROUND = 3.6; const OUT = 2.0;
   const ease = (k) => (k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2);
   const arc = (a, b, k, lift) => a.clone().lerp(b, ease(k)).add(new T.Vector3(0, Math.sin(k * Math.PI) * lift, 0));
-  function emit(ev) { if (!run?.on) return; const p = project(actor.mesh.position.x, actor.mesh.position.y + size * 0.45, actor.mesh.position.z); run.on({ ...ev, ...(p ? { x: p.x, y: p.y } : {}) }); }
+  const right = new T.Vector3(); const up = new T.Vector3(); const back = new T.Vector3(); const tmp = new T.Vector3();
+  const parent = actor.mesh.parent;
+  let run = null;
+  // The camera's axes, in the scene's own space.
+  function axes() {
+    cam.updateMatrixWorld(); parent.updateMatrixWorld();
+    const inv = new T.Matrix3().setFromMatrix4(parent.matrixWorld).invert();
+    right.setFromMatrixColumn(cam.matrixWorld, 0).applyMatrix3(inv).normalize();
+    up.setFromMatrixColumn(cam.matrixWorld, 1).applyMatrix3(inv).normalize();
+    back.setFromMatrixColumn(cam.matrixWorld, 2).applyMatrix3(inv).normalize();
+  }
+  // The yaw that makes him face a direction of the scene (0: toward you).
+  const yawFor = (dir) => Math.atan2(dir.dot(right), dir.dot(back));
+  // A point of his body (his own space, after his turn) in the scene: where his hand is, to hold things.
+  function bodyPoint(q, yaw, pos) {
+    const c = Math.cos(yaw); const sn = Math.sin(yaw);
+    const px = c * q.x + sn * q.z; const pz = -sn * q.x + c * q.z;
+    return pos.clone().addScaledVector(right, px * size * BODY).addScaledVector(up, (q.y - 0.08) * size * BODY).addScaledVector(back, pz * size * BODY);
+  }
+  const at = () => { const p = actor.mesh.position; return project(p.x, p.y + size * 0.42, p.z); };
+  function emit(ev) { if (!run?.on) return; const p = at(); run.on({ ...ev, ...(p ? { x: p.x, y: p.y } : {}) }); }
   const ctx = {
-    say: (text, ms = 1600) => emit({ say: text, ms }),
+    say: (text, ms = 2000) => emit({ say: text, ms }),
+    mark: (m) => emit({ mark: m }),
     notes: (n = 3) => emit({ notes: n }),
-    mood: (m) => { actor.state.mood = m; },
-    talk: (on) => { actor.state.talk = on; },
-    cream: (on) => { actor.state.cream = on; },
-    hop: (h = 0.22) => { run.hop = { t0: run.now, h }; sfx.voice('hop'); },
-    sway: (on) => { run.sway = on; },
-    nod: (on) => { run.nod = on; },
   };
   return {
     busy: () => !!run,
+    hand: () => (run ? bodyPoint(actor.U.uHandR.value, actor.U.uYaw.value, actor.mesh.position) : null),
     start(story, outfit, on) {
-      run = { story, on, t0: null, fired: 0, now: 0, hop: null, sway: false, nod: false };
+      run = { story, on, t0: null, i: -1, stepT0: 0, from: null, pos: E.clone(), yaw: 0, stretch: 0 };
       actor.U.uOutfit.value = outfit;
-      Object.assign(actor.state, { mood: 'glad', talk: false, cream: false, roll: 0 });
+      Object.assign(actor.state, { mood: 'glad', talk: false, cream: false, roll: 0, hands: 'rest', yaw: 0 });
       return true;
     },
-    stop() { if (run) { actor.mesh.visible = false; const on = run.on; run = null; on?.({ end: true }); } },
-    update(t, cam) {
+    // When he leaves, the scene is as it was (what he ate grows back, what he moved goes back).
+    stop() { if (run) { actor.mesh.visible = false; const { on, story } = run; run = null; story.done?.(); actor.state.cream = false; on?.({ end: true }); } },
+    update(t) {
       if (!run) return;
+      axes();
       if (run.t0 === null) run.t0 = t;
-      const e = t - run.t0; run.now = e;
-      const seated = IN + AROUND + DOWN;
-      const len = seated + run.story.seated;
-      let pos; let alpha = 1;
-      if (e < IN) { pos = arc(E, orbitAt(A0), e / IN, 0.8); alpha = Math.min(1, e / 0.4); }
-      else if (e < IN + AROUND) pos = orbitAt(A0 - ((e - IN) / AROUND) * Math.PI * 2);
-      else if (e < seated) pos = arc(orbitAt(A0), S, (e - IN - AROUND) / DOWN, 0.15);
-      else if (e < len) pos = S.clone();
-      else if (e < len + OUT) { pos = arc(S, X, (e - len) / OUT, 1.0); alpha = Math.min(1, (len + OUT - e) / 0.5); }
-      else { this.stop(); return; }
-      // Seated: hops, a sway, nodding off.
-      if (e >= seated && e < len) {
-        if (run.hop) { const k = (e - run.hop.t0) / 0.55; if (k < 1) pos.y += Math.sin(k * Math.PI) * run.hop.h; else run.hop = null; }
-        actor.state.roll = run.sway ? Math.sin(e * 3.2) * 0.16 : run.nod ? Math.sin(e * 2.4) * 0.12 : 0;
-        // The story's events, each once, at its time.
-        const se = e - seated;
-        while (run.fired < run.story.events.length && run.story.events[run.fired][0] <= se) { run.story.events[run.fired][1](ctx); run.fired += 1; }
-      } else actor.state.roll = 0;
-      pos.y += Math.sin(t * 2.1) * 0.03;
+      const e = t - run.t0;
+      const steps = run.story.steps;
+      let pos; let alpha = 1; let face = null; let heading = null; let grow = 1;
+      const inEnd = IN + AROUND;
+      if (e < IN) {
+        const k = e / IN; pos = arc(E, orbitAt(A0), k, 0.5); heading = orbitAt(A0).sub(E);
+        // He appears inside the frame, popping out of a little puff.
+        grow = Math.min(1, 0.15 + e / 0.45); alpha = Math.min(1, e / 0.3);
+        if (!run.poofed) { run.poofed = true; emit({ poof: true }); }
+      }
+      else if (e < inEnd) { const a = A0 - ((e - IN) / AROUND) * Math.PI * 2; pos = orbitAt(a); heading = orbitAt(a - 0.05).sub(pos); }
+      else {
+        // The steps of the story, one after another.
+        if (run.i < 0 || (run.i < steps.length && e - run.stepT0 >= steps[run.i].ms / 1000)) {
+          run.i += 1; run.stepT0 = e; run.from = run.pos.clone();
+          const st = steps[run.i];
+          if (st) {
+            if (st.mood !== undefined) actor.state.mood = st.mood;
+            if (st.hands) actor.state.hands = st.hands;
+            if (st.talk !== undefined) actor.state.talk = st.talk;
+            st.do?.(ctx);
+          }
+        }
+        const st = steps[run.i];
+        const k = st ? Math.min(1, (e - run.stepT0) / (st.ms / 1000)) : 1;
+        if (st) {
+          const to = st.to ? V(st.to) : null;
+          pos = to ? arc(run.from, to, k, st.hop ?? (run.from.distanceTo(to) * 0.35)) : run.from.clone();
+          if (to && run.from.distanceTo(to) > 0.05) heading = to.clone().sub(run.from);
+          face = st.face;
+          if (st.bounce) pos.y += Math.abs(Math.sin(k * Math.PI * st.bounce.n)) * st.bounce.h;
+          if (st.jump) pos.y += Math.sin(Math.min(1, k * 1.6) * Math.PI) * st.jump;
+          // Standing on something soft, he sinks into it a little.
+          if (st.sink) pos.y -= st.sink * Math.min(1, k * 3);
+          actor.state.roll = st.sway ? Math.sin(e * 3.4) * 0.2 : st.nod ? Math.max(0, Math.sin(e * 1.6)) * 0.28 : 0;
+          run.stretch = st.stretch !== undefined ? st.stretch * Math.sin(Math.min(1, k * 2) * Math.PI) : run.stretch * 0.85;
+          st.each?.(k, ctx);
+        } else {
+          // The end: away he flies.
+          const ke = (e - run.stepT0) / OUT;
+          if (ke >= 1) { emit({ poof: true }); this.stop(); return; }
+          pos = arc(run.from, X, ke, 0.25); heading = X.clone().sub(run.from);
+          // He vanishes inside the frame, in a little puff.
+          grow = Math.min(1, (1 - ke) / 0.3); alpha = Math.min(1, (1 - ke) / 0.25);
+          actor.state.hands = 'wave';
+        }
+      }
+      run.pos.copy(pos);
+      pos = pos.clone(); pos.y += Math.sin(t * 2.1) * 0.03;
+      // Where he looks: the way he moves, a thing, or you.
+      let yaw = run.yaw;
+      if (face === 'you') yaw = 0;
+      else if (Array.isArray(face)) { tmp.set(face[0] - pos.x, 0, face[2] - pos.z); yaw = yawFor(tmp); }
+      else if (face === 'back') yaw = Math.PI;
+      else if (heading && heading.lengthSq() > 1e-4) { heading.y = 0; yaw = yawFor(heading); }
+      // The shortest way round.
+      let dy = yaw - run.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      run.yaw += dy * 0.12;
+      actor.state.yaw = run.yaw;
       actor.mesh.visible = true;
       actor.mesh.position.copy(pos);
-      actor.mesh.scale.setScalar(size);
+      const sy = (1 + run.stretch) * grow; const sx = (1 - run.stretch * 0.5) * grow;
+      actor.mesh.scale.set(size * sx, size * sy, size);
+      actor.mesh.position.y += (sy - 1) * size * 0.4;
       actor.U.uAlpha.value = alpha;
-      // Warmer near the fire (or the candle), cooler away from it.
       const w = warm(pos);
       actor.U.uTint.value.setRGB(0.78 + 0.27 * w, 0.82 + 0.1 * w, 0.95 - 0.12 * w);
       actor.update(t, cam, 160);
@@ -471,41 +588,62 @@ const PROPS = {
       g.updateMatrixWorld(); proj.set(x, y, z); g.localToWorld(proj); cam.updateMatrixWorld(); proj.project(cam);
       return { x: c.left + ((proj.x + 1) / 2) * c.width, y: c.top + ((1 - proj.y) / 2) * c.height };
     };
-    const stage3 = storyStage({ actor, project: projectLocal,
-      look: { entry: [2.6, 2.8, 2.4], exit: [-2.8, 3, 1.6], center: [0, 0, 0], radius: 1.7, height: 1.5, seat: [0.42, 1.22, 0.42], size: 0.62 },
+    const stage3 = storyStage({ actor, cam, project: projectLocal,
+      look: { entry: [1.0, 1.7, 0.9], exit: [-0.95, 1.55, 0.7], center: [0, 0, 0], radius: 1.2, height: 1.45, size: 0.62 },
       warm: (p) => (lit ? Math.max(0, 1 - Math.hypot(p.x, p.y - 1.5, p.z) / 1.4) * 0.6 : 0) });
-    const eatCherry = () => {
-      const left = cherries.filter(([c]) => c.visible);
-      if (!left.length) return false;
-      const pair = left[Math.floor(Math.random() * left.length)];
-      for (const m of pair) m.visible = false;
-      setTimeout(() => { for (const m of pair) m.visible = true; }, 4 * 60000);
-      return true;
-    };
+    const TOP = 1.2; // where he stands on the cake
+    // The marks he leaves in the ganache where he lands (a soft dent), gone when he leaves.
+    const dents = Array.from({ length: 6 }, () => { const d = mesh(new T.CircleGeometry(0.11, 18), phys(0x2a1208, { roughness: 0.5 }), { y: 0.932, rx: -Math.PI / 2, cast: false }); d.visible = false; g.add(d); return d; });
+    let dentI = 0;
+    const dent = (x, z) => { const d = dents[dentI++ % dents.length]; d.position.x = x; d.position.z = z; d.visible = true; d.scale.set(1.2, 1, 0.9); };
+    const CANDLE = [0, 1.45, 0];
+    const visibleCherries = () => cherries.filter(([c]) => c.visible);
     const STORIES = {
-      cherry: { seated: 6, events: [
-        [0.2, (c) => { c.mood('surprised'); sfx.voice('surprised'); c.say('¡Una cereza!', 1300); }],
-        [1.4, (c) => { eatCherry(); c.mood('love'); c.cream(true); sfx.voice('glad'); c.hop(0.12); }],
-        [2.4, (c) => { c.talk(true); c.say('Mmm.', 1300); }],
-        [3.6, (c) => { c.talk(false); c.mood('glad'); }],
-      ] },
-      wish: { seated: 6.5, events: [
-        [0.2, (c) => { c.mood('shut'); c.say('Pido un deseo…', 1800); }],
-        [2.2, (c) => { c.say('Fuuu…', 900); if (lit) { lit = false; flame.visible = false; sfx.blow(); setTimeout(() => { lit = true; flame.visible = true; }, 30000); } }],
-        [3.4, (c) => { c.mood('wink'); c.say('¡No te lo digo!', 1500); }],
-      ] },
-      taste: { seated: 6, events: [
-        [0.2, (c) => { c.mood('wink'); c.say('Nadie está mirando…', 1500); c.sway(true); }],
-        [2.0, (c) => { c.sway(false); c.cream(true); c.mood('love'); sfx.voice('glad'); }],
-        [2.6, (c) => { c.say('Solo una probadita.', 1500); }],
-      ] },
-      dance: { seated: 5, events: [
-        [0.2, (c) => { c.mood('glad'); c.say('¡Torta, torta!', 1600); c.hop(0.14); }],
-        [0.9, (c) => c.hop(0.18)],
-        [1.6, (c) => c.hop(0.24)],
-        [2.6, (c) => { c.mood('love'); c.sway(true); }],
-        [4.2, (c) => c.sway(false)],
-      ] },
+      // A cherry: he spots one, tiptoes to it, eats it, cream all over his face, and dances a little.
+      cherry: () => {
+        // The cherry nearest to you: he stands behind it, so reaching for it he faces you.
+        const pair = visibleCherries().sort((p1, p2) => p2[0].position.z - p1[0].position.z)[0];
+        const cp = pair ? pair[0].position : new T.Vector3(0.3, 1.2, 0.7);
+        const by = [cp.x * 0.45, TOP, cp.z * 0.45 - 0.12];
+        const C = [cp.x, 1.2, cp.z];
+        let gone = false;
+        return [
+          { ms: 1500, to: [-0.2, TOP, -0.3], hop: 0.3, mood: 'glad' },
+          { ms: 1600, face: C, hands: 'cheeks', mood: 'surprised', stretch: 0.22, sink: 0.08, do: (c) => { dent(-0.2, -0.3); c.mark('!'); sfx.voice('surprised'); c.say('¡Una cereza!', 1500); } },
+          { ms: 1400, to: by, hop: 0.05, face: C, hands: 'hold', mood: 'wink', bounce: { n: 3, h: 0.03 } },
+          { ms: 2000, face: C, hands: 'eat', mood: 'love', stretch: -0.15, sink: 0.1, do: () => dent(by[0], by[2]),
+            each: (k) => { if (k > 0.35 && !gone) { gone = true; if (pair) for (const m of pair) m.visible = false; actor.state.cream = 'messy'; sfx.voice('glad'); sfx.crackle(); } } },
+          { ms: 2200, face: 'you', hands: 'cheeks', mood: 'love', talk: true, sink: 0.1, do: (c) => c.say('Mmm… ¡qué rica!', 1900) },
+          { ms: 2000, face: 'you', hands: 'up', mood: 'glad', talk: false, bounce: { n: 3, h: 0.1 }, do: (c) => c.say('¡Quedé todo manchado!', 1800) },
+        ];
+      },
+      // A wish: eyes closed, hands together; a big breath; he blows the candle out.
+      wish: () => [
+        { ms: 1600, to: [0.12, TOP, -0.4], hop: 0.3, mood: 'glad', face: CANDLE },
+        { ms: 2600, face: CANDLE, hands: 'blow', mood: 'shut', do: (c) => c.say('Pido un deseo…', 2300) },
+        { ms: 1200, face: CANDLE, hands: 'up', mood: 'surprised', stretch: 0.25 },
+        { ms: 1300, face: CANDLE, hands: 'blow', stretch: -0.22, do: (c) => { c.say('¡Fuuu!', 1000); if (lit) { lit = false; flame.visible = false; sfx.blow(); setTimeout(() => { lit = true; flame.visible = true; }, 30000); } } },
+        { ms: 2200, face: 'you', hands: 'mouth', mood: 'wink', do: (c) => c.say('¡No te lo digo!', 1900) },
+      ],
+      // A taste: he looks both ways, swipes cream, and is caught with it on his face.
+      taste: () => [
+        { ms: 1500, to: [-0.3, TOP, -0.25], hop: 0.3, mood: 'wink' },
+        { ms: 1300, face: [-1.5, 1.2, 0.4], hands: 'rest', mood: '' },
+        { ms: 1300, face: [1.5, 1.2, 0.4], hands: 'rest', mood: '', do: (c) => c.say('Nadie está mirando…', 1700) },
+        { ms: 1500, face: [-0.45, 1.0, 0.55], hands: 'hold', mood: 'wink', stretch: -0.1 },
+        { ms: 1400, face: 'you', hands: 'eat', mood: 'love', sink: 0.08, do: () => { dent(-0.3, -0.25); actor.state.cream = true; sfx.voice('glad'); } },
+        { ms: 1800, face: 'you', hands: 'cheeks', mood: 'surprised', stretch: 0.2, do: (c) => { c.mark('!'); c.say('¡Me viste!', 1600); } },
+        { ms: 1600, face: 'you', hands: 'shrug', mood: 'wink', do: (c) => c.say('Solo una probadita.', 1500) },
+      ],
+      // A dance on the cake: hops in a little circle, hands up.
+      dance: () => [
+        { ms: 1400, to: [0.4, TOP, 0.4], hop: 0.3, mood: 'glad', do: (c) => c.say('¡Torta, torta!', 1700) },
+        { ms: 900, to: [-0.4, TOP, 0.35], hop: 0.25, hands: 'up', mood: 'glad' },
+        { ms: 900, to: [-0.35, TOP, -0.4], hop: 0.25, hands: 'up' },
+        { ms: 900, to: [0.4, TOP, -0.35], hop: 0.25, hands: 'up' },
+        { ms: 900, to: [0.42, TOP, 0.42], hop: 0.25, hands: 'up' },
+        { ms: 1800, face: 'you', hands: 'hips', mood: 'love', stretch: 0.15, sink: 0.08, do: () => { dent(0.42, 0.42); dent(-0.4, 0.35); dent(-0.35, -0.4); sfx.voice('love'); } },
+      ],
     };
     return {
       scene, camera: cam,
@@ -519,7 +657,7 @@ const PROPS = {
       },
       update(t) {
         g.rotation.y += ((hold || stage3.busy() ? 0 : Math.sin(t * 0.25) * 0.5) - g.rotation.y) * 0.08;
-        stage3.update(t, cam);
+        stage3.update(t);
         const f = 1 + Math.sin(t * 23) * 0.06 + Math.sin(t * 37) * 0.04;
         flame.scale.set(1, f, 1); light.intensity = lit ? 1.4 * f : 0;
       },
@@ -527,7 +665,11 @@ const PROPS = {
       // Specter eats a cherry: it is gone from the top, and grows back a few minutes later.
       act(name, arg) {
         // Specter comes for cake: one of his stories (`arg`: { story, on }).
-        if (name === 'story') { if (stage3.busy() || !STORIES[arg?.story]) return 0; return stage3.start(STORIES[arg.story], 2, arg.on); }
+        if (name === 'story') { if (stage3.busy() || !STORIES[arg?.story]) return 0; return stage3.start({ steps: STORIES[arg.story](), done: () => {
+          for (const pr of cherries) for (const m of pr) m.visible = true;
+          for (const d of dents) d.visible = false;
+          lit = true; flame.visible = true;
+        } }, 2, arg.on); }
         if (name === 'stop') { stage3.stop(); return 1; }
         if (name === 'hold') { hold = true; return 1; }
         if (name === 'free') { hold = false; return 1; }
@@ -724,8 +866,8 @@ const PROPS = {
     scene.add(new T.HemisphereLight(0x6a80d0, 0x3a3460, 1.2));
     const moon = new T.DirectionalLight(0xa8baff, 1.5); moon.position.set(-5, 6, 5); moon.castShadow = true;
     moon.shadow.mapSize.set(1024, 1024); Object.assign(moon.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5 }); scene.add(moon);
-    const fireLight = new T.PointLight(0xff8a2a, 14, 7, 1.5); fireLight.position.set(0, 0.7, 0); fireLight.castShadow = true;
-    fireLight.shadow.mapSize.set(512, 512); scene.add(fireLight);
+    // The fire's light casts no shadow: a point light's shadow draws the scene six more times every frame.
+    const fireLight = new T.PointLight(0xff8a2a, 14, 7, 1.5); fireLight.position.set(0, 0.7, 0); scene.add(fireLight);
     const world = new T.Group(); scene.add(world);
     // The island: a grassy top and a rocky underside, faceted.
     const top = mesh(new T.CylinderGeometry(3.3, 3.1, 0.35, 14, 1), flat(0x2f5a3a), { y: -0.18 });
@@ -796,28 +938,25 @@ const PROPS = {
     let poked = Date.now();
     try { poked = Number(localStorage.getItem(POKED)) || poked; } catch { /* burns from now */ }
     const strength = () => Math.max(0.3, 1 - (Date.now() - poked) / (20 * 60000) * 0.7);
-    // Specter's marshmallow: a stick from where he sits (SEAT, right of the fire) to over the flames. It slides out of
-    // his hands, toasts while it is over the fire, catches fire if left too long, is blown out, charred, and put away.
-    const SEAT = new T.Vector3(1.85, 0.42, 0.95);
-    const TIP = new T.Vector3(0.32, 0.92, 0.25);
-    const HAND = new T.Vector3(1.6, 0.62, 0.85);
-    const stick = new T.Group(); stick.visible = false; world.add(stick);
-    const along = HAND.clone().sub(TIP); const L = along.length();
-    stick.position.copy(TIP);
-    stick.rotation.set(0, -Math.atan2(along.z, along.x), Math.atan2(along.y, Math.hypot(along.x, along.z)));
-    const rod = new T.Group(); stick.add(rod);
-    rod.add(mesh(new T.CylinderGeometry(0.022, 0.03, L + 0.25, 6), flat(0x8a6038), { x: (L + 0.25) / 2 - 0.05, rz: Math.PI / 2, cast: false }));
+    // Specter's things in the scene: a twig he breaks off a pine, with a marshmallow on its tip, held in his right
+    // hand. It toasts over the fire, catches fire when he dozes off, is blown out, charred, and eaten.
+    const twig = new T.Group(); twig.visible = false; world.add(twig);
+    const TW = 0.78;
+    twig.add(mesh(new T.CylinderGeometry(0.011, 0.016, TW, 5), flat(0x7a5232), { x: TW / 2, rz: Math.PI / 2, cast: false }));
+    twig.add(mesh(new T.ConeGeometry(0.035, 0.09, 5), greens[0], { x: TW * 0.55, y: 0.035, rz: -0.7, cast: false }));
     const mallowMat = phys(0xfffaf2, { roughness: 0.75, sheen: 0.5 });
-    const mallow = mesh(new T.CapsuleGeometry(0.13, 0.14, 6, 14), mallowMat, { rz: Math.PI / 2, cast: false });
-    rod.add(mallow);
-    const mFlame = new T.Group(); mFlame.visible = false; rod.add(mFlame);
-    for (let i = 0; i < 3; i += 1) mFlame.add(mesh(new T.ConeGeometry(0.07 - i * 0.015, 0.3 - i * 0.06, 8, 1, true), new T.MeshBasicMaterial({ color: i ? 0xffc04a : 0xff6a1a, transparent: true, opacity: 0.85, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }), { y: 0.16, cast: false, receive: false }));
+    const mallow = mesh(new T.CapsuleGeometry(0.05, 0.06, 5, 10), mallowMat, { x: TW + 0.03, rz: Math.PI / 2, cast: false });
+    mallow.visible = false; twig.add(mallow);
+    const mFlame = new T.Group(); mFlame.visible = false; mFlame.position.x = TW + 0.03; twig.add(mFlame);
+    for (let i = 0; i < 3; i += 1) mFlame.add(mesh(new T.ConeGeometry(0.035 - i * 0.008, 0.17 - i * 0.035, 7, 1, true), new T.MeshBasicMaterial({ color: i ? 0xffc04a : 0xff6a1a, transparent: true, opacity: 0.9, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }), { y: 0.09, cast: false, receive: false }));
+    const puffs = Array.from({ length: 6 }, () => { const sp = new T.Sprite(new T.SpriteMaterial({ map: soft(), color: 0x9a9aa6, transparent: true, opacity: 0, depthWrite: false })); world.add(sp); return sp; });
+    let puffAt = -1; const puffFrom = new T.Vector3();
     const RAW = new T.Color(0xfffaf2); const GOLD = new T.Color(0xe7a64a); const BROWN = new T.Color(0x9a5a2a); const CHAR = new T.Color(0x1c1612);
-    const roast = { out: 0, want: 0, toast: 0, burning: false, charred: false };
+    const roast = { toast: 0, burning: false, charred: false, aim: new T.Vector3(0, 1, 0), aimTo: new T.Vector3(0, 1, 0), shake: false };
     let hold = false;
     const proj = new T.Vector3(); const projUp = new T.Vector3();
     let flare = 0; let lastT = 0;
-    // Specter, when he comes camping: a backpack on, sitting right of the fire.
+    // Specter, when he comes camping: a backpack on.
     const actor = specterActor(world);
     const cam = camera(21, [0, 5.4, 14.4], [0, -0.05, -0.3]);
     const projectLocal = (x, y, z) => {
@@ -825,63 +964,110 @@ const PROPS = {
       world.updateMatrixWorld(); proj.set(x, y, z); world.localToWorld(proj); cam.updateMatrixWorld(); proj.project(cam);
       return { x: c.left + ((proj.x + 1) / 2) * c.width, y: c.top + ((1 - proj.y) / 2) * c.height };
     };
-    const stage3 = storyStage({ actor, project: projectLocal,
-      look: { entry: [4.5, 3.6, 3], exit: [-4.5, 4.2, 2.2], center: [0, 0, 0], radius: 2.75, height: 1.35, seat: [SEAT.x + 0.1, SEAT.y + 0.05, SEAT.z], size: 1.0 },
+    const stage3 = storyStage({ actor, cam, project: projectLocal,
+      look: { entry: [2.2, 1.6, 1.4], exit: [-2.1, 1.6, 1.2], center: [0, 0, 0], radius: 2.4, height: 1.2, size: 1.0 },
       warm: (p) => Math.max(0, 1 - Math.hypot(p.x, p.z) / 3) * strength() });
+    // Where things are: the fire, his seat at its right, the pine he takes a twig from.
+    // He sits behind the fire, a little to its right: looking at the fire, he looks your way (a stage's rule).
+    const FIRE = [0, 0.5, 0]; const SEAT = [0.95, 0.42, -0.6];
+    const aim = (x, y, z) => { roast.aimTo.set(x, y, z); };
+    const nearPine = () => {
+      const want = new T.Vector3(2.1, 0, -0.7);
+      return trees.filter((tr) => tr.scale.x > 0.8 && tr.userData.h > 1.2).sort((p1, p2) => p1.position.distanceTo(want) - p2.position.distanceTo(want))[0];
+    };
+    const smoke = () => { puffAt = lastT; puffFrom.copy(twig.position).addScaledVector(roast.aim.clone().sub(twig.position).normalize(), TW); };
     const STORIES = {
-      // The marshmallow: toasted, forgotten while he dozes, on fire, blown out, charred.
-      mallow: { seated: 14.5, events: [
-        [0.2, (c) => { c.mood('glad'); c.say('¿Un malvavisco?', 1500); }],
-        [1.4, () => { Object.assign(roast, { want: 1, toast: 0, burning: false, charred: false }); }],
-        [2.0, (c) => { c.talk(true); c.sway(true); c.notes(3); sfx.voice('hum'); }],
-        [4.6, (c) => { c.talk(false); c.sway(false); c.mood('shut'); c.nod(true); c.say('zz…', 1600); }],
-        [7.2, () => { roast.burning = true; sfx.whoosh(); }],
-        [8.6, (c) => { c.nod(false); c.mood('surprised'); sfx.voice('surprised'); c.say('¡Ay! ¡Se quema!', 1400); c.hop(0.3); }],
-        [9.6, (c) => { c.say('Fuuu…', 900); sfx.blow(); roast.burning = false; roast.charred = true; }],
-        [10.8, (c) => { c.mood('sad'); sfx.voice('sad'); c.say('Quedó carbonizado…', 1700); }],
-        [12.6, (c) => { c.mood('wink'); c.say('Igual me lo como.', 1500); }],
-        [13.8, () => { roast.want = 0; }],
-      ] },
-      // Warming up: eyes closed, the fire rises a little.
-      warm: { seated: 5, events: [
-        [0.3, (c) => { flare = Math.max(flare, 0.45); c.mood('shut'); c.say('Qué calentito…', 1800); c.sway(true); }],
-        [3.6, (c) => { c.sway(false); c.mood('glad'); sfx.voice('glad'); }],
-      ] },
-      // A scary story: the eyes open in the dark behind him; he jumps, and laughs.
-      story: { seated: 9.5, events: [
-        [0.2, (c) => { c.mood('wink'); c.say('Te cuento una historia de miedo…', 2000); }],
-        [2.3, (c) => { c.talk(true); c.say('Había una vez, en este mismo bosque…', 2000); }],
-        [4.3, (c) => { c.talk(false); if (watch.start === null) watch.at = lastT; }],
-        [5.5, (c) => { c.mood('scared'); sfx.voice('scared'); c.say('¿…Escuchaste eso?', 1600); c.hop(0.18); }],
-        [7.4, (c) => { c.mood('glad'); c.say('Jaja, era broma. Creo.', 1600); }],
-      ] },
-      // A song by the fire: he sways, notes rise.
-      song: { seated: 6, events: [
-        [0.2, (c) => { c.mood('glad'); c.talk(true); c.sway(true); c.notes(3); sfx.voice('hum'); }],
-        [2.0, (c) => { c.notes(3); sfx.voice('hum'); }],
-        [3.8, (c) => { c.notes(2); sfx.voice('hum'); }],
-        [5.2, (c) => { c.talk(false); c.sway(false); c.mood('wink'); }],
-      ] },
+      // The marshmallow: a twig from a pine, the marshmallow from his backpack, toasting, a doze, a fire, a fright.
+      mallow: () => {
+        const pine = nearPine();
+        const pp = pine ? pine.position : new T.Vector3(2.2, 0, -0.9);
+        // Beside the pine, toward the front: you see him in profile as he reaches for it.
+        const toFire = new T.Vector3(-pp.x, 0, -pp.z).normalize();
+        const stand = [pp.x + toFire.x * 0.35 + 0.0, 0.42, pp.z + 0.62];
+        const P = [pp.x, 0.6, pp.z];
+        let z1 = false; let z2 = false; let ate = false;
+        return [
+          { ms: 1900, to: stand, mood: 'glad', do: (c) => c.say('Necesito una rama…', 1900) },
+          { ms: 1500, face: P, hands: 'hold', mood: 'wink', stretch: 0.12 },
+          { ms: 1100, face: P, hands: 'hold', stretch: -0.18, do: (c) => { if (pine) pine.userData.shake = lastT; sfx.crackle(); sfx.rustle(); c.mark('!'); twig.visible = true; mallow.visible = false; Object.assign(roast, { toast: 0, burning: false, charred: false }); aim(stand[0], 1.6, stand[2]); } },
+          { ms: 1800, face: 'you', hands: 'hold', mood: 'glad', bounce: { n: 2, h: 0.1 }, do: (c) => c.say('¡Perfecta!', 1700) },
+          { ms: 1900, to: SEAT, hop: 0.4, hands: 'hold', do: () => aim(SEAT[0] - 0.2, 1.4, SEAT[2]) },
+          { ms: 2800, face: 'back', hands: 'rummage', mood: '', do: (c) => c.say('¿Dónde los guardé…?', 2600) },
+          { ms: 1600, face: 'you', hands: 'hold', mood: 'surprised', stretch: 0.28, do: (c) => { mallow.visible = true; c.mark('!'); sfx.voice('surprised'); c.say('¡Aquí está!', 1500); } },
+          { ms: 4600, face: FIRE, hands: 'hold', mood: 'glad', talk: true, sway: true, do: (c) => { aim(0.05, 0.62, 0.05); c.notes(4); sfx.voice('hum'); } },
+          { ms: 2600, face: FIRE, hands: 'mouth', mood: 'yawn', talk: false, stretch: 0.16, do: (c) => { sfx.voice('yawn'); c.say('Qué sueño…', 2200); } },
+          { ms: 4200, face: FIRE, hands: 'hold', mood: 'shut', nod: true, do: () => aim(0.02, 0.16, 0.02),
+            each: (k, c) => { if (k > 0.2 && !z1) { z1 = true; c.mark('z'); } if (k > 0.65 && !z2) { z2 = true; c.mark('z'); } } },
+          { ms: 3000, face: FIRE, hands: 'hold', mood: 'shut', nod: true, do: (c) => { roast.burning = true; sfx.whoosh(); c.mark('z'); } },
+          { ms: 1500, face: FIRE, hands: 'rub', mood: 'wink', do: (c) => c.mark('?') },
+          { ms: 1700, face: 'you', hands: 'up', mood: 'surprised', jump: 0.75, stretch: 0.5, do: (c) => { c.mark('!'); sfx.voice('scared'); c.say('¡¡AY!! ¡SE QUEMA!', 1700); aim(SEAT[0] + 0.3, 1.9, SEAT[2] + 0.3); } },
+          { ms: 2000, face: 'you', hands: 'shake', mood: 'scared', do: (c) => { roast.shake = true; c.say('¡¡Fuego, fuego!!', 1700); } },
+          { ms: 1300, face: 'you', hands: 'blow', mood: 'surprised', stretch: -0.14, do: (c) => { roast.shake = false; aim(SEAT[0] - 0.4, 1.0, SEAT[2] + 0.5); c.say('Fuuu…', 1100); sfx.blow(); } },
+          { ms: 1400, face: 'you', hands: 'blow', stretch: -0.2, do: (c) => { c.say('¡FUUUU!', 1100); sfx.blow(); roast.burning = false; roast.charred = true; smoke(); } },
+          { ms: 2800, face: 'you', hands: 'cheeks', mood: 'sad', do: (c) => { sfx.voice('sad'); c.say('…', 1500); } },
+          { ms: 2200, face: 'you', hands: 'shrug', mood: 'sad', do: (c) => c.say('Quedó carbonizado.', 2000) },
+          { ms: 2400, face: 'you', hands: 'eat', mood: 'wink', do: (c) => { aim(SEAT[0], 1.0, SEAT[2] + 0.9); c.say('Igual me lo como.', 1900); },
+            each: (k) => { if (k > 0.65 && !ate) { ate = true; mallow.visible = false; sfx.crackle(); } } },
+          { ms: 1800, face: 'you', hands: 'cheeks', mood: 'love', stretch: 0.1, do: (c) => { sfx.voice('love'); c.say('Crujiente.', 1500); twig.visible = false; } },
+        ];
+      },
+      // Warming up: his hands to the fire, eyes closed, a sway; a yawn and a stretch.
+      warm: () => [
+        { ms: 2000, to: SEAT, hop: 0.35, mood: 'glad' },
+        { ms: 4200, face: FIRE, hands: 'blow', mood: 'shut', sway: true, do: (c) => { flare = Math.max(flare, 0.45); c.say('Qué calentito…', 2200); } },
+        { ms: 2400, face: FIRE, hands: 'up', mood: 'yawn', stretch: 0.3, do: () => sfx.voice('yawn') },
+        { ms: 1800, face: 'you', hands: 'cheeks', mood: 'glad', do: (c) => { sfx.voice('glad'); c.say('Así da gusto.', 1600); } },
+      ],
+      // A scary story: told to you, hands up; the eyes open behind him; he notices last.
+      story: () => [
+        { ms: 2000, to: SEAT, hop: 0.35, mood: 'wink' },
+        { ms: 2600, face: 'you', hands: 'shrug', mood: 'wink', do: (c) => c.say('Te cuento una historia de miedo…', 2400) },
+        { ms: 3000, face: 'you', hands: 'up', mood: 'scared', talk: true, sway: true, do: (c) => { c.say('Había una vez… en este mismo bosque…', 2800); if (watch.start === null) watch.at = lastT + 0.6; } },
+        { ms: 2200, face: 'you', hands: 'rest', mood: '', talk: false, do: (c) => c.mark('?') },
+        { ms: 1600, face: 'back', hands: 'cheeks', mood: 'surprised', do: (c) => c.mark('!') },
+        { ms: 1600, face: 'you', hands: 'up', mood: 'scared', jump: 0.6, stretch: 0.45, do: (c) => { sfx.voice('scared'); c.say('¡¿…Escuchaste eso?!', 1600); } },
+        { ms: 2200, face: 'you', hands: 'hips', mood: 'glad', do: (c) => c.say('Jaja, era broma. Creo.', 2000) },
+      ],
+      // A song by the fire: he sways, waves, notes rise.
+      song: () => [
+        { ms: 2000, to: SEAT, hop: 0.35, mood: 'glad' },
+        { ms: 2400, face: 'you', hands: 'wave', mood: 'glad', talk: true, sway: true, do: (c) => { c.notes(3); sfx.voice('hum'); } },
+        { ms: 2400, face: FIRE, hands: 'cheeks', mood: 'love', talk: true, sway: true, do: (c) => { c.notes(3); sfx.voice('hum'); } },
+        { ms: 2400, face: 'you', hands: 'up', mood: 'glad', talk: true, bounce: { n: 3, h: 0.08 }, do: (c) => { c.notes(3); sfx.voice('hum'); } },
+        { ms: 1500, face: 'you', hands: 'hips', mood: 'wink', talk: false },
+      ],
     };
     return {
       scene, camera: cam,
       update(t) {
         const dt = Math.min(0.1, Math.max(0, t - lastT)); lastT = t;
         flare = Math.max(0, flare - dt * 0.5);
-        // While Specter is in the scene, it holds still, so he stays where he sits.
+        // While Specter is in the scene, it holds still.
         world.rotation.y += ((hold || stage3.busy() ? 0 : Math.sin(t * 0.12) * 0.12) - world.rotation.y) * Math.min(1, dt * 3);
-        stage3.update(t, cam);
-        roast.out += (roast.want - roast.out) * Math.min(1, dt * 3.2);
-        stick.visible = roast.out > 0.02;
-        rod.position.x = (1 - roast.out) * (L - 0.1); // it slides from his hands toward the fire
-        if (stick.visible) {
-          rod.rotation.x = t * 1.2; // turned over the flames
-          if (roast.out > 0.9 && !roast.charred && !roast.burning) roast.toast = Math.min(1, roast.toast + dt / 5);
+        stage3.update(t);
+        // The twig in his hand, pointing where he aims it (shaken when it burns).
+        const hand = stage3.hand();
+        if (!stage3.busy()) twig.visible = false;
+        if (twig.visible && hand) {
+          roast.aim.lerp(roast.aimTo, Math.min(1, dt * 3));
+          const dir = roast.aim.clone().sub(hand);
+          if (roast.shake) dir.add(new T.Vector3(Math.sin(t * 22) * 0.6, Math.cos(t * 19) * 0.3, 0));
+          twig.position.copy(hand);
+          twig.quaternion.setFromUnitVectors(new T.Vector3(1, 0, 0), dir.normalize());
+          const tip = hand.clone().addScaledVector(dir, TW);
+          if (mallow.visible && !roast.charred && !roast.burning && tip.distanceTo(new T.Vector3(0, 0.55, 0)) < 0.45) roast.toast = Math.min(1, roast.toast + dt / 5);
           mallowMat.color.copy(RAW).lerp(GOLD, Math.min(1, roast.toast * 1.6)).lerp(BROWN, Math.max(0, roast.toast * 1.6 - 1) * 0.8);
           if (roast.charred || roast.burning) mallowMat.color.copy(CHAR);
-          mFlame.visible = roast.burning;
-          mFlame.rotation.x = -rod.rotation.x; // the little flame stays upright
-          for (const [i, f] of mFlame.children.entries()) f.scale.set(1, 1 + Math.sin(t * 15 + i) * 0.2, 1);
+          mFlame.visible = roast.burning && mallow.visible;
+          for (const [i, f] of mFlame.children.entries()) f.scale.set(1, 1 + Math.sin(t * 15 + i) * 0.25, 1);
+          mFlame.quaternion.copy(twig.quaternion).invert(); // the little flame stays upright
+        }
+        // Smoke after he blows it out.
+        for (const [i, sp] of puffs.entries()) {
+          const k = puffAt < 0 ? 1 : (t - puffAt - i * 0.12) / 2;
+          if (k < 0 || k >= 1) { sp.material.opacity = 0; continue; }
+          sp.position.copy(puffFrom).add(new T.Vector3(Math.sin(i * 2.1 + k * 3) * 0.12, k * 0.9, 0));
+          sp.scale.setScalar(0.12 + k * 0.35); sp.material.opacity = 0.6 * (1 - k);
         }
         world.position.y = Math.sin(t * 0.6) * 0.05;
         for (const f of flames) {
@@ -904,7 +1090,8 @@ const PROPS = {
           const g = Math.min(1, Math.max(0, (age - tr.userData.sprout) / tr.userData.grow));
           const s = g <= 0 ? 0.001 : 0.12 + 0.88 * (1 - (1 - g) ** 2);
           tr.scale.setScalar(s);
-          tr.rotation.z = Math.sin(t * 0.8 + tr.userData.sway) * 0.015 * s;
+          const sh = tr.userData.shake ? Math.max(0, 1 - (t - tr.userData.shake) / 0.9) : 0;
+          tr.rotation.z = Math.sin(t * 0.8 + tr.userData.sway) * 0.015 * s + Math.sin(t * 40) * 0.09 * sh;
         }
         // The eyes: rare; they open slowly, blink, close; fleeing, they squeeze shut and sink back into the dark.
         if (watch.start === null && t > watch.at && flare < 0.05) {
@@ -949,14 +1136,10 @@ const PROPS = {
         // He warms up by it: the fire rises a little, quietly.
         if (name === 'warm') { flare = Math.max(flare, 0.45); return 3000; }
         // Specter comes camping: one of his stories (`arg`: { story, on }).
-        if (name === 'story') { if (stage3.busy() || !STORIES[arg?.story]) return 0; return stage3.start(STORIES[arg.story], 3, arg.on); }
+        if (name === 'story') { if (stage3.busy() || !STORIES[arg?.story]) return 0; return stage3.start({ steps: STORIES[arg.story](), done: () => { twig.visible = false; mallow.visible = false; Object.assign(roast, { toast: 0, burning: false, charred: false, shake: false }); } }, 3, arg.on); }
         if (name === 'stop') { stage3.stop(); return 1; }
         if (name === 'hold') { hold = true; return 1; }
         if (name === 'free') { hold = false; return 1; }
-        if (name === 'stick') { Object.assign(roast, { want: 1, toast: 0, burning: false, charred: false }); return 1; }
-        if (name === 'burn') { roast.burning = true; sfx.whoosh(); return 1; }
-        if (name === 'blowout') { roast.burning = false; roast.charred = true; return 1; }
-        if (name === 'away') { roast.want = 0; return 1; }
         return 0;
       },
       // Where a point of the scene falls on the screen, and how many pixels one unit measures there.
@@ -970,7 +1153,6 @@ const PROPS = {
         proj.project(cam); projUp.project(cam);
         return { x: c.left + ((proj.x + 1) / 2) * c.width, y: c.top + ((1 - proj.y) / 2) * c.height, unit: Math.abs(projUp.y - proj.y) / 2 * c.height };
       },
-      seat: SEAT,
       poke() {
         // Brought back from the embers: the satisfying sound, once; while it burns, only a soft crackle now and then.
         if (strength() < 0.75) sfx.revive(); else sfx.crackle();

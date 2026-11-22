@@ -136,6 +136,8 @@ function mood(name, ms, quiet = false) {
   nodo.mood = name; nodo.moodUntil = performance.now() + ms;
   nodo.el.dataset.mood = name;
   nodo.face.dataset.mood = name === 'sleep' ? 'shut' : FACES.includes(name) ? name : name ? 'glad' : '';
+  // His hands say it too.
+  nodo.face.dataset.hands = { surprised: 'cheeks', scared: 'up', yawn: 'mouth', dizzy: 'shrug', love: 'cheeks', angry: 'hips', sad: 'shrug', wink: 'wave' }[name] ?? (name === 'glad' && Math.random() < 0.5 ? 'wave' : 'rest');
 }
 // The faces his canvas knows (props3d.js).
 const FACES = ['glad', 'shut', 'sad', 'surprised', 'angry', 'love', 'dizzy', 'wink', 'scared', 'yawn'];
@@ -227,6 +229,16 @@ function notesAt(x, y, n = 3) {
     }, i * 420);
   }
 }
+// A mark over his head in the scene: «!» when he realizes, «?» when he wonders, «z» when he dozes.
+function markAt(x, y, m) {
+  if (!front) return;
+  const el = document.createElement('span');
+  el.className = `specter-mark m-${m === '!' ? 'bang' : m === '?' ? 'ask' : 'zz'}`;
+  el.textContent = m === 'z' ? 'z' : m;
+  el.style.left = `${x}px`; el.style.top = `${y - 26}px`;
+  front.append(el);
+  setTimeout(() => el.remove(), m === 'z' ? 2200 : 1300);
+}
 // The spin that hides him (out) or brings him back (in), with a puff of sparkles.
 function spin(dir) {
   if (!nodo) return;
@@ -279,6 +291,8 @@ function playAt(c, asked = false) {
       const started = actProp(c, 'story', { story, on: (ev) => {
         if (ev.say && ev.x !== undefined) sceneSpeech(ev.say, ev.x, ev.y, ev.ms);
         if (ev.notes && ev.x !== undefined) notesAt(ev.x, ev.y, ev.notes);
+        if (ev.mark && ev.x !== undefined) markAt(ev.x, ev.y, ev.mark);
+        if (ev.poof && ev.x !== undefined) burst(ev.x, ev.y, 10);
         if (ev.end) comeBack();
       } });
       if (!started) { comeBack(); return; }
@@ -424,7 +438,8 @@ function release() {
   b.va += (pointer.vx / b.r) * 0.004;
   // Thrown hard he gets dizzy; let go gently, glad.
   if (b.kind === 'nodo') b.home = null;
-  if (b.kind === 'nodo' && drag.moved >= 4 && speed < 900 && droppedOnDecor(b.x, b.y)) { drag = null; root.classList.remove('grabbing'); return; }
+  // Dropped on the decoration: he goes in (the grab's rubbing sound ends here too, or it would go on).
+  if (b.kind === 'nodo' && drag.moved >= 4 && speed < 900 && droppedOnDecor(b.x, b.y)) { sfx.release(0, b.r * 2); drag = null; root.classList.remove('grabbing'); return; }
   if (b.kind === 'nodo') { if (drag.moved < 4) poked(b); else if (speed > 900) { mood('dizzy', 2200); say(['¡Wiii!', 'Mareado…', '¡Otra vez!'][Math.floor(Math.random() * 3)], 1500); } else mood('glad', 900); }
   else if (drag.moved < 4) { b.vy -= 160; b.va += rand(-1, 1); }
   sfx.release(drag.moved < 4 ? 600 : speed, b.r * 2);
