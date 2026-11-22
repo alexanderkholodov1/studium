@@ -730,7 +730,8 @@ async function generateOutline(files = [], live = null) {
 }
 // The whole guide in one request, when the writer works in a folder (the bridge): the outline and every chapter come
 // back as files. Otherwise (an AI with no folder), the outline and then one chapter per request, as before.
-const wholeAtOnce = () => ai.choice('solution').provider === 'bridge:claude' && T.prefs?.writeAll !== 'outline';
+// An older bridge cannot hand back files: with it, the guide goes chapter by chapter (and the page asks to update it).
+const wholeAtOnce = () => ai.choice('solution').provider === 'bridge:claude' && T.prefs?.writeAll !== 'outline' && !ai.bridgeOld();
 async function generateWhole(files = [], live = null) {
   const system = wholePrompt({ parts: T.parts, course: T.course, deadline: deadlineText(T.deadline), prefs: T.prefs });
   const text = `El enunciado del trabajo «${T.title}»${T.group ? ` (grupo: ${T.group})` : ''} y lo que lo acompaña:
