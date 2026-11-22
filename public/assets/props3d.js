@@ -134,9 +134,12 @@ vec2 map(vec3 w){
     if (bag < res.x) res = vec2(bag, 3.);
   }
   // his hands: two small round mittens that float by his sides (no arms, like a cartoon)
-  float hl = (length((q - uHandL) / vec3(.13, .11, .1)) - 1.) * .1;
-  float hr = (length((q - uHandR) / vec3(.13, .11, .1)) - 1.) * .1;
-  float hd = min(hl, hr);
+  float hl = (length((q - uHandL) / vec3(.12, .11, .1)) - 1.) * .1;
+  float hr = (length((q - uHandR) / vec3(.12, .11, .1)) - 1.) * .1;
+  // a thumb on each mitten, toward the body and up
+  float tl = length(q - uHandL - vec3(.07, .07, .04)) - .045;
+  float tr = length(q - uHandR - vec3(-.07, .07, .04)) - .045;
+  float hd = min(smin(hl, tl, .04), smin(hr, tr, .04));
   if (hd < res.x) res = vec2(hd, 4.);
   return res;
 }
@@ -183,12 +186,14 @@ vec3 face(vec3 col, vec2 f, float dif){
     }
   }
   // the medic's round glasses: thin dark rims over his eyes and a bridge, the lenses a touch lighter
+  // the medic's small round glasses, low on the nose: he looks over them
   if (uDoctor > .5){
-    vec2 gp = vec2(abs(f.x), f.y) - vec2(.205, .3);
-    float rim = abs(length(gp) - .14);
-    if (length(gp) < .13) col = mix(col, vec3(1.), .08);
-    if (rim < .016) col = vec3(.12,.12,.14);
-    if (abs(f.y - .31) < .012 && abs(f.x) < .066) col = vec3(.12,.12,.14);
+    vec2 gp = vec2(abs(f.x), f.y) - vec2(.16, .2);
+    float rim = abs(length(gp) - .075);
+    if (length(gp) < .07) col = mix(col, vec3(.85,.92,1.), .18);
+    if (rim < .011) col = vec3(.1,.1,.12);
+    if (abs(f.y - .205) < .008 && abs(f.x) < .088) col = vec3(.1,.1,.12);
+    if (abs(f.y - .215) < .007 && abs(f.x) > .232 && abs(f.x) < .34) col = vec3(.1,.1,.12);
   }
   // brows, only when they say something: up in the middle when worried or sad, down when angry
   float bw = abs(uBrow);
@@ -271,8 +276,8 @@ void main(){
     if (q.z < -.6 && ((abs(cq.x) < .045 && abs(cq.y) < .14) || (abs(cq.y) < .045 && abs(cq.x) < .14))) col = vec3(.78,.12,.12) * (.5 + .6*dif);
   } else if (h.y > 3.5) {
     // his hands: the same soft body; as a medic, dark rubber gloves
-    vec3 base = uDoctor > .5 ? vec3(.2,.21,.24) : vec3(.86,.89,1.);
-    col = base * (.4 + .7*dif) + (uDoctor > .5 ? vec3(.3) * spec : vec3(.55,.5,1.)*fres*.7 + spec*.4);
+    vec3 base = uDoctor > .5 ? vec3(.72,.08,.1) : vec3(.86,.89,1.);
+    col = base * (.4 + .7*dif) + (uDoctor > .5 ? vec3(.9) * spec * 1.2 + vec3(.3,.05,.05) * fres : vec3(.55,.5,1.)*fres*.7 + spec*.4);
   } else if (h.y > 2.5) {
     // the backpack: canvas green-brown, a lighter flap, a pocket, the blanket roll red
     col = mix(vec3(.36,.4,.26), vec3(.46,.5,.32), smoothstep(.12, .3, q.y)) * (.45 + .7*dif) + spec*.1;
@@ -286,27 +291,37 @@ void main(){
     vec3 base = mix(vec3(.72,.77,1.), vec3(1.,1.,1.), smoothstep(-.65, .8, q.y));
     col = base * (.36 + .72*dif) * mix(.72, 1., ao) + vec3(.55,.5,1.)*fres*.8 + spec*.4;
     col += vec3(.35,.4,1.) * .16 * smoothstep(-.2, -.6, q.y);
-    // the medic: a white coat with a high collar, open in front over a grey vest and a red tie; a red cross on his
-    // chest; dark hair slicked back
+    // the medic: a white lab coat, closed, with buttons; a white shirt and a red tie show only in the V at the neck;
+    // a high collar; a red cross on his chest; dark hair slicked back, smooth and shiny, parted on the side
     if (uDoctor > .5){
       vec3 white = vec3(.97,.97,.95) * (.45 + .65*dif) * mix(.8, 1., ao) + spec*.2;
-      float coat = smoothstep(.03, -.02, q.y);
-      float open = q.z > 0. ? step(abs(q.x), .03 + max(0., .02 - q.y) * .22) : 0.;
-      col = mix(col, white, coat * (1. - open));
-      // the vest and the tie in the opening
-      if (coat > .5 && open > .5) col = abs(q.x) < .035 + max(0., -q.y) * .02 && q.y > -.45 ? vec3(.62,.1,.1) * (.5 + .6*dif) : vec3(.3,.31,.33) * (.45 + .6*dif);
-      // the lapels' edge
-      if (coat > .5 && q.z > 0. && abs(abs(q.x) - (.03 + max(0., .02 - q.y) * .22)) < .016) col *= .78;
+      float coat = smoothstep(.04, -.01, q.y);
+      col = mix(col, white, coat);
+      if (q.z > 0. && coat > .5){
+        // the V at the neck: a white shirt, a red tie with its knot
+        float vw = max(0., q.y + .14) * .55;
+        if (q.y > -.14 && abs(q.x) < vw){
+          col = vec3(.99,.99,1.) * (.6 + .5*dif);
+          float tw = .022 + max(0., -.02 - q.y) * .06;
+          if (abs(q.x) < tw && q.y < .02) col = vec3(.7,.08,.1) * (.5 + .6*dif) + spec*.3;
+        }
+        // the lapels' edges
+        if (q.y > -.14 && abs(abs(q.x) - vw) < .014) col *= .8;
+        // the buttons down the front
+        for (int k = 0; k < 3; k++){ vec2 bp = vec2(q.x - .05, q.y + .24 + float(k) * .13); if (length(bp) < .022) col = vec3(.55,.57,.6) * (.5 + .6*dif) + spec*.6; }
+        // the line where the coat closes
+        if (abs(q.x - .025) < .006 && q.y < -.14) col *= .85;
+      }
       // the high collar, up the sides of his neck
-      if (q.y > -.04 && q.y < .1 && abs(q.x) > .34) col = white * .96;
+      if (q.y > -.02 && q.y < .1 && abs(q.x) > .34) col = white * .96;
       // a red cross on the left of his chest
-      vec2 cr = vec2(q.x + .26, q.y + .16);
-      if (q.z > .2 && ((abs(cr.x) < .022 && abs(cr.y) < .06) || (abs(cr.y) < .022 && abs(cr.x) < .06))) col = vec3(.8,.12,.12) * (.5 + .6*dif);
-      // dark hair, slicked back: from the forehead over the top to the back, with comb lines and shine
-      float line = .6 - .3 * smoothstep(.1, -.45, q.z);
+      vec2 cr = vec2(q.x + .26, q.y + .2);
+      if (q.z > .2 && ((abs(cr.x) < .02 && abs(cr.y) < .055) || (abs(cr.y) < .02 && abs(cr.x) < .055))) col = vec3(.8,.12,.12) * (.5 + .6*dif);
+      // the hair: from a gentle widow's peak over the top to the back, smooth, with one broad shine and a side part
+      float line = .53 + .03 * smoothstep(.0, .3, abs(q.x)) - .07 * (1. - smoothstep(0., .1, abs(q.x))) * step(0., q.z) - .22 * smoothstep(.1, -.45, q.z);
       if (q.y > line) {
-        float comb = .5 + .5 * sin(q.x * 70.);
-        col = vec3(.14,.11,.1) * (.5 + .6*dif) + vec3(.35,.3,.28) * spec * (.6 + .4*comb) + vec3(.05) * comb;
+        col = vec3(.17,.13,.11) * (.5 + .55*dif) + vec3(.5,.42,.38) * pow(spec, .6) * .55;
+        if (q.z > -.2 && abs(q.x - .2) < .01) col *= .65;
       }
     }
     // the apron (the cake): pink with a white frill and a heart, over his lower body
@@ -1153,6 +1168,35 @@ const PROPS = {
         try { localStorage.setItem(POKED, String(poked)); } catch { /* not remembered */ }
         flare = 1;
         return true;
+      },
+    };
+  },
+
+  // A dove, for the medic's routines: low-poly, pearl grey with an iridescent neck, a small beak, wings that flap
+  // while it flies (canvas.dataset.flap = '1') and fold when it perches; its head pecks (canvas.dataset.peck = '1').
+  dove(canvas) {
+    const scene = new T.Scene(); stage(scene, { key: [2, 4, 4], ground: false, intensity: 1.8 });
+    const flat = (c, r = 0.7) => std(c, r, 0, { flatShading: true });
+    const g = new T.Group(); scene.add(g);
+    g.add(mesh(new T.IcosahedronGeometry(0.5, 1), flat(0xc9ccd3), { s: [1.25, 0.8, 0.8] }));
+    g.add(mesh(new T.ConeGeometry(0.22, 0.6, 6), flat(0x8e939c), { x: -0.75, y: 0.1, rz: Math.PI / 2 + 0.25, s: [1, 1, 0.5] }));
+    const head = new T.Group(); head.position.set(0.55, 0.38, 0); g.add(head);
+    head.add(mesh(new T.IcosahedronGeometry(0.24, 1), flat(0xb7bcc6)));
+    head.add(mesh(new T.IcosahedronGeometry(0.2, 1), flat(0x5f8f7f, 0.3), { x: -0.08, y: -0.16, s: [1, 0.8, 1.1] }));
+    head.add(mesh(new T.ConeGeometry(0.06, 0.18, 5), flat(0xd98c3a), { x: 0.27, y: -0.02, rz: -Math.PI / 2 }));
+    for (const z of [-0.13, 0.13]) head.add(mesh(new T.SphereGeometry(0.035, 8, 6), std(0x111111, 0.2), { x: 0.13, y: 0.06, z }));
+    const wings = [-1, 1].map((sz) => { const w = new T.Group(); w.position.set(0.05, 0.22, sz * 0.25); g.add(w); w.add(mesh(new T.IcosahedronGeometry(0.4, 0), flat(0xa9aeb8), { x: -0.15, z: sz * 0.25, s: [1.2, 0.18, 0.75] })); return w; });
+    for (const z of [-0.1, 0.1]) g.add(mesh(new T.CylinderGeometry(0.02, 0.02, 0.22, 4), flat(0xd96a6a), { x: 0.1, y: -0.45, z }));
+    return {
+      scene, camera: camera(28, [0, 0.4, 4.2], [0, 0.05, 0]),
+      update(t) {
+        const d = canvas?.dataset ?? {};
+        const flap = d.flap === '1';
+        for (const [i, w] of wings.entries()) w.rotation.x = (i ? 1 : -1) * (flap ? 0.2 + Math.sin(t * 22) * 0.9 : 0.1);
+        g.position.y = flap ? Math.sin(t * 22) * 0.04 : 0;
+        head.rotation.z = d.peck === '1' ? -Math.max(0, Math.sin(t * 9)) * 0.7 : Math.sin(t * 2.5) * 0.08;
+        head.position.x = 0.55 + (d.peck === '1' ? Math.max(0, Math.sin(t * 9)) * 0.08 : 0);
+        g.rotation.y = -0.35 + Math.sin(t * 0.8) * 0.1;
       },
     };
   },

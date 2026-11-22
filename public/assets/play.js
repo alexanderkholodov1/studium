@@ -389,6 +389,86 @@ function droppedOnRadio(x, y) {
   else { mood('glad', 1200, true); say('¡Pongamos música!', 1400); el.querySelector('[data-radio-play]')?.click(); }
   return true;
 }
+/* ---------- the medic's routines (when he wears that costume): doves, Archimedes, a checkup ---------- */
+// A dove on the screen: a small 3D bird (props3d.js 'dove') that flies along an arc, perches, pecks, flies away.
+function dove(x, y) {
+  const el = document.createElement('div');
+  el.className = 'dove';
+  el.innerHTML = '<canvas class="prop" data-prop="dove" data-fixed data-flap="1" aria-hidden="true"></canvas>';
+  front.append(el);
+  props(el);
+  const c = el.querySelector('canvas');
+  const d = { el, x, y, set(px, py, face) { this.x = px; this.y = py; el.style.transform = `translate3d(${(px - 36).toFixed(1)}px, ${(py - 36).toFixed(1)}px, 0) scaleX(${face < 0 ? -1 : 1})`; } };
+  d.set(x, y, 1);
+  d.fly = (tx, ty, ms = 1400, lift = 70) => new Promise((res) => {
+    const fx = d.x; const fy = d.y; const t0 = performance.now(); const face = tx < fx ? -1 : 1;
+    c.dataset.flap = '1'; c.dataset.peck = ''; sfx.wings();
+    const step = (now) => {
+      if (!el.isConnected) { res(); return; }
+      const k = Math.min(1, (now - t0) / ms); const e = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
+      d.set(fx + (tx - fx) * e, fy + (ty - fy) * e - Math.sin(k * Math.PI) * lift, face);
+      if (k < 1) requestAnimationFrame(step); else res();
+    };
+    requestAnimationFrame(step);
+  });
+  d.perch = () => { c.dataset.flap = ''; };
+  d.peck = (on) => { c.dataset.peck = on ? '1' : ''; if (on) sfx.coo(); };
+  d.gone = () => { el.classList.add('out'); setTimeout(() => el.remove(), 400); };
+  return d;
+}
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const MEDIC = {
+  async archimedes() {
+    const head = () => ({ x: nodo.x + 6, y: nodo.y - nodo.r * 0.95 });
+    const b = dove(innerWidth + 60, Math.max(80, nodo.y - 260));
+    await b.fly(head().x, head().y, 1700, 60);
+    b.perch(); sfx.coo();
+    mood('love', 1800, true); nodo.face.dataset.hands = 'cheeks'; say('¡Archimedes!', 1600);
+    await wait(1800);
+    b.peck(true); mood('surprised', 1200); nodo.face.dataset.hands = 'up'; say('¡Ay!', 900); nodo.sq = -0.12; wake();
+    await wait(1300);
+    b.peck(false); mood('angry', 2000); nodo.face.dataset.hands = 'hips'; say('¡Archimedes! ¡No!', 1700);
+    await wait(900);
+    b.fly(-80, Math.max(60, nodo.y - 300), 1600, 40).then(() => b.gone());
+    await wait(1000);
+    nodo.face.dataset.hands = 'shake'; say('Pájaro travieso…', 1500);
+    await wait(1600);
+    nodo.face.dataset.hands = 'rest'; mood('wink', 900);
+  },
+  async flock() {
+    nodo.face.dataset.hands = 'up'; mood('glad', 2400, true); nodo.face.dataset.talk = '1'; sfx.voice('hum'); say('♪ Fiu, fiu…', 1500);
+    await wait(900);
+    nodo.face.dataset.talk = '';
+    const birds = [[-60, 120], [innerWidth + 60, 160], [innerWidth / 2, -60]].map(([x, y]) => dove(x, y));
+    const cx = nodo.x; const cy = nodo.y - nodo.r * 1.6;
+    await Promise.all(birds.map((b, i) => b.fly(cx + Math.cos(i * 2.1) * 110, cy + Math.sin(i * 2.1) * 50, 1500 + i * 200, 50)));
+    mood('love', 2000, true); nodo.face.dataset.hands = 'cheeks';
+    for (let r = 0; r < 2; r += 1) await Promise.all(birds.map((b, i) => b.fly(cx + Math.cos(i * 2.1 + (r + 1) * 1.4) * 110, cy + Math.sin(i * 2.1 + (r + 1) * 1.4) * 50, 700, 15)));
+    await Promise.all(birds.map((b, i) => b.fly(nodo.x + (i - 1) * 70 + (i === 1 ? 0 : 0), innerHeight - 30, 900, 10)));
+    for (const b of birds) { b.perch(); b.peck(true); }
+    say('Coman, coman.', 1500); nodo.face.dataset.hands = 'rest';
+    await wait(2000);
+    for (const [i, b] of birds.entries()) { b.peck(false); b.fly(i % 2 ? innerWidth + 80 : -80, 60 + i * 40, 1400, 60).then(() => b.gone()); }
+    nodo.face.dataset.hands = 'wave'; say('¡Adiós!', 1200);
+    await wait(1400);
+    nodo.face.dataset.hands = 'rest';
+  },
+  async checkup() {
+    nodo.face.dataset.hands = 'hold'; mood('', 3000, true); say('A ver ese pulso…', 1600);
+    await wait(1200); sfx.heartbeat(); await wait(700); sfx.heartbeat(); await wait(900);
+    mood('wink', 1400); nodo.face.dataset.hands = 'hips'; say('Mmm… todo en orden.', 1600);
+    await wait(1500); nodo.face.dataset.hands = 'rest';
+  },
+};
+let medicBusy = false;
+function medicRoutine() {
+  if (medicBusy || !nodo || nodo.gone || specterSkin() !== 'doctor') return false;
+  const names = Object.keys(MEDIC);
+  const pick = names[Math.floor(Math.random() * names.length)];
+  medicBusy = true;
+  MEDIC[pick]().catch(() => {}).finally(() => { medicBusy = false; if (nodo) nodo.face.dataset.hands = 'rest'; });
+  return true;
+}
 let routineRun = 0;
 function stopRoutine() {
   routineRun += 1;
@@ -398,6 +478,8 @@ function routine() {
   const now = performance.now();
   if (now - lastVisit > rand(6, 12) * 60000 && decorVisit()) { lastVisit = now; return; }
   if (music.on && now > music.next && danceBy()) return;
+  // In his medic's costume, most of his little scenes are a medic's.
+  if (specterSkin() === 'doctor' && Math.random() < 0.65 && medicRoutine()) return;
   const names = Object.keys(ROUTINES);
   const steps = ROUTINES[names[Math.floor(Math.random() * names.length)]];
   const run = ++routineRun;
@@ -832,6 +914,8 @@ export const specter = {
     nodo.home = home;
     flyTo(home, H - nodo.r - 34, { ms: 1600, loops: 1, arc: 110, stay: 1, then: () => { mood('glad', 1600); say(['¡Volví!', '¡Aquí estoy!', 'Boo. ¿Me extrañaste?'][Math.floor(Math.random() * 3)], 1800); sfx.boing(2); } });
   },
+  // One of the medic's scenes now (in that costume).
+  medic: (name) => { if (name && MEDIC[name] && !medicBusy && nodo && !nodo.gone) { medicBusy = true; MEDIC[name]().catch(() => {}).finally(() => { medicBusy = false; }); return true; } return medicRoutine(); },
   // Into the decoration of Inicio now (its stories still wait their turn).
   decor: () => playAt(placedDecor(), true),
   say: (text, ms) => say(text, ms),

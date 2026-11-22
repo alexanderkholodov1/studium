@@ -1,6 +1,6 @@
 // Sounds, synthesized on the spot with the Web Audio API (no audio files), quiet and alive:
-// - every gesture has its own sound and follows what the hand does: grabbing, dragging (a deep, soft rub of brown
-//   noise that swells with the speed), throwing (a warm rising «fwoop»), impacts (by size and speed), shaking,
+// - every gesture has its own sound and follows what the hand does: grabbing, dragging (a clean, airy swish that
+//   opens and brightens with the pull), throwing (a warm rising «fwoop»), impacts (by size and speed), shaking,
 //   setting down, pressing;
 // - nothing is ever the same sound twice: partials, filters, envelopes and stereo position vary on every hit, not
 //   only the pitch;
@@ -112,41 +112,48 @@ const pick = (xs) => xs[Math.floor(Math.random() * xs.length)];
 // Bigger things sound lower.
 const sizeToFreq = (size) => Math.max(140, Math.min(900, 1400 / Math.sqrt(Math.max(8, size))));
 
-/* ---------- the voice of a drag: a deep, soft rub, like cloth or air (brown noise, low-passed), with the speed ---------- */
-// Brown noise is white noise integrated: its energy is in the lows, so it sounds deep and soft, never hissy. Under it,
-// a very quiet low rumble. Both rise and fall smoothly with the speed of the hand; held still, they fade away.
-let brown = null;
-function brownNoise() {
-  if (brown) return brown;
+/* ---------- the voice of a drag: a clean, airy swish that opens with the pull ---------- */
+// Pink noise (no rumble, no hiss) through a soft resonant band: an elegant, breathy «shhh» with a hint of tone, like a
+// finger gliding on a smooth surface. The harder the pull, the brighter and fuller it gets; it pans with the hand, and
+// fades in and out gently. Under 150 Hz nothing sounds (that is what made it feel like a storm).
+let pink = null;
+function pinkNoise() {
+  if (pink) return pink;
   const len = ctx.sampleRate * 2;
-  brown = ctx.createBuffer(1, len, ctx.sampleRate);
-  const d = brown.getChannelData(0);
-  let last = 0;
-  for (let i = 0; i < len; i += 1) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3.5; }
-  // The loop's seam: fade both ends into each other.
+  pink = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = pink.getChannelData(0);
+  let b0 = 0; let b1 = 0; let b2 = 0; let b3 = 0; let b4 = 0; let b5 = 0; let b6 = 0;
+  for (let i = 0; i < len; i += 1) {
+    const w = Math.random() * 2 - 1;
+    b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759; b2 = 0.969 * b2 + w * 0.153852;
+    b3 = 0.8665 * b3 + w * 0.3104856; b4 = 0.55 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.016898;
+    d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11; b6 = w * 0.115926;
+  }
   const f = 2000; for (let i = 0; i < f; i += 1) { const k = i / f; d[i] *= k; d[len - 1 - i] *= k; }
-  return brown;
+  return pink;
 }
-let rub = null; // { src, filter, gain, hum, humGain }
+let rub = null; // { src, band, air, gain, pan }
 function rubStart() {
   if (rub) return;
   const s = ctx.createBufferSource();
-  s.buffer = brownNoise(); s.loop = true;
-  const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.Q.value = 0.4; f.frequency.value = 180;
+  s.buffer = pinkNoise(); s.loop = true;
+  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 150; hp.Q.value = 0.5;
+  const band = ctx.createBiquadFilter(); band.type = 'bandpass'; band.frequency.value = 500; band.Q.value = 1.6;
+  const air = ctx.createBiquadFilter(); air.type = 'highshelf'; air.frequency.value = 3000; air.gain.value = -10;
   const g = ctx.createGain(); g.gain.value = 0.0001;
-  out(s.connect(f).connect(g), 0.12, 0);
-  const hum = ctx.createOscillator(); hum.type = 'sine'; hum.frequency.value = 55;
-  const hg = ctx.createGain(); hg.gain.value = 0.0001;
-  out(hum.connect(hg), 0.05, 0);
-  s.start(now(), Math.random() * 1.5); hum.start();
-  rub = { src: s, filter: f, gain: g, hum, humGain: hg };
+  let node = s.connect(hp).connect(band).connect(air).connect(g);
+  let pan = null;
+  if (ctx.createStereoPanner) { pan = ctx.createStereoPanner(); node = node.connect(pan); }
+  out(node, 0.2, 0);
+  s.start(now(), Math.random() * 1.5);
+  rub = { src: s, band, air, gain: g, pan };
 }
 function rubStop() {
   if (!rub) return;
   const r = rub; rub = null;
   const t = now();
-  for (const p of [r.gain.gain, r.humGain.gain]) { p.cancelScheduledValues(t); p.setTargetAtTime(0.0001, t, 0.09); }
-  r.src.stop(t + 0.6); r.hum.stop(t + 0.6);
+  r.gain.gain.cancelScheduledValues(t); r.gain.gain.setTargetAtTime(0.0001, t, 0.07);
+  r.src.stop(t + 0.5);
 }
 let shakeDir = 0;
 
@@ -199,17 +206,18 @@ export const sfx = {
     rubStart();
     shakeDir = 0;
   },
-  // While dragging: a deep, soft rub that swells and settles with the speed (and nothing else: no knocks, no taps).
+  // While dragging: a clean, airy swish that swells and brightens with the pull (and nothing else: no knocks, no taps).
   drag(speed = 0, vx = 0) {
     if (!audio() || !rub) return;
     if (rub) {
-      const s = Math.min(1, speed / 1600);
+      const s = Math.min(1, speed / 1800);
       const t = now();
-      // Smooth on purpose (a slow time constant): it swells and settles with the hand, without jitter.
-      rub.gain.gain.setTargetAtTime(0.0001 + s * 0.11, t, 0.12);
-      rub.filter.frequency.setTargetAtTime(160 + s * 520, t, 0.15);
-      rub.humGain.gain.setTargetAtTime(0.0001 + s * 0.012, t, 0.15);
-      rub.hum.frequency.setTargetAtTime(48 + s * 22, t, 0.2);
+      // Smooth on purpose: it swells and settles with the hand, never jitters.
+      rub.gain.gain.setTargetAtTime(0.0001 + Math.pow(s, 0.8) * 0.16, t, 0.09);
+      rub.band.frequency.setTargetAtTime(420 + s * 1300, t, 0.12);
+      rub.band.Q.setTargetAtTime(1.8 - s * 0.9, t, 0.12);
+      rub.air.gain.setTargetAtTime(-12 + s * 8, t, 0.12);
+      if (rub.pan) rub.pan.pan.setTargetAtTime(Math.max(-0.5, Math.min(0.5, vx / 2500)), t, 0.15);
     }
     const dir = Math.sign(vx);
     if (dir) shakeDir = dir;
@@ -280,6 +288,18 @@ export const sfx = {
     const t = now();
     sine(196, t, { gain: 0.018, type: 'triangle', attack: 0.4, decay: 1.4, glide: 0.97, room: 0.7 });
     sine(207.7, t + 0.15, { gain: 0.014, type: 'triangle', attack: 0.4, decay: 1.3, glide: 0.97, room: 0.7 });
+  },
+  // A dove: a soft, throaty coo; its wings, a few quick soft beats.
+  coo() {
+    if (!audio() || !limit('coo', 500)) return;
+    const t = now();
+    sine(vary(420, 0.04), t, { gain: 0.022, type: 'triangle', attack: 0.05, decay: 0.28, glide: 0.82, room: 0.3 });
+    sine(vary(380, 0.04), t + 0.32, { gain: 0.018, type: 'triangle', attack: 0.05, decay: 0.36, glide: 0.78, room: 0.3 });
+  },
+  wings() {
+    if (!audio() || !limit('wings', 250)) return;
+    const t = now();
+    for (let i = 0; i < 4; i += 1) hiss(t + i * 0.06, { gain: 0.012, attack: 0.01, decay: 0.05, freq: 700, q: 0.6, type: 'lowpass', room: 0.15 });
   },
   // Specter's voice: a small sound of his own for each emotion, soft and short, never words.
   voice(mood = 'glad') {
