@@ -52,6 +52,9 @@ export const TASKS = {
   identify: { name: 'Identificar un documento', tier: 'light', effort: 'low', why: 'basta un modelo ligero, pensando poco: solo reconoce qué es' },
   ask: { name: 'Preguntarle al grafo', tier: 'light', effort: 'low', why: 'basta un modelo ligero y rápido, pensando poco: elige qué mostrarte' },
   feedback: { name: 'Analizar el feedback', tier: 'mid', effort: 'medium', why: 'basta un modelo intermedio, pensando lo normal: agrupa lo que llegó y propone arreglos' },
+  // «Trabajos» (trabajos.js): the solution guide of an assignment, and «No lo entiendo» inside it.
+  solution: { name: 'Guía de solución de un trabajo', tier: 'strong', effort: 'high', why: 'conviene el modelo más capaz que tengas, pensando bastante: escribe la solución completa, explicada línea por línea' },
+  tutor: { name: 'Explicar una parte de un trabajo', tier: 'light', effort: 'low', why: 'basta un modelo ligero y rápido, pensando poco: explica una parte en pocas líneas, al instante' },
 };
 // Where each kind of task runs, first to last. Nothing should cost the person anything: their subscription through
 // the bridge (no charge per use) and the free ways first; a key that charges per use only if it is all they have.
@@ -609,6 +612,8 @@ export const onActivity = (fn) => { hearers.add(fn); return () => hearers.delete
 const tell = (entry) => { for (const fn of hearers) { try { fn(entry); } catch { /* a closed window */ } } };
 function logLine(entry, text) { entry.lines.push({ at: Date.now(), text }); tell(entry); }
 const TIMEOUT = 120_000;
+// A whole milestone of a solution guide, every line explained, takes a strong model several minutes.
+const TIMEOUT_OF = { solution: 15 * 60_000 };
 export const longest = (c) => (c.provider === 'anthropic' || c.provider === 'bridge:claude' ? 64000 : 32000);
 export async function run({ system, text, files = [], maxTokens = 32000, onProgress, signal, task = 'guide', use = null, label = '', entry = null } = {}) {
   // Keys and passwords never reach the AI: whatever text goes, from a file or typed, is filtered here first.
@@ -640,7 +645,7 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
     const watched = (n) => { if (typeof n === 'number' && n >= 0) { rec.received = n; rec.phase = 'receiving'; } tell(rec); onProgress?.(n); };
     const out = await Promise.race([
       send({ way, model, effort, system, text, files: usable, maxTokens, onProgress: watched, signal }),
-      new Promise((_, reject) => { timer = setTimeout(() => reject(new AIError(`${model} no respondió en ${TIMEOUT / 60000} minutos: Studium cortó el pedido.`, { kind: 'transient', way })), TIMEOUT); }),
+      new Promise((_, reject) => { const limit = TIMEOUT_OF[task] ?? TIMEOUT; timer = setTimeout(() => reject(new AIError(`${model} no respondió en ${limit / 60000} minutos: Studium cortó el pedido.`, { kind: 'transient', way })), limit); }),
     ]).finally(() => clearTimeout(timer));
     rec.phase = 'done'; rec.ms = Date.now() - rec.started; rec.response = String(out.text ?? '').slice(0, 60000);
     logLine(rec, `Respondió en ${Math.round(rec.ms / 1000)} s: ${String(out.text ?? '').length} caracteres${out.truncated ? ' (cortado por el límite de largo)' : ''}.`);

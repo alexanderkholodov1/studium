@@ -38,6 +38,7 @@ import { mountAdmin, renderAdmin } from './admin.js';
 import { mountFeedback } from './feedback.js';
 import * as vault from './vault.js';
 import { mountComunidad, renderComunidad } from './comunidad.js';
+import { mountTrabajos, renderTrabajos } from './trabajos.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -119,8 +120,8 @@ document.addEventListener('click', (e) => {
 });
 
 /* ---------- views ---------- */
-const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'horario', 'malla', 'student', 'catalog', 'map', 'library', 'profes', 'contribute', 'comunidad', 'settings', 'about', 'news', 'sources', 'guide', 'admin'];
-const TABS = { home: 'home', horario: 'home', malla: 'home', catalog: 'contribute', comunidad: 'comunidad', map: 'map', library: 'map', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', news: 'about', admin: 'admin' };
+const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'horario', 'malla', 'student', 'catalog', 'map', 'library', 'profes', 'contribute', 'comunidad', 'trabajos', 'settings', 'about', 'news', 'sources', 'guide', 'admin'];
+const TABS = { home: 'home', horario: 'home', malla: 'home', catalog: 'contribute', comunidad: 'comunidad', trabajos: 'trabajos', map: 'map', library: 'map', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', news: 'about', admin: 'admin' };
 const PUBLIC = ['landing', 'auth', 'about', 'news', 'denied', 'verify'];
 let current = 'boot';
 function show(view) {
@@ -327,6 +328,7 @@ mountEggs({ toast, onFound: (id, fresh) => { unlocked(fresh); if (current === 'h
 mountAdmin(context);
 mountFeedback();
 mountComunidad();
+mountTrabajos(context);
 mountCommunity(context);
 mountLibrary(context);
 mountEditor();
@@ -530,6 +532,7 @@ async function route() {
       novedades: ['news', 'Novedades', () => renderNews($('#news'))],
       guias: ['catalog', 'Guías', renderCatalog],
       comunidad: ['comunidad', 'Comunidad', renderComunidad],
+      trabajos: ['trabajos', 'Trabajos', () => renderTrabajos(arg)],
       // The logo: the public page, also for members, who reach their own space from «Inicio».
       bienvenida: ['landing', 'Qué es', null],
       admin: ['admin', 'Admin', () => renderAdmin(arg[0])],

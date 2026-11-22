@@ -607,6 +607,50 @@ try {
     expect('admin reads the counts', await list(A.token, 'eggs'), 200);
   }
 
+  // «Trabajos»: an assignment, its group (joined with the invitation's code), its parts, milestones, progress and AI log.
+  {
+    const tid = appId();
+    const code = randomBytes(24).toString('base64url');
+    const stamped = (path, data, stamps, create = false) => {
+      touched.add(path);
+      return { update: { name: `${base}/${path}`, fields: fields(data) }, updateTransforms: stamps.map((f) => ({ fieldPath: f, setToServerValue: 'REQUEST_TIME' })), ...(create ? { currentDocument: { exists: false } } : {}) };
+    };
+    const trabajoDoc = (over = {}) => ({ title: 'Trabajo de prueba', course: 'Curso de prueba', parts: 3, owner: s.uid, code, statement: gz('enunciado'), encoding: 'gzip', ...over });
+    const at = (path) => `/trabajos/${tid}${path}`;
+    expect('a trabajo without its creator as member is refused', await commit(s.token, [stamped(`trabajos/${tid}`, trabajoDoc(), ['created', 'updated'], true)]), 403);
+    expect('student creates a trabajo, joining it in the same write', await commit(s.token, [
+      stamped(`trabajos/${tid}`, trabajoDoc(), ['created', 'updated'], true), stamped(`trabajos/${tid}/miembros/${s.uid}`, { name: 'Ana', code }, ['joined'], true)]), 200);
+    const forged = appId();
+    expect('a trabajo in someone else\'s name is refused', await commit(s.token, [
+      stamped(`trabajos/${forged}`, trabajoDoc({ owner: c.uid }), ['created', 'updated'], true), stamped(`trabajos/${forged}/miembros/${s.uid}`, { name: 'Ana', code }, ['joined'], true)]), 403);
+    expect('classmate cannot read a trabajo before joining', await status(c.token, 'GET', at('')), 403);
+    expect('classmate cannot join with a wrong code', await commit(c.token, [stamped(`trabajos/${tid}/miembros/${c.uid}`, { name: 'Bea', code: 'x'.repeat(32) }, ['joined'], true)]), 403);
+    expect('classmate cannot join someone else', await commit(c.token, [stamped(`trabajos/${tid}/miembros/${tag}`, { name: 'Otro', code }, ['joined'], true)]), 403);
+    expect('otherDomain cannot join even with the code', await commit(accounts.otherDomain.token, [stamped(`trabajos/${tid}/miembros/${accounts.otherDomain.uid}`, { name: 'X', code }, ['joined'], true)]), 403);
+    expect('classmate joins with the code', await commit(c.token, [stamped(`trabajos/${tid}/miembros/${c.uid}`, { name: 'Bea', code }, ['joined'], true)]), 200);
+    expect('classmate reads the trabajo', await status(c.token, 'GET', at('')), 200);
+    expect('classmate lists the members', await status(c.token, 'GET', at('/miembros')), 200);
+    expect('classmate cannot change the trabajo', await commit(c.token, [put(`trabajos/${tid}`, { title: 'Otro título' }, { mask: ['title'] })]), 403);
+    expect('owner changes the trabajo', await commit(s.token, [put(`trabajos/${tid}`, { repo: { owner: 'alguien', name: 'repo' } }, { mask: ['repo'] })]), 200);
+    expect('otherDomain cannot read the trabajo', await status(accounts.otherDomain.token, 'GET', at('')), 403);
+    expect('classmate takes part B', await commit(c.token, [stamped(`trabajos/${tid}/partes/B`, { uid: c.uid }, ['at'], true)]), 200);
+    expect('student cannot take part B too', await commit(s.token, [stamped(`trabajos/${tid}/partes/B`, { uid: s.uid }, ['at'])]), 403);
+    expect('part D does not exist in a trabajo of 3 parts', await commit(s.token, [stamped(`trabajos/${tid}/partes/D`, { uid: s.uid }, ['at'], true)]), 403);
+    expect('a part taken in someone else\'s name is refused', await commit(s.token, [stamped(`trabajos/${tid}/partes/A`, { uid: c.uid }, ['at'], true)]), 403);
+    expect('classmate writes a milestone of the guide', await commit(c.token, [put(`trabajos/${tid}/hitos/H1`, { data: gz('{}'), encoding: 'gzip', by: c.uid })]), 200);
+    expect('a milestone signed by someone else is refused', await commit(c.token, [put(`trabajos/${tid}/hitos/H2`, { data: gz('{}'), encoding: 'gzip', by: s.uid })]), 403);
+    expect('classmate writes their own progress', await commit(c.token, [put(`trabajos/${tid}/avance/${c.uid}`, { steps: { 'H1.1': { d: true, u: true } } })]), 200);
+    expect('classmate cannot write the progress of someone else', await commit(c.token, [put(`trabajos/${tid}/avance/${s.uid}`, { steps: {} })]), 403);
+    expect('student reads the progress of the group', await status(s.token, 'GET', at(`/avance/${c.uid}`)), 200);
+    expect('classmate keeps their own log of AI use', await commit(c.token, [put(`trabajos/${tid}/ia/${c.uid}`, { log: [{ step: 'H1', prompt: 'x' }] })]), 200);
+    expect('classmate keeps their list of trabajos', await commit(c.token, [put(`misTrabajos/${c.uid}`, { ids: [tid] })]), 200);
+    expect('student cannot read the list of someone else', await status(s.token, 'GET', `/misTrabajos/${c.uid}`), 403);
+    expect('the owner removes a member', await commit(s.token, [remove(`trabajos/${tid}/miembros/${c.uid}`)]), 200);
+    expect('a removed member cannot read the trabajo', await status(c.token, 'GET', at('')), 403);
+    expect('a removed member cannot write progress', await commit(c.token, [put(`trabajos/${tid}/avance/${c.uid}`, { steps: {} })]), 403);
+    expect('the owner deletes the trabajo', await commit(s.token, [remove(`trabajos/${tid}`)]), 200);
+  }
+
   expect('nobody writes elsewhere', await status(s.token, 'PATCH', `/other/${tag}`, write), 403);
 } finally {
   // The settings stay: the emulators keep the defaults the tests wrote, and live they were never touched.

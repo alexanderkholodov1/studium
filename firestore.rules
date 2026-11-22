@@ -455,6 +455,84 @@ service cloud.firestore {
       allow update: if member() && request.resource.data.keys().hasOnly(['count']) && request.resource.data.count == resource.data.count + 1;
     }
 
+    // «Trabajos»: an assignment, its solution guide and its group. Only its members read anything of it. A person
+    // joins with the code of the invitation link (proved here against the trabajo's code, which they cannot read
+    // before joining); only its creator changes the trabajo itself or removes someone. Each member writes only their
+    // own progress and their own log of AI use; any member may write a milestone of the guide.
+    function trabajoAt(tid) { return /databases/$(database)/documents/trabajos/$(tid); }
+    function inTrabajo(tid) { return exists(/databases/$(database)/documents/trabajos/$(tid)/miembros/$(request.auth.uid)); }
+    function ownsTrabajo(tid) { return get(trabajoAt(tid)).data.owner == request.auth.uid; }
+    function trabajo(d) {
+      return d.keys().hasOnly(['title', 'course', 'deadline', 'parts', 'owner', 'code', 'statement', 'outline', 'encoding', 'ai', 'repo', 'created', 'updated'])
+        && d.keys().hasAll(['title', 'parts', 'owner', 'code', 'statement', 'encoding', 'created', 'updated'])
+        && text(d.title, 160) && optional(d, 'course', 120) && optional(d, 'deadline', 40)
+        && d.parts is int && d.parts >= 1 && d.parts <= 8
+        && d.code is string && d.code.matches('[A-Za-z0-9_-]{24,64}')
+        && d.statement is bytes && d.statement.size() <= 600000 && d.encoding == 'gzip'
+        && (!('outline' in d) || (d.outline is bytes && d.outline.size() <= 600000))
+        && (!('ai' in d) || made(d.ai))
+        && (!('repo' in d) || (d.repo is map && d.repo.keys().hasOnly(['owner', 'name']) && text(d.repo.owner, 100) && text(d.repo.name, 100)))
+        && d.created is timestamp && d.updated == request.time;
+    }
+    match /trabajos/{tid} {
+      allow get: if member() && inTrabajo(tid);
+      allow create: if member() && appId(tid) && trabajo(request.resource.data) && request.resource.data.owner == request.auth.uid
+        && request.resource.data.created == request.time
+        && existsAfter(/databases/$(database)/documents/trabajos/$(tid)/miembros/$(request.auth.uid));
+      allow update: if member() && resource.data.owner == request.auth.uid && trabajo(request.resource.data)
+        && request.resource.data.owner == resource.data.owner && request.resource.data.created == resource.data.created;
+      allow delete: if member() && resource.data.owner == request.auth.uid;
+
+      match /miembros/{uid} {
+        allow get, list: if member() && inTrabajo(tid);
+        allow create: if member() && uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['name', 'code', 'joined']) && text(request.resource.data.name, 40)
+          && request.resource.data.joined == request.time && request.resource.data.code == getAfter(trabajoAt(tid)).data.code;
+        allow update: if member() && uid == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
+          && text(request.resource.data.name, 40);
+        allow delete: if member() && (uid == request.auth.uid || ownsTrabajo(tid));
+      }
+      match /partes/{letter} {
+        allow get, list: if member() && inTrabajo(tid);
+        allow create: if member() && inTrabajo(tid)
+          && letter in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+          && {'A': 1, 'B': 2, 'C': 3, 'D': 4, 'E': 5, 'F': 6, 'G': 7, 'H': 8}[letter] <= get(trabajoAt(tid)).data.parts
+          && request.resource.data.keys().hasOnly(['uid', 'at']) && request.resource.data.uid == request.auth.uid
+          && request.resource.data.at == request.time;
+        allow delete: if member() && inTrabajo(tid) && (resource.data.uid == request.auth.uid || ownsTrabajo(tid));
+      }
+      match /hitos/{hid} {
+        allow get, list: if member() && inTrabajo(tid);
+        allow create, update: if member() && inTrabajo(tid) && hid.matches('[A-Z]{1,2}[0-9]{1,3}')
+          && request.resource.data.keys().hasOnly(['data', 'encoding', 'by', 'ai', 'updated'])
+          && request.resource.data.data is bytes && request.resource.data.data.size() <= 900000 && request.resource.data.encoding == 'gzip'
+          && request.resource.data.by == request.auth.uid && (!('ai' in request.resource.data) || made(request.resource.data.ai))
+          && request.resource.data.updated == request.time;
+        allow delete: if member() && ownsTrabajo(tid);
+      }
+      match /avance/{uid} {
+        allow get, list: if member() && inTrabajo(tid);
+        allow create, update: if member() && inTrabajo(tid) && uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['steps', 'updated']) && request.resource.data.steps is map
+          && request.resource.data.steps.size() <= 600 && request.resource.data.updated == request.time;
+        allow delete: if member() && uid == request.auth.uid;
+      }
+      match /ia/{uid} {
+        allow get, list: if member() && inTrabajo(tid);
+        allow create, update: if member() && inTrabajo(tid) && uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['log', 'updated']) && request.resource.data.log is list
+          && request.resource.data.log.size() <= 300 && request.resource.data.updated == request.time;
+        allow delete: if member() && uid == request.auth.uid;
+      }
+    }
+    // Which trabajos a person belongs to, kept by that person only (so their list opens without searching).
+    match /misTrabajos/{uid} {
+      allow get, delete: if member() && uid == request.auth.uid;
+      allow create, update: if member() && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['ids', 'updated']) && request.resource.data.ids is list
+        && request.resource.data.ids.size() <= 60 && request.resource.data.updated == request.time;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
