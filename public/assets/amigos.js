@@ -100,6 +100,17 @@ export async function invitations() {
 }
 export const dropInvitation = (tid) => deleteDoc(doc(db, 'amigos', uid(), 'invitaciones', tid));
 
+/* ---------- «Pedir a tu amigo que la escriba» ---------- */
+export async function askToWrite(friend, { tid, title, code, repo = '', note = '' }) {
+  await setDoc(doc(db, 'amigos', friend, 'pedidos', tid), { title: String(title).slice(0, 160), from: uid(), name: await myName(), code, repo: String(repo).slice(0, 200), note: String(note).slice(0, 1000), at: serverTimestamp() });
+}
+export async function requests() {
+  if (!uid()) return [];
+  const s = await getDocs(collection(db, 'amigos', uid(), 'pedidos')).catch(() => null);
+  return (s?.docs ?? []).map((d) => ({ tid: d.id, ...d.data() }));
+}
+export const dropRequest = (tid, to = uid()) => deleteDoc(doc(db, 'amigos', to, 'pedidos', tid));
+
 /* ---------- the panel, on top of «Comunidad» ---------- */
 let mount = null;
 let state = { code: '', name: '', friends: [], offer: null, error: '', note: '', ending: '' };

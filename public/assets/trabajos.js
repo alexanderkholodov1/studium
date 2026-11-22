@@ -584,6 +584,7 @@ async function renderList() {
   const invs = await amigos.invitations();
   for (const i of invs.filter((x) => ids.includes(x.tid))) amigos.dropInvitation(i.tid).catch(() => {});
   const invited = invs.filter((x) => !ids.includes(x.tid));
+  const asked = await amigos.requests();
   const rows = (await Promise.all(ids.map((id) => getDoc(tRef(id)).then((s) => (s.exists() ? { id, ...s.data() } : null)).catch(() => null)))).filter(Boolean);
   root.innerHTML = `<div class="page-head"><h1>Trabajos</h1><button type="button" class="button primary" data-tj="new">Empezar un trabajo nuevo</button></div>
     <p class="lede-small tj-lede">Resuelve un trabajo en grupo con una guía, paso a paso, entendiendo cada línea.</p>
@@ -591,7 +592,12 @@ async function renderList() {
       <p><b class="no-i18n">${esc(i.name)}</b> te invitó a <b class="no-i18n">${esc(i.title)}</b>.</p>
       <p class="fine">Al entrar, el grupo verá tu nombre, la parte que tomes y tu avance.</p>
       <p class="tj-draft-act"><button type="button" class="button primary small" data-tj="inv-join" data-tid="${esc(i.tid)}" data-code="${esc(i.code)}">Entrar al trabajo</button> <button type="button" class="link" data-tj="inv-drop" data-tid="${esc(i.tid)}">Ahora no</button></p></div>`).join('')}</div>` : ''}
-    ${draftsHTML(drafts)}${(drafts.length || invited.length) && rows.length ? '<h2 class="tj-sub">Tus trabajos</h2>' : ''}
+    ${asked.length ? `<h2 class="tj-sub">Te piden escribir una guía</h2><div class="tj-cards">${asked.map((i) => `<div class="tj-card tj-invited glass">
+      <p><b class="no-i18n">${esc(i.name)}</b> te pide que escribas con tu IA la guía de <b class="no-i18n">${esc(i.title)}</b>.</p>
+      ${i.note ? `<p class="fine no-i18n">«${esc(i.note)}»</p>` : ''}${i.repo ? `<p class="fine">Contexto: <a href="${esc(i.repo)}" target="_blank" rel="noopener">${esc(i.repo)}</a></p>` : ''}
+      <p class="fine">Se usa tu cuota. Entras al trabajo como miembro.</p>
+      <p class="tj-draft-act"><button type="button" class="button primary small" data-tj="ask-accept" data-tid="${esc(i.tid)}" data-code="${esc(i.code)}">Aceptar y abrirlo</button> <button type="button" class="link" data-tj="ask-drop" data-tid="${esc(i.tid)}">Ahora no</button></p></div>`).join('')}</div>` : ''}
+    ${draftsHTML(drafts)}${(drafts.length || invited.length || asked.length) && rows.length ? '<h2 class="tj-sub">Tus trabajos</h2>' : ''}
     ${rows.length ? `<div class="tj-cards">${rows.map((r) => `<div class="tj-card glass" data-id="${esc(r.id)}">
         <a class="tj-card-main" href="#/trabajos/${esc(r.id)}"><b class="no-i18n">${esc(r.title)}</b><span class="fine"><span class="no-i18n">${esc([r.course, r.group].filter(Boolean).join(' · '))}</span>${r.deadline ? `<br>entrega: ${esc(deadlineText(r.deadline))}` : ''}</span></a>
         <details class="tj-menu"><summary aria-label="Más opciones de ${esc(r.title)}">⋯</summary><div class="tj-menu-list glass">
@@ -625,6 +631,41 @@ async function leaveTrabajo(id) {
   await deleteDoc(tRef(id, 'miembros', uid()));
   await keepIds((await myIds()).filter((x) => x !== id));
   return r;
+}
+
+// «Pedir a tu amigo que la escriba»: a friend's AI writes the guide (their quota). The statement's files go with it
+// (they live only on the owner's device otherwise), and a repository may be given as context.
+async function askFriendHTML() {
+  const friends = await amigos.listFriends().catch(() => []);
+  if (!friends.length) return '<p>Todavía no tienes amigos en Studium. <a href="#/comunidad">Agrégalos en Comunidad</a> con tu enlace de amigo.</p>';
+  const repo = T.repo ? `https://github.com/${T.repo.owner}/${T.repo.name}` : (T.prefs?.repoUrl ?? '');
+  return `<form data-askfriend-form><p class="small">Tu amigo recibe el pedido en sus Trabajos y escribe la guía con su IA. Entra al trabajo como miembro, ve el enunciado y sus archivos, y solo puede escribir la guía.</p>
+    <div class="tj-friends">${friends.map((f, i) => `<label class="tj-pick"><input type="radio" name="friend" value="${esc(f.uid)}" data-name="${esc(f.name)}" ${i ? '' : 'checked'}> <i class="am-av" aria-hidden="true">${esc(String(f.name).trim()[0]?.toUpperCase() ?? '?')}</i> <span class="no-i18n">${esc(f.name)}</span></label>`).join('')}</div>
+    <label class="field"><span>Un repo como contexto <small>(opcional)</small></span><input name="repo" value="${esc(repo)}" placeholder="https://github.com/usuario/repo" autocomplete="off"></label>
+    <label class="field"><span>Una nota para tu amigo y su IA <small>(opcional)</small></span><textarea name="note" rows="2" maxlength="1000" placeholder="Por ejemplo: ya tenemos la topología armada; falta todo lo demás."></textarea></label>
+    <p><button type="submit" class="act">Enviar el pedido</button> <span class="mut" data-askfriend-status role="status"></span></p></form>`;
+}
+async function sendAskFriend(form) {
+  const f = new FormData(form);
+  const friend = String(f.get('friend') ?? '');
+  const name = form.querySelector('input[name="friend"]:checked')?.dataset.name ?? '';
+  const repo = String(f.get('repo') ?? '').trim();
+  const note = String(f.get('note') ?? '').trim();
+  if (!friend) throw new Error('Elige a quién pedírselo.');
+  // The files of the statement, for the friend's AI (one document each, under 1 MB).
+  const files = (await filesOf(T.id)).filter((x) => typeof x.data === 'string' && x.data.length <= 950000).slice(0, 20);
+  for (const [i, x] of files.entries()) await setDoc(tRef(T.id, 'archivos', String(i)), { name: String(x.name).slice(0, 200), type: String(x.type ?? '').slice(0, 100), data: x.data, updated: serverTimestamp() });
+  const prefs = { ...(T.prefs ?? {}) };
+  if (note) prefs.note = `${prefs.note ? `${prefs.note} ` : ''}Nota de ${await myName()} para quien escribe la guía: ${note}`.slice(0, 1500);
+  const r = repo ? repoOf({ share: 'repo', repoUrl: repo }) : {};
+  if (r.repo) { prefs.share = 'repo'; prefs.repoUrl = repo; }
+  await setDoc(tRef(T.id), { escritor: friend, prefs, ...r, updated: serverTimestamp() }, { merge: true });
+  await amigos.askToWrite(friend, { tid: T.id, title: T.title, code: T.code, repo, note });
+  T.escritor = friend; T.escritorName = name; T.prefs = prefs; if (r.repo) T.repo = r.repo;
+}
+async function remoteFiles(tid) {
+  const s = await getDocs(collection(db, 'trabajos', tid, 'archivos')).catch(() => null);
+  return (s?.docs ?? []).sort((a, b) => Number(a.id) - Number(b.id)).map((d) => ({ name: d.data().name, type: d.data().type, data: d.data().data }));
 }
 
 // Inviting to a trabajo: friends of Studium with one tap (they find it in their Trabajos), or the link for anyone else.
@@ -1406,12 +1447,13 @@ function closing() {
 
 function noOutline() {
   const gone = usesFolder() && folderState(folderOf(T.id)) === 'gone';
-  return `<section class="sec" id="cap-inicio" style="--c:var(--blue);--cs:var(--blue-s)"><h2><span class="n">0</span>La guía todavía no está escrita</h2><div class="card soft">${T.owner === uid()
-    ? `${gone ? `<div class="tj-gone"><p><b>Tu carpeta se desconectó del puente.</b> Se cerró o reinició el puente, o pasó el tiempo que la prestaste. Sin ella, tu IA no puede trabajar ahí.</p>
+  return `<section class="sec" id="cap-inicio" style="--c:var(--blue);--cs:var(--blue-s)"><h2><span class="n">0</span>La guía todavía no está escrita</h2><div class="card soft">${T.owner === uid() || T.escritor === uid()
+    ? `${T.escritor === uid() ? `<p class="tj-asked">🤝 <b>${esc(nameOf(T.owner))}</b> te pidió que escribas esta guía con tu IA. Se usa tu cuota, y la guía queda registrada como escrita por ti.</p>` : ''}${T.owner === uid() && T.escritor ? `<p class="tj-asked">🤝 Le pediste a <b>${esc(T.escritorName || nameOf(T.escritor))}</b> que escriba esta guía. Cuando la escriba, aparece aquí. <button type="button" class="ask" data-tj="ask-cancel">Cancelar el pedido</button></p>` : ''}${gone ? `<div class="tj-gone"><p><b>Tu carpeta se desconectó del puente.</b> Se cerró o reinició el puente, o pasó el tiempo que la prestaste. Sin ella, tu IA no puede trabajar ahí.</p>
         <p><button type="button" class="act" data-tj="folder-pick">Elegir la carpeta otra vez</button> <button type="button" class="ask" data-tj="folder-forget">Seguir sin ella</button> <button type="button" class="ask" data-tj="edit-questions" data-at="ai">Volver a las preguntas</button></p><p class="fine" id="tj-folder-status" role="status"></p></div>` : ''}
       ${errorBox(T.lastError ?? failed.get(T.id))}<p>Tu IA lee el enunciado y arma los capítulos: qué pide el trabajo, cómo se reparten y cada paso explicado.</p>${aiBlock('solution')}
       ${usesFolder() ? `<div class="tj-where"><h3>Dónde trabaja y qué puede hacer</h3>${placeHTML(folderOf(T.id) || 'temp')}<p class="fine">El modelo y cuánto piensa se cambian arriba, en «Con Claude Code…».</p></div>` : ''}${ai.ready() ? `${ai.choice('solution').provider === 'bridge:claude' ? accountPick() : ''}<p><button type="button" class="act" data-tj="outline">${(T.lastError ?? failed.get(T.id)) ? 'Intentarlo otra vez' : 'Escribir la guía'}</button> <span class="mut" id="tj-gen-status" role="status"></span></p>` : ''}
-      <p class="small"><button type="button" class="ask" data-tj="edit-questions">← Volver a las preguntas</button> <span class="mut">cambia lo que elegiste (la IA, la carpeta, cómo quieres la guía…) antes de escribirla</span></p>`
+      ${T.owner === uid() ? `<p class="small"><button type="button" class="ask" data-tj="edit-questions">← Volver a las preguntas</button> <span class="mut">cambia lo que elegiste (la IA, la carpeta, cómo quieres la guía…) antes de escribirla</span></p>
+      ${T.escritor ? '' : '<details class="q tj-askfriend" data-askfriend-box><summary class="qh">¿Se te acabó la cuota de tu IA? Pide a un amigo que la escriba</summary><div class="ans" data-askfriend>Cargando tus amigos…</div></details>'}` : ''}`
     : '<p>Quien creó el trabajo todavía no escribió la guía.</p>'}</div></section>`;
 }
 
@@ -1608,11 +1650,19 @@ function wire(root) {
   });
   root.addEventListener('change', (ev) => { if (ev.target.matches?.('[data-fc-dir]')) { flashDeal(ev.target.value); flashDo(''); } });
   root.addEventListener('input', () => { if (draft && root.querySelector('.tj-wizard')) { keepAnswer(); saveDraft(); } });
-  root.addEventListener('toggle', (ev) => { if (draft && ev.target.matches?.('[data-tj-more]')) draft.moreOpen = ev.target.open; }, true);
+  root.addEventListener('toggle', (ev) => {
+    if (draft && ev.target.matches?.('[data-tj-more]')) draft.moreOpen = ev.target.open;
+    if (ev.target.matches?.('[data-askfriend-box]') && ev.target.open) { const el = ev.target.querySelector('[data-askfriend]'); askFriendHTML().then((h) => { el.innerHTML = h; }); }
+  }, true);
   root.addEventListener('submit', async (ev) => {
     const form = ev.target;
     ev.preventDefault();
     const button = form.querySelector('[type="submit"]');
+    if (form.matches('[data-askfriend-form]')) {
+      const st = form.querySelector('[data-askfriend-status]');
+      await busy(button, async () => { st.textContent = 'Enviando el pedido y los archivos del enunciado…'; await sendAskFriend(form); repaint(); ctx.toast('Pedido enviado: tu amigo lo ve en sus Trabajos.'); }).catch((e) => { st.textContent = e.message || 'No se pudo enviar.'; });
+      return;
+    }
     if (form.matches('[data-adj-form]')) {
       const f = new FormData(form);
       const t = targetOf(form.dataset.key);
@@ -1842,6 +1892,17 @@ function wire(root) {
       }).catch((e) => say('#tj-folder-status', e.message));
       return;
     }
+    if (kind === 'ask-cancel') { await busy(b, async () => { const f = T.escritor; await setDoc(tRef(T.id), { escritor: '', updated: serverTimestamp() }, { merge: true }); await amigos.dropRequest(T.id, f).catch(() => {}); T.escritor = ''; repaint(); ctx.toast('Pedido cancelado.'); }).catch(() => {}); return; }
+    if (kind === 'ask-accept') {
+      await busy(b, async () => {
+        const { tid, code } = b.dataset;
+        if (!(await myIds()).includes(tid)) { await setDoc(tRef(tid, 'miembros', uid()), { name: await myName(), code, joined: serverTimestamp() }); await keepIds([...(await myIds()), tid]); }
+        await amigos.dropRequest(tid).catch(() => {});
+        T = null; location.hash = `#/trabajos/${tid}`;
+      }).catch(() => ctx.toast('No se pudo abrir: quizá el trabajo se eliminó o canceló el pedido.'));
+      return;
+    }
+    if (kind === 'ask-drop') { await busy(b, async () => { await amigos.dropRequest(b.dataset.tid); await renderList(); }).catch(() => {}); return; }
     if (kind === 'folder-forget') { keepFolder(T.id, ''); repaint(); ctx.toast('Tu IA trabajará solo con lo que trajiste.'); return; }
     if (kind === 'edit-questions') { await busy(b, () => draftFromTrabajo(b.dataset.at === 'ai' ? QUESTIONS.findIndex((x) => x.input === 'ai') : undefined)).catch(() => {}); return; }
     if (kind === 'folder-renew') {
@@ -1900,7 +1961,7 @@ function wire(root) {
       if (usesFolder() && (await folderStateNow(folderOf(T.id))) === 'gone') { repaint(); gRoot().querySelector('.tj-gone')?.scrollIntoView({ block: 'center' }); return; }
       const box = b.closest('.card') ?? gRoot();
       box.insertAdjacentHTML('beforeend', liveHTML('Tu IA está armando la guía'));
-      startWork(); await busy(b, async () => { const files = await filesOf(T.id); if (wholeAtOnce()) { await generateWhole(files, liveFeed(box)); await releaseFolder(T.id); } else await generateOutline(files, liveFeed(box)); repaint(); }).catch(() => repaint());
+      startWork(); await busy(b, async () => { let files = await filesOf(T.id); if (!files.length && T.escritor === uid()) files = await remoteFiles(T.id); if (wholeAtOnce()) { await generateWhole(files, liveFeed(box)); await releaseFolder(T.id); } else await generateOutline(files, liveFeed(box)); repaint(); }).catch(() => repaint());
       return;
     }
     if (kind === 'gen-all') { await busy(b, () => writeAll(b)).catch((e) => { const box = b.closest('.card') ?? gRoot(); box.querySelector('[data-live]')?.remove(); box.querySelector('.tj-error')?.remove(); box.insertAdjacentHTML('beforeend', errorBox(errInfo(e, 'Escribir los capítulos'), 'gen-all')); }); return; }

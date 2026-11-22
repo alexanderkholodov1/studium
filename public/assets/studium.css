@@ -3381,3 +3381,5 @@ canvas.prop { display: block; }
 .tjg-app .rn-picked { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--signal-s); box-shadow: inset 0 0 0 1px var(--signal); font-size: 15px; }
 .tjg-app .rn-plan h4 { margin: 0 0 6px; }
 .tjg-app .rn-also { margin: 12px 0 0; padding: 10px 14px; border-radius: 12px; background: var(--green-s); }
+.tj-asked { margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; background: var(--blue-s, #e1ebfb); }
+.tj-card.tj-invited { padding: 16px 18px; }

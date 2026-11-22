@@ -718,6 +718,18 @@ try {
     expect('a friend invites to a trabajo', await commit(s.token, invite()), 200);
     expect('the invited reads their invitations', await status(c.token, 'GET', `/amigos/${c.uid}/invitaciones`), 200);
     expect('the invited joins with the invitation\'s code', await commit(c.token, [stamped(`trabajos/${tid}/miembros/${c.uid}`, { name: 'Bea', code: tcode }, ['joined'], true), remove(`amigos/${c.uid}/invitaciones/${tid}`)]), 200);
+    // «Pedir a tu amigo que la escriba»: the owner names the friend, who may then write only the outline.
+    const pedido = (from = s.uid) => [stamped(`amigos/${c.uid}/pedidos/${tid}`, { title: 'T', from, name: 'Ana', code: tcode, repo: '', note: 'hola' }, ['at'], true)];
+    expect('only the owner asks a friend to write the guide', await commit(c.token, [stamped(`amigos/${s.uid}/pedidos/${tid}`, { title: 'T', from: c.uid, name: 'Bea', code: tcode, repo: '', note: '' }, ['at'], true)]), 403);
+    expect('the owner asks a friend to write the guide', await commit(s.token, pedido()), 200);
+    expect('the owner puts the statement\'s files', await commit(s.token, [stamped(`trabajos/${tid}/archivos/0`, { name: 'enunciado.pdf', type: 'application/pdf', data: 'JVBERi0x' }, ['updated'], true)]), 200);
+    expect('a member cannot put files', await commit(c.token, [stamped(`trabajos/${tid}/archivos/1`, { name: 'x.pdf', type: 'application/pdf', data: 'x' }, ['updated'], true)]), 403);
+    expect('a member reads the statement\'s files', await status(c.token, 'GET', `/trabajos/${tid}/archivos/0`), 200);
+    expect('before being named, the friend cannot write the outline', await commit(c.token, [stamped(`trabajos/${tid}`, { outline: gz('{}') }, ['updated'])].map((w) => ({ ...w, updateMask: { fieldPaths: ['outline'] } }))), 403);
+    expect('the owner names the friend as the guide\'s writer', await commit(s.token, [{ ...stamped(`trabajos/${tid}`, { escritor: c.uid }, ['updated']), updateMask: { fieldPaths: ['escritor'] } }]), 200);
+    expect('the named friend writes the outline', await commit(c.token, [{ ...stamped(`trabajos/${tid}`, { outline: gz('{}') }, ['updated']), updateMask: { fieldPaths: ['outline'] } }]), 200);
+    expect('the named friend cannot change the title', await commit(c.token, [{ ...stamped(`trabajos/${tid}`, { title: 'Otro' }, ['updated']), updateMask: { fieldPaths: ['title'] } }]), 403);
+    expect('the friend drops the request', await commit(c.token, [remove(`amigos/${c.uid}/pedidos/${tid}`)]), 200);
     expect('classmate ends the friendship, on both sides', await commit(c.token, [remove(`amigos/${c.uid}/lista/${s.uid}`), remove(`amigos/${s.uid}/lista/${c.uid}`)]), 200);
     expect('no invitation once they are not friends', await commit(s.token, invite()), 403);
     expect('a renewed code voids the old one', await commit(s.token, [stamped(`amigos/${s.uid}`, { code: `${sCode}x` }, ['updated']), remove(`amigoCodes/${sCode}`), stamped(`amigoCodes/${sCode}x`, { uid: s.uid, name: 'Ana' }, ['updated'], true)]), 200);

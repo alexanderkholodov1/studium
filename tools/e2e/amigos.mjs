@@ -257,6 +257,31 @@ try {
   ok('…and B adds it to «Fechas y entregas»', dates.some((d) => /Reunión 16:00/.test(d)), dates.join(' | '));
   await B.js(`document.querySelector('#cap-reunion').scrollIntoView();`); await W(300);
   await B.shot('c2-b-reunion-fijada');
+  // «Pedir a tu amigo que la escriba»: A's new trabajo without a guide; A asks B; B finds it, accepts, and is the writer.
+  const tid2 = await A.js(`const F = await import('https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-lite.js'); const D = await import('/studium/assets/data.js');
+    const ref = F.doc(F.collection(D.db, 'trabajos')); const code = 'c'.repeat(8) + Math.random().toString(36).slice(2).padEnd(24, 'x');
+    const b = F.writeBatch(D.db);
+    b.set(ref, { title: 'Proyecto de ML (prueba automática)', parts: 2, owner: D.auth.currentUser.uid, code, statement: F.Bytes.fromUint8Array(await D.gzip('Enunciado de prueba')), encoding: 'gzip', created: F.serverTimestamp(), updated: F.serverTimestamp() });
+    b.set(F.doc(D.db, 'trabajos', ref.id, 'miembros', D.auth.currentUser.uid), { name: 'A', code, joined: F.serverTimestamp() });
+    await b.commit();
+    const mine = await F.getDoc(F.doc(D.db, 'misTrabajos', D.auth.currentUser.uid));
+    await F.setDoc(F.doc(D.db, 'misTrabajos', D.auth.currentUser.uid), { ids: [...(mine.data()?.ids ?? []), ref.id].slice(-60), updated: F.serverTimestamp() });
+    return ref.id;`);
+  await A.js(`location.hash = '#/trabajos/${tid2}';`);
+  await A.wait(`document.querySelector('[data-askfriend-box]')`, 15000);
+  await A.js(`document.querySelector('[data-askfriend-box]').open = true;`);
+  await A.wait(`document.querySelector('[data-askfriend-form] input[name="friend"]')`, 10000);
+  await A.js(`document.querySelector('[data-askfriend-form] textarea').value = 'Falta todo; gracias.'; document.querySelector('[data-askfriend-form] [type=submit]').click();`);
+  await A.wait(`/Le pediste a/.test(document.querySelector('.tj-asked')?.textContent ?? '')`, 15000);
+  ok('A asks B to write the guide', true, await A.js(`return document.querySelector('.tj-asked').textContent.trim()`));
+  await A.shot('e1-a-pidio');
+  await B.js(`location.hash = '#/trabajos';`);
+  await B.wait(`document.querySelector('[data-tj="ask-accept"]')`, 15000);
+  ok('B finds the request in Trabajos, with the note', /te pide que escribas/.test(await B.js(`return document.body.innerText`)) && /Falta todo/.test(await B.js(`return document.body.innerText`)));
+  await B.shot('e2-b-pedido');
+  await B.js(`document.querySelector('[data-tj="ask-accept"]').click();`);
+  await B.wait(`location.hash === '#/trabajos/${tid2}' && /te pidió que escribas/.test(document.querySelector('.tj-asked')?.textContent ?? '')`, 15000);
+  ok('B accepts and opens it as the guide’s writer', true);
   // A ends the friendship.
   await A.js(`location.hash = '#/comunidad';`);
   await A.wait(`document.querySelector('[data-am="end-ask"]')`, 15000);

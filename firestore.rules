@@ -465,7 +465,8 @@ service cloud.firestore {
     function inTrabajo(tid) { return exists(/databases/$(database)/documents/trabajos/$(tid)/miembros/$(request.auth.uid)); }
     function ownsTrabajo(tid) { return get(trabajoAt(tid)).data.owner == request.auth.uid; }
     function trabajo(d) {
-      return d.keys().hasOnly(['title', 'course', 'group', 'deadline', 'prefs', 'parts', 'owner', 'code', 'statement', 'outline', 'encoding', 'ai', 'repo', 'created', 'updated'])
+      return d.keys().hasOnly(['title', 'course', 'group', 'deadline', 'prefs', 'parts', 'owner', 'code', 'statement', 'outline', 'encoding', 'ai', 'repo', 'escritor', 'created', 'updated'])
+        && (!('escritor' in d) || d.escritor is string)
         && d.keys().hasAll(['title', 'parts', 'owner', 'code', 'statement', 'encoding', 'created', 'updated'])
         && text(d.title, 160) && optional(d, 'course', 120) && optional(d, 'group', 80) && optional(d, 'deadline', 40)
         && d.parts is int && d.parts >= 1 && d.parts <= 8
@@ -484,8 +485,20 @@ service cloud.firestore {
         && existsAfter(/databases/$(database)/documents/trabajos/$(tid)/miembros/$(request.auth.uid));
       allow update: if member() && resource.data.owner == request.auth.uid && trabajo(request.resource.data)
         && request.resource.data.owner == resource.data.owner && request.resource.data.created == resource.data.created;
+      // «Pedir a tu amigo que la escriba»: the friend the owner named writes the guide's outline, and nothing else.
+      allow update: if member() && inTrabajo(tid) && resource.data.get('escritor', '') == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['outline', 'ai', 'updated']) && trabajo(request.resource.data);
       allow delete: if member() && resource.data.owner == request.auth.uid;
 
+      // The statement's files (PDFs, pictures) for a friend who writes the guide: the owner puts them; members read.
+      match /archivos/{n} {
+        allow get, list: if member() && inTrabajo(tid);
+        allow create, update: if member() && ownsTrabajo(tid) && n.matches('[0-9]{1,2}')
+          && request.resource.data.keys().hasOnly(['name', 'type', 'data', 'updated']) && text(request.resource.data.name, 200)
+          && request.resource.data.type is string && request.resource.data.type.size() <= 100
+          && request.resource.data.data is string && request.resource.data.data.size() <= 950000 && request.resource.data.updated == request.time;
+        allow delete: if member() && ownsTrabajo(tid);
+      }
       match /miembros/{uid} {
         allow get, list: if member() && inTrabajo(tid);
         allow create: if member() && uid == request.auth.uid
@@ -603,6 +616,16 @@ service cloud.firestore {
           && request.resource.data.since == request.time && request.resource.data.code is string
           && codeOf(request.resource.data.code).uid == (request.auth.uid == uid ? other : uid);
         allow delete: if member() && request.auth.uid in [uid, other];
+      }
+      // A friend asks this person to write the guide of their trabajo (with the trabajo's code, to join it).
+      match /pedidos/{tid} {
+        allow get, list: if member() && uid == request.auth.uid;
+        allow create: if member() && request.resource.data.keys().hasOnly(['title', 'from', 'name', 'code', 'repo', 'note', 'at'])
+          && request.resource.data.from == request.auth.uid && uid != request.auth.uid
+          && text(request.resource.data.title, 160) && text(request.resource.data.name, 40) && optional(request.resource.data, 'repo', 200)
+          && optional(request.resource.data, 'note', 1000) && request.resource.data.at == request.time
+          && friends(uid, request.auth.uid) && ownsTrabajo(tid) && request.resource.data.code == get(trabajoAt(tid)).data.code;
+        allow delete: if member() && (uid == request.auth.uid || resource.data.from == request.auth.uid);
       }
       match /invitaciones/{tid} {
         allow get, list: if member() && uid == request.auth.uid;
