@@ -1,6 +1,6 @@
 // Sounds, synthesized on the spot with the Web Audio API (no audio files), quiet and alive:
-// - every gesture has its own sound and follows what the hand does: grabbing, dragging (a continuous rub that grows
-//   with the speed), throwing (air that grows with the release speed), impacts (by size and speed), shaking,
+// - every gesture has its own sound and follows what the hand does: grabbing, dragging (soft notes of a pentatonic
+//   scale as the thing travels, higher when faster), throwing (a warm rising «fwoop»), impacts (by size and speed), shaking,
 //   setting down, pressing;
 // - nothing is ever the same sound twice: partials, filters, envelopes and stereo position vary on every hit, not
 //   only the pitch;
@@ -112,27 +112,12 @@ const pick = (xs) => xs[Math.floor(Math.random() * xs.length)];
 // Bigger things sound lower.
 const sizeToFreq = (size) => Math.max(140, Math.min(900, 1400 / Math.sqrt(Math.max(8, size))));
 
-/* ---------- the continuous voice of a drag ---------- */
-let rub = null; // { src, filter, gain }
-function rubStart() {
-  if (rub) return;
-  const s = ctx.createBufferSource();
-  s.buffer = noise; s.loop = true;
-  const f = ctx.createBiquadFilter();
-  f.type = 'bandpass'; f.Q.value = 0.9; f.frequency.value = 400;
-  const g = ctx.createGain();
-  g.gain.value = 0.0001;
-  out(s.connect(f).connect(g), 0.15, 0);
-  s.start(now(), Math.random() * 1.5);
-  rub = { src: s, filter: f, gain: g };
-}
-function rubStop() {
-  if (!rub) return;
-  const r = rub; rub = null;
-  r.gain.gain.cancelScheduledValues(now());
-  r.gain.gain.setTargetAtTime(0.0001, now(), 0.06);
-  r.src.stop(now() + 0.4);
-}
+/* ---------- a drag: no continuous noise (it was unpleasant); soft notes as the thing travels ---------- */
+// While something is dragged, every stretch it travels plays one soft note of a pentatonic scale, higher the faster
+// it goes, like a wind chime touched by the hand. Nothing sounds while it is held still.
+const glide = { on: false, travelled: 0, step: 0 };
+function rubStart() { glide.on = true; glide.travelled = 0; glide.step = Math.floor(Math.random() * 5); }
+function rubStop() { glide.on = false; }
 let shakeDir = 0;
 
 export const sfx = {
@@ -184,13 +169,17 @@ export const sfx = {
     rubStart();
     shakeDir = 0;
   },
-  // While dragging: a rub that grows with the speed; quick reversals are a shake.
+  // While dragging: a soft note every stretch travelled, higher when faster; quick reversals are a shake.
   drag(speed = 0, vx = 0) {
-    if (!audio() || !rub) return;
-    const s = Math.min(1, speed / 1800);
-    const t = now();
-    rub.gain.gain.setTargetAtTime(0.0001 + s * 0.035, t, 0.05);
-    rub.filter.frequency.setTargetAtTime(250 + s * 1800, t, 0.05);
+    if (!audio() || !glide.on) return;
+    // About every 140 px travelled (pointer events come ~60 a second), one soft note; faster, a higher one.
+    glide.travelled += speed / 60;
+    if (glide.travelled > 140 && speed > 120 && limit('glide', 110)) {
+      glide.travelled = 0;
+      const s = Math.min(1, speed / 1800);
+      glide.step = (glide.step + 1 + (s > 0.5 ? 1 : 0)) % 10;
+      body(note(glide.step + Math.round(s * 4), 330), now(), { gain: 0.012 + s * 0.01, decay: 0.35, bright: 0.2, room: 0.45, pan: Math.max(-0.6, Math.min(0.6, vx / 2500)) });
+    }
     const dir = Math.sign(vx);
     if (dir && shakeDir && dir !== shakeDir && Math.abs(vx) > 500 && limit('shake', 70)) this.shake(Math.min(1, Math.abs(vx) / 2500));
     if (dir) shakeDir = dir;
@@ -201,8 +190,10 @@ export const sfx = {
     rubStop();
     const t = now();
     if (speed > 500) {
+      // Thrown: a soft rising «fwoop», warm and low, never a hiss.
       const s = Math.min(1, speed / 2200);
-      hiss(t, { gain: 0.02 + s * 0.05, attack: 0.02, decay: 0.18 + s * 0.35, freq: 900 + s * 1400, q: 0.6, sweep: 0.35, room: 0.25, pan: (Math.random() - 0.5) * 0.4 });
+      sine(vary(240, 0.05), t, { gain: 0.016 + s * 0.012, attack: 0.03, decay: 0.28 + s * 0.2, glide: 1.6 + s, room: 0.35 });
+      hiss(t, { gain: 0.006 + s * 0.008, attack: 0.04, decay: 0.25, freq: 500, q: 0.5, type: 'lowpass', room: 0.2 });
     } else body(sizeToFreq(size), t, { gain: 0.03, decay: 0.25, bright: 0.3, room: 0.2 });
   },
   // Two things meeting: by size and speed, a different body every time; gentle and never too often.
@@ -214,7 +205,8 @@ export const sfx = {
   shake(intensity = 0.5) {
     if (!audio()) return;
     const t = now();
-    for (let i = 0; i < 3; i += 1) hiss(t + i * vary(0.022, 0.4), { gain: 0.01 + intensity * 0.025, decay: 0.015, freq: vary(2200, 0.4), q: 3, room: 0.1, pan: (Math.random() - 0.5) * 0.8 });
+    // A shake: two soft wooden taps, not a rattle of noise.
+    for (let i = 0; i < 2; i += 1) body(vary(520, 0.1), t + i * 0.05, { gain: 0.008 + intensity * 0.01, decay: 0.08, bright: 0.25, room: 0.1, pan: (Math.random() - 0.5) * 0.6 });
   },
   // A bubble: a drop of water, different every time.
   pop() {
