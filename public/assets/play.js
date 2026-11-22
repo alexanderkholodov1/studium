@@ -3,7 +3,7 @@
 // watches the pointer and hops) and bubbles to pop. Also the confetti of a met goal and the springy letters of the
 // wordmark. Everything is DOM moved with transforms; nothing runs when the person prefers reduced motion or focus.
 import { sfx } from './sfx.js';
-import { props } from './props3d.js';
+import { props, actProp } from './props3d.js';
 import { specterSkin } from './specter.js';
 
 const root = document.documentElement;
@@ -180,12 +180,78 @@ const ROUTINES = {
   bounce: [[0, () => hopUp(nodo, 240)], [650, () => hopUp(nodo, 280)], [1300, () => hopUp(nodo, 340)], [2200, () => mood('dizzy', 1500)], [3700, () => mood('glad', 900, true)]],
   boo: [[0, () => { mood('wink', 1200); pose({ alpha: 0.12, scale: 0.9, ms: 900 }); }], [2400, () => { pose({ alpha: 1, scale: 1.12, ms: 160 }); mood('surprised', 900); say('¡Boo!', 1200); nodo.sq = -0.14; wake(); }], [2700, () => pose({ ms: 300 })], [3400, () => mood('glad', 1000, true)]],
 };
+// The decoration of Inicio: very rarely he goes to it by himself, and dropped on it he plays there. Each decoration
+// has several little scenes; one he has done waits ten minutes before he does it again, and when none is left he
+// says he has had enough.
+const DECOR_COOL = 10 * 60000;
+const decorDone = {};
+// Where he stands for each scene, in the canvas' box, and what he does (returns how long it takes).
+const DECOR_SCENES = {
+  cake: [
+    { id: 'cherry', at: [0.5, 0.28], run: (c) => { if (!actProp(c, 'eat')) return 0; nodo.face.dataset.cream = '1'; mood('love', 1600); sfx.voice('glad'); hopUp(nodo, 160); setTimeout(() => { if (nodo) nodo.face.dataset.cream = ''; }, 60000); setTimeout(() => say('Mmm. Una cereza.', 1500), 900); return 2600; } },
+    { id: 'wish', at: [0.5, 0.18], run: (c) => { mood('shut', 1600, true); say('Pido un deseo…', 1500); setTimeout(() => { if (actProp(c, 'blow')) sfx.blow(); mood('wink', 1200); }, 1600); setTimeout(() => say('¡No te lo digo!', 1400), 2400); return 3800; } },
+    { id: 'taste', at: [0.35, 0.3], run: () => { mood('surprised', 700); setTimeout(() => { nodo.face.dataset.cream = '1'; mood('glad', 1400); say('Solo una probadita.', 1500); }, 700); setTimeout(() => { if (nodo) nodo.face.dataset.cream = ''; }, 30000); return 2600; } },
+    { id: 'dance', at: [0.5, 0.12], run: () => { say('¡Torta, torta!', 1500); hopUp(nodo, 180); setTimeout(() => hopUp(nodo, 220), 600); setTimeout(() => { hopUp(nodo, 260); mood('love', 1200); }, 1200); return 2800; } },
+  ],
+  campfire: [
+    { id: 'mallow', at: [0.88, 0.36], run: (c) => { const ms = actProp(c, 'marshmallow'); if (!ms) return 0; mood('glad', ms, true); say('Un malvavisco…', 1800); setTimeout(() => { if (nodo) { mood('love', 1600); sfx.voice('love'); say('¡Perfecto!', 1400); } }, ms - 1600); return ms; } },
+    { id: 'warm', at: [0.62, 0.42], run: (c) => { actProp(c, 'warm'); mood('shut', 2800, true); say('Qué calentito.', 1800); setTimeout(() => mood('glad', 900, true), 2800); return 3400; } },
+    { id: 'story', at: [0.3, 0.38], run: (c) => { say('Te cuento una historia de miedo…', 1800); setTimeout(() => { actProp(c, 'eyes'); }, 1500); setTimeout(() => { mood('scared', 1500); say('¿Escuchaste eso?', 1500); }, 2300); setTimeout(() => { mood('glad', 1000); say('Jaja, era broma.', 1300); }, 4200); return 5400; } },
+    { id: 'song', at: [0.7, 0.34], run: () => { mood('glad', 3000, true); nodo.face.dataset.talk = '1'; sfx.voice('hum'); notes(5); pose({ rot: -8, ms: 500 }); setTimeout(() => pose({ rot: 8, ms: 500 }), 600); setTimeout(() => { pose({ rot: -6, ms: 500 }); sfx.voice('hum'); }, 1200); setTimeout(() => { pose({ ms: 400 }); if (nodo) nodo.face.dataset.talk = ''; }, 2000); return 2800; } },
+  ],
+};
+const ENOUGH = { cake: ['Ya no quiero más torta…', 'Estoy lleno. Ni una cereza más.'], campfire: ['Ya me calenté bastante.', 'Ni un malvavisco más, por hoy.'] };
+let lastVisit = performance.now();
+let visiting = 0;
+function decorCanvas() {
+  const c = document.querySelector('#dash [data-tile="decor"] canvas[data-prop]');
+  if (!c || !DECOR_SCENES[c.dataset.prop]) return null;
+  const r = c.getBoundingClientRect();
+  return r.top > 70 && r.bottom < innerHeight - 10 && r.width > 120 ? c : null;
+}
+// He goes to the decoration and plays one of its scenes; `asked` when the person dropped him there (then, if he has
+// done them all lately, he says so).
+function playAt(c, asked = false) {
+  if (!nodo || !c) return false;
+  const kind = c.dataset.prop;
+  const now = performance.now();
+  const free = DECOR_SCENES[kind].filter((x) => now - (decorDone[`${kind}:${x.id}`] ?? -Infinity) > DECOR_COOL);
+  const r = c.getBoundingClientRect();
+  if (!free.length) {
+    if (asked) { mood(kind === 'cake' ? 'dizzy' : 'shut', 1600); say(ENOUGH[kind][Math.floor(Math.random() * ENOUGH[kind].length)], 2000); }
+    return false;
+  }
+  const scene = free[Math.floor(Math.random() * free.length)];
+  const run = ++visiting;
+  mood('glad', 1200, true);
+  specter.visit(r.left + r.width * scene.at[0], r.top + r.height * scene.at[1]);
+  setTimeout(() => {
+    if (run !== visiting || !nodo?.fly || drag) return; // grabbed on the way: the scene is off
+    const ms = scene.run(c);
+    if (!ms) { specter.home(); return; }
+    decorDone[`${kind}:${scene.id}`] = performance.now();
+    setTimeout(() => { if (run === visiting && nodo?.fly) specter.home(); }, ms + 300);
+  }, 1100);
+  return true;
+}
+function decorVisit() { return playAt(decorCanvas()); }
+// Dropped on the decoration: he plays there.
+function droppedOnDecor(x, y) {
+  const c = document.querySelector('#dash [data-tile="decor"] canvas[data-prop]');
+  if (!c || !DECOR_SCENES[c.dataset.prop]) return false;
+  const r = c.getBoundingClientRect();
+  if (x < r.left || x > r.right || y < r.top || y > r.bottom) return false;
+  visiting += 1;
+  return playAt(c, true) || true;
+}
 let routineRun = 0;
 function stopRoutine() {
   routineRun += 1;
   if (nodo) { pose({ ms: 200 }); nodo.face.dataset.talk = ''; }
 }
 function routine() {
+  const now = performance.now();
+  if (now - lastVisit > rand(6, 12) * 60000 && decorVisit()) { lastVisit = now; return; }
   const names = Object.keys(ROUTINES);
   const steps = ROUTINES[names[Math.floor(Math.random() * names.length)]];
   const run = ++routineRun;
@@ -302,6 +368,7 @@ function release() {
   b.va += (pointer.vx / b.r) * 0.004;
   // Thrown hard he gets dizzy; let go gently, glad.
   if (b.kind === 'nodo') b.home = null;
+  if (b.kind === 'nodo' && drag.moved >= 4 && speed < 900 && droppedOnDecor(b.x, b.y)) { drag = null; root.classList.remove('grabbing'); return; }
   if (b.kind === 'nodo') { if (drag.moved < 4) poked(b); else if (speed > 900) { mood('dizzy', 2200); say(['¡Wiii!', 'Mareado…', '¡Otra vez!'][Math.floor(Math.random() * 3)], 1500); } else mood('glad', 900); }
   else if (drag.moved < 4) { b.vy -= 160; b.va += rand(-1, 1); }
   sfx.release(drag.moved < 4 ? 600 : speed, b.r * 2);

@@ -118,14 +118,16 @@ const PROPS = {
     g.add(mesh(new T.TorusGeometry(1.0, 0.075, 14, 90), cream, { y: 0.1, rx: Math.PI / 2 }));
     const cherry = phys(0xb3101f, { roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.04 });
     const stem = std(0x4a6a2a, 0.6);
+    const cherries = [];
     for (let i = 0; i < 10; i += 1) {
       const a = (i / 10) * Math.PI * 2; const x = Math.cos(a) * 0.76; const z = Math.sin(a) * 0.76;
       // A rosette: three rings of cream, each smaller, twisted, and a tip.
       for (let k = 0; k < 3; k += 1) g.add(mesh(new T.TorusGeometry(0.1 - k * 0.028, 0.045 - k * 0.008, 10, 24), cream, { x, y: 0.97 + k * 0.055, z, rx: Math.PI / 2, rz: k * 0.6 }));
       g.add(mesh(new T.ConeGeometry(0.035, 0.08, 12), cream, { x, y: 1.14, z }));
       if (i % 2 === 0) {
-        g.add(mesh(new T.SphereGeometry(0.06, 20, 14), cherry, { x, y: 1.21, z }));
-        g.add(mesh(new T.CylinderGeometry(0.006, 0.006, 0.12, 6), stem, { x: x + 0.02, y: 1.3, z, rz: -0.35, cast: false }));
+        const c = mesh(new T.SphereGeometry(0.06, 20, 14), cherry, { x, y: 1.21, z });
+        const sm = mesh(new T.CylinderGeometry(0.006, 0.006, 0.12, 6), stem, { x: x + 0.02, y: 1.3, z, rz: -0.35, cast: false });
+        g.add(c, sm); cherries.push([c, sm]);
       }
     }
     // The candle: a striped wax stick (a painted texture), a black wick, and the flame.
@@ -151,6 +153,18 @@ const PROPS = {
         flame.scale.set(1, f, 1); light.intensity = lit ? 1.4 * f : 0;
       },
       poke() { lit = !lit; flame.visible = lit; return lit; },
+      // Specter eats a cherry: it is gone from the top, and grows back a few minutes later.
+      act(name) {
+        // He blows the candle out (a wish); it lights again half a minute later.
+        if (name === 'blow') { if (!lit) return false; lit = false; flame.visible = false; setTimeout(() => { lit = true; flame.visible = true; }, 30000); return true; }
+        if (name !== 'eat') return false;
+        const left = cherries.filter(([c]) => c.visible);
+        if (!left.length) return false;
+        const pair = left[Math.floor(Math.random() * left.length)];
+        for (const m of pair) m.visible = false;
+        setTimeout(() => { for (const m of pair) m.visible = true; }, 4 * 60000);
+        return true;
+      },
     };
   },
 
@@ -406,6 +420,14 @@ const PROPS = {
     let poked = Date.now();
     try { poked = Number(localStorage.getItem(POKED)) || poked; } catch { /* burns from now */ }
     const strength = () => Math.max(0.3, 1 - (Date.now() - poked) / (20 * 60000) * 0.7);
+    // A marshmallow on a stick, held out over the fire from the right (Specter's visit): it toasts and is eaten.
+    const stick = new T.Group(); stick.visible = false; world.add(stick);
+    stick.add(mesh(new T.CylinderGeometry(0.028, 0.034, 2.2, 6), flat(0x8a6038), { y: 0, rz: Math.PI / 2, cast: false }));
+    const mallowMat = phys(0xfffaf2, { roughness: 0.75, sheen: 0.5 });
+    const mallow = mesh(new T.CapsuleGeometry(0.15, 0.16, 6, 14), mallowMat, { x: -1.2, rz: Math.PI / 2, cast: false });
+    stick.add(mallow);
+    const roast = { start: -1 };
+    const RAW = new T.Color(0xfffaf2); const GOLD = new T.Color(0xe7a64a); const BROWN = new T.Color(0x9a5a2a);
     let flare = 0; let lastT = 0;
     return {
       scene, camera: camera(21, [0, 5.4, 14.4], [0, -0.05, -0.3]),
@@ -413,6 +435,17 @@ const PROPS = {
         const dt = Math.min(0.1, Math.max(0, t - lastT)); lastT = t;
         flare = Math.max(0, flare - dt * 0.5);
         world.rotation.y = Math.sin(t * 0.12) * 0.12;
+        if (roast.start >= 0) {
+          const e = t - roast.start;
+          const slide = e < 0.8 ? 1 - e / 0.8 : e > 6.2 ? (e - 6.2) / 0.8 : 0;
+          stick.position.set(1.5 + slide * 1.6, 0.95 + Math.sin(t * 3) * 0.02, 0.45);
+          stick.rotation.z = 0.18;
+          const k = Math.min(1, Math.max(0, (e - 0.8) / 4.6));
+          mallowMat.color.copy(RAW).lerp(GOLD, Math.min(1, k * 1.6)).lerp(BROWN, Math.max(0, k * 1.6 - 1) * 0.7);
+          mallow.rotation.x = e * 1.4; // turned over the fire
+          if (e > 5.6) mallow.visible = false; // eaten
+          if (e > 7) { roast.start = -1; stick.visible = false; }
+        }
         world.position.y = Math.sin(t * 0.6) * 0.05;
         for (const f of flames) {
           const w = Math.sin(t * 9 + f.userData.p) * 0.05;
@@ -473,6 +506,15 @@ const PROPS = {
           if ((k > 1 || peek.ducking) && peek.out < 0.02) { peeker.visible = false; peek.next = t + 90 + Math.random() * 90; }
         }
       },
+      act(name) {
+        // A scary story: the eyes open in the dark right away.
+        if (name === 'eyes') { if (watch.start !== null) return 0; watch.at = lastT; return 4000; }
+        // He warms up by it: the fire rises a little, quietly.
+        if (name === 'warm') { flare = Math.max(flare, 0.45); return 3000; }
+        if (name !== 'marshmallow' || roast.start >= 0) return 0;
+        roast.start = lastT; stick.visible = true; mallow.visible = true;
+        return 7000;
+      },
       poke() {
         // Brought back from the embers: the satisfying sound, once; while it burns, only a soft crackle now and then.
         if (strength() < 0.75) sfx.revive(); else sfx.crackle();
@@ -511,10 +553,10 @@ const PROPS = {
     const U = {
       uRes: { value: new T.Vector2(1, 1) }, uT: { value: 0 }, uYaw: { value: 0 }, uPitch: { value: 0 }, uRoll: { value: 0 },
       uBlinkL: { value: 1 }, uBlinkR: { value: 1 }, uHappy: { value: 0 }, uWide: { value: 0 }, uHeart: { value: 0 }, uDizzy: { value: 0 },
-      uBrow: { value: 0 }, uSmile: { value: 0.35 }, uMouth: { value: 0 }, uBlush: { value: 0.4 }, uTear: { value: 0 }, uDoctor: { value: 0 }, uRed: { value: 0 },
+      uBrow: { value: 0 }, uSmile: { value: 0.35 }, uMouth: { value: 0 }, uBlush: { value: 0.4 }, uTear: { value: 0 }, uDoctor: { value: 0 }, uRed: { value: 0 }, uCream: { value: 0 },
     };
     const frag = `precision highp float;
-uniform vec2 uRes; uniform float uT, uYaw, uPitch, uRoll, uBlinkL, uBlinkR, uHappy, uWide, uHeart, uDizzy, uBrow, uSmile, uMouth, uBlush, uTear, uDoctor, uRed;
+uniform vec2 uRes; uniform float uT, uYaw, uPitch, uRoll, uBlinkL, uBlinkR, uHappy, uWide, uHeart, uDizzy, uBrow, uSmile, uMouth, uBlush, uTear, uDoctor, uRed, uCream;
 mat3 rY(float a){ float c=cos(a), s=sin(a); return mat3(c,0.,s, 0.,1.,0., -s,0.,c); }
 mat3 rX(float a){ float c=cos(a), s=sin(a); return mat3(1.,0.,0., 0.,c,-s, 0.,s,c); }
 mat3 rZ(float a){ float c=cos(a), s=sin(a); return mat3(c,-s,0., s,c,0., 0.,0.,1.); }
@@ -601,6 +643,16 @@ vec3 face(vec3 col, vec2 f, float dif){
   // cheeks: rosier when glad or in love, red when angry
   float bl = length((vec2(abs(f.x), f.y) - vec2(.37, .17)) / vec2(.1, .055));
   col = mix(col, mix(vec3(1.,.56,.72), vec3(1.,.3,.32), uRed), uBlush * (1. - smoothstep(.3, 1., bl)));
+  // cream on his face after a bite of the cake: a dab by the mouth and one on the cheek
+  if (uCream > .02){
+    float c1 = length((f - vec2(.11, .1)) / vec2(.085, .055));
+    float c2 = length((f - vec2(-.34, .25)) / vec2(.06, .045));
+    float cd = min(c1, c2);
+    // a soft rim of shade makes the white cream read on his white body
+    col = mix(col, col * vec3(.78, .74, .82), (1. - smoothstep(.95, 1.25, cd)) * uCream);
+    col = mix(col, vec3(1., .97, .9) * (.9 + .15*dif), (1. - smoothstep(.75, .95, cd)) * uCream);
+    if (cd < .45) col = mix(col, vec3(1.), .5 * uCream);
+  }
   // a tear, falling slowly
   if (uTear > .05){
     float fall = fract(uT*.35) * .18;
@@ -704,6 +756,7 @@ void main(){
         // Talking, the mouth opens and closes with the syllables.
         U.uMouth.value = Math.max(now.mouth, d.talk === '1' ? 0.25 + 0.55 * Math.abs(Math.sin(t * 13) * Math.sin(t * 5.3)) : 0);
         U.uDoctor.value = d.skin === 'doctor' ? 1 : 0;
+        U.uCream.value += ((d.cream === '1' ? 1 : 0) - U.uCream.value) * k;
       },
     };
   },
@@ -789,7 +842,7 @@ export async function prop(canvas, kind) {
   const drawn = new Promise((resolve) => { p.ready = resolve; });
   live.add(p); seen.observe(canvas);
   last = 0; schedule();
-  return { poke: () => { const out = p.prop.poke?.(); schedule(); return out; }, drawn };
+  return { poke: () => { const out = p.prop.poke?.(); schedule(); return out; }, act: (name) => { const out = p.prop.act?.(name); schedule(); return out; }, drawn };
 }
 // Every canvas with data-prop="kind" inside root gets its object (once). Returns a promise kept when all of them are
 // drawn (or failed: the page never waits on a 3D object that cannot be drawn).
@@ -802,3 +855,5 @@ export function props(root = document) {
   return Promise.all(waits);
 }
 export const pokeProp = (canvas) => canvas?._prop?.poke();
+// Something done to an object from outside (Specter eats a cherry of the cake, toasts a marshmallow at the fire).
+export const actProp = (canvas, name) => canvas?._prop?.act?.(name);
