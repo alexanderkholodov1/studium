@@ -37,7 +37,8 @@ const look = await call(token, 'POST', `https://identitytoolkit.googleapis.com/v
 const user = look.users?.[0];
 if (!user) { console.error(`No account ${to} in ${id}.`); process.exit(1); }
 const uid = user.localId;
-const base = `https://firestore.googleapis.com/v1/projects/${id}/databases/(default)/documents`;
+const docs = `projects/${id}/databases/(default)/documents`;
+const base = `https://firestore.googleapis.com/v1/${docs}`;
 const profile = await call(token, 'GET', `${base}/profiles/${uid}`).catch(() => null);
 const name = String(profile?.fields?.nickname?.stringValue || to.split('@')[0]).slice(0, 40);
 const tid = [...randomBytes(20)].map((b) => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[b % 62]).join('');
@@ -47,14 +48,14 @@ const bytes = (v) => ({ bytesValue: gzipSync(Buffer.from(typeof v === 'string' ?
 const ai = { mapValue: { fields: { provider: { stringValue: 'anthropic' }, model: { stringValue: 'claude-opus-5-5' }, effort: { stringValue: '' } } } };
 const keep = ['title', 'course', 'group', 'deadline', 'prefs', 'statement', 'encoding'];
 const writes = [
-  { update: { name: `${base}/trabajos/${tid}`, fields: { ...Object.fromEntries(keep.filter((k) => F[k]).map((k) => [k, F[k]])), parts: { integerValue: String(parts) }, owner: { stringValue: uid }, code: { stringValue: code }, outline: bytes(outline), ai, created: { timestampValue: now }, updated: { timestampValue: now } } } },
-  { update: { name: `${base}/trabajos/${tid}/miembros/${uid}`, fields: { name: { stringValue: name }, code: { stringValue: code }, joined: { timestampValue: now } } } },
-  ...hitos.map((h) => ({ update: { name: `${base}/trabajos/${tid}/hitos/${h.id}`, fields: { data: bytes(h.data), encoding: { stringValue: 'gzip' }, by: { stringValue: uid }, ai, updated: { timestampValue: now } } } })),
-  ...(instructions ? [{ update: { name: `${base}/trabajos/${tid}/ia/${uid}`, fields: { log: { arrayValue: { values: [{ mapValue: { fields: { at: { stringValue: now }, task: { stringValue: 'solution' }, step: { stringValue: 'guía completa' }, model: { stringValue: 'claude-opus-5-5' }, provider: { stringValue: 'bridge:claude' }, prompt: { stringValue: instructions.slice(0, 3000) } } } }] } }, updated: { timestampValue: now } } } }] : []),
+  { update: { name: `${docs}/trabajos/${tid}`, fields: { ...Object.fromEntries(keep.filter((k) => F[k]).map((k) => [k, F[k]])), parts: { integerValue: String(parts) }, owner: { stringValue: uid }, code: { stringValue: code }, outline: bytes(outline), ai, created: { timestampValue: now }, updated: { timestampValue: now } } } },
+  { update: { name: `${docs}/trabajos/${tid}/miembros/${uid}`, fields: { name: { stringValue: name }, code: { stringValue: code }, joined: { timestampValue: now } } } },
+  ...hitos.map((h) => ({ update: { name: `${docs}/trabajos/${tid}/hitos/${h.id}`, fields: { data: bytes(h.data), encoding: { stringValue: 'gzip' }, by: { stringValue: uid }, ai, updated: { timestampValue: now } } } })),
+  ...(instructions ? [{ update: { name: `${docs}/trabajos/${tid}/ia/${uid}`, fields: { log: { arrayValue: { values: [{ mapValue: { fields: { at: { stringValue: now }, task: { stringValue: 'solution' }, step: { stringValue: 'guía completa' }, model: { stringValue: 'claude-opus-5-5' }, provider: { stringValue: 'bridge:claude' }, prompt: { stringValue: instructions.slice(0, 3000) } } } }] } }, updated: { timestampValue: now } } } }] : []),
 ];
 const mine = await call(token, 'GET', `${base}/misTrabajos/${uid}`).catch(() => null);
 const ids = [...(mine?.fields?.ids?.arrayValue?.values ?? []).map((v) => v.stringValue), tid].slice(-60);
-writes.push({ update: { name: `${base}/misTrabajos/${uid}`, fields: { ids: { arrayValue: { values: ids.map((x) => ({ stringValue: x })) } }, updated: { timestampValue: now } } } });
+writes.push({ update: { name: `${docs}/misTrabajos/${uid}`, fields: { ids: { arrayValue: { values: ids.map((x) => ({ stringValue: x })) } }, updated: { timestampValue: now } } } });
 console.log(`To ${to} (${name}): trabajo ${tid}, ${writes.length} documents`);
 if (dry) { console.log('--dry: nothing written'); process.exit(0); }
 await call(token, 'POST', `${base}:commit`, { writes });
