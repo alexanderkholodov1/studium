@@ -2697,7 +2697,7 @@ canvas.prop { display: block; }
 .tjg-app header.hero p { margin: 6px 0; color: var(--ink2); font: 500 15px var(--gd); }
 .tjg-app .team { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; font: 600 15px var(--gd); }
 .tjg-app .team small { color: var(--muted); font-family: var(--gm); }
-.tjg-app .av { display: inline-grid; place-items: center; width: 24px; height: 24px; margin-right: 6px; border-radius: 4px; background: var(--p); color: #fff; font: 800 12px var(--gm); font-style: normal; vertical-align: middle; }
+.tjg-app .av { display: inline-grid; place-items: center; width: 24px; height: 24px; margin-right: 6px; border-radius: 4px; background: var(--pc); color: #fff; font: 800 12px var(--gm); font-style: normal; vertical-align: middle; }
 .tjg-app section.sec { margin-top: 58px; scroll-margin-top: 56px; }
 .tjg-app section.sec > h2 { position: relative; font: 700 28px/1.2 var(--gd); font-stretch: 108%; margin: 0 0 20px; display: flex; gap: 16px; align-items: center; padding: 14px 22px; background: var(--navy); color: var(--on-navy); border-radius: 4px; overflow: hidden; }
 .tjg-app section.sec > h2::after { content: ""; position: absolute; right: 0; top: 0; bottom: 0; width: 180px; background: repeating-linear-gradient(115deg, var(--c) 0 14px, var(--on-navy) 14px 22px); opacity: .9; -webkit-mask: linear-gradient(90deg, transparent, #000 60%); mask: linear-gradient(90deg, transparent, #000 60%); }
@@ -2714,7 +2714,7 @@ canvas.prop { display: block; }
 .tjg-app .small { font-size: 14.5px; }
 .tjg-app .mut { color: var(--muted); }
 .tjg-app .bad { color: var(--rose); font-weight: 600; }
-.tjg-app dfn { font-style: normal; text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
+.tjg-app dfn { font-style: normal; font-weight: 700; color: var(--strong, var(--ink)); text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
 .tjg-app .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 18px; margin: 14px 0; }
 .tjg-app .card.soft { border-left: 4px solid var(--c); }
 .tjg-app .def { background: var(--panel); border: 1px solid var(--line); border-top: 4px solid var(--c); border-radius: 4px; padding: 12px 16px; margin-bottom: 12px; }
@@ -2726,7 +2726,7 @@ canvas.prop { display: block; }
 .tjg-app details.q .ans { padding: 6px 16px 10px; }
 .tjg-app pre.src { margin: 0; padding: 12px 16px; white-space: pre-wrap; font: 13px/1.55 var(--gm); max-height: 460px; overflow: auto; }
 .tjg-app .parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
-.tjg-app .part { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-top: 4px solid var(--p); border-radius: 4px; padding: 12px 14px; }
+.tjg-app .part { display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-top: 4px solid var(--pc); border-radius: 4px; padding: 12px 14px; }
 .tjg-app .part > div { display: grid; line-height: 1.3; }
 .tjg-app .part .who { font-weight: 700; }
 .tjg-app button.act { font: 700 14px var(--gd); color: #fff; background: var(--signal); border: 0; border-radius: 5px; padding: 8px 14px; cursor: pointer; }
@@ -2734,7 +2734,7 @@ canvas.prop { display: block; }
 .tjg-app button.act:disabled { opacity: .5; cursor: wait; }
 .tjg-app button.ask, .tjg-app button.ghost { font: 600 14px var(--gd); color: var(--blue); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .tjg-app .pick { margin: 8px 0; }
-.tjg-app article.step { margin: 34px 0; padding-left: 18px; border-left: 3px solid var(--p); scroll-margin-top: 60px; }
+.tjg-app article.step { margin: 34px 0; padding-left: 18px; border-left: 3px solid var(--pc); scroll-margin-top: 60px; }
 .tjg-app article.step > h3 { margin-top: 0; }
 .tjg-app article.step > h3::before { display: none; }
 .tjg-app .num { font: 700 17px var(--gm); color: var(--muted); }
@@ -2927,7 +2927,7 @@ canvas.prop { display: block; }
 .tjg-app[data-template="cuaderno"] h3::before { width: 10px; height: 10px; border-radius: 50%; background: var(--c); box-shadow: none; }
 .tjg-app[data-template="cuaderno"] article.step { padding: 22px 26px; border-left: 0; border-radius: 22px; background: var(--panel);
   box-shadow: 0 1px 0 rgba(255, 255, 255, .8) inset, 0 22px 40px -30px rgba(28, 34, 51, .45), 0 0 0 1px var(--line); position: relative; }
-.tjg-app[data-template="cuaderno"] article.step::before { content: ""; position: absolute; left: 0; top: 22px; bottom: 22px; width: 4px; border-radius: 0 4px 4px 0; background: var(--p); }
+.tjg-app[data-template="cuaderno"] article.step::before { content: ""; position: absolute; left: 0; top: 22px; bottom: 22px; width: 4px; border-radius: 0 4px 4px 0; background: var(--pc); }
 .tjg-app[data-template="cuaderno"] .fig.code, .tjg-app[data-template="cuaderno"] details.q, .tjg-app[data-template="cuaderno"] .card, .tjg-app[data-template="cuaderno"] .def, .tjg-app[data-template="cuaderno"] .part {
   border-radius: 14px; box-shadow: 0 14px 28px -24px rgba(28, 34, 51, .5); }
 .tjg-app[data-template="cuaderno"] .fig .fh { background: #232a3d; }
@@ -2946,7 +2946,7 @@ canvas.prop { display: block; }
 .tjg-app[data-template="pizarra"] section.sec > h2 { background: linear-gradient(90deg, var(--panel2), transparent); border-radius: 18px; box-shadow: inset 0 0 0 1px var(--line); }
 .tjg-app[data-template="pizarra"] section.sec > h2::after { opacity: .25; }
 .tjg-app[data-template="pizarra"] section.sec > h2 .n { border-radius: 12px; box-shadow: 0 0 24px -4px var(--c); }
-.tjg-app[data-template="pizarra"] article.step { padding: 20px 24px; border-radius: 20px; background: var(--panel); border-left: 0; box-shadow: 0 24px 50px -30px #000, inset 0 0 0 1px var(--line), inset 3px 0 0 var(--p); }
+.tjg-app[data-template="pizarra"] article.step { padding: 20px 24px; border-radius: 20px; background: var(--panel); border-left: 0; box-shadow: 0 24px 50px -30px #000, inset 0 0 0 1px var(--line), inset 3px 0 0 var(--pc); }
 .tjg-app[data-template="pizarra"] .fig.code, .tjg-app[data-template="pizarra"] details.q, .tjg-app[data-template="pizarra"] .card, .tjg-app[data-template="pizarra"] .def, .tjg-app[data-template="pizarra"] .part { border-radius: 14px; }
 
 /* Revista: editorial, airy, large serif titles and one strong colour. */
@@ -3017,6 +3017,46 @@ canvas.prop { display: block; }
 .tj-picking-card p { margin: 0 0 8px; }
 .tj-picking-icon { font-size: 46px; filter: drop-shadow(0 10px 12px rgba(0, 0, 0, .25)); animation: tj-bob 1.6s ease-in-out infinite; }
 @keyframes tj-bob { 50% { transform: translateY(-6px); } }
+
+/* The guide, section 0 and the parts: what each person does and their steps; the rules of the work; the source. */
+.tjg-app .part-body { display: grid; gap: 4px; min-width: 0; }
+.tjg-app .parts .part { grid-template-columns: auto 1fr; }
+.tjg-app .parts .part > .who, .tjg-app .parts .part > .act, .tjg-app .parts .part > .mut { grid-column: 2; justify-self: start; }
+.tjg-app .part-what { margin: 2px 0 4px; font-size: 14.5px; line-height: 1.45; }
+.tjg-app .part details > summary { cursor: pointer; font-size: 13.5px; }
+.tjg-app .part-steps { margin: 6px 0 0; padding-left: 0; list-style: none; display: grid; gap: 3px; font-size: 14px; }
+.tjg-app .part-steps a { color: var(--ink); text-decoration: none; }
+.tjg-app .part-steps a:hover { text-decoration: underline; }
+.tjg-app .part-steps .num { font: 600 12px var(--gm); color: var(--muted); }
+.tjg-app .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 8px 0 12px; }
+.tjg-app .rule { background: var(--panel); border-radius: 14px; padding: 12px 16px; box-shadow: 0 14px 28px -24px rgba(0, 0, 0, .45), inset 0 0 0 1px var(--line); }
+.tjg-app .rule h4 { margin: 0 0 6px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); }
+.tjg-app .rule p, .tjg-app .rule ul { margin: 0; font-size: 14.5px; }
+.tjg-app .card.source { margin: 18px 0; border-left: 4px solid var(--blue); padding-top: 16px; }
+.tjg-app .card.source h3 { margin-top: 0; }
+.tjg-app .card.source > p { margin: 4px 0 10px; }
+.tjg-app .reading .ans { font-size: 14px; }
+.tjg-app .turn { margin: 12px 0; padding: 12px 16px; border-radius: 14px; background: color-mix(in oklab, var(--green) 10%, var(--panel)); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--green) 30%, transparent); }
+.tjg-app .turn h4 { margin: 0 0 6px; color: color-mix(in oklab, var(--green) 70%, var(--ink)); }
+.tjg-app .turn ul { margin: 0; padding-left: 20px; }
+
+/* Flashcards as in the Examen 2 guide: one big card with depth, flip, «lo sabía» or «repasar», the tally. */
+.tjg-app .fc-trainer { max-width: 760px; margin: 10px 0 14px; }
+.tjg-app .fc-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; font-size: 14px; }
+.tjg-app .fc-bar select { width: auto; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+.tjg-app .flashcard { min-height: 230px; display: grid; align-content: center; gap: 10px; text-align: center; padding: 26px 30px; border-radius: 22px; outline: none;
+  background: linear-gradient(160deg, color-mix(in oklab, var(--blue) 7%, var(--panel)), var(--panel)); border-top: 6px solid var(--blue);
+  box-shadow: 0 30px 50px -30px rgba(0, 0, 0, .5), 0 2px 0 rgba(255, 255, 255, .5) inset, inset 0 0 0 1px var(--line); transition: transform .35s cubic-bezier(.2, 1.4, .4, 1); }
+.tjg-app .flashcard.open { transform: rotateX(4deg) translateY(-2px); }
+.tjg-app .flashcard:focus-visible { box-shadow: 0 0 0 3px var(--signal), 0 30px 50px -30px rgba(0, 0, 0, .5); }
+.tjg-app .fc-big { font: 800 clamp(30px, 5vw, 52px)/1.05 var(--gd); letter-spacing: -.02em; color: var(--ink); }
+.tjg-app .fc-big2 { font: 800 28px var(--gd); color: var(--blue); }
+.tjg-app .fc-q, .tjg-app .fc-def { font-size: 19px; line-height: 1.5; max-width: 620px; margin: 0 auto; }
+.tjg-app .fc-back { border-top: 1px dashed var(--line); padding-top: 12px; animation: tj-fade .3s ease both; }
+.tjg-app .fc-btns { display: flex; gap: 10px; margin: 12px 0 4px; }
+.tjg-app .fc-btns small { opacity: .6; margin-left: 4px; font-weight: 500; }
+.tjg-app .fc-btns .ok { background: color-mix(in oklab, var(--okc) 14%, var(--panel)); border-color: var(--okc); color: color-mix(in oklab, var(--okc) 75%, var(--ink)); }
+.tjg-app .fc-btns .again { background: color-mix(in oklab, var(--rose) 12%, var(--panel)); border-color: var(--rose); color: color-mix(in oklab, var(--rose) 75%, var(--ink)); }
 
 /* «Más opciones» of the guide: closed by default, so the screen shows only what most people choose. */
 .tj-more { border-radius: 16px; box-shadow: inset 0 0 0 1px var(--line); padding: 4px 14px; }

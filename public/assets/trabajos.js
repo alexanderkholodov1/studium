@@ -412,6 +412,7 @@ const QUESTIONS = [
   { key: 'course', ask: '¿De qué materia es?', input: 'text', placeholder: 'Machine Learning', optional: true },
   { key: 'statement', ask: 'Trae el enunciado', hint: 'Y todo lo que lo acompaña: la rúbrica, archivos de inicio, un ZIP. Puedes traer varios.', input: 'files', required: true },
   { key: 'goal', ask: '¿Qué quieres hacer con este trabajo?', hint: 'Así tu IA sabe desde dónde partir.', input: 'goal' },
+  { key: 'work', ask: '¿Cómo van a trabajar?', hint: 'Así la guía sabe cuánto explicar y cómo comparten el trabajo.', input: 'work' },
   { key: 'ai', ask: 'Tu IA para este trabajo', input: 'ai' },
   { key: 'prefs', ask: '¿Cómo quieres la guía?', hint: 'Elige lo que prefieras; lo demás queda como viene.', input: 'prefs' },
   { key: 'parts', ask: '¿Cuántos son en el grupo?', hint: 'La guía se divide en una parte por persona.', input: 'count' },
@@ -419,7 +420,7 @@ const QUESTIONS = [
   { key: 'deadline', ask: '¿Cuándo es la entrega?', input: 'date', optional: true },
   { key: 'ready', ask: 'Todo listo', input: 'ready' },
 ];
-export const PREF_DEFAULT = { goal: 'solve', goalNote: '', template: 'cuaderno', writeAll: 'all', tone: 'balanced', level: 'zero', length: 'normal', text: 'some', cards: true, defense: true, practice: false, visuals: true, note: '' };
+export const PREF_DEFAULT = { goal: 'solve', goalNote: '', balance: 'both', share: 'each', repoUrl: '', template: 'cuaderno', writeAll: 'all', tone: 'balanced', level: 'zero', length: 'normal', text: 'some', cards: true, defense: true, practice: false, visuals: true, note: '' };
 // Which Claude account writes (several may be signed in on this computer).
 function accountPick() {
   const b = ai.bridgeOf();
@@ -546,6 +547,15 @@ function renderDraft(error = '') {
       ${best.id === 'bridge' && draft.pairing && !usable(best) ? `<div class="tj-bridge ai-bridge">${bridgeSteps().replace('data-ai-pair>', 'data-tj="pair-code">')}</div>` : ''}
       <details class="tj-more" ${ways.length ? '' : 'open'}><summary>Conectar otra IA</summary>${allWays(best)}</details>`;
   }
+  if (q.input === 'work') {
+    const seg = (key, choices) => `<div class="tj-seg" role="radiogroup">${choices.map(([v, label]) => `<label class="${draft.prefs[key] === v ? 'on' : ''}"><input type="radio" name="p-${key}" value="${v}" data-tj-pref="${key}" ${draft.prefs[key] === v ? 'checked' : ''}>${esc(label)}</label>`).join('')}</div>`;
+    const shares = [['repo', 'Un repo de GitHub que ya tenemos'], ['newrepo', 'Un repo nuevo de GitHub'], ['drive', 'Una carpeta de Drive u OneDrive'], ['each', 'Cada uno en su computadora'], ['one', 'Una sola computadora']];
+    control = `<h3>Entender o hacer</h3>${seg('balance', [['understand', 'Sobre todo entender'], ['both', 'Los dos'], ['do', 'Sobre todo hacer']])}
+      <h3>Dónde comparten el trabajo</h3><div class="tj-goals">${shares.map(([v, label]) => `<label class="tj-pick ${draft.prefs.share === v ? 'on' : ''}"><input type="radio" name="share" value="${v}" data-tj-pref="share" ${draft.prefs.share === v ? 'checked' : ''}> <span>${esc(label)}</span></label>`).join('')}</div>
+      ${draft.prefs.share === 'repo' ? `<label class="field"><span>El enlace del repo</span><input class="tj-input" name="repoUrl" value="${esc(draft.prefs.repoUrl)}" placeholder="https://github.com/usuario/repo" autocomplete="off"></label><p class="fine">En la guía puedes conectar tu GitHub (solo lectura) para que cada commit marque su paso como hecho.</p>` : ''}
+      ${draft.prefs.share === 'newrepo' ? '<p class="fine">La guía empieza con cómo crearlo, hacerlo privado e invitar al grupo.</p>' : ''}
+      ${draft.prefs.share === 'drive' ? '<p class="fine">La guía dice qué subir y con qué nombre. Conectar Drive u OneDrive a Studium llega después.</p>' : ''}`;
+  }
   if (q.input === 'goal') {
     const goals = [['solve', 'Resolverlo desde cero', 'la solución completa, hasta el entregable'], ['complete', 'Entender y completar lo que ya tenemos', 'parte de lo que ya hicieron'], ['review', 'Revisar y corregir nuestra solución', 'qué está bien, qué falta, qué cambiar'], ['defend', 'Prepararme para la defensa', 'entender cada parte y practicar preguntas']];
     control = `<div class="tj-goals">${goals.map(([v, label, why]) => `<label class="tj-pick ${draft.prefs.goal === v ? 'on' : ''}"><input type="radio" name="goal" value="${v}" data-tj-pref="goal" ${draft.prefs.goal === v ? 'checked' : ''}> <span><b>${esc(label)}</b><br><small>${esc(why)}</small></span></label>`).join('')}</div>
@@ -599,6 +609,7 @@ function keepAnswer() {
   if (q.input === 'text') draft[q.key] = String(form.v.value).trim();
   if (q.input === 'files' && form.text) draft.text = String(form.text.value).trim();
   if (q.input === 'prefs' && form.note) draft.prefs.note = String(form.note.value).trim().slice(0, 1500);
+  if (q.input === 'work' && form.repoUrl) draft.prefs.repoUrl = String(form.repoUrl.value).trim().slice(0, 200);
   if (q.input === 'goal' && form.goalNote) draft.prefs.goalNote = String(form.goalNote.value).trim().slice(0, 800);
   if (q.input === 'date') { draft.date = form.date.value; draft.time = form.time.value; }
 }
@@ -630,6 +641,11 @@ async function readAll(files) {
   }
   return { texts, binaries, notes };
 }
+// «https://github.com/usuario/repo» → the trabajo's repository, for «Comprobar en GitHub».
+function repoOf(p) {
+  const m = p?.share === 'repo' && String(p.repoUrl ?? '').match(/github\.com[/:]([\w.-]{1,100})\/([\w.-]{1,100}?)(?:\.git)?(?:[/?#]|$)/i);
+  return m ? { repo: { owner: m[1], name: m[2] } } : {};
+}
 async function createTrabajo() {
   const { texts, binaries, notes } = await readAll(draft.files);
   const statement = [draft.text, ...texts].filter(Boolean).join('\n\n');
@@ -639,7 +655,7 @@ async function createTrabajo() {
   const batch = writeBatch(db);
   batch.set(ref, {
     title: draft.title.slice(0, 160), course: draft.course.slice(0, 120), group: draft.group.slice(0, 80), deadline: draftDeadline(), prefs: { ...draft.prefs, inFolder: !!(draft.workspace && draft.workspace !== 'temp') },
-    parts: draft.parts, owner: uid(), code, statement: await pack((statement + (binaries.length ? `\n\n(Archivos entregados a la IA tal como son: ${binaries.map((p) => p.name).join(', ')})` : '')).slice(0, 2_000_000)),
+    parts: draft.parts, owner: uid(), code, ...repoOf(draft.prefs), statement: await pack((statement + (binaries.length ? `\n\n(Archivos entregados a la IA tal como son: ${binaries.map((p) => p.name).join(', ')})` : '')).slice(0, 2_000_000)),
     encoding: 'gzip', created: serverTimestamp(), updated: serverTimestamp(),
   });
   batch.set(doc(db, 'trabajos', ref.id, 'miembros', uid()), { name: await myName(), code, joined: serverTimestamp() });
@@ -736,7 +752,7 @@ const nameOf = (u) => T.members.find((m) => m.uid === u)?.name ?? 'alguien';
 const mark = (key) => T.avance[uid()]?.[key] ?? {};
 const doneBy = (key) => T.members.filter((m) => T.avance[m.uid]?.[key]?.d);
 const isDone = (key) => doneBy(key).length > 0;
-const avatar = (letter, title = '') => `<i class="av" style="--p:${letter ? colorOf(letter) : 'var(--muted)'}" ${title ? `title="${esc(title)}"` : ''}>${esc(letter || '·')}</i>`;
+const avatar = (letter, title = '') => `<i class="av" style="--pc:${letter ? colorOf(letter) : 'var(--muted)'}" ${title ? `title="${esc(title)}"` : ''}>${esc(letter || '·')}</i>`;
 const short = (t, n = 22) => (String(t).length > n ? `${String(t).slice(0, n - 1)}…` : String(t));
 const gRoot = () => $('#tjg-body');
 const scroller = () => $('#view-trabajo');
@@ -765,7 +781,7 @@ function templateSample(id) {
   return `<div class="tjg-app tpl-sample" data-template="${id}" aria-hidden="true"><div class="wrap">
     <header class="hero"><div><h1>Proyecto final</h1><p>Guía de solución · Machine Learning</p></div></header>
     <section class="sec" style="--c:var(--blue);--cs:var(--blue-s)"><h2><span class="n">1</span>Preparar los datos</h2>
-      <article class="step" style="--p:var(--teal)"><h3><span class="num">1.1</span>Cargar el dataset</h3>
+      <article class="step" style="--pc:var(--teal)"><h3><span class="num">1.1</span>Cargar el dataset</h3>
         <p class="key">La idea: <b>separar el test antes de todo</b>, para que nada se filtre.</p>
         <div class="prose"><p>Un <b>pipeline</b> encadena cada paso, así el preprocesamiento aprende solo del entrenamiento.</p></div>
         <div class="fig code"><div class="fh"><span>python</span></div><table><tr><td class="ln">1</td><td class="cd">df = pd.read_csv("casas.csv")</td><td class="ex">Lee el archivo en una tabla.</td></tr></table></div>
@@ -821,30 +837,64 @@ function aiBlock(task) {
 
 function intro() {
   const o = T.outline;
-  const reqs = o.requisitos.filter((r) => r.texto);
   const letters = LETTERS.slice(0, T.parts).split('');
   const all = steps();
   const missing = o.hitos.filter((h) => !T.hitos[h.id]).length;
+  // A guide made before «razonamiento» existed mixed what to know with how the AI read the material: all of it folds.
+  const older = o.razonamiento === undefined;
+  const notices = older ? [] : o.avisos;
+  const reading = older ? o.avisos.map((x) => `- ${x}`).join('\n') : o.razonamiento;
   return `<section class="sec" id="cap-inicio" style="--c:var(--blue);--cs:var(--blue-s)">
-      <h2><span class="n">0</span>El trabajo en pocas palabras</h2>
-      <div class="row"><div class="prose no-i18n">${md(o.resumen)}
-          ${reqs.length ? `<h3>Lo que tienen que entregar</h3><ul class="tight">${reqs.map((r) => `<li>${inline(r.texto)}${r.peso ? ` <span class="wt">${esc(r.peso)}</span>` : ''}</li>`).join('')}</ul>` : ''}</div>
-        <div>${o.avisos.length ? `<div class="trap"><b>Antes de empezar</b>${o.avisos.map((a) => `<p>${inline(a)}</p>`).join('')}</div>` : ''}
-          <details class="q"><summary class="qh">Leer el enunciado original</summary><pre class="src">${esc(T.statement)}</pre></details></div></div>
+      <h2><span class="n">0</span>De qué se trata</h2>
+      <div class="row"><div class="prose no-i18n">${md(o.de_que_trata || o.resumen)}
+          ${o.diagrama ? `<figure class="diagram"><pre class="mermaid">${esc(o.diagrama)}</pre></figure>` : ''}</div>
+        <div>${notices.length ? `<div class="trap"><b>Antes de empezar</b><ul class="tight">${notices.map((x) => `<li>${inline(x)}</li>`).join('')}</ul></div>` : ''}
+          ${reading ? `<details class="q reading"><summary class="qh">Cómo entendió tu IA el material</summary><div class="ans no-i18n">${md(reading)}</div></details>` : ''}</div></div>
+      ${statementBlock()}
+      ${rulesBlock()}
       <h3>Cómo se reparten</h3>
-      <p>Son ${T.parts} ${T.parts === 1 ? 'parte' : 'partes'}: cada uno toma una y avanza en paralelo. Aun así, <b>todos leen y entienden toda la guía</b>, porque la defensa es de todos.</p>
+      <p>Cada uno toma una parte y avanza en paralelo. Aun así, <b>todos entienden toda la guía</b>: la defensa es de todos.</p>
       <div class="parts">${letters.map((L) => {
         const holder = T.taken[L];
-        const n = all.filter((s) => s.parte === L).length;
-        return `<div class="part" style="--p:${colorOf(L)}">${avatar(L)}<div><b>Persona ${L}</b><span class="mut">${n} ${n === 1 ? 'paso' : 'pasos'}</span></div>
+        const mine = all.filter((s) => s.parte === L);
+        const what = (o.partes ?? []).find((x) => x.letra === L)?.resumen ?? '';
+        return `<div class="part" style="--pc:${colorOf(L)}">${avatar(L)}<div class="part-body"><b>Persona ${L}</b>${what ? `<p class="part-what no-i18n">${inline(what)}</p>` : ''}
+            <details ${holder === uid() ? 'open' : ''}><summary class="mut">${mine.length} ${mine.length === 1 ? 'paso' : 'pasos'}</summary><ol class="part-steps">${mine.map((s) => `<li><a href="#paso-${esc(s.id)}" data-tj="jump"><span class="num">${esc(s.num)}</span> ${esc(s.titulo)}</a>${isDone(s.id) ? ' ✓' : ''}</li>`).join('')}</ol></details></div>
           ${holder ? `<span class="who">${esc(nameOf(holder))}${holder === uid() ? ' <button type="button" class="ask" data-tj="leave">soltar</button>' : ''}</span>` : myPart() ? '<span class="mut">libre</span>' : `<button type="button" class="act" data-tj="take" data-part="${L}">Es la mía</button>`}</div>`;
       }).join('')}</div>
-      ${missing ? `<div class="card soft"><p>${missing === o.hitos.length ? 'Los capítulos todavía no están escritos.' : missing === 1 ? 'Falta un capítulo por escribir.' : `Faltan ${missing} capítulos por escribir.`} Tu IA los escribe uno por uno; cada uno tarda unos minutos.</p>${aiBlock('solution')}<p><button type="button" class="act" data-tj="gen-all">Escribir ${missing === 1 ? 'el capítulo que falta' : `los ${missing} capítulos`}</button> <span class="mut" id="tj-gen-status" role="status"></span></p></div>` : ''}
+      ${missing ? `<div class="card soft"><p>${missing === o.hitos.length ? 'Los capítulos todavía no están escritos.' : missing === 1 ? 'Falta un capítulo por escribir.' : `Faltan ${missing} capítulos por escribir.`} Quedó lo que tu IA alcanzó a escribir.</p>${aiBlock('solution')}<p><button type="button" class="act" data-tj="gen-all">Escribir ${missing === 1 ? 'el capítulo que falta' : `los ${missing} capítulos`}</button> <span class="mut" id="tj-gen-status" role="status"></span></p></div>` : ''}
       ${(o.preguntas ?? []).length && !T.prefs?.answers ? `<div class="card soft questions"><h4>Antes de seguir, tu IA quiere confirmar contigo</h4>
         ${o.preguntas.map((q, i) => `<label class="qa"><b>${esc(q.pregunta)}</b>${q.por_que ? `<span class="mut small">${esc(q.por_que)}</span>` : ''}<textarea data-tj-answer="${i}" rows="2" placeholder="Tu respuesta"></textarea></label>`).join('')}
         ${T.owner === uid() ? '<p><button type="button" class="act" data-tj="answer">Responder y rehacer el esquema</button> <button type="button" class="ask" data-tj="answer-skip">Seguir sin responder</button> <span class="mut" id="tj-answer-status" role="status"></span></p>' : '<p class="mut small">Quien creó el trabajo responde estas preguntas.</p>'}</div>` : ''}
-      ${stepChecks('enunciado', `qué pide el trabajo «${T.title}»: ${o.resumen}`, 'Lo leí')}
     </section>`;
+}
+// The source itself, whole and as it came: what an AI summarizes can lose things (his words).
+function statementBlock() {
+  const o = T.outline;
+  const words = String(T.statement ?? '').split(/\s+/).filter(Boolean).length;
+  return `<div class="card source"><h3>El enunciado, tal cual</h3>
+      <p class="mut">La fuente original y completa. Lo de arriba es la lectura de tu IA; esto es lo que dice el profesor.</p>
+      <details class="q"><summary class="qh">Leer el enunciado completo${words ? ` · ${words.toLocaleString('es')} palabras` : ''}</summary><pre class="src">${esc(T.statement)}</pre>
+        ${o.enunciado_textual ? `<h4>Lo que dicen los archivos (transcrito por tu IA)</h4><pre class="src">${esc(o.enunciado_textual)}</pre>` : ''}</details>
+      ${stepChecks('enunciado', `el enunciado de «${T.title}»: ${o.resumen}`, 'Lo leí completo')}</div>`;
+}
+// The technical part of the work, once: what is handed in, how it is graded, how, the defense, the dates.
+function rulesBlock() {
+  const r = T.outline.reglas;
+  const has = r && (r.entregables.length || r.calificacion.length || r.modalidad || r.defensa || r.fechas.length);
+  const reqs = T.outline.requisitos.filter((x) => x.texto);
+  if (!has) {
+    return reqs.length ? `<details class="q"><summary class="qh">Lo que pide el enunciado, punto por punto</summary><div class="ans"><ul class="tight">${reqs.map((x) => `<li>${inline(x.texto)}${x.peso ? ` <span class="wt">${esc(x.peso)}</span>` : ''}</li>`).join('')}</ul></div></details>` : '';
+  }
+  const li = (xs) => `<ul class="tight">${xs.map((x) => `<li>${inline(x)}</li>`).join('')}</ul>`;
+  return `<h3>Las reglas del trabajo</h3><div class="rules no-i18n">
+      ${r.entregables.length ? `<div class="rule"><h4>Se entrega</h4>${li(r.entregables)}</div>` : ''}
+      ${r.calificacion.length ? `<div class="rule"><h4>Se califica</h4>${li(r.calificacion)}</div>` : ''}
+      ${r.modalidad ? `<div class="rule"><h4>Modalidad</h4><p>${inline(r.modalidad)}</p></div>` : ''}
+      ${r.defensa ? `<div class="rule"><h4>Defensa</h4><p>${inline(r.defensa)}</p></div>` : ''}
+      ${r.fechas.length ? `<div class="rule"><h4>Fechas</h4>${li(r.fechas)}</div>` : ''}
+    </div>
+    ${reqs.length ? `<details class="q"><summary class="qh">Lo que pide el enunciado, punto por punto</summary><div class="ans"><ul class="tight">${reqs.map((x) => `<li>${inline(x.texto)}${x.peso ? ` <span class="wt">${esc(x.peso)}</span>` : ''}</li>`).join('')}</ul></div></details>` : ''}`;
 }
 
 function stepHTML(s, step) {
@@ -855,7 +905,7 @@ function stepHTML(s, step) {
     return `<div class="fig code"><div class="fh"><span>${esc(c.lenguaje)}</span><span class="sp"></span><button type="button" class="ask" data-tj="copy" data-text="${esc(c.codigo)}">copiar</button></div>
       <table>${lines.map((line, i) => `<tr><td class="ln">${i + 1}</td><td class="cd">${esc(line) || ' '}</td><td class="ex">${expl.has(i + 1) ? inline(expl.get(i + 1)) : ''}</td></tr>`).join('')}</table></div>`;
   }).join('');
-  return `<article class="step" id="paso-${esc(s.id)}" style="--p:${colorOf(s.parte)}">
+  return `<article class="step" id="paso-${esc(s.id)}" style="--pc:${colorOf(s.parte)}">
       <h3><span class="num">${esc(s.num)}</span>${esc(s.titulo)} ${avatar(s.parte, holder ? nameOf(holder) : `Persona ${s.parte}`)}</h3>
       ${step ? `${step.clave ? `<p class="key no-i18n">${inline(step.clave)}</p>` : ''}<div class="row"><div class="prose no-i18n">${step.objetivo ? `<p class="lead">${inline(step.objetivo)}</p>` : ''}${md(step.teoria)}
           ${step.diagrama ? `<figure class="diagram"><pre class="mermaid">${esc(step.diagrama)}</pre></figure>` : ''}
@@ -863,7 +913,7 @@ function stepHTML(s, step) {
         <div>${step.esperado ? `<div class="def"><h4>Al correrlo verás</h4>${md(step.esperado)}</div>` : ''}
           ${step.comprueba.map((q) => `<details class="q"><summary class="qh">${inline(q.pregunta)}</summary><div class="ans">${md(q.respuesta)}</div></details>`).join('')}
           ${step.commit ? `<p class="small mut">Al guardarlo en GitHub: <code>${esc(step.commit)}</code> <button type="button" class="ask" data-tj="copy" data-text="${esc(step.commit)}">copiar</button></p>` : ''}</div></div>
-        ${code}${stepChecks(s.id, `el paso «${s.titulo}»${step.objetivo ? `: ${step.objetivo}` : ''}`)}` : ''}
+        ${code}${(step.tu_turno ?? []).length ? `<div class="turn no-i18n"><h4>✋ Tu turno</h4><ul>${step.tu_turno.map((x) => `<li>${inline(x)}</li>`).join('')}</ul></div>` : ''}${stepChecks(s.id, `el paso «${s.titulo}»${step.objetivo ? `: ${step.objetivo}` : ''}`)}` : ''}
     </article>`;
 }
 
@@ -882,6 +932,30 @@ function chapter(h, i) {
     </section>`;
 }
 
+// The flashcard trainer: shuffled deck, flip, «Lo sabía» or «Repasar» (that card comes back), the tally.
+let fc = null;
+const shuffle = (a) => { for (let k = a.length - 1; k > 0; k -= 1) { const j = Math.floor(Math.random() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; } return a; };
+function flashDeal(dir = fc?.dir ?? 'term') { fc = { dir, deck: shuffle([...T.outline.glosario]), i: 0, known: 0, seen: 0, open: false, of: T.id }; }
+function flashHTML() {
+  if (!fc || fc.of !== T.id) flashDeal();
+  const c = fc.deck[fc.i];
+  const head = `<div class="fc-bar"><label>Sentido <select data-fc-dir><option value="term" ${fc.dir === 'term' ? 'selected' : ''}>término → qué es</option><option value="def" ${fc.dir === 'def' ? 'selected' : ''}>qué es → término</option></select></label><button type="button" class="ask" data-tj="fc-deal">Barajar de nuevo</button></div>`;
+  if (!c) return `${head}<div class="flashcard done" tabindex="0"><div class="fc-big">¡Vuelta completa!</div><p>Sabías ${fc.known} de ${fc.seen}. Las que marcaste para repasar volvieron hasta que las supiste.</p></div>`;
+  const front = fc.dir === 'term' ? `<div class="fc-big">${esc(c.termino)}</div><div class="mut">¿Qué es y para qué sirve?</div>` : `<div class="fc-q">${esc(c.definicion)}</div><div class="mut">¿Qué término es?</div>`;
+  const back = fc.open ? `<div class="fc-back">${fc.dir === 'term' ? `<div class="fc-def">${inline(c.definicion)}</div>` : `<div class="fc-big2">${esc(c.termino)}</div>`}</div>` : '';
+  return `${head}<div class="flashcard ${fc.open ? 'open' : ''}" tabindex="0" data-fc-card>${front}${back}</div>
+    <div class="fc-btns">${fc.open ? '<button type="button" class="act ok" data-tj="fc-ok">✓ Lo sabía <small>1</small></button><button type="button" class="act again" data-tj="fc-no">↻ Repasar <small>2</small></button>' : '<button type="button" class="act" data-tj="fc-flip">Voltear <small>espacio</small></button>'}</div>
+    <p class="mut small">Tarjeta ${fc.i + 1} de ${fc.deck.length} · sabías ${fc.known} de ${fc.seen}</p>`;
+}
+function flashDo(what) {
+  if (!fc) return;
+  const c = fc.deck[fc.i];
+  if (what === 'flip' && c) fc.open = true;
+  if ((what === 'ok' || what === 'no') && c && fc.open) { fc.seen += 1; if (what === 'ok') fc.known += 1; else fc.deck.push(c); fc.i += 1; fc.open = false; }
+  if (what === 'deal') flashDeal();
+  const el = gRoot().querySelector('[data-fc]');
+  if (el) { el.innerHTML = flashHTML(); el.querySelector('[data-fc-card]')?.focus(); }
+}
 function closing() {
   const all = steps();
   const repo = T.repo ? `${T.repo.owner}/${T.repo.name}` : '';
@@ -922,7 +996,8 @@ function closing() {
       ${defense.length ? `<h3>Practicar la defensa</h3><p>Las preguntas que les podrían hacer. Respóndanlas en voz alta antes de abrir la respuesta.</p><div class="cols2">${defense.map((q) => `<details class="q"><summary class="qh">${inline(q.pregunta)}</summary><div class="ans">${md(q.respuesta)}</div></details>`).join('')}</div>` : ''}
       ${T.outline.glosario.length ? (T.prefs?.cards === false
     ? `<h3>Términos</h3><dl class="gloss">${T.outline.glosario.map((g) => `<dt>${esc(g.termino)}</dt><dd>${esc(g.definicion)}</dd>`).join('')}</dl>`
-    : `<h3>Tarjetas de términos</h3><p>Lee el término, di en voz alta qué significa y gira la tarjeta.</p><div class="flash">${T.outline.glosario.map((g) => `<details class="fc"><summary>${esc(g.termino)}</summary><p>${esc(g.definicion)}</p></details>`).join('')}</div>`) : ''}
+    : `<h3>Tarjetas de términos</h3><p>Di en voz alta qué significa y voltea. <span class="mut small">Espacio voltea · 1 lo sabía · 2 repasar</span></p><div class="fc-trainer" data-fc>${flashHTML()}</div>
+      <details class="q"><summary class="qh">Ver todos los términos</summary><dl class="gloss">${T.outline.glosario.map((g) => `<dt>${esc(g.termino)}</dt><dd>${esc(g.definicion)}</dd>`).join('')}</dl></details>`) : ''}
     </section>`;
 }
 
@@ -1071,6 +1146,11 @@ function download(name, text) {
 }
 
 function wire(root) {
+  root.addEventListener('keydown', (ev) => {
+    if (!ev.target.closest?.('[data-fc]')) return;
+    if (ev.key === ' ') { ev.preventDefault(); flashDo('flip'); } else if (ev.key === '1') flashDo('ok'); else if (ev.key === '2') flashDo('no');
+  });
+  root.addEventListener('change', (ev) => { if (ev.target.matches?.('[data-fc-dir]')) { flashDeal(ev.target.value); flashDo(''); } });
   root.addEventListener('input', () => { if (draft && root.querySelector('.tj-wizard')) { keepAnswer(); saveDraft(); } });
   root.addEventListener('toggle', (ev) => { if (draft && ev.target.matches?.('[data-tj-more]')) draft.moreOpen = ev.target.open; }, true);
   root.addEventListener('submit', async (ev) => {
@@ -1259,6 +1339,7 @@ function wire(root) {
       await busy(b, async () => { await ai.changeBridgeFolder(b.dataset.id, { remove: true }); if (draft) { if (draft.workspace === b.dataset.id) draft.workspace = 'temp'; keepAnswer(); renderDraft(); } else repaint(); }).catch(() => {});
       return;
     }
+    if (kind === 'fc-flip' || kind === 'fc-ok' || kind === 'fc-no' || kind === 'fc-deal') { flashDo(kind.slice(3)); return; }
     if (kind === 'stop') {
       if (ctl && !ctl.signal.aborted) { ctl.abort(); b.disabled = true; b.textContent = 'Deteniendo…'; ctx.toast('Detenido. Tu IA se detuvo en tu computadora.'); }
       return;
