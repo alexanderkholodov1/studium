@@ -121,10 +121,10 @@ vec2 map(vec3 w){
   if (uDoctor > .5){
     vec3 hq = q - vec3(0., .24, 0.);
     float groove = .006 * sin(q.x * 46.) * smoothstep(.45, .7, q.y);
-    float shell = length(hq * vec3(1., 1., .96)) - .655 + groove;
-    float line = .5 + .05 * smoothstep(.0, .35, abs(q.x)) - .22 * smoothstep(.15, -.45, q.z);
+    float shell = length(hq * vec3(1., 1., .96)) - .632 + groove;
+    float line = .57 + .04 * smoothstep(.0, .35, abs(q.x)) - .12 * smoothstep(.15, -.45, q.z);
     shell = max(shell, line - q.y);
-    float swoop = length((q - vec3(.05, .74, .44)) / vec3(1.6, .55, .9)) - .11;
+    float swoop = length((q - vec3(.05, .76, .42)) / vec3(1.6, .5, .9)) - .075;
     float hair = smin(shell, max(swoop, line + .04 - q.y), .06);
     if (hair < res.x) res = vec2(hair, 6.);
   }
