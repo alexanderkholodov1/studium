@@ -3570,3 +3570,7 @@ canvas.prop { display: block; }
 .tj-wizard :is(p, li, .fine, label, .tj-kept, .tj-warn, .tj-sentence) { overflow-wrap: anywhere; }
 .tj-files li { min-width: 0; }
 .tj-files li small { flex: none; }
+/* The notice at the bottom is always solid and legible, over any page or guide (over a guide it was glass in Studium's
+   colors, nearly transparent on the guide's own background: his report, 2026-11-23). */
+.toast.glass { background: var(--card, #fff); color: var(--ink, #1c2233); -webkit-backdrop-filter: none; backdrop-filter: none;
+  box-shadow: 0 18px 40px -18px rgba(0, 0, 0, .55), 0 0 0 1px var(--line, rgba(0, 0, 0, .12)); }

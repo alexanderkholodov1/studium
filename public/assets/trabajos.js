@@ -2105,7 +2105,7 @@ function wire(root) {
         await setVisibility(vis);
         repaint();
         ctx.toast(vis === 'private' ? 'Ahora es privada.' : vis === 'link' ? 'Lista: quien tenga el enlace puede leerla.' : 'Lista: aparece en Guías para todos en Studium.');
-      }).catch((e) => { st.textContent = e.message || 'No se pudo cambiar.'; });
+      }).catch((e) => { st.textContent = /permission|insufficient/i.test(`${e?.code} ${e?.message}`) ? 'Studium todavía no permite compartir en este servidor: falta publicar sus reglas. Pruébalo en el enlace beta, o espera a la versión.' : (e.message || 'No se pudo cambiar.'); st.classList.add('tj-warn'); });
       return;
     }
     if (form.matches('[data-adj-form]')) {
