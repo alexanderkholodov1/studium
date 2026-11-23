@@ -238,6 +238,8 @@ export function cleanMilestone(m, milestone) {
     })).filter((c) => c.codigo.trim()),
     librerias: list(p?.librerias, 20).map((l) => ({ nombre: str(l?.nombre, 60), para_que: str(l?.para_que, 400) })).filter((l) => l.nombre),
     esperado: str(p?.esperado, 1500),
+    // Worked examples (study guides, estudio-prompts.js): the problem and its solution, step by step.
+    ejemplos: list(p?.ejemplos, 4).map((x) => ({ enunciado: str(x?.enunciado, 3000), solucion: str(x?.solucion, 8000) })).filter((x) => x.enunciado && x.solucion),
     comprueba: list(p?.comprueba, 4).map((q) => ({ pregunta: str(q?.pregunta, 400), respuesta: str(q?.respuesta, 1500) })).filter((q) => q.pregunta),
     defensa: list(p?.defensa, 5).map((q) => ({ pregunta: str(q?.pregunta, 400), respuesta: str(q?.respuesta, 1500) })).filter((q) => q.pregunta),
     commit: str(p?.commit, 120),

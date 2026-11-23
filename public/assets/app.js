@@ -14,7 +14,7 @@ import { buildGraph } from './graph.js';
 import { mountMap, openMap, refreshMap } from './mapui.js';
 import { showGuide, showAnchor } from './viewer.js';
 import { startScene, tilt, glassLight, transition, rise, restOffscreen } from './fx.js';
-import { mountContribute, renderPane, presetGuide, startQueue } from './contribute.js';
+import { mountContribute, renderPane, presetGuide, startQueue, studyGraph } from './contribute.js';
 import { prefs } from './prefs.js';
 import { sfx } from './sfx.js';
 import { play, springLetters, celebrate } from './play.js';
@@ -39,7 +39,7 @@ import { mountAdmin, renderAdmin } from './admin.js';
 import { mountFeedback } from './feedback.js';
 import * as vault from './vault.js';
 import { mountComunidad, renderComunidad } from './comunidad.js';
-import { mountTrabajos, renderTrabajos } from './trabajos.js';
+import { mountTrabajos, renderTrabajos, renderStudy, openStudy, studyShelf, useGraph } from './trabajos.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -121,8 +121,8 @@ document.addEventListener('click', (e) => {
 });
 
 /* ---------- views ---------- */
-const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'horario', 'malla', 'student', 'catalog', 'map', 'library', 'profes', 'contribute', 'comunidad', 'trabajos', 'trabajo', 'settings', 'about', 'news', 'sources', 'guide', 'admin'];
-const TABS = { home: 'home', horario: 'home', malla: 'home', catalog: 'contribute', comunidad: 'comunidad', trabajos: 'trabajos', trabajo: 'trabajos', map: 'map', library: 'map', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', news: 'about', admin: 'admin' };
+const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'horario', 'malla', 'student', 'catalog', 'map', 'library', 'profes', 'contribute', 'comunidad', 'trabajos', 'trabajo', 'estudio', 'settings', 'about', 'news', 'sources', 'guide', 'admin'];
+const TABS = { home: 'home', horario: 'home', malla: 'home', catalog: 'contribute', comunidad: 'comunidad', trabajos: 'trabajos', trabajo: 'trabajos', estudio: 'contribute', map: 'map', library: 'map', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', news: 'about', admin: 'admin' };
 const PUBLIC = ['landing', 'auth', 'about', 'news', 'denied', 'verify'];
 let current = 'boot';
 function show(view) {
@@ -332,6 +332,7 @@ mountAdmin(context);
 mountFeedback();
 mountComunidad(context);
 mountTrabajos(context);
+useGraph(studyGraph(state));
 mountCommunity(context);
 mountLibrary(context);
 mountEditor();
@@ -538,7 +539,10 @@ async function route() {
       ajustes: ['settings', 'Ajustes', renderSettings],
       acerca: ['about', 'Acerca', null],
       novedades: ['news', 'Novedades', () => renderNews($('#news'))],
-      guias: ['catalog', 'Guías', renderCatalog],
+      // Guías: the person's own study guides on top («Tus guías»), then everyone's.
+      guias: ['catalog', 'Guías', () => { renderCatalog(); return studyShelf($('#my-guides')); }],
+      // A study guide opens apart from Studium's page, in the same environment as a trabajo's guide.
+      estudio: ['trabajo', 'Guía de estudio', () => openStudy(arg[0])],
       comunidad: ['comunidad', 'Comunidad', renderComunidad],
       // A friend's link (amigos.js): Comunidad, with the friend's proposal on top.
       amigos: ['comunidad', 'Comunidad', () => renderComunidad(arg)],
@@ -551,9 +555,20 @@ async function route() {
     };
     // «Estudia»: drop anything, sorted in sight; the desk of each course; a guide or the graph from what was dropped.
     // «Lo que subiste» (what was published, to change who sees it or delete it) is reached from «Estudiar».
+    // «Hacer una guía»: one question per screen, written by the person's AI with Trabajos' engine (trabajos.js).
+    // The older guide (a page the AI writes, to publish in Guías) stays at #/estudiar/guia-html.
+    if (page === 'estudiar' && arg[0] === 'guia') {
+      document.title = `${t('Hacer una guía')} · Studium`;
+      $('#eg-body').innerHTML = '<p class="status">Cargando…</p>'; // never the previous guide's last screen
+      show('estudio');
+      await load();
+      if (ticket !== routing) return;
+      await renderStudy(arg.slice(1));
+      return;
+    }
     if (page === 'estudiar' || page === 'mis-aportes') {
       const mine = page === 'mis-aportes';
-      const pane = mine ? 'mine' : arg[0] === 'guia' ? 'guide' : arg[0] === 'grafo' ? 'material' : arg[0] === 'materia' ? 'desk' : 'estudia';
+      const pane = mine ? 'mine' : arg[0] === 'guia-html' ? 'guide' : arg[0] === 'grafo' ? 'material' : arg[0] === 'materia' ? 'desk' : 'estudia';
       const title = mine ? 'Lo que subiste' : pane === 'desk' ? arg[1] : 'Estudiar';
       document.title = `${mine ? t(title) : title === 'Estudiar' ? t('Estudiar') : title} · Studium`;
       $('#c-title').textContent = mine ? t('Lo que subiste') : t('Estudiar');
@@ -563,7 +578,7 @@ async function route() {
       await load();
       if (ticket !== routing) return;
       mountContribute(context);
-      renderPane(pane, pane === 'desk' ? { course: arg[1] ?? '' } : pane === 'guide' && arg[1] ? { course: arg[1] } : undefined);
+      renderPane(pane, pane === 'desk' ? { course: arg[1] ?? '' } : undefined);
       return;
     }
     const [view, title, render] = views[page] ?? views[''];

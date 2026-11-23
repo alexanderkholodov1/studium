@@ -8,7 +8,7 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <!-- What may run and connect on this page: only Studium's own code, the libraries it names, and the services each person
      connects. No inline script: tools/check.mjs refuses one. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.youtube.com https://www.gstatic.com https://cdn.jsdelivr.net https://accounts.google.com https://js.puter.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com https://api.anthropic.com https://api.openai.com https://openrouter.ai https://api.github.com https://cdn.jsdelivr.net https://accounts.google.com https://*.puter.com https://puter.com wss://*.puter.com http://127.0.0.1:*; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src 'self' https://www.youtube.com https://accounts.google.com https://*.firebaseapp.com https://*.puter.com https://puter.com; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.youtube.com https://www.gstatic.com https://cdn.jsdelivr.net https://accounts.google.com https://js.puter.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://accounts.google.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; media-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com https://api.anthropic.com https://api.openai.com https://openrouter.ai https://api.github.com https://cdn.jsdelivr.net https://accounts.google.com https://*.puter.com https://puter.com wss://*.puter.com http://127.0.0.1:*; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src 'self' https://www.youtube.com https://accounts.google.com https://*.firebaseapp.com https://*.puter.com https://puter.com; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="theme-color" content="#0a0e1a">
 <link rel="icon" href="/studium/assets/logo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -317,9 +317,10 @@
   <nav class="subtabs" aria-label="Estudiar"><a href="#/estudiar" data-sub="material">Tu escritorio</a><a href="#/estudiar/guias" data-sub="guias" aria-current="true">Guías</a></nav>
   <div class="page-head">
     <h1>Guías</h1>
-    <a class="button primary" href="#/estudiar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>Hacer una guía</a>
+    <a class="button primary" href="#/estudiar/guia"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>Hacer una guía</a>
     <label class="search glass"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><input id="q" type="search" placeholder="Busca una materia, un tema o un profe" aria-label="Buscar guías"></label>
   </div>
+  <section class="my-guides" id="my-guides" hidden></section>
   <fieldset class="seg filters" id="g-filter"><legend class="sr">Mostrar</legend>
     <label><input type="radio" name="gf" value="all" checked><span>Todas</span></label>
     <label><input type="radio" name="gf" value="soon"><span>Próximos exámenes</span></label>
@@ -508,6 +509,10 @@
 
 <main class="view page wide" id="view-trabajos" hidden>
   <div id="tj-body"></div>
+</main>
+<!-- «Hacer una guía» (Estudiar): one question per screen, with Trabajos' engine (trabajos.js) -->
+<main class="view page wide" id="view-estudio" hidden>
+  <div id="eg-body"></div>
 </main>
 <main class="view page wide" id="view-comunidad" hidden>
   <div class="page-head"><h1>Comunidad</h1></div>

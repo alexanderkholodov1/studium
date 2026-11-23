@@ -15,6 +15,7 @@ import * as ai from './ai.js';
 import * as convert from './convert.js';
 import { prefs } from './prefs.js';
 import { renderEstudia, renderDesk } from './estudia.js';
+import { startStudy, presetStudy } from './trabajos.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -410,12 +411,39 @@ async function droppedFiles(dataTransfer) {
 export const shareToGraph = (files, values) => enqueue('material', files, values);
 // A guide from what was dropped: the files become its notes, and what «Estudia» saw prefills its exact questions.
 let found = null; // { piles, exams, links }
+// Since 2026-11-23 a guide is written by Trabajos' engine (trabajos.js, kind «estudio»): the files and what Estudiar
+// saw in them go to its questions.
 export function startGuide(files, preset) {
-  if (files.length) { notes = files.slice(0, 20); }
-  found = { piles: preset.piles ?? [], exams: preset.exams ?? [], links: preset.links ?? [] };
-  pending = { course: preset.course, graph: true };
-  gStep = preset.course ? 1 : 0;
-  location.hash = '#/estudiar/guia';
+  startStudy({ files, course: preset.course ?? '', exams: preset.exams ?? [], links: preset.links ?? [] }).catch((e) => ctx?.toast?.(e.message));
+}
+// What the knowledge graph gives a study guide (trabajos.js asks through these): the course's node, a course's name
+// from its id, and the context of the course (or of a route's concepts) for the AI, as the older guide sent it.
+export function studyGraph(state) {
+  const g = () => state.graph;
+  const course = (name) => (name ? g()?.byId.get(`course:${keyOf(name)}`) ?? null : null);
+  return {
+    course,
+    nameOf: (id) => g()?.byId.get(id)?.name ?? null,
+    context({ course: name, route, exams = [] }) {
+      const node = course(name);
+      const keys = route?.keys ? new Set(route.keys) : null;
+      if (!node && !keys) return '';
+      const graph = g();
+      const concepts = keys ? [...keys].map((k) => graph.byId.get(`concept:${k}`)).filter(Boolean)
+        : graph.links.filter((l) => l.kind === 'in' && l.source === node).map((l) => l.target)
+          .concat(graph.links.filter((l) => l.kind === 'has' && l.source === node).flatMap((l) => graph.links.filter((m) => m.source === l.target).map((m) => m.target)))
+          .filter((n, i, all) => n.type === 'concept' && all.indexOf(n) === i);
+      const contributions = keys ? state.contributions.filter((c) => concepts.some((n) => n.items?.has?.(c.id))) : node.contributions;
+      const contest = node?.theme === 'algoritmos' || !!node?.contributions.some((c) => c.kind === 'contest');
+      const text = contextPack({
+        course: { name: node?.name ?? name, code: node?.code ?? '', university: node?.contributions.find((c) => c.university)?.university ?? '' },
+        professor: '', term: '', contest,
+        concepts: concepts.map((n) => ({ key: n.key, name: n.name, summaries: n.summaries.map((s) => s.text), relations: n.relations, band: route?.bands?.[n.key] ?? '' })),
+        contributions, guides: node?.guides ?? [], ordered: !!keys,
+      });
+      return exams.length ? `${text}\n\n(Exámenes anteriores que trajo el estudiante: ${exams.slice(0, 10).join(', ')}.)` : text;
+    },
+  };
 }
 export { droppedFiles };
 // The exact instructions «Procesar material» sends, for the person to read before anything runs.
@@ -538,6 +566,8 @@ function goStep(i) {
   scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 }
 export function presetGuide(preset) {
+  // The graph's «Crear una guía» goes to the new questions too (trabajos.js), with the course and the route.
+  presetStudy({ course: preset.course ?? '', title: preset.title ?? '', route: preset.route ?? null });
   pending = preset;
   gStep = preset.course ? 1 : 0;
   fromMap = preset.route ? { keys: new Set(preset.route.keys), label: preset.route.label, bands: preset.route.bands } : null;

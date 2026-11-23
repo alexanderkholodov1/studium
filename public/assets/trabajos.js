@@ -16,7 +16,22 @@ import * as amigos from './amigos.js';
 import { communityOf } from './settings.js';
 import { reunionBlock, wireReunion, resetReunion } from './reunion.js';
 import { bridgeSteps, pairBridge, findBridgeSay } from './space.js';
-import { LETTERS, outlinePrompt, milestonePrompt, wholePrompt, adjustPrompt, ADJUST_KINDS, TUTOR, parseJSON, cleanOutline, cleanMilestone } from './trabajo-prompts.js';
+import { LETTERS, outlinePrompt as tjOutline, milestonePrompt as tjMilestone, wholePrompt as tjWhole, adjustPrompt as tjAdjust, ADJUST_KINDS, TUTOR as TJ_TUTOR, parseJSON, cleanOutline, cleanMilestone } from './trabajo-prompts.js';
+import * as EP from './estudio-prompts.js';
+
+// «Estudiar» uses this same engine for a study guide (his decision, 2026-11-23): a trabajo whose prefs say
+// kind «estudio», for one person, written from their material for one evaluation. Its own questions, its own
+// instructions to the AI (estudio-prompts.js) and its own words in the guide; the same environment, templates,
+// «Detener» and «Ajustar». No new database fields: the kind lives in prefs, which the rules already allow.
+const isStudy = (x) => x?.prefs?.kind === 'estudio' || x?.kind === 'estudio';
+// The guide open now, or else the draft being answered.
+const study = () => (T ? isStudy(T) : isStudy(draft));
+const outlinePrompt = (a) => (study() ? EP.outlinePrompt(a) : tjOutline(a));
+const milestonePrompt = (a) => (study() ? EP.milestonePrompt(a) : tjMilestone(a));
+const wholePrompt = (a) => (study() ? EP.wholePrompt(a) : tjWhole(a));
+const adjustPrompt = (a) => (study() ? EP.adjustPrompt(a) : tjAdjust(a));
+const tutorPrompt = () => (study() ? EP.TUTOR : TJ_TUTOR);
+const ADJ_KINDS = () => (study() ? EP.ADJUST_KINDS : ADJUST_KINDS);
 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -34,6 +49,9 @@ const CLASSIC = ['gh', 'p_'].join('');
 
 let ctx = null;
 let root = null;
+// What the knowledge graph knows of a course, and its context for the AI (contribute.js gives both).
+let graphOf = null;
+export function useGraph(g) { graphOf = g; }
 // The trabajo open now, and how it is being read.
 let T = null;
 let onlyMine = false;
@@ -238,14 +256,14 @@ let undo = null;
 function targetOf(key) {
   if (key.startsWith('paso:')) {
     const s = steps().find((x) => x.id === key.slice(5));
-    return s ? { key, kind: 'paso', hito: s.hito, label: `el paso ${s.num} «${s.titulo}»` } : null;
+    return s ? { key, kind: 'paso', hito: s.hito, label: `${study() ? 'el concepto' : 'el paso'} ${s.num} «${s.titulo}»` } : null;
   }
   if (key.startsWith('hito:')) {
     const i = T.outline.hitos.findIndex((h) => h.id === key.slice(5));
-    return i >= 0 ? { key, kind: 'hito', hito: T.outline.hitos[i].id, label: `el capítulo ${i + 1} «${T.outline.hitos[i].titulo}»` } : null;
+    return i >= 0 ? { key, kind: 'hito', hito: T.outline.hitos[i].id, label: `${study() ? 'el tema' : 'el capítulo'} ${i + 1} «${T.outline.hitos[i].titulo}»` } : null;
   }
   if (key === 'glosario') return { key, kind: 'esquema', label: 'el glosario (las tarjetas de términos)' };
-  return { key: 'esquema', kind: 'esquema', label: 'la sección 0 (de qué se trata, las reglas, el reparto)' };
+  return { key: 'esquema', kind: 'esquema', label: study() ? 'la sección 0 (qué entra, cómo es la evaluación, ojo con)' : 'la sección 0 (de qué se trata, las reglas, el reparto)' };
 }
 const adjButton = (key) => `<button type="button" class="adj" data-tj="adj" data-key="${esc(key)}" title="Pedir un cambio a tu IA">✎ <span>Ajustar</span></button>`;
 // Which part of the guide a node belongs to.
@@ -304,7 +322,7 @@ function trayHTML() {
   if (!list.length && !undo) return '';
   return `<div class="tj-traybar">${list.length ? `<button type="button" class="act" data-tj="tray-open">✎ ${list.length} ${list.length === 1 ? 'cambio' : 'cambios'} por aplicar</button>` : ''}
       ${undo ? `<button type="button" class="ask" data-tj="adj-undo">Deshacer el último ajuste</button>` : ''}</div>
-    <div class="tj-traypanel" hidden><h4>Cambios por aplicar</h4><ol>${list.map((c, i) => `<li><b>${esc(c.label)}</b>${c.quote ? `<q class="no-i18n">${esc(c.quote.slice(0, 160))}${c.quote.length > 160 ? '…' : ''}</q>` : ''}<span class="mut small">${esc([...(c.kinds ?? []).map((k) => ADJUST_KINDS[k] ?? k), c.note].filter(Boolean).join(' · '))}</span><button type="button" class="ask" data-tj="adj-drop" data-i="${i}" aria-label="Quitar este cambio">quitar</button></li>`).join('')}</ol>
+    <div class="tj-traypanel" hidden><h4>Cambios por aplicar</h4><ol>${list.map((c, i) => `<li><b>${esc(c.label)}</b>${c.quote ? `<q class="no-i18n">${esc(c.quote.slice(0, 160))}${c.quote.length > 160 ? '…' : ''}</q>` : ''}<span class="mut small">${esc([...(c.kinds ?? []).map((k) => ADJ_KINDS()[k] ?? k), c.note].filter(Boolean).join(' · '))}</span><button type="button" class="ask" data-tj="adj-drop" data-i="${i}" aria-label="Quitar este cambio">quitar</button></li>`).join('')}</ol>
       ${aiBlock('solution')}
       <p class="tj-adjbtns"><button type="button" class="act" data-tj="adj-apply">Aplicar con tu IA</button><button type="button" class="ask" data-tj="adj-clear">Descartar todos</button><button type="button" class="ask" data-tj="tray-close">Cerrar</button></p>
       <div data-adj-live></div></div>`;
@@ -322,7 +340,7 @@ async function applyAdjust(list, box) {
   const hids = [...new Set(list.filter((c) => c.kind !== 'esquema').map((c) => c.hito))].filter((h) => T.hitos[h]);
   const files = ai.choice('solution').provider === 'bridge:claude' && !ai.bridgeOld();
   const chapters = hids.map((h) => { const { by: _by, ai: _ai, ...d } = T.hitos[h]; return d; });
-  const system = adjustPrompt({ outline: T.outline, chapters, changes: list, prefs: T.prefs, files });
+  const system = adjustPrompt({ outline: T.outline, chapters, changes: list, prefs: promptPrefs(), files });
   startWork();
   box.innerHTML = liveHTML('Tu IA ajusta la guía');
   const r = await askAI('solution', system, 'Aplica los cambios pedidos a la guía.', [], `Ajustes a «${T.title}»`, liveFeed(box));
@@ -560,20 +578,22 @@ let saving = null;
 function saveDraft() {
   if (!draft || !uid()) return;
   clearTimeout(saving);
+  // The draft as it is now: «Guardar y salir» closes it right after, and the save must not find it gone.
+  const now = draft;
   saving = setTimeout(() => {
-    if (!draft) return;
-    const keep = { ...draft, pairing: false, owner: uid(), saved: Date.now() };
-    draftStore('readwrite', (st) => st.put(keep, draft.id)).catch((e) => console.warn('draft', e));
+    const keep = { ...now, pairing: false, owner: uid(), saved: Date.now() };
+    draftStore('readwrite', (st) => st.put(keep, now.id)).catch((e) => console.warn('draft', e));
   }, 300);
 }
-const listDrafts = () => draftStore('readonly', (st) => st.getAll()).then((all) => (all ?? []).filter((d) => d.owner === uid() && d.kind !== 'files').sort((a, b) => b.saved - a.saved)).catch(() => []);
+// A trabajo's list shows its drafts; Estudiar's shows the drafts of study guides.
+const listDrafts = (kind = '') => draftStore('readonly', (st) => st.getAll()).then((all) => (all ?? []).filter((d) => d.owner === uid() && d.kind !== 'files' && (d.kind ?? '') === kind).sort((a, b) => b.saved - a.saved)).catch(() => []);
 const dropDraft = (id) => draftStore('readwrite', (st) => st.delete(id)).catch(() => {});
 const getDraft = (id) => draftStore('readonly', (st) => st.get(id)).catch(() => null);
 function draftsHTML(list) {
   if (!list.length) return '';
   const when = (t) => new Date(t).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   return `<h2 class="tj-sub">Borradores</h2><div class="tj-cards">${list.map((d) => `<div class="tj-card tj-draft glass">
-      <div class="tj-card-main"><b>${esc(d.title || 'Trabajo sin nombre')}</b><span class="fine">Te quedaste en «${esc(QUESTIONS[d.at]?.ask ?? '')}» · ${esc(when(d.saved))}${d.files?.length ? ` · ${d.files.length} ${d.files.length === 1 ? 'archivo' : 'archivos'}` : ''}</span></div>
+      <div class="tj-card-main"><b>${esc(d.title || (isStudy(d) ? (d.course ? `Guía de ${d.course}` : 'Guía sin nombre') : 'Trabajo sin nombre'))}</b><span class="fine">Te quedaste en «${esc(questionsOf(d)[d.at]?.ask ?? '')}» · ${esc(when(d.saved))}${d.files?.length ? ` · ${d.files.length} ${d.files.length === 1 ? 'archivo' : 'archivos'}` : ''}</span></div>
       <p class="tj-draft-act"><button type="button" class="button primary small" data-tj="draft-resume" data-id="${esc(d.id)}">Retomar</button> <button type="button" class="link danger" data-tj="draft-drop" data-id="${esc(d.id)}">Eliminar</button></p></div>`).join('')}</div>`;
 }
 
@@ -585,7 +605,7 @@ async function renderList() {
   for (const i of invs.filter((x) => ids.includes(x.tid))) amigos.dropInvitation(i.tid).catch(() => {});
   const invited = invs.filter((x) => !ids.includes(x.tid));
   const asked = await amigos.requests();
-  const rows = (await Promise.all(ids.map((id) => getDoc(tRef(id)).then((s) => (s.exists() ? { id, ...s.data() } : null)).catch(() => null)))).filter(Boolean);
+  const rows = (await Promise.all(ids.map((id) => getDoc(tRef(id)).then((s) => (s.exists() ? { id, ...s.data() } : null)).catch(() => null)))).filter((r) => r && !isStudy(r));
   root.innerHTML = `<div class="page-head"><h1>Trabajos</h1><button type="button" class="button primary" data-tj="new">Empezar un trabajo nuevo</button></div>
     <p class="lede-small tj-lede">Resuelve un trabajo en grupo con una guía, paso a paso, entendiendo cada línea.</p>
     ${invited.length ? `<h2 class="tj-sub">Te invitaron</h2><div class="tj-cards">${invited.map((i) => `<div class="tj-card tj-invited glass">
@@ -703,7 +723,7 @@ function inviteText(tid, title, code) {
 const inviteLink = (tid, code) => `${location.origin}${location.pathname}#/trabajos/unirse/${tid}/${code}`;
 
 /* ---------- a new trabajo: one question at a time ---------- */
-const QUESTIONS = [
+const TJ_QUESTIONS = [
   { key: 'title', ask: '¿Cómo se llama el trabajo?', hint: 'Como aparece en el enunciado, o como lo llaman ustedes.', input: 'text', placeholder: 'Proyecto final de Machine Learning', required: true },
   { key: 'course', ask: '¿De qué materia es?', input: 'text', placeholder: 'Machine Learning', optional: true },
   { key: 'statement', ask: 'Trae el enunciado', hint: 'Y todo lo que lo acompaña: la rúbrica, archivos de inicio, un ZIP. Puedes traer varios.', input: 'files', required: true },
@@ -717,6 +737,21 @@ const QUESTIONS = [
   { key: 'ready', ask: 'Todo listo', input: 'ready' },
 ];
 export const PREF_DEFAULT = { goal: 'solve', goalNote: '', balance: 'both', share: 'each', repoUrl: '', template: 'cuaderno', writeAll: 'all', tone: 'balanced', level: 'zero', length: 'normal', text: 'some', cards: true, defense: true, practice: false, visuals: true, note: '' };
+// A study guide, one question per screen: what, for which evaluation, when, the material, what enters, how to study,
+// the AI, how the guide should be. Only the course is needed; everything else has a default or «Saltar».
+const STUDY_QUESTIONS = [
+  { key: 'course', ask: '¿Qué vas a estudiar?', hint: 'La materia, como la llamas.', input: 'text', placeholder: 'Cálculo II, Redes de Computadores, Historia del arte…', required: true },
+  { key: 'title', ask: '¿Para qué evaluación?', hint: 'La guía se arma pensando en ese día.', input: 'text', placeholder: 'Examen 2, el final, la lección del viernes…', optional: true },
+  { key: 'deadline', ask: '¿Cuándo es?', input: 'date', optional: true },
+  { key: 'material', ask: 'Trae tu material', hint: 'Apuntes, diapositivas, fotos del cuaderno, exámenes anteriores, deberes: todo lo que tengas. Va solo a tu IA.', input: 'files', optional: true },
+  { key: 'scope', ask: '¿Qué entra?', hint: 'Si no lo sabes, salta: tu IA lo deduce de tu material.', input: 'scope', optional: true },
+  { key: 'goal', ask: '¿Cómo quieres estudiar?', hint: 'Así tu IA sabe cuánto explicar y cuánto practicar.', input: 'studygoal' },
+  { key: 'ai', ask: 'Tu IA para esta guía', input: 'ai' },
+  { key: 'prefs', ask: '¿Cómo quieres la guía?', hint: 'Elige lo que prefieras; lo demás queda como viene.', input: 'prefs' },
+  { key: 'ready', ask: 'Todo listo', input: 'ready' },
+];
+export const STUDY_DEFAULT = { kind: 'estudio', goal: 'review', goalNote: '', scope: '', style: '', template: 'cuaderno', writeAll: 'all', tone: 'balanced', level: 'basic', length: 'normal', text: 'some', cards: true, examq: true, practice: false, visuals: true, note: '' };
+const questionsOf = (d) => (isStudy(d) ? STUDY_QUESTIONS : TJ_QUESTIONS);
 // Which Claude account writes (several may be signed in on this computer).
 function accountPick() {
   const b = ai.bridgeOf();
@@ -777,6 +812,22 @@ function startDraft() {
   draft = { id: `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, at: 0, title: '', course: '', text: '', files: [], parts: 3, group: '', date: '', time: '', pasting: false, workspace: 'temp', prefs: { ...PREF_DEFAULT } };
   renderDraft();
 }
+// A new study guide. From the desk it comes with the files dropped there and what Estudiar saw in them (the course,
+// past exams); from the graph, with the course and the concepts of a route. It opens on the first question not known.
+function newStudy(preset = {}) {
+  return {
+    id: `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, kind: 'estudio', at: 0, title: String(preset.title ?? ''), course: String(preset.course ?? ''),
+    text: '', files: [], parts: 1, group: '', date: '', time: '', pasting: false, workspace: 'temp', prefs: { ...STUDY_DEFAULT },
+    graph: true, route: preset.route ?? null, exams: preset.exams ?? [], links: preset.links ?? [],
+  };
+}
+export async function startStudy(preset = {}) {
+  draft = newStudy(preset);
+  if (preset.files?.length) await addFiles(preset.files.slice(0, 60));
+  draft.at = draft.course ? 1 : 0;
+  saveDraft();
+  location.hash = '#/estudiar/guia';
+}
 const sameFile = (a, b) => a.name === b.name && a.size === b.size && a.lastModified === b.lastModified;
 // A folder brought whole: its files keep their place in it («carpeta/sub/archivo.py»). Skipped: hidden files and the
 // folders that are never material (git, dependencies, caches); at most 400 files and 40 MB.
@@ -829,11 +880,11 @@ async function addFiles(list) {
 }
 function renderDraft(error = '') {
   saveDraft();
-  const q = QUESTIONS[draft.at];
-  const dots = QUESTIONS.map((_, i) => `<i class="${i < draft.at ? 'done' : i === draft.at ? 'now' : ''}"></i>`).join('');
+  const q = questionsOf(draft)[draft.at];
+  const dots = questionsOf(draft).map((_, i) => `<i class="${i < draft.at ? 'done' : i === draft.at ? 'now' : ''}"></i>`).join('');
   let control = '';
   let hint = q.hint ?? '';
-  if (q.input === 'text') control = `<input class="tj-input" name="v" value="${esc(draft[q.key])}" placeholder="${esc(q.placeholder ?? '')}" maxlength="${q.key === 'group' ? 80 : 160}" autocomplete="off">`;
+  if (q.input === 'text') control = `<input class="tj-input" name="v" value="${esc(draft[q.key])}" placeholder="${esc(q.placeholder ?? '')}" maxlength="${q.key === 'group' ? 80 : q.key === 'course' ? 120 : 160}" autocomplete="off" ${q.key === 'course' ? 'list="tj-courses"' : ''}>${q.key === 'course' ? coursesList() : ''}`;
   if (q.input === 'count') control = `<div class="tj-count">${[1, 2, 3, 4, 5, 6, 7, 8].map((n) => `<button type="button" class="button ${n === draft.parts ? 'primary' : 'ghost'}" data-tj="count" data-n="${n}">${n}</button>`).join('')}</div>`;
   if (q.input === 'date') {
     control = `<div class="tj-when"><label class="field"><span>Día</span><input type="date" name="date" value="${esc(draft.date)}"></label>
@@ -847,14 +898,15 @@ function renderDraft(error = '') {
       </label>
       <p class="tj-folderpick"><label class="button ghost small"><input type="file" name="folder" webkitdirectory multiple hidden> Elegir una carpeta…</label>
         ${draft.broughtFolder ? `<span class="fine">Trajiste la carpeta <b>${esc(draft.broughtFolder)}</b>${draft.folderNote ? ` (${esc(draft.folderNote)})` : ''}. Si tu IA trabaja con el puente, en «Tu IA» puedes hacer que trabaje directamente en ella.</span>` : ''}</p>
-      ${draft.kept ? `<p class="tj-kept">Ya está guardado el enunciado que trajiste${draft.kept.files.length ? `, con ${draft.kept.files.slice(0, 4).map((f) => `«${esc(f.name)}»`).join(', ')}${draft.kept.files.length > 4 ? ` y ${draft.kept.files.length - 4} más` : ''}` : ''}. Lo que traigas ahora se agrega a eso.</p>` : ''}
+      ${draft.kept ? `<p class="tj-kept">Ya está guardado ${isStudy(draft) ? 'el material' : 'el enunciado'} que trajiste${draft.kept.files.length ? `, con ${draft.kept.files.slice(0, 4).map((f) => `«${esc(f.name)}»`).join(', ')}${draft.kept.files.length > 4 ? ` y ${draft.kept.files.length - 4} más` : ''}` : ''}. Lo que traigas ahora se agrega a eso.</p>` : ''}
       ${draft.unread?.length ? `<p class="tj-warn">No pude leer ${draft.unread.map((n) => `«${esc(n)}»`).join(', ')}: puede que esté abierto en otro programa, se haya movido o se esté sincronizando (OneDrive). Ciérralo o espera, y vuelve a traerlo.</p>` : ''}
       ${draft.files.length ? `<ul class="tj-files">${draft.files.slice(0, 8).map((f, i) => `<li><span>${esc(f.name)}</span><small>${sizeText(f.size)}</small><button type="button" class="link" data-tj="drop-file" data-i="${i}" aria-label="Quitar ${esc(f.name)}">quitar</button></li>`).join('')}${draft.files.length > 8 ? `<li class="fine">y ${draft.files.length - 8} archivos más · <button type="button" class="link" data-tj="drop-all">quitar todos</button></li>` : ''}</ul>` : ''}
-      ${draft.pasting || draft.text ? `<textarea class="tj-paste plain" name="text" rows="5" placeholder="Pega aquí el enunciado y la rúbrica">${esc(draft.text)}</textarea>` : '<button type="button" class="link" data-tj="paste">Prefiero pegar el texto</button>'}`;
+      ${draft.pasting || draft.text ? `<textarea class="tj-paste plain" name="text" rows="5" placeholder="${isStudy(draft) ? 'Pega aquí tus apuntes, el temario o lo que entra' : 'Pega aquí el enunciado y la rúbrica'}">${esc(draft.text)}</textarea>` : '<button type="button" class="link" data-tj="paste">Prefiero pegar el texto</button>'}
+      ${isStudy(draft) ? graphLine() : ''}`;
   }
   if (q.input === 'ai') {
     // Short on purpose (his words: «muy larga, mucho texto»): who writes, who answers, where; the rest folded.
-    if (!draft.foldersRead && ai.connected().some((w) => w.startsWith('bridge:'))) { draft.foldersRead = true; ai.bridgeFolders().then(() => { if (draft && QUESTIONS[draft.at].input === 'ai') renderDraft(); }).catch(() => {}); }
+    if (!draft.foldersRead && ai.connected().some((w) => w.startsWith('bridge:'))) { draft.foldersRead = true; ai.bridgeFolders().then(() => { if (draft && questionsOf(draft)[draft.at].input === 'ai') renderDraft(); }).catch(() => {}); }
     const an = analyze([...draft.files, ...(draft.kept?.files ?? [])], draft.text, draft.kept?.chars ?? 0);
     const best = options(an)[0];
     const ways = ai.connected();
@@ -893,51 +945,86 @@ function renderDraft(error = '') {
     control = `<div class="tj-goals">${goals.map(([v, label, why]) => `<label class="tj-pick ${draft.prefs.goal === v ? 'on' : ''}"><input type="radio" name="goal" value="${v}" data-tj-pref="goal" ${draft.prefs.goal === v ? 'checked' : ''}> <span><b>${esc(label)}</b><br><small>${esc(why)}</small></span></label>`).join('')}</div>
       <label class="field"><span>Cuéntale más, si quieres <small>(opcional)</small></span><textarea class="tj-paste plain" name="goalNote" rows="2" maxlength="800" placeholder="Por ejemplo: ya tenemos el scraper; nos falta el modelado y la defensa.">${esc(draft.prefs.goalNote)}</textarea></label>`;
   }
+  if (q.input === 'scope') {
+    const styles = [['problems', 'Problemas'], ['choice', 'Opción múltiple'], ['essay', 'Desarrollo'], ['code', 'Código'], ['mixed', 'De todo'], ['', 'No sé']];
+    control = `<label class="field"><span>Los temas que entran <small>(si los sabes)</small></span><textarea class="tj-paste plain" name="scope" rows="3" maxlength="1200" placeholder="Por ejemplo: desde derivadas parciales hasta multiplicadores de Lagrange; capítulos 4 a 6 del libro.">${esc(draft.prefs.scope)}</textarea></label>
+      <h3>¿Cómo son las preguntas?</h3><div class="tj-seg" role="radiogroup">${styles.map(([v, label]) => `<label class="${draft.prefs.style === v ? 'on' : ''}"><input type="radio" name="p-style" value="${v}" data-tj-pref="style" ${draft.prefs.style === v ? 'checked' : ''}>${esc(label)}</label>`).join('')}</div>
+      ${draft.exams?.length ? `<p class="fine">Tu IA imita el estilo de los exámenes que trajiste: ${esc(draft.exams.slice(0, 4).join(', '))}${draft.exams.length > 4 ? '…' : ''}.</p>` : ''}`;
+  }
+  if (q.input === 'studygoal') {
+    const goals = [['learn', 'Entenderlo desde cero', 'no lo vi bien en clase: explícamelo todo'], ['review', 'Repasar lo que ya vi', 'lo entendí en clase; quiero fijarlo y no olvidar nada'], ['practice', 'Practicar mucho', 'más ejercicios resueltos y preguntas de examen que teoría'], ['cram', 'Repaso de última hora', 'lo esencial, las fórmulas y los errores típicos']];
+    control = `<div class="tj-goals">${goals.map(([v, label, why]) => `<label class="tj-pick ${draft.prefs.goal === v ? 'on' : ''}"><input type="radio" name="goal" value="${v}" data-tj-pref="goal" ${draft.prefs.goal === v ? 'checked' : ''}> <span><b>${esc(label)}</b><br><small>${esc(why)}</small></span></label>`).join('')}</div>
+      <label class="field"><span>Cuéntale más, si quieres <small>(opcional)</small></span><textarea class="tj-paste plain" name="goalNote" rows="2" maxlength="800" placeholder="Por ejemplo: me cuestan las demostraciones; el profe siempre pregunta el teorema de Stokes.">${esc(draft.prefs.goalNote)}</textarea></label>`;
+  }
   if (q.input === 'prefs') {
     const seg = (key, choices) => `<div class="tj-seg" role="radiogroup">${choices.map(([v, label]) => `<label class="${draft.prefs[key] === v ? 'on' : ''}"><input type="radio" name="p-${key}" value="${v}" data-tj-pref="${key}" ${draft.prefs[key] === v ? 'checked' : ''}>${esc(label)}</label>`).join('')}</div>`;
     const box = (key, label) => `<label class="tj-pick ${draft.prefs[key] ? 'on' : ''}"><input type="checkbox" data-tj-pref="${key}" ${draft.prefs[key] ? 'checked' : ''}> ${esc(label)}</label>`;
     control = `<div class="tj-prefs">
         <div><h3>Cómo se ve</h3><div class="tpl-pick">${Object.entries(TEMPLATES).map(([k, v]) => `<label class="tpl-card ${draft.prefs.template === k ? 'on' : ''}"><input type="radio" name="template" value="${k}" data-tj-pref="template" ${draft.prefs.template === k ? 'checked' : ''}><span class="tpl-prev">${templateSample(k)}</span><b>${esc(v.name)}</b><small>${esc(v.note)}</small></label>`).join('')}</div></div>
-        <div><h3>Al terminar el esquema</h3>${seg('writeAll', [['all', 'Escribir todos los capítulos de una vez'], ['outline', 'Primero el esquema, para revisarlo']])}</div>
-        <div><h3>Algo más que tu IA deba saber <small>(opcional)</small></h3><textarea class="tj-paste plain" name="note" rows="3" maxlength="1500" placeholder="Por ejemplo: el profesor pide todo en inglés; ya tenemos el scraper hecho.">${esc(draft.prefs.note)}</textarea></div>
+        <div><h3>Al terminar el esquema</h3>${seg('writeAll', [['all', `Escribir todos los ${isStudy(draft) ? 'temas' : 'capítulos'} de una vez`], ['outline', 'Primero el esquema, para revisarlo']])}</div>
+        <div><h3>Algo más que tu IA deba saber <small>(opcional)</small></h3><textarea class="tj-paste plain" name="note" rows="3" maxlength="1500" placeholder="${isStudy(draft) ? 'Por ejemplo: el examen es sin calculadora; quiero las fórmulas al final de cada tema.' : 'Por ejemplo: el profesor pide todo en inglés; ya tenemos el scraper hecho.'}">${esc(draft.prefs.note)}</textarea></div>
         <details class="tj-more" data-tj-more ${draft.moreOpen ? 'open' : ''}><summary>Más opciones <small>cómo explica, desde dónde parte, qué tan larga, cuánto texto y qué incluye</small></summary><div class="tj-prefs">
         <div><h3>Cómo explica</h3>${seg('tone', [['direct', 'Directo a la respuesta'], ['balanced', 'Equilibrado'], ['didactic', 'Muy didáctico']])}</div>
-        <div><h3>Desde dónde parte</h3>${seg('level', [['zero', 'Desde cero'], ['basic', 'Sé lo básico'], ['advanced', 'Tengo experiencia']])}</div>
+        <div><h3>Desde dónde parte</h3>${seg('level', [['zero', 'Desde cero'], ['basic', 'Sé lo básico'], ['advanced', isStudy(draft) ? 'Ya lo domino' : 'Tengo experiencia']])}</div>
         <div><h3>Qué tan larga</h3>${seg('length', [['short', 'Corta'], ['normal', 'Normal'], ['full', 'Completa']])}</div>
         <div><h3>Texto en pantalla</h3>${seg('text', [['little', 'Poco, al grano'], ['some', 'Lo justo'], ['much', 'Explicaciones largas']])}</div>
-        <div><h3>Qué incluye</h3><div class="tj-boxes">${box('cards', 'Tarjetas de términos al final')}${box('defense', 'Preguntas de defensa')}${box('practice', 'Ejercicios para practicar')}${box('visuals', 'Gráficas y diagramas, cuando ayuden')}</div></div>
+        <div><h3>Qué incluye</h3><div class="tj-boxes">${box('cards', 'Tarjetas de términos al final')}${isStudy(draft) ? `${box('examq', 'Preguntas como las del examen')}${box('practice', 'Más ejercicios para practicar')}` : `${box('defense', 'Preguntas de defensa')}${box('practice', 'Ejercicios para practicar')}`}${box('visuals', 'Gráficas y diagramas, cuando ayuden')}</div></div>
         </div></details>
       </div>`;
   }
   if (q.input === 'ready') {
-    control = `<p class="tj-sentence">Tu IA va a leer el enunciado de <b>${esc(draft.title)}</b> y escribir una guía de solución para <b>${draft.parts} ${draft.parts === 1 ? 'persona' : 'personas'}</b>, paso a paso, con cada línea explicada.</p>
-      ${ai.ready() ? ai.pickerHTML('solution') : ''}
-      ${ai.promptHTML((ai.choice('solution').provider === 'bridge:claude' && draft.prefs.writeAll !== 'outline' && !ai.bridgeOld() ? wholePrompt : outlinePrompt)({ parts: draft.parts, course: draft.course, deadline: deadlineText(draftDeadline()), prefs: draft.prefs }), '', 'el enunciado y lo que trajiste')}
-      <p class="tj-vis">🔒 Lo ven solo tú y quienes invites después: tus amigos de Studium, o quien tenga su enlace.</p>`;
+    const s = isStudy(draft);
+    const n = draft.files.length + (draft.kept?.files.length ?? 0);
+    const sentence = s ? `Tu IA va a leer ${n ? `tu material (${n} ${n === 1 ? 'archivo' : 'archivos'}${draft.text ? ' y lo que pegaste' : ''})` : draft.text ? 'lo que pegaste' : 'lo que sabe del tema'}${draft.graph && graphCourse() ? ' y lo que la comunidad sabe de la materia' : ''} y escribir tu guía de <b>${esc(draft.course)}</b>${draft.title ? ` para <b>${esc(draft.title)}</b>` : ''}: cada tema explicado, con ejemplos resueltos y preguntas como las del examen.`
+      : `Tu IA va a leer el enunciado de <b>${esc(draft.title)}</b> y escribir una guía de solución para <b>${draft.parts} ${draft.parts === 1 ? 'persona' : 'personas'}</b>, paso a paso, con cada línea explicada.`;
+    control = `<p class="tj-sentence">${sentence}</p>
+      ${ai.ready() ? ai.pickerHTML('solution') : '<p class="tj-warn">Para escribirla necesitas una IA conectada. <button type="button" class="link" data-tj="connect" data-vendor="gemini">Conectar Gemini, gratis</button>, o créala ahora y escríbela después.</p>'}
+      ${ai.promptHTML((ai.choice('solution').provider === 'bridge:claude' && draft.prefs.writeAll !== 'outline' && !ai.bridgeOld() ? wholePrompt : outlinePrompt)({ parts: draft.parts, course: draft.course, deadline: deadlineText(draftDeadline()), prefs: s ? studyPrefs(draft) : draft.prefs }), '', s ? 'tu material' : 'el enunciado y lo que trajiste')}
+      <p class="tj-vis">${s ? '🔒 Solo la ves tú.' : '🔒 Lo ven solo tú y quienes invites después: tus amigos de Studium, o quien tenga su enlace.'}</p>`;
   }
   root.innerHTML = `<form class="tj-wizard panel glass" id="tj-wizard">
       <div class="tj-dots" aria-hidden="true">${dots}</div>
-      ${draft.tid ? '<p class="tj-editing">Estás cambiando las respuestas de un trabajo que ya creaste: «Atrás» llega a cualquier pregunta, y al final tu IA escribe la guía con lo nuevo.</p>' : ''}
+      ${draft.tid ? `<p class="tj-editing">Estás cambiando las respuestas de ${isStudy(draft) ? 'una guía' : 'un trabajo'} que ya creaste: «Atrás» llega a cualquier pregunta, y al final tu IA escribe la guía con lo nuevo.</p>` : ''}
       <h1>${esc(q.ask)}</h1>
       ${hint ? `<p class="lede-small">${esc(hint)}</p>` : ''}
       ${error === FOLDER_GONE ? `<p class="tj-warn" role="alert">${esc(error)}</p>` : ''}
       ${control}
-      ${error && error !== FOLDER_GONE ? (typeof error === 'string' ? `<p class="tj-warn">${esc(error)}</p>` : problemBox(error, 'Crear el trabajo')) : ''}
+      ${error && error !== FOLDER_GONE ? (typeof error === 'string' ? `<p class="tj-warn">${esc(error)}</p>` : problemBox(error, isStudy(draft) ? 'Crear la guía' : 'Crear el trabajo')) : ''}
       <div class="tj-wizard-nav">
         ${draft.at ? '<button type="button" class="link" data-tj="back">← Atrás</button>' : ''}
         <button type="button" class="link mut" data-tj="cancel">Guardar y salir</button>
         <span></span>
-        ${q.optional ? `<button type="button" class="link" data-tj="skip">${q.input === 'date' ? 'Todavía no sabemos' : 'Saltar'}</button>` : ''}
+        ${q.optional ? `<button type="button" class="link" data-tj="skip">${q.input === 'date' ? (isStudy(draft) ? 'Todavía no sé' : 'Todavía no sabemos') : q.input === 'files' && isStudy(draft) && !draft.files.length && !draft.text ? 'No tengo material' : 'Saltar'}</button>` : ''}
         ${q.input === 'ready'
-    ? `${ai.ready() ? '<button class="button primary big" type="submit">Escribir mi guía</button>' : `<button class="button ghost" type="submit" data-later="1">${draft.tid ? 'Guardar y escribir la guía después' : 'Crear el trabajo y escribir la guía después'}</button>`}`
+    ? `${ai.ready() ? '<button class="button primary big" type="submit">Escribir mi guía</button>' : `<button class="button ghost" type="submit" data-later="1">${draft.tid ? 'Guardar y escribir la guía después' : isStudy(draft) ? 'Crear la guía y escribirla después' : 'Crear el trabajo y escribir la guía después'}</button>`}`
     : '<button class="button primary" type="submit">Siguiente →</button>'}
       </div>
     </form>`;
   root.querySelector('.tj-input, .tj-paste')?.focus();
 }
+// The courses Studium knows (the graph), offered while typing which one.
+function coursesList() {
+  const names = [...new Set((ctx?.state?.graph?.nodes ?? []).filter((n) => n.type === 'course').map((n) => n.name))].sort((a, b) => a.localeCompare(b, 'es'));
+  return `<datalist id="tj-courses">${names.slice(0, 400).map((x) => `<option value="${esc(x)}">`).join('')}</datalist>`;
+}
+// The course in the knowledge graph, when Studium has material of it from other students.
+function graphCourse(name = draft?.course) {
+  if (!name) return null;
+  return graphOf?.course(name) ?? null;
+}
+function graphLine() {
+  const c = graphCourse();
+  if (!c) return '';
+  const n = c.contributions?.length ?? 0;
+  return `<label class="tj-pick ${draft.graph ? 'on' : ''}"><input type="checkbox" data-tj-graph ${draft.graph ? 'checked' : ''}> <span><b>Sumar lo que la comunidad sabe de ${esc(c.name)}</b><br><small>${draft.route ? `los conceptos de la ruta que elegiste en el grafo${draft.route.label ? ` (${esc(draft.route.label)})` : ''}` : `${n} ${n === 1 ? 'aporte anónimo' : 'aportes anónimos'} de otros estudiantes: conceptos y preguntas reales`}</small></span></label>`;
+}
+// What the AI is told about how the person wants to study (the guide's prefs plus the evaluation).
+function studyPrefs(d) {
+  return { ...d.prefs, exam: d.title, when: d.date ? deadlineText(`${d.date}${d.time ? `T${d.time}` : ''}`) : '' };
+}
 const draftDeadline = () => (draft.date ? `${draft.date}${draft.time ? `T${draft.time}` : ''}` : '');
 function keepAnswer() {
-  const q = QUESTIONS[draft.at];
+  const q = questionsOf(draft)[draft.at];
   const form = $('#tj-wizard', root);
   if (!form) return;
   if (q.input === 'text') draft[q.key] = String(form.v.value).trim();
@@ -946,19 +1033,20 @@ function keepAnswer() {
   if (q.input === 'work' && form.repoUrl) draft.prefs.repoUrl = String(form.repoUrl.value).trim().slice(0, 200);
   if (q.input === 'work' && form.repoName) draft.prefs.repoName = String(form.repoName.value).trim().slice(0, 100);
   if (q.input === 'work' && form.ghCreate?.value.trim()) { ai.setKey(GH_CREATE, form.ghCreate.value.trim()); form.ghCreate.value = ''; }
-  if (q.input === 'goal' && form.goalNote) draft.prefs.goalNote = String(form.goalNote.value).trim().slice(0, 800);
+  if ((q.input === 'goal' || q.input === 'studygoal') && form.goalNote) draft.prefs.goalNote = String(form.goalNote.value).trim().slice(0, 800);
+  if (q.input === 'scope' && form.scope) draft.prefs.scope = String(form.scope.value).trim().slice(0, 1200);
   if (q.input === 'date') { draft.date = form.date.value; draft.time = form.time.value; }
 }
 function nextQuestion() {
   keepAnswer();
-  const q = QUESTIONS[draft.at];
+  const q = questionsOf(draft)[draft.at];
   if (q.required && q.input === 'text' && !draft[q.key]) return renderDraft('Escríbelo para seguir.');
-  if (q.input === 'files' && !draft.files.length && !draft.text && !draft.kept) return renderDraft('Trae el enunciado para seguir: uno o varios archivos, o el texto pegado.');
+  if (q.input === 'files' && q.required && !draft.files.length && !draft.text && !draft.kept) return renderDraft('Trae el enunciado para seguir: uno o varios archivos, o el texto pegado.');
   // What can be checked here is checked here, not at the end.
   if (q.input === 'work' && draft.prefs.share === 'repo' && !repoOf(draft.prefs).repo) return renderDraft('Pega el enlace del repo, como https://github.com/usuario/repo, o elige «No, hay que crearlo».');
   if (q.input === 'work' && draft.prefs.share === 'newrepo' && !/^[A-Za-z0-9._-]{1,100}$/.test(String(draft.prefs.repoName || slug(draft.title)))) return renderDraft('El nombre del repo solo puede tener letras, números, puntos, guiones y guiones bajos, sin espacios.');
   if (q.input === 'work' && draft.prefs.share === 'newrepo' && draft.prefs.repoBy === 'token' && !ai.keyOf(GH_CREATE)) return renderDraft('Pega la clave de GitHub que puede crear repos (los pasos están arriba), o elige otra forma de crearlo.');
-  draft.at = Math.min(QUESTIONS.length - 1, draft.at + 1);
+  draft.at = Math.min(questionsOf(draft).length - 1, draft.at + 1);
   renderDraft();
 }
 
@@ -1050,16 +1138,21 @@ async function fitStatement(text) {
 // (after a failure or «Intentarlo otra vez») gets them too, not only their names.
 const keepFiles = (tid, files) => draftStore('readwrite', (st) => st.put({ kind: 'files', owner: uid(), files, saved: Date.now() }, `files:${tid}`)).catch(() => {});
 const filesOf = (tid) => draftStore('readonly', (st) => st.get(`files:${tid}`)).then((x) => x?.files ?? []).catch(() => []);
+// A study guide with no evaluation named is «Guía de <materia>».
+const titleOf = (d) => (isStudy(d) && !d.title ? `Guía de ${d.course}` : d.title);
 async function createTrabajo() {
   const { texts, binaries, notes } = await readAll(draft.files);
-  const statement = [draft.text, ...texts].filter(Boolean).join('\n\n');
+  const s = isStudy(draft);
+  const context = s && draft.graph ? await (graphOf?.context({ course: draft.course, route: draft.route, exams: draft.exams }) ?? '') : '';
+  let statement = [draft.text, ...texts, context].filter(Boolean).join('\n\n');
+  if (s && !statement && !binaries.length) statement = `(El estudiante no trajo material. Escribe la guía con lo que sabes de ${draft.course}, al nivel de un curso universitario${draft.prefs.scope ? ', con lo que él dijo que entra' : ''}.)`;
   if (!statement && !binaries.length) throw new Error(`No se pudo leer lo que trajiste${notes.length ? `: ${notes.join('; ')}` : ''}.`);
   const ref = doc(collection(db, 'trabajos'));
   const code = newCode();
   const batch = writeBatch(db);
   batch.set(ref, {
-    title: draft.title.slice(0, 160), course: draft.course.slice(0, 120), group: draft.group.slice(0, 80), deadline: draftDeadline(), prefs: { ...draft.prefs, inFolder: !!(draft.workspace && draft.workspace !== 'temp') },
-    parts: draft.parts, owner: uid(), code, ...repoOf(draft.prefs), statement: await fitStatement(statement + (binaries.length ? `\n\n(Archivos entregados a la IA tal como son: ${binaries.map((p) => p.name).join(', ')})` : '')),
+    title: titleOf(draft).slice(0, 160), course: draft.course.slice(0, 120), group: draft.group.slice(0, 80), deadline: draftDeadline(), prefs: { ...draft.prefs, inFolder: !!(draft.workspace && draft.workspace !== 'temp') },
+    parts: s ? 1 : draft.parts, owner: uid(), code, ...repoOf(draft.prefs), statement: await fitStatement(statement + (binaries.length ? `\n\n(Archivos entregados a la IA tal como son: ${binaries.map((p) => p.name).join(', ')})` : '')),
     encoding: 'gzip', created: serverTimestamp(), updated: serverTimestamp(),
   });
   batch.set(doc(db, 'trabajos', ref.id, 'miembros', uid()), { name: await myName(), code, joined: serverTimestamp() });
@@ -1083,8 +1176,8 @@ async function updateTrabajo() {
   if (binaries.length) { pdfs = [...pdfs, ...binaries]; await keepFiles(tid, pdfs); }
   if (add || binaries.length) statement = `${old}\n\n${add}${binaries.length ? `\n\n(Archivos agregados, entregados a la IA tal como son: ${binaries.map((x) => x.name).join(', ')})` : ''}`;
   await setDoc(tRef(tid), {
-    title: draft.title.slice(0, 160), course: draft.course.slice(0, 120), group: draft.group.slice(0, 80), deadline: draftDeadline(), prefs: { ...draft.prefs, inFolder: !!(draft.workspace && draft.workspace !== 'temp') },
-    parts: draft.parts, ...repoOf(draft.prefs), ...(statement ? { statement: await fitStatement(statement) } : {}), updated: serverTimestamp(),
+    title: titleOf(draft).slice(0, 160), course: draft.course.slice(0, 120), group: draft.group.slice(0, 80), deadline: draftDeadline(), prefs: { ...draft.prefs, inFolder: !!(draft.workspace && draft.workspace !== 'temp') },
+    parts: isStudy(draft) ? 1 : draft.parts, ...repoOf(draft.prefs), ...(statement ? { statement: await fitStatement(statement) } : {}), updated: serverTimestamp(),
   }, { merge: true });
   keepFolder(tid, draft.workspace);
   return { id: tid, pdfs, notes };
@@ -1092,27 +1185,35 @@ async function updateTrabajo() {
 // Back to the questions from a trabajo whose guide is not written (his words: going back in the draft even from
 // «generar», for when the folder got disconnected). Every answer comes back as it was; it opens on «Tu IA» when the
 // folder is the problem, else on the last question, and «Atrás» reaches all of them.
-async function draftFromTrabajo(at = QUESTIONS.length - 1) {
+async function draftFromTrabajo(at = questionsOf(T).length - 1) {
   const [date = '', time = ''] = String(T.deadline ?? '').split('T');
   const kept = await filesOf(T.id);
-  const prefs = { ...PREF_DEFAULT, ...(T.prefs ?? {}) };
+  const prefs = { ...(study() ? STUDY_DEFAULT : PREF_DEFAULT), ...(T.prefs ?? {}) };
   delete prefs.inFolder;
+  const kind = study() ? 'estudio' : undefined;
   const folder = folderOf(T.id);
   draft = {
     id: `e${T.id}`, tid: T.id, at, title: T.title ?? '', course: T.course ?? '', text: '', files: [], parts: T.parts ?? 3, group: T.group ?? '', date, time: time.slice(0, 5), pasting: false,
     workspace: folderState(folder) === 'ok' ? folder : 'temp', prefs, kept: { chars: T.statement?.length ?? 0, files: kept.map((f) => ({ name: f.name, size: f.data?.length ?? 0 })) },
+    ...(kind ? { kind, graph: false } : {}),
   };
   T = null;
-  location.hash = '#/trabajos';
+  location.hash = kind ? '#/estudiar/guia' : '#/trabajos';
 }
+// What the AI reads: a trabajo's statement, or the material of a study guide.
+function sourceText() {
+  if (study()) return `El material de estudio para «${T.title}»${T.course ? ` (${T.course})` : ''}:\n\n${T.statement}`;
+  return `El enunciado del trabajo «${T.title}»${T.group ? ` (grupo: ${T.group})` : ''} y lo que lo acompaña:\n\n${T.statement}`;
+}
+const promptPrefs = () => (study() ? { ...(T.prefs ?? {}), exam: T.title, when: T.deadline ? deadlineText(T.deadline) : '' } : T.prefs);
 function working(text, live = false) {
   root.innerHTML = `<div class="tj-wizard tj-working panel glass">${live ? '' : '<div class="tj-spinner" aria-hidden="true"></div>'}<h1>${esc(text)}</h1>${live ? liveHTML('Lo que hace tu IA, ahora') : ''}<p class="lede-small">Puedes dejar esta pestaña abierta y volver en un rato.</p></div>`;
   return live ? liveFeed(root) : null;
 }
 
 async function generateOutline(files = [], live = null) {
-  const system = outlinePrompt({ parts: T.parts, course: T.course, deadline: deadlineText(T.deadline), prefs: T.prefs });
-  const text = `El enunciado del trabajo «${T.title}»${T.group ? ` (grupo: ${T.group})` : ''} y lo que lo acompaña:\n\n${T.statement}`;
+  const system = outlinePrompt({ parts: T.parts, course: T.course, deadline: deadlineText(T.deadline), prefs: promptPrefs() });
+  const text = sourceText();
   let r;
   try { r = await askAI('solution', system, text, files, `Esquema de «${T.title}»`, live); T.lastError = null; failed.delete(T.id); } catch (e) { T.lastError = errInfo(e, 'Escribir la guía'); failed.set(T.id, T.lastError); throw e; }
   keepResume(T.id, r.resume);
@@ -1126,10 +1227,8 @@ async function generateOutline(files = [], live = null) {
 // An older bridge cannot hand back files: with it, the guide goes chapter by chapter (and the page asks to update it).
 const wholeAtOnce = () => ai.choice('solution').provider === 'bridge:claude' && T.prefs?.writeAll !== 'outline' && !ai.bridgeOld();
 async function generateWhole(files = [], live = null) {
-  const system = wholePrompt({ parts: T.parts, course: T.course, deadline: deadlineText(T.deadline), prefs: T.prefs });
-  const text = `El enunciado del trabajo «${T.title}»${T.group ? ` (grupo: ${T.group})` : ''} y lo que lo acompaña:
-
-${T.statement}`;
+  const system = wholePrompt({ parts: T.parts, course: T.course, deadline: deadlineText(T.deadline), prefs: promptPrefs() });
+  const text = sourceText();
   let r;
   try { r = await askAI('solution', system, text, files, `Guía completa de «${T.title}»`, live); T.lastError = null; failed.delete(T.id); } catch (e) { T.lastError = errInfo(e, 'Escribir la guía'); failed.set(T.id, T.lastError); throw e; }
   keepResume(T.id, r.resume);
@@ -1156,7 +1255,7 @@ ${T.statement}`;
 }
 async function generateMilestone(hid, live = null) {
   const milestone = T.outline.hitos.find((h) => h.id === hid);
-  const system = milestonePrompt({ milestone, outline: T.outline, prefs: T.prefs });
+  const system = milestonePrompt({ milestone, outline: T.outline, prefs: promptPrefs() });
   const r = await askAI('solution', system, `Escribe el hito ${hid} completo.`, [], `Hito ${hid} de «${T.title}»`, live);
   keepResume(T.id, r.resume);
   const data = cleanMilestone(parseJSON(r.text), milestone);
@@ -1233,21 +1332,31 @@ function templateSample(id) {
 function topbar() {
   const all = steps();
   const total = pct(all.filter((s) => isDone(s.id)).length, all.length);
-  const caps = T.outline ? [['inicio', '0 · El trabajo'], ['reunion', '◷ · Reunirse'], ...T.outline.hitos.map((h, i) => [h.id, `${i + 1} · ${short(h.titulo)}`]), ['entrega', '✓ · Entregar']] : [];
+  const s = study();
+  const caps = T.outline ? (s ? [['inicio', '0 · Qué entra'], ...T.outline.hitos.map((h, i) => [h.id, `${i + 1} · ${short(h.titulo)}`]), ['entrega', '✓ · Repaso']]
+    : [['inicio', '0 · El trabajo'], ['reunion', '◷ · Reunirse'], ...T.outline.hitos.map((h, i) => [h.id, `${i + 1} · ${short(h.titulo)}`]), ['entrega', '✓ · Entregar']]) : [];
   return `<nav class="top"><div class="in">
-      <a class="back" href="#/trabajos" title="Volver a Studium">← Studium</a>
-      <span class="brand">${esc(short((T.course || T.title).toUpperCase(), 26))} · GUÍA DE SOLUCIÓN</span>
+      <a class="back" href="${s ? '#/guias' : '#/trabajos'}" title="Volver a Studium">← Studium</a>
+      <span class="brand">${esc(short((T.course || T.title).toUpperCase(), 26))} · ${s ? 'GUÍA DE ESTUDIO' : 'GUÍA DE SOLUCIÓN'}</span>
       ${caps.map(([id, label]) => `<a href="#cap-${esc(id)}" data-tj="jump" data-cap="${esc(id)}">${esc(label)}</a>`).join('')}
       <span class="sp"></span>
       ${myPart() ? `<label class="mine"><input type="checkbox" data-tj="mine" ${onlyMine ? 'checked' : ''}> Solo mi parte</label>` : ''}
-      <span class="pct" title="Pasos hechos por el grupo">${total}%</span>
+      <span class="pct" title="${s ? 'Conceptos que ya entiendes' : 'Pasos hechos por el grupo'}">${s ? pct(all.filter((x) => mark(x.id).u).length, all.length) : total}%</span>
       <select data-tj-template aria-label="Plantilla de la guía">${Object.entries(TEMPLATES).map(([k, v]) => `<option value="${k}" ${templateOf() === k ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>
       <button type="button" data-tj="theme">Claro / oscuro</button>
-    </div><div class="prog" style="width:${total}%"></div></nav>`;
+    </div><div class="prog" style="width:${s ? pct(all.filter((x) => mark(x.id).u).length, all.length) : total}%"></div></nav>`;
 }
 
 function hero() {
   const all = steps();
+  if (study()) {
+    const days = T.deadline ? Math.ceil((new Date(`${T.deadline.slice(0, 10)}T12:00`) - new Date()) / 864e5) : null;
+    const left = days === null ? '' : days > 1 ? ` · faltan ${days} días` : days === 1 ? ' · es mañana' : days === 0 ? ' · es hoy' : '';
+    return `<header class="hero">
+      <div><h1 class="no-i18n">${esc(T.title)}</h1>
+      <p>Guía de estudio${T.course ? ` · <span class="no-i18n">${esc(T.course)}</span>` : ''}${T.deadline ? ` · ${esc(deadlineText(T.deadline))}${left}` : ''} · pasa el cursor sobre lo subrayado con puntos para ver su definición</p></div>
+    </header>`;
+  }
   return `<header class="hero">
       <div><h1 class="no-i18n">${esc(T.title)}</h1>
       <p>Guía de solución${T.course ? ` · ${esc(T.course)}` : ''}${T.group ? ` · ${esc(T.group)}` : ''}${T.deadline ? ` · entrega: ${esc(deadlineText(T.deadline))}` : ''} · pasa el cursor sobre lo subrayado con puntos para ver su definición</p></div>
@@ -1260,7 +1369,7 @@ function hero() {
     </header>`;
 }
 
-function stepChecks(key, label, doneWord = 'Lo hice') {
+function stepChecks(key, label, doneWord = study() ? 'Lo practiqué' : 'Lo hice') {
   const m = mark(key);
   const others = doneBy(key).filter((x) => x.uid !== uid()).map((x) => x.name);
   const a = asking.get(key);
@@ -1277,7 +1386,33 @@ function aiBlock(task) {
   return `<div class="pick">${ai.pickerHTML(task)}</div>${task === 'solution' && ai.choice(task).provider.startsWith('bridge:') ? watchBox() : ''}`;
 }
 
+// Section 0 of a study guide: what enters, how the evaluation is, what to watch out for, the material as it came.
+function studyIntro() {
+  const o = T.outline;
+  const missing = o.hitos.filter((h) => !T.hitos[h.id]).length;
+  const r = o.reglas ?? {};
+  const how = [...(r.calificacion ?? []), r.modalidad, ...(r.fechas ?? [])].filter(Boolean);
+  const reqs = (o.requisitos ?? []).filter((x) => x.texto);
+  return `<section class="sec" id="cap-inicio" style="--c:var(--blue);--cs:var(--blue-s)">
+      <h2><span class="n">0</span>Qué entra ${adjButton('esquema')}</h2>
+      <div class="row"><div class="prose no-i18n">${md(o.de_que_trata || o.resumen)}
+          ${o.diagrama ? `<figure class="diagram"><pre class="mermaid">${esc(o.diagrama)}</pre></figure>` : ''}</div>
+        <div>${o.avisos.length ? `<div class="trap"><b>Ojo con</b><ul class="tight">${o.avisos.map((x) => `<li>${inline(x)}</li>`).join('')}</ul></div>` : ''}
+          ${how.length ? `<div class="def"><h4>Cómo es la evaluación</h4><ul class="tight no-i18n">${how.map((x) => `<li>${inline(x)}</li>`).join('')}</ul></div>` : ''}
+          ${o.razonamiento ? `<details class="q reading"><summary class="qh">Cómo leyó tu IA el material</summary><div class="ans no-i18n">${md(o.razonamiento)}</div></details>` : ''}</div></div>
+      ${reqs.length ? `<h3>Lo que tienes que saber hacer</h3><p>Al terminar la guía, cada una de estas cosas te sale sola. Márcalas cuando las domines.</p>
+        <ul class="tight no-i18n">${reqs.map((x) => `<li>${inline(x.texto)}${x.peso ? ` <span class="wt">${esc(x.peso)}</span>` : ''}${x.material ? ` <span class="mut small">· ${esc(x.material)}</span>` : ''}</li>`).join('')}</ul>` : ''}
+      <div class="card source"><h3>Tu material, tal cual</h3>
+        <p class="mut">Lo que leyó tu IA para escribir la guía: tus archivos${/# Studium: contexto/.test(T.statement ?? '') ? ' y lo que la comunidad sabe de la materia' : ''}.</p>
+        <details class="q"><summary class="qh">Ver el material</summary><pre class="src">${esc(T.statement)}</pre></details></div>
+      ${missing ? `<div class="card soft"><p>${missing === o.hitos.length ? 'Los temas todavía no están escritos.' : missing === 1 ? 'Falta un tema por escribir.' : `Faltan ${missing} temas por escribir.`} Quedó lo que tu IA alcanzó a escribir.</p>${aiBlock('solution')}<p><button type="button" class="act" data-tj="gen-all">Escribir ${missing === 1 ? 'el tema que falta' : `los ${missing} temas`}</button> <span class="mut" id="tj-gen-status" role="status"></span></p></div>` : ''}
+      ${(o.preguntas ?? []).length && !T.prefs?.answers ? `<div class="card soft questions"><h4>Antes de seguir, tu IA quiere confirmar contigo</h4>
+        ${o.preguntas.map((q, i) => `<label class="qa"><b>${esc(q.pregunta)}</b>${q.por_que ? `<span class="mut small">${esc(q.por_que)}</span>` : ''}<textarea data-tj-answer="${i}" rows="2" placeholder="Tu respuesta"></textarea></label>`).join('')}
+        <p><button type="button" class="act" data-tj="answer">Responder y rehacer el esquema</button> <button type="button" class="ask" data-tj="answer-skip">Seguir sin responder</button> <span class="mut" id="tj-answer-status" role="status"></span></p></div>` : ''}
+    </section>`;
+}
 function intro() {
+  if (study()) return studyIntro();
   const o = T.outline;
   const letters = LETTERS.slice(0, T.parts).split('');
   const all = steps();
@@ -1348,6 +1483,7 @@ function stepHTML(s, step) {
     return `<div class="fig code"><div class="fh"><span>${esc(c.lenguaje)}</span><span class="sp"></span><button type="button" class="ask" data-tj="copy" data-text="${esc(c.codigo)}">copiar</button></div>
       <table>${lines.map((line, i) => `<tr><td class="ln">${i + 1}</td><td class="cd">${esc(line) || ' '}</td><td class="ex">${expl.has(i + 1) ? inline(expl.get(i + 1)) : ''}</td></tr>`).join('')}</table></div>`;
   }).join('');
+  if (study()) return studyStep(s, step, code);
   return `<article class="step" id="paso-${esc(s.id)}" style="--pc:${colorOf(s.parte)}">
       <h3><span class="num">${esc(s.num)}</span>${esc(s.titulo)} ${avatar(s.parte, holder ? nameOf(holder) : `Persona ${s.parte}`)} ${step ? adjButton(`paso:${s.id}`) : ''}</h3>
       ${step ? `${step.clave ? `<p class="key no-i18n">${inline(step.clave)}</p>` : ''}<div class="row"><div class="prose no-i18n">${step.objetivo ? `<p class="lead">${inline(step.objetivo)}</p>` : ''}${md(step.teoria)}
@@ -1361,6 +1497,20 @@ function stepHTML(s, step) {
     </article>`;
 }
 
+function studyStep(s, step, code) {
+  const qa = (q) => `<details class="q"><summary class="qh">${inline(q.pregunta)}</summary><div class="ans">${md(q.respuesta)}</div></details>`;
+  return `<article class="step" id="paso-${esc(s.id)}" style="--pc:var(--c)">
+      <h3><span class="num">${esc(s.num)}</span>${esc(s.titulo)} ${step ? adjButton(`paso:${s.id}`) : ''}</h3>
+      ${step ? `${step.clave ? `<p class="key no-i18n">${inline(step.clave)}</p>` : ''}<div class="row"><div class="prose no-i18n">${step.objetivo ? `<p class="lead">${inline(step.objetivo)}</p>` : ''}${md(step.teoria)}
+          ${step.diagrama ? `<figure class="diagram"><pre class="mermaid">${esc(step.diagrama)}</pre></figure>` : ''}</div>
+        <div>${step.comprueba.length ? `<div class="def"><h4>¿Lo entendiste?</h4>${step.comprueba.map(qa).join('')}</div>` : ''}
+          ${step.esperado ? `<div class="def"><h4>Al correrlo verás</h4>${md(step.esperado)}</div>` : ''}</div></div>
+        ${(step.ejemplos ?? []).map((x, k) => `<div class="worked no-i18n"><h4>Ejemplo resuelto${step.ejemplos.length > 1 ? ` ${k + 1}` : ''}</h4>${md(x.enunciado)}<details class="q"><summary class="qh">Intenta resolverlo y luego mira la solución</summary><div class="ans">${md(x.solucion)}</div></details></div>`).join('')}
+        ${code}${(step.tu_turno ?? []).length ? `<div class="turn no-i18n"><h4>✋ Ahora tú, a mano</h4><ul>${step.tu_turno.map((x) => `<li>${inline(x)}</li>`).join('')}</ul></div>` : ''}
+        ${step.defensa.length ? `<div class="exam no-i18n"><h4>Así te lo pueden preguntar</h4>${step.defensa.map(qa).join('')}</div>` : ''}
+        ${stepChecks(s.id, `el concepto «${s.titulo}»${step.objetivo ? `: ${step.objetivo}` : ''}`)}` : ''}
+    </article>`;
+}
 function chapter(h, i) {
   const data = T.hitos[h.id];
   const byId = new Map((data?.pasos ?? []).map((p) => [p.id, p]));
@@ -1369,10 +1519,10 @@ function chapter(h, i) {
   const hue = ['--blue', '--green', '--orange', '--violet', '--rose', '--brown'][i % 6];
   return `<section class="sec" id="cap-${esc(h.id)}" style="--c:var(${hue});--cs:var(${hue}-s)">
       <h2><span class="n">${i + 1}</span>${esc(h.titulo)} ${data ? adjButton(`hito:${h.id}`) : ''}</h2>
-      <p class="lead">${h.entregable ? `Al terminar este capítulo tendrán ${esc(lower(h.entregable))}.` : ''} ${h.listo_cuando ? `Está listo cuando ${esc(lower(h.listo_cuando))}.` : ''}</p>
-      ${data ? '' : `<div class="card soft"><p>Este capítulo todavía no está escrito. Sus pasos:</p><ol class="tight">${list.map((s) => `<li>${esc(s.titulo)} ${avatar(s.parte)}</li>`).join('')}</ol>${aiBlock('solution')}<p><button type="button" class="act" data-tj="gen" data-hito="${esc(h.id)}">Escribirlo con tu IA</button> <span class="mut" data-status="${esc(h.id)}"></span></p></div>`}
+      <p class="lead">${study() ? `${h.entregable ? `Al terminar este tema podrás ${esc(lower(h.entregable).replace(/^podrás\s+/, ''))}.` : ''} ${h.listo_cuando ? `Lo dominas cuando ${esc(lower(h.listo_cuando))}.` : ''}` : `${h.entregable ? `Al terminar este capítulo tendrán ${esc(lower(h.entregable))}.` : ''} ${h.listo_cuando ? `Está listo cuando ${esc(lower(h.listo_cuando))}.` : ''}`}</p>
+      ${data ? '' : `<div class="card soft"><p>${study() ? 'Este tema todavía no está escrito. Sus conceptos:' : 'Este capítulo todavía no está escrito. Sus pasos:'}</p><ol class="tight">${list.map((s) => `<li>${esc(s.titulo)} ${study() ? '' : avatar(s.parte)}</li>`).join('')}</ol>${aiBlock('solution')}<p><button type="button" class="act" data-tj="gen" data-hito="${esc(h.id)}">Escribirlo con tu IA</button> <span class="mut" data-status="${esc(h.id)}"></span></p></div>`}
       ${data ? list.map((s) => stepHTML(s, byId.get(s.id))).join('') || '<p class="mut">Tu parte no tiene pasos en este capítulo.</p>' : ''}
-      ${data ? `<p class="small mut capfoot">${done} de ${h.pasos.length} pasos hechos · escrito con ${esc(data.ai?.model ?? 'IA')} · <button type="button" class="ask" data-tj="gen" data-hito="${esc(h.id)}">escribirlo otra vez</button></p>` : ''}
+      ${data ? `<p class="small mut capfoot">${study() ? `${steps().filter((s) => s.hito === h.id && mark(s.id).u).length} de ${h.pasos.length} conceptos entendidos` : `${done} de ${h.pasos.length} pasos hechos`} · escrito con ${esc(data.ai?.model ?? 'IA')} · <button type="button" class="ask" data-tj="gen" data-hito="${esc(h.id)}">escribirlo otra vez</button></p>` : ''}
     </section>`;
 }
 
@@ -1400,7 +1550,26 @@ function flashDo(what) {
   const el = gRoot().querySelector('[data-fc]');
   if (el) { el.innerHTML = flashHTML(); el.querySelector('[data-fc-card]')?.focus(); }
 }
+function studyClosing() {
+  const all = steps();
+  const a = T.avance[uid()] ?? {};
+  const pU = pct(all.filter((s) => a[s.id]?.u).length, all.length);
+  const pP = pct(all.filter((s) => a[s.id]?.d).length, all.length);
+  const weak = all.filter((s) => !a[s.id]?.u);
+  const exam = T.outline.hitos.flatMap((h) => (T.hitos[h.id]?.pasos ?? []).flatMap((p) => p.defensa));
+  return `<section class="sec" id="cap-entrega" style="--c:var(--rose);--cs:var(--rose-s)">
+      <h2><span class="n">✓</span>Repaso final</h2>
+      <div class="progress"><div class="prow"><b>Entiendes</b><span>${pU}% de la guía</span>${bar(pU, 'var(--blue)')}<span>practicaste ${pP}%</span>${bar(pP, 'var(--teal)')}</div></div>
+      ${weak.length && weak.length < all.length ? `<p>Te falta: ${weak.slice(0, 12).map((s) => `<a href="#paso-${esc(s.id)}" data-tj="jump">${esc(s.titulo)}</a>`).join(', ')}${weak.length > 12 ? '…' : ''}.</p>` : !weak.length && all.length ? '<p><b>Lo entiendes todo.</b> Haz el simulacro de abajo sin mirar y repasa las tarjetas la noche antes.</p>' : ''}
+      ${exam.length ? `<h3>Simulacro: preguntas como las del examen</h3><p>Respóndelas en papel, sin mirar la guía, y solo después abre la respuesta.</p><div class="cols2">${exam.map((q) => `<details class="q"><summary class="qh">${inline(q.pregunta)}</summary><div class="ans">${md(q.respuesta)}</div></details>`).join('')}</div>` : ''}
+      ${T.outline.glosario.length ? (T.prefs?.cards === false
+    ? `<h3>Términos</h3><dl class="gloss">${T.outline.glosario.map((g) => `<dt>${esc(g.termino)}</dt><dd>${inline(g.definicion)}</dd>`).join('')}</dl>`
+    : `<h3>Tarjetas de términos ${adjButton('glosario')}</h3><p>Di en voz alta qué significa y voltea. <span class="mut small">Espacio voltea · 1 lo sabía · 2 repasar</span></p><div class="fc-trainer" data-fc>${flashHTML()}</div>
+      <details class="q"><summary class="qh">Ver todos los términos</summary><dl class="gloss">${T.outline.glosario.map((g) => `<dt>${esc(g.termino)}</dt><dd>${inline(g.definicion)}</dd>`).join('')}</dl></details>`) : ''}
+    </section>`;
+}
 function closing() {
+  if (study()) return studyClosing();
   const all = steps();
   const repo = T.repo ? `${T.repo.owner}/${T.repo.name}` : '';
   const token = !!ai.keyOf('github');
@@ -1450,11 +1619,16 @@ function noOutline() {
   return `<section class="sec" id="cap-inicio" style="--c:var(--blue);--cs:var(--blue-s)"><h2><span class="n">0</span>La guía todavía no está escrita</h2><div class="card soft">${T.owner === uid() || T.escritor === uid()
     ? `${T.escritor === uid() ? `<p class="tj-asked">🤝 <b>${esc(nameOf(T.owner))}</b> te pidió que escribas esta guía con tu IA. Se usa tu cuota, y la guía queda registrada como escrita por ti.</p>` : ''}${T.owner === uid() && T.escritor ? `<p class="tj-asked">🤝 Le pediste a <b>${esc(T.escritorName || nameOf(T.escritor))}</b> que escriba esta guía. Cuando la escriba, aparece aquí. <button type="button" class="ask" data-tj="ask-cancel">Cancelar el pedido</button></p>` : ''}${gone ? `<div class="tj-gone"><p><b>Tu carpeta se desconectó del puente.</b> Se cerró o reinició el puente, o pasó el tiempo que la prestaste. Sin ella, tu IA no puede trabajar ahí.</p>
         <p><button type="button" class="act" data-tj="folder-pick">Elegir la carpeta otra vez</button> <button type="button" class="ask" data-tj="folder-forget">Seguir sin ella</button> <button type="button" class="ask" data-tj="edit-questions" data-at="ai">Volver a las preguntas</button></p><p class="fine" id="tj-folder-status" role="status"></p></div>` : ''}
-      ${errorBox(T.lastError ?? failed.get(T.id))}<p>Tu IA lee el enunciado y arma los capítulos: qué pide el trabajo, cómo se reparten y cada paso explicado.</p>${aiBlock('solution')}
+      ${errorBox(T.lastError ?? failed.get(T.id))}<p>${study() ? 'Tu IA lee tu material y arma los temas: qué entra, cada concepto explicado, con ejemplos resueltos y preguntas como las del examen.' : 'Tu IA lee el enunciado y arma los capítulos: qué pide el trabajo, cómo se reparten y cada paso explicado.'}</p>${aiBlock('solution')}
       ${usesFolder() ? `<div class="tj-where"><h3>Dónde trabaja y qué puede hacer</h3>${placeHTML(folderOf(T.id) || 'temp')}<p class="fine">El modelo y cuánto piensa se cambian arriba, en «Con Claude Code…».</p></div>` : ''}${ai.ready() ? `${ai.choice('solution').provider === 'bridge:claude' ? accountPick() : ''}<p><button type="button" class="act" data-tj="outline">${(T.lastError ?? failed.get(T.id)) ? 'Intentarlo otra vez' : 'Escribir la guía'}</button> <span class="mut" id="tj-gen-status" role="status"></span></p>` : ''}
       ${T.owner === uid() ? `<p class="small"><button type="button" class="ask" data-tj="edit-questions">← Volver a las preguntas</button> <span class="mut">cambia lo que elegiste (la IA, la carpeta, cómo quieres la guía…) antes de escribirla</span></p>
       ${T.escritor ? '' : '<details class="q tj-askfriend" data-askfriend-box><summary class="qh">¿Se te acabó la cuota de tu IA? Pide a un amigo que la escriba</summary><div class="ans" data-askfriend>Cargando tus amigos…</div></details>'}` : ''}`
     : '<p>Quien creó el trabajo todavía no escribió la guía.</p>'}</div></section>`;
+}
+// A study guide is one person's: «Pedir a un amigo» is the trabajos' (its friend joins the group).
+function noOutlineFor() {
+  const html = noOutline();
+  return study() ? html.replace(/<details class="q tj-askfriend"[\s\S]*?<\/details>/, '') : html;
 }
 
 function paint() {
@@ -1464,11 +1638,30 @@ function paint() {
   // The meeting goes where the AI said the group works together (the first such step shown), else at the end.
   const together = T.outline ? steps().filter((s) => (!onlyMine || s.parte === myPart()) && T.hitos[s.hito]?.pasos?.find((p) => p.id === s.id)?.reunion) : [];
   const why = together[0] ? T.hitos[together[0].hito].pasos.find((p) => p.id === together[0].id).reunion : '';
-  MEET = { at: together[0]?.id ?? '', others: new Set(together.slice(1).map((s) => s.id)), html: T.outline ? reunionBlock(T, { repaint, ref: tRef, people: () => T?.members ?? [], why }) : '' };
-  gRoot().innerHTML = `<div class="tjg-app" data-template="${templateOf()}" ${theme ? `data-theme="${theme}"` : ''}>${topbar()}<div class="wrap">${hero()}${T.outline ? intro() + T.outline.hitos.map(chapter).join('') + closing() : noOutline()}</div></div>`;
+  MEET = { at: together[0]?.id ?? '', others: new Set(together.slice(1).map((s) => s.id)), html: T.outline && !study() ? reunionBlock(T, { repaint, ref: tRef, people: () => T?.members ?? [], why }) : '' };
+  gRoot().innerHTML = `<div class="tjg-app" data-template="${templateOf()}" ${theme ? `data-theme="${theme}"` : ''}>${topbar()}<div class="wrap">${hero()}${T.outline ? intro() + T.outline.hitos.map(chapter).join('') + closing() : noOutlineFor()}</div></div>`;
   markChapter();
   drawDiagrams();
+  drawMath();
   paintTray();
+}
+// Formulas written in LaTeX between $ (study guides ask for them), drawn by KaTeX (jsDelivr, pinned) only when the
+// guide has some. Code and diagrams are left alone; KaTeX never runs what it reads (trust is off).
+let katexLib = null;
+async function drawMath() {
+  const app = gRoot()?.querySelector('.tjg-app');
+  if (!app || !/\$[^$\s]/.test(app.textContent)) return;
+  try {
+    katexLib ??= (async () => {
+      const css = document.createElement('link');
+      css.rel = 'stylesheet'; css.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css';
+      document.head.append(css);
+      await import('https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.mjs').then((m) => { window.katex = m.default; });
+      return (await import('https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.mjs')).default;
+    })();
+    const render = await katexLib;
+    render(app, { delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }, { left: '\\(', right: '\\)', display: false }, { left: '\\[', right: '\\]', display: true }], throwOnError: false, trust: false, ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option', 'select'], ignoredClasses: ['mermaid', 'tj-tray', 'tj-adjpop'] });
+  } catch { /* the formulas stay as written */ }
 }
 // Diagrams the AI wrote in Mermaid, drawn by Mermaid itself (jsDelivr, pinned), only when there are some. Each one is
 // drawn once and kept: the guide repaints whenever someone marks a step or takes a part, and redrawing every diagram
@@ -1541,11 +1734,11 @@ function markChapter() {
 async function openTrabajo(tid) {
   fonts();
   if (T?.id !== tid || T.viewer !== uid()) {
-    gRoot().innerHTML = '<p class="tjg-status">Abriendo el trabajo…</p>';
+    gRoot().innerHTML = `<p class="tjg-status">${location.hash.startsWith('#/estudio/') ? 'Abriendo tu guía…' : 'Abriendo el trabajo…'}</p>`;
     T = await loadTrabajo(tid);
     asking.clear();
     resetReunion();
-    if (!T) { gRoot().innerHTML = '<p class="tjg-status">Ese trabajo no existe, o no eres parte de él. <a href="#/trabajos">Volver</a></p>'; return; }
+    if (!T) { gRoot().innerHTML = `<p class="tjg-status">${location.hash.startsWith('#/estudio/') ? 'Esa guía no existe, o no es tuya. <a href="#/guias">Volver</a>' : 'Ese trabajo no existe, o no eres parte de él. <a href="#/trabajos">Volver</a>'}</p>`; return; }
   }
   paint();
   scroller()?.scrollTo({ top: 0 });
@@ -1571,11 +1764,11 @@ function toggle(kind, key, on) {
 async function ask(key, label) {
   if (!ai.ready()) { ctx.toast('Conecta una IA en Ajustes: la clave gratis de Gemini sirve.'); return; }
   asking.set(key, { busy: true }); repaint();
-  const text = `Trabajo: «${T.title}»${T.course ? ` (curso ${T.course})` : ''}.\nNo entiendo ${label}.\nExplícamelo.`;
+  const text = `${study() ? 'Guía de estudio' : 'Trabajo'}: «${T.title}»${T.course ? ` (curso ${T.course})` : ''}.\nNo entiendo ${label}.\nExplícamelo.`;
   try {
-    const r = await askAI('tutor', TUTOR, text, [], 'No lo entiendo');
+    const r = await askAI('tutor', tutorPrompt(), text, [], 'No lo entiendo');
     asking.set(key, { text: r.text, model: r.model });
-    await logAI({ task: 'tutor', step: key, model: r.model, provider: r.way, prompt: `${TUTOR}\n\n${text}` });
+    await logAI({ task: 'tutor', step: key, model: r.model, provider: r.way, prompt: `${tutorPrompt()}\n\n${text}` });
   } catch (e) { asking.set(key, { error: e.message }); }
   repaint();
 }
@@ -1676,24 +1869,25 @@ function wire(root) {
       return;
     }
     if (form.id === 'tj-wizard') {
-      if (QUESTIONS[draft.at].input !== 'ready') { nextQuestion(); return; }
+      if (questionsOf(draft)[draft.at].input !== 'ready') { nextQuestion(); return; }
       const later = !!ev.submitter?.dataset.later;
       if (!later && usesFolder() && (await folderStateNow(draft.workspace)) === 'gone') {
         draft.workspace = 'temp';
-        draft.at = QUESTIONS.findIndex((x) => x.input === 'ai');
+        draft.at = questionsOf(draft).findIndex((x) => x.input === 'ai');
         renderDraft(FOLDER_GONE);
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
       try {
         if (draft.prefs.share === 'newrepo' && draft.prefs.repoBy && draft.prefs.repoBy !== 'guide') { working('Creando el repo en tu GitHub…'); await makeRepo(draft.prefs); }
-        working(draft.tid ? 'Guardando tus respuestas…' : 'Creando el trabajo…');
+        const kindNow = isStudy(draft);
+        working(draft.tid ? 'Guardando tus respuestas…' : kindNow ? 'Creando tu guía…' : 'Creando el trabajo…');
         const made = draft.tid ? await updateTrabajo() : await createTrabajo();
         T = await loadTrabajo(made.id);
         dropDraft(draft.id);
         draft = null;
         if (!later && ai.ready()) {
-          const live = working('Tu IA está leyendo el enunciado y armando la guía', true);
+          const live = working(kindNow ? 'Tu IA está leyendo tu material y armando la guía' : 'Tu IA está leyendo el enunciado y armando la guía', true);
           startWork();
           try {
             if (wholeAtOnce()) await generateWhole(made.pdfs, live);
@@ -1709,7 +1903,7 @@ function wire(root) {
             if (!stopped()) await releaseFolder(made.id);
           } catch (e) { const info = T.lastError?.message === e.message ? T.lastError : errInfo(e, 'Escribir la guía'); failed.set(made.id, info); }
         }
-        location.hash = `#/trabajos/${made.id}`;
+        location.hash = kindNow ? `#/estudio/${made.id}` : `#/trabajos/${made.id}`;
       } catch (e) { console.error(e); renderDraft(e); }
     } else if (form.dataset.edit) {
       const f = new FormData(form);
@@ -1752,6 +1946,7 @@ function wire(root) {
     }
     else if (el.dataset?.tj === 'share-git' && draft) { keepAnswer(); draft.prefs.share = el.value === 'none' ? 'each' : (['repo', 'newrepo'].includes(draft.prefs.share) ? draft.prefs.share : 'repo'); renderDraft(); }
     else if (el.dataset?.tj === 'share-repo' && draft) { keepAnswer(); draft.prefs.share = el.value; renderDraft(); }
+    else if (el.dataset?.tjGraph !== undefined && draft) { keepAnswer(); draft.graph = el.checked; renderDraft(); }
     else if (el.dataset?.tjPref) { keepAnswer(); draft.prefs[el.dataset.tjPref] = el.type === 'checkbox' ? el.checked : el.value; renderDraft(); }
     else if (el.closest?.('[data-ai-pick]')) { const task = el.closest('[data-ai-pick]').dataset.aiPick; ai.setChoice(task, ai.picked(task, root)); }
   });
@@ -1777,7 +1972,14 @@ function wire(root) {
     if (!b || b.tagName === 'INPUT') return;
     const kind = b.dataset.tj;
     if (kind === 'new') { startDraft(); return; }
-    if (kind === 'cancel') { keepAnswer(); saveDraft(); draft = null; ctx.toast('Quedó en tus borradores: puedes retomarlo cuando quieras.'); setTimeout(renderList, 400); return; }
+    if (kind === 'cancel') {
+      keepAnswer(); saveDraft();
+      const was = isStudy(draft);
+      draft = null;
+      ctx.toast(was ? 'Quedó en «Tus guías»: puedes retomarla cuando quieras.' : 'Quedó en tus borradores: puedes retomarlo cuando quieras.');
+      if (was) setTimeout(() => { location.hash = '#/guias'; }, 400); else setTimeout(renderList, 400);
+      return;
+    }
     if (kind === 'draft-resume') { const d = await getDraft(b.dataset.id); if (d) { draft = d; renderDraft(); } return; }
     if (kind === 'draft-drop') {
       const card = b.closest('.tj-card');
@@ -1786,7 +1988,11 @@ function wire(root) {
       return;
     }
     if (kind === 'back') { keepAnswer(); draft.at = Math.max(0, draft.at - 1); renderDraft(); return; }
-    if (kind === 'skip') { const k = QUESTIONS[draft.at].key; if (k === 'deadline') { draft.date = ''; draft.time = ''; } else draft[k] = ''; draft.at += 1; renderDraft(); return; }
+    if (kind === 'skip') {
+      const k = questionsOf(draft)[draft.at].key;
+      if (k === 'deadline') { draft.date = ''; draft.time = ''; } else if (k === 'scope') { draft.prefs.scope = ''; draft.prefs.style = ''; } else if (k !== 'material') draft[k] = '';
+      draft.at += 1; renderDraft(); return;
+    }
     if (kind === 'count') { draft.parts = Number(b.dataset.n); draft.at += 1; renderDraft(); return; }
     if (kind === 'pair-code') {
       const code = b.closest('.tj-bridge')?.querySelector('[data-ai-pair-code]')?.value;
@@ -1904,7 +2110,7 @@ function wire(root) {
     }
     if (kind === 'ask-drop') { await busy(b, async () => { await amigos.dropRequest(b.dataset.tid); await renderList(); }).catch(() => {}); return; }
     if (kind === 'folder-forget') { keepFolder(T.id, ''); repaint(); ctx.toast('Tu IA trabajará solo con lo que trajiste.'); return; }
-    if (kind === 'edit-questions') { await busy(b, () => draftFromTrabajo(b.dataset.at === 'ai' ? QUESTIONS.findIndex((x) => x.input === 'ai') : undefined)).catch(() => {}); return; }
+    if (kind === 'edit-questions') { await busy(b, () => draftFromTrabajo(b.dataset.at === 'ai' ? questionsOf(T).findIndex((x) => x.input === 'ai') : undefined)).catch(() => {}); return; }
     if (kind === 'folder-renew') {
       say('#tj-folder-status', '');
       const close = pickingNotice();
@@ -1982,6 +2188,7 @@ export function mountTrabajos(context) {
   ctx = context;
   root = $('#tj-body');
   wire(root);
+  wire($('#eg-body'));
   wire($('#tjg-body'));
   wireReunion($('#tjg-body'), (t) => ctx.toast(t));
   $('#view-trabajo').addEventListener('scroll', () => requestAnimationFrame(markChapter), { passive: true });
@@ -1995,6 +2202,75 @@ export async function renderTrabajos(arg = []) {
   }
   if (arg[0]) return openTrabajo(arg[0]);
   T = null;
+  root = $('#tj-body');
+  if (isStudy(draft)) draft = null; // kept in «Tus guías»
   if (draft) return renderDraft();
   return renderList();
+}
+
+/* ---------- «Estudiar»: a study guide, with this same engine ---------- */
+// #/estudiar/guia: the questions of a new guide (or the one being answered); #/estudiar/guia/<course>: a new one for
+// that course (links from the graph); #/estudio/<id>: the guide, in its own environment.
+export async function renderStudy(arg = []) {
+  T = null;
+  root = $('#eg-body');
+  // A course by its graph id (course:…) or by its name.
+  const given = String(arg[0] ?? '');
+  const named = given ? graphOf?.nameOf?.(given) ?? given.replace(/^course:/, '') : '';
+  if (!isStudy(draft) || (named && draft.course !== named && draft.at > 0)) draft = newStudy({ course: named });
+  if (named && !draft.course) { draft.course = named; draft.at = 1; }
+  renderDraft();
+}
+export const openStudy = (id) => openTrabajo(id);
+// From the graph: a guide of a route's concepts (mapui.js).
+export function presetStudy(preset) {
+  draft = newStudy(preset);
+  draft.at = draft.course ? 1 : 0;
+  saveDraft();
+}
+// «Tus guías», on top of Guías: the guides being answered and the ones made, each one tap from going on.
+export async function studyShelf(el) {
+  if (!el || !uid()) return;
+  const [drafts, ids] = await Promise.all([listDrafts('estudio'), myIds()]);
+  const rows = (await Promise.all(ids.map((id) => getDoc(tRef(id)).then((x) => (x.exists() ? { id, ...x.data() } : null)).catch(() => null))))
+    .filter((r) => r && isStudy(r) && r.owner === uid());
+  if (!drafts.length && !rows.length) { el.hidden = true; el.innerHTML = ''; return; }
+  const when = (t) => new Date(t).toLocaleString('es', { day: 'numeric', month: 'short' });
+  const date = (d) => (d ? new Date(`${d.slice(0, 10)}T12:00`).toLocaleDateString('es', { day: 'numeric', month: 'short' }) : '');
+  el.hidden = false;
+  el.innerHTML = `<h2 class="tj-sub">Tus guías</h2><div class="tj-cards">
+    ${rows.map((r) => `<div class="tj-card glass" data-id="${esc(r.id)}">
+        <a class="tj-card-main" href="#/estudio/${esc(r.id)}"><b class="no-i18n">${esc(r.title)}</b><span class="fine"><span class="no-i18n">${esc(r.course ?? '')}</span>${r.deadline ? ` · ${esc(date(r.deadline))}` : ''}${r.outline ? '' : ' · <b>sin escribir</b>'}</span></a>
+        <details class="tj-menu"><summary aria-label="Más opciones de ${esc(r.title)}">⋯</summary><div class="tj-menu-list glass">
+          <a href="#/estudio/${esc(r.id)}">Abrir la guía</a>
+          <span class="tj-menu-note">Solo la ves <b>tú</b>.</span>
+          <button type="button" class="danger" data-eg="delete-ask" data-id="${esc(r.id)}" data-title="${esc(r.title)}">Eliminar…</button>
+        </div></details><div class="tj-card-extra" data-extra></div></div>`).join('')}
+    ${drafts.map((d) => `<div class="tj-card tj-draft glass" data-id="${esc(d.id)}">
+        <div class="tj-card-main"><b>${esc(d.title || (d.course ? `Guía de ${d.course}` : 'Guía sin nombre'))}</b><span class="fine">Sin terminar · te quedaste en «${esc(questionsOf(d)[d.at]?.ask ?? '')}» · ${esc(when(d.saved))}</span></div>
+        <p class="tj-draft-act"><button type="button" class="button primary small" data-eg="resume" data-id="${esc(d.id)}">Seguir</button> <button type="button" class="link danger" data-eg="drop" data-id="${esc(d.id)}">Eliminar</button></p></div>`).join('')}
+  </div>`;
+  if (el.dataset.wired) return;
+  el.dataset.wired = '1';
+  el.addEventListener('click', async (ev) => {
+    const b = ev.target.closest('[data-eg]');
+    if (!b) return;
+    const card = b.closest('.tj-card');
+    const extra = card?.querySelector('[data-extra]');
+    const { eg, id } = b.dataset;
+    if (eg === 'resume') { const d = await getDraft(id); if (d) { draft = d; location.hash = '#/estudiar/guia'; } return; }
+    if (eg === 'drop') {
+      if (!b.dataset.sure) { b.dataset.sure = '1'; b.textContent = '¿Eliminarla? Pulsa otra vez'; return; }
+      await dropDraft(id); await studyShelf(el); return;
+    }
+    if (eg === 'delete-ask') {
+      card.querySelector('.tj-menu').open = false;
+      extra.innerHTML = `<p><b>¿Eliminar «${esc(b.dataset.title)}»?</b> Se borran la guía y lo que marcaste. No se puede deshacer.</p><p><button type="button" class="button small red" data-eg="delete" data-id="${esc(id)}">Sí, eliminarla</button> <button type="button" class="link" data-eg="close">No</button></p>`;
+      return;
+    }
+    if (eg === 'close') { extra.innerHTML = ''; return; }
+    if (eg === 'delete') {
+      await busy(b, async () => { await deleteTrabajo(id); ctx?.toast?.('Guía eliminada.'); await studyShelf(el); }).catch(() => {});
+    }
+  });
 }
