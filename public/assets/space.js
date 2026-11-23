@@ -20,6 +20,7 @@ import { renderHomeSchedule } from './schedule.js';
 import * as grid from './grid.js';
 import * as decor from './decor.js';
 
+const rid = () => Math.random().toString(36).slice(2, 10);
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 let ctx = null;
