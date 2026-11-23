@@ -1,48 +1,54 @@
-// The judgement every guide is written with, Trabajos' and Estudiar's alike (his words, 2026-11-23: the AI needs
-// CRITERIA to follow — pedagogical, of friendly and very understandable design, graphics that strengthen the
-// understanding of processes, simplifying what is redundant or hard to read — not blind restrictions). The prompts
-// add only what is particular to their kind and the exact format; the reasons live here, once.
+// The judgement every guide is written with, Trabajos' and Estudiar's alike, for any course of any career (his words,
+// 2026-11-23: the AI needs CRITERIA — pedagogical, of friendly and very understandable design, graphics that make
+// processes understood, simplifying what is redundant — not blind restrictions; whatever might not apply to some
+// trabajo or some subject, or limits or forbids too much, is badly written). So: questions to judge by and examples
+// that open possibilities, never fixed counts, fixed shapes or rules taken from one case. The exact format the
+// machine needs (JSON, Mermaid, LaTeX) is said apart, as format, in the prompts.
 
 const PRIORITY = {
-  trabajo: `1. Lo que dio el PROFESOR (el enunciado, la rúbrica, sus archivos de inicio, sus figuras) manda siempre. La guía cumple exactamente lo que pide, con sus nombres de archivos, comandos, direcciones y formatos.
-2. El material del curso, como apoyo.
-3. Lo que ya hizo el grupo, o archivos que escribió una IA: son un AVANCE, no la verdad. Úsalos si cumplen el enunciado; si se apartan de él, dilo, sigue al enunciado y, si la diferencia es una decisión del grupo, pregúntala en "preguntas".`,
-  estudio: `1. Lo que dio el PROFESOR (su temario, sus diapositivas, sus exámenes anteriores, sus deberes) marca qué entra y cómo se pregunta.
-2. El libro y el material del curso, como apoyo.
-3. Los apuntes del estudiante y cualquier texto escrito por una IA: son su avance, útil para saber cómo lo entiende, pero no la verdad. Si contradicen al profesor, sigue al profesor y dilo con tacto.`,
+  trabajo: `- Lo que dio quien evalúa (el enunciado, la rúbrica, sus archivos, sus figuras, sus indicaciones) es lo que hay que cumplir: la guía lleva a cumplirlo tal como lo pide.
+- El material del curso ayuda a entenderlo.
+- Lo que el grupo ya hizo, o lo que escribió una IA, es un avance: úsalo cuando sirve, señala dónde se aparta de lo que se pide, y si apartarse es una decisión del grupo, pregúntaselo.`,
+  estudio: `- Lo que dio quien evalúa (su temario, sus clases, sus evaluaciones anteriores, sus indicaciones) dice qué entra y cómo se pregunta.
+- Los libros y el resto del material del curso ayudan a entenderlo.
+- Los apuntes del estudiante y lo que escribió una IA son su avance: sirven para ver cómo lo entiende, y donde se apartan de lo que dijo quien evalúa, se lo dices con tacto.`,
 };
-// Studium marks each file the person brought with who made it («del profe», «nuestro avance»…).
-const LABELS = 'En el material, cada archivo viene marcado con su origen ("[del profesor]", "[avance del grupo]", "[apuntes del estudiante]"…), como lo marcó la persona.';
 
 export function criteria(kind) {
   const study = kind === 'estudio';
-  const goal = study ? 'que el estudiante resuelva solo las preguntas del examen' : 'que el grupo entregue lo que pide el enunciado y lo defienda entendiendo cada parte';
-  return `Criterios (no son casillas que llenar: son el juicio con que decides cada párrafo, cada diagrama y cada actividad).
+  const goal = study ? 'que el estudiante llegue a la evaluación dominando lo que entra' : 'que el grupo cumpla lo que se le pide y entienda lo que entrega';
+  return `Criterios. Sirven para cualquier materia de cualquier carrera: no son casillas que llenar, son el juicio con que decides cada parte de la guía según la situación.
 
 QUÉ MANDA
 ${PRIORITY[study ? 'estudio' : 'trabajo']}
-${LABELS}
+- En el material, cada archivo viene marcado con su origen ("[del profesor]", "[avance del grupo]", "[apuntes del estudiante]"…), como lo marcó la persona.
 
 PARA QUÉ SIRVE CADA COSA
-- Todo lo que escribes sirve a un fin: ${goal}. Antes de poner una actividad, una pregunta o un párrafo, pregúntate a qué ${study ? 'parte del examen' : 'requisito o parte del entregable'} acerca. Si no acerca a nada, no va: nada de tareas de relleno (copiar a mano algo que ya está hecho, repetir lo que otro paso ya hizo, "explícaselo a un compañero" sin propósito).
-- Lo que el estudiante hace con sus manos produce algo que ${study ? 'se evalúa' : 'se entrega o se comprueba'}, y dice cómo saber que salió bien.
+- Todo lo que escribes sirve a un fin: ${goal}. Ante cada párrafo, actividad o pregunta, pregúntate qué acerca a ese fin; si no acerca a nada, sobra.
+- Lo que la persona hace con sus manos produce algo que ${study ? 'la prepara para lo que se evalúa' : 'se entrega o se comprueba'}, y sabe cómo darse cuenta de que salió bien.
 
 CÓMO SE APRENDE
-- Primero la intuición y el para qué, después el detalle. Una idea nueva a la vez, explicada antes de usarse y conectada con la anterior.
-- Lo concreto antes que lo abstracto: un ejemplo real del propio trabajo o del propio curso vale más que una definición.
-- Lo difícil se parte en pasos pequeños; lo fácil no se alarga.
-- Escribe como un profesor paciente que habla con una persona: frases cortas, prosa clara, sin jerga sin explicar. Si un párrafo se puede decir con la mitad de palabras, dilo con la mitad. Si algo te quedó redundante o difícil de leer, reescríbelo más simple.
-- Que se lea a simple vista: párrafos de 1 a 3 frases, listas cuando hay varias cosas, y en cada párrafo 1 a 3 palabras en **negrita** que lleven el ojo a lo importante (nunca una frase entera).
+- Adapta el camino a quien lee y a la materia: lo que necesita saber antes va antes; lo nuevo se conecta con lo que ya sabe.
+- La intuición y el para qué suelen abrir mejor que la definición; lo concreto (un caso, un ejemplo del propio curso) suele aclarar lo abstracto.
+- Lo difícil merece más pasos y más ejemplos; lo fácil, menos. La extensión de cada parte la decide lo que cuesta entenderla.
+- Escribe como un buen profesor que habla con una persona: claro, sin jerga sin explicar. Si algo quedó redundante, largo o difícil de leer, reescríbelo más simple.
+- Que se lea a simple vista: frases y párrafos cortos, listas cuando hay varias cosas, y en cada párrafo unas pocas palabras en **negrita** que lleven el ojo a lo importante.
 
 LO QUE SE VE
-- Si el material tiene una figura (una topología de red, un circuito, una arquitectura, un diagrama de clases, un mapa), la guía la DIBUJA al principio, con los mismos nombres e interfaces que usa el profesor, porque todo lo demás se refiere a ella. Cuando un paso habla de una parte de esa figura ("la interfaz eth1 de borde"), su diagrama la muestra en su lugar.
-- Cada diagrama explica UNA idea y elige la forma que la hace evidente: la estructura (qué hay y cómo está conectado) como un grafo pequeño; un intercambio de mensajes como una secuencia; un proceso que avanza como un recorrido animado ("recorrido": cómo viaja un paquete, cómo se aplica una configuración comando por comando, cómo corre un algoritmo). Nada de diagramas que intentan meter TODO el proceso en una sola caja de cajas.
-- Pocos nodos (de 3 a 8), etiquetas cortas (de 1 a 4 palabras; el detalle va en el texto), sin repetir en el diagrama lo que ya dice la prosa.
-- Mermaid válido: cada etiqueta entre comillas dobles, por ejemplo A["Borde (eth1)"] --> B{"¿Llega?"}; nunca comillas dobles dentro de una etiqueta; ids de nodo simples (letras y números).
+- Las gráficas existen para que el estudiante entienda: decide cuándo usarlas, cuántas, de qué tipo, cuánto detalle y qué nombres llevan según lo que la situación necesita mostrar.
+- Preguntas que ayudan a decidir: ¿hay algo de cuya forma depende todo lo demás (una estructura, un sistema, un mapa de ideas, un esquema)? Mostrarlo pronto y volver a él cuando un paso se refiere a una de sus partes ayuda a no perderse. ¿Hay algo que pasa en el tiempo (un proceso, un mecanismo, un algoritmo, un procedimiento, una cadena de causas)? Verlo en movimiento con un "recorrido" lo hace evidente, desde un momento puntual hasta la simulación completa del proceso. ¿Hay una comparación, un intercambio, un ciclo, una jerarquía, una evolución? Elige la forma que lo deje claro.
+- Una gráfica está bien si se entiende al mirarla: se leen sus textos, no repite lo que ya dice la prosa sin agregar nada, y su tamaño y su detalle son los que hacen falta para lo que quiere mostrar.
 
-EL CÓDIGO Y LOS ARCHIVOS
-- Cada pieza de código dice a qué archivo pertenece, con su ruta tal como queda en la carpeta ("lab/topologia.yml"), o que es un comando de la terminal; y en una frase qué es ese archivo y para qué existe. Su "lenguaje" es el real (yaml, bash, python, cisco…), nunca "text".
+LO QUE SE HACE
+- Cuando el trabajo produce algo concreto (código, archivos, cálculos, diseños, textos, configuraciones, mediciones), cada pieza dice dónde va o a qué parte pertenece y para qué existe, de modo que nadie se pierda al juntarlas.
 
 ANTES DE ENTREGAR
-- Relee la guía como la leería ${study ? 'el estudiante la noche antes del examen' : 'un integrante que no sabe nada del tema'}: ¿hay algo redundante, confuso, sin para qué, o una figura que falta para entender? Arréglalo antes de responder.`;
+- Relee la guía como la leería ${study ? 'el estudiante la noche antes de la evaluación' : 'un integrante que llega sin saber nada del tema'}: ¿hay algo redundante, confuso, sin para qué, o algo que no se entiende sin una gráfica que falta? Arréglalo antes de responder.`;
 }
+
+// The exact format the machine needs: not pedagogy, only what Studium can read and draw.
+export const FORMAT_RULES = `Formato (para que Studium pueda leerlo y dibujarlo):
+- Gráficas en Mermaid válido (cualquier tipo de diagrama de Mermaid), sin comillas invertidas alrededor. En las etiquetas de nodo, el texto entre comillas dobles, por ejemplo A["Texto (con paréntesis)"] --> B{"¿Pregunta?"}, sin comillas dobles dentro; ids de nodo simples (letras y números).
+- Un "recorrido" usa un diagrama flowchart (es el que Studium anima): sus "pasos" nombran los ids de los nodos que participan en cada momento, en el orden en que pasa lo que pasa.
+- Fórmulas en LaTeX entre signos de dólar: $x^2$ dentro del texto, $$\\frac{a}{b}$$ para una fórmula sola. Las cantidades de dinero, con la moneda en letras o su código (USD 20, 20 dólares), para no confundirlas con fórmulas.
+- \`código\` dentro del texto entre comillas invertidas.`;

@@ -1031,9 +1031,9 @@ function renderDraft(error = '') {
     const share = ['repo', 'newrepo'].includes(draft.prefs.share) ? 'github' : draft.prefs.share === 'each' ? 'none' : '';
     const pick = (name, v, label, note, on) => `<label class="tj-pick ${on ? 'on' : ''}"><input type="radio" name="${name}" value="${v}" data-tj="${name}" ${on ? 'checked' : ''}> <span><b>${esc(label)}</b><br><small>${esc(note)}</small></span></label>`;
     control = `<h3>¿Entender o hacer?</h3>${seg('balance', [['understand', 'Sobre todo entender'], ['both', 'Los dos'], ['do', 'Sobre todo hacer']])}
-      <h3>¿Van a usar GitHub?</h3><div class="tj-goals">
+      <h3>¿Van a usar GitHub? <small>(si el trabajo tiene código)</small></h3><div class="tj-goals">
         ${pick('share-git', 'github', 'Sí, con GitHub', 'el código vive en un repo; la guía les da cada commit, push y PR', share === 'github')}
-        ${pick('share-git', 'none', 'No, sin GitHub', 'cada uno en su computadora; la guía les dice cómo juntar el trabajo', share === 'none')}</div>
+        ${pick('share-git', 'none', 'No, sin GitHub', 'cada uno por su cuenta; la guía les dice cómo juntar el trabajo', share === 'none')}</div>
       ${share === 'github' ? `<h3>¿Ya tienen el repo?</h3><div class="tj-goals">
         ${pick('share-repo', 'repo', 'Sí, ya lo tenemos', 'pegas su enlace', draft.prefs.share === 'repo')}
         ${pick('share-repo', 'newrepo', 'No, hay que crearlo', 'eliges quién lo crea', draft.prefs.share === 'newrepo')}</div>` : ''}
