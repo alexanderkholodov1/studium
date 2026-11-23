@@ -3574,3 +3574,57 @@ canvas.prop { display: block; }
    colors, nearly transparent on the guide's own background: his report, 2026-11-23). */
 .toast.glass { background: var(--card, #fff); color: var(--ink, #1c2233); -webkit-backdrop-filter: none; backdrop-filter: none;
   box-shadow: 0 18px 40px -18px rgba(0, 0, 0, .55), 0 0 0 1px var(--line, rgba(0, 0, 0, .12)); }
+
+/* ---------- «Escena»: the object of study drawn as it is (escena.js) ---------- */
+.tjg-app figure.escena { margin: 16px 0; padding: 14px 16px 16px; border-radius: 18px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line), 0 20px 40px -32px rgba(0, 0, 0, .55); }
+.tjg-app figure.escena figcaption { font: 700 14px var(--gd); color: var(--ink2); margin-bottom: 8px; }
+.tjg-app .es-svg { display: block; width: 100%; height: auto; max-height: 70vh; overflow: visible; font-family: var(--gb); }
+.tjg-app .es-el { --f: color-mix(in oklab, var(--blue) 12%, var(--panel)); --s: color-mix(in oklab, var(--blue) 55%, var(--line)); transition: opacity .35s, transform .6s cubic-bezier(.2, .9, .2, 1); }
+.tjg-app .es-el[data-col="rojo"] { --f: color-mix(in oklab, var(--rose) 16%, var(--panel)); --s: var(--rose); }
+.tjg-app .es-el[data-col="verde"] { --f: color-mix(in oklab, var(--green) 16%, var(--panel)); --s: var(--green); }
+.tjg-app .es-el[data-col="naranja"] { --f: color-mix(in oklab, var(--orange) 18%, var(--panel)); --s: var(--orange); }
+.tjg-app .es-el[data-col="violeta"] { --f: color-mix(in oklab, var(--violet) 16%, var(--panel)); --s: var(--violet); }
+.tjg-app .es-el[data-col="amarillo"] { --f: color-mix(in oklab, #f2c200 22%, var(--panel)); --s: #d4a800; }
+.tjg-app .es-el[data-col="gris"] { --f: color-mix(in oklab, var(--ink) 7%, var(--panel)); --s: var(--muted); }
+.tjg-app .es-el[data-col="rosa"] { --f: color-mix(in oklab, #e86aa6 18%, var(--panel)); --s: #d4548f; }
+.tjg-app .es-el[data-col="cian"] { --f: color-mix(in oklab, #19b3c9 16%, var(--panel)); --s: #129cb0; }
+.tjg-app .es-el rect, .tjg-app .es-el ellipse { fill: var(--f); stroke: var(--s); stroke-width: 1.5; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .12)); transition: fill .35s, stroke .35s, stroke-width .35s; }
+.tjg-app .es-contenedor > rect { fill: color-mix(in oklab, var(--f) 45%, transparent); stroke-dasharray: 6 4; filter: none; }
+.tjg-app .es-tenue > rect { opacity: .55; }
+.tjg-app .es-resaltado > rect { stroke-width: 3; }
+.tjg-app .es-th > rect { fill: color-mix(in oklab, var(--s) 22%, var(--panel)); filter: none; }
+.tjg-app .es-td > rect { fill: var(--panel); stroke: var(--line); filter: none; }
+.tjg-app .es-cell > rect { filter: none; }
+.tjg-app .es-t { font-size: 14px; font-weight: 650; fill: var(--ink); }
+.tjg-app .es-th .es-t { font-weight: 800; font-size: 13px; }
+.tjg-app .es-s, .tjg-app .es-addr { font-size: 11.5px; fill: var(--muted); }
+.tjg-app .es-label text, .tjg-app text.es-label { fill: var(--ink2); font-weight: 700; font-size: 13px; }
+.tjg-app .es-line line, .tjg-app .es-arrow line { stroke: var(--s); stroke-width: 2; }
+.tjg-app .es-svg marker path { fill: var(--muted); }
+.tjg-app .es-hidden { opacity: 0; }
+.tjg-app .es-hidden.es-shown { opacity: 1; }
+.tjg-app .es-gone { opacity: .08; }
+.tjg-app .es-lit > rect, .tjg-app .es-lit > ellipse { stroke: var(--signal, #f2c200) !important; stroke-width: 3.5 !important; filter: drop-shadow(0 0 10px color-mix(in oklab, var(--signal, #f2c200) 70%, transparent)); }
+.tjg-app .es-lit.es-arrow line { stroke: var(--signal, #f2c200); stroke-width: 3.5; }
+.tjg-app .es-lit .es-t { font-weight: 800; }
+.tjg-app .es-steps li { display: none; }
+.tjg-app .es-steps li.on { display: flex; }
+.tjg-app .es-num { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--signal, #f2c200); color: #1c2233; font: 800 12px var(--gd); }
+@media (prefers-reduced-motion: reduce) { .tjg-app .es-el { transition: none; } }
+/* The material of the guide, with «Lo cubrí / Lo entendí», at the start and at the end of each chapter. */
+.tjg-app .sources { margin: 18px 0; padding: 14px 18px; border-radius: 16px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
+.tjg-app .sources h4 { margin: 0 0 8px; }
+.tjg-app .sources h4 small { font-weight: 600; color: var(--muted); margin-left: 6px; }
+.tjg-app .sources ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.tjg-app .sources li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 14px; padding: 6px 0; border-top: 1px solid var(--line); }
+.tjg-app .sources li:first-child { border-top: 0; }
+.tjg-app .src-checks { display: inline-flex; gap: 8px; }
+.tjg-app .sources.at-end { background: color-mix(in oklab, var(--c, var(--blue)) 6%, var(--panel)); }
+.tjg-app .fc-sig { font: 600 14px var(--gb); color: var(--muted); margin-bottom: 6px; }
+/* In a guide: «Pedir un cambio a tu IA» where the tutorial was; Feedback beside it, never apart. */
+.in-tjg .tour-help { display: none !important; }
+.in-tjg .fb-fab { bottom: 16px; right: 16px; opacity: .85; }
+.tjg-app .tj-askai { position: fixed; z-index: 55; right: 70px; bottom: 16px; padding: 10px 16px; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--blue); color: #fff; font: 700 14px var(--gd); box-shadow: 0 14px 30px -12px color-mix(in oklab, var(--blue) 70%, black); }
+.tjg-app .tj-askai:hover { transform: translateY(-2px); }
+@media (max-width: 640px) { .tjg-app .tj-askai { right: 64px; padding: 9px 12px; font-size: 13px; } }

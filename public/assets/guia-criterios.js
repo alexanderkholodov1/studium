@@ -35,9 +35,11 @@ CÓMO SE APRENDE
 - Que se lea a simple vista: frases y párrafos cortos, listas cuando hay varias cosas, y en cada párrafo unas pocas palabras en **negrita** que lleven el ojo a lo importante.
 
 LO QUE SE VE
-- Las gráficas existen para que el estudiante entienda: decide cuándo usarlas, cuántas, de qué tipo, cuánto detalle y qué nombres llevan según lo que la situación necesita mostrar.
-- Preguntas que ayudan a decidir: ¿hay algo de cuya forma depende todo lo demás (una estructura, un sistema, un mapa de ideas, un esquema)? Mostrarlo pronto y volver a él cuando un paso se refiere a una de sus partes ayuda a no perderse. ¿Hay algo que pasa en el tiempo (un proceso, un mecanismo, un algoritmo, un procedimiento, una cadena de causas)? Verlo en movimiento con un "recorrido" lo hace evidente, desde un momento puntual hasta la simulación completa del proceso. ¿Hay una comparación, un intercambio, un ciclo, una jerarquía, una evolución? Elige la forma que lo deje claro.
-- Una gráfica está bien si se entiende al mirarla: se leen sus textos, no repite lo que ya dice la prosa sin agregar nada, y su tamaño y su detalle son los que hacen falta para lo que quiere mostrar.
+- Una gráfica sirve para que el estudiante vea lo que el texto describe tal como es: su forma, sus partes, cómo se relacionan y con datos concretos del propio tema. Representa el objeto de estudio mismo, no los nombres de los conceptos.
+- Si algo cambia o sucede en el tiempo, el cambio ocurre sobre esa misma representación, paso a paso, y cada paso dice qué cambió y por qué. Puede abarcar un momento o el proceso completo.
+- Nombres de conceptos en cajas unidas por flechas solo sirven cuando lo que se explica es, en sí mismo, una relación entre ideas o un flujo; en lo demás no enseñan más que la prosa.
+- La cantidad, el tipo y el detalle de las gráficas los decide lo que hace falta entender. Una gráfica está bien si se entiende al mirarla: se leen sus textos y nada se encima.
+- Toda sigla se escribe completa la primera vez que aparece, y en el glosario dice qué significa.
 
 LO QUE SE HACE
 - Cuando el trabajo produce algo concreto (código, archivos, cálculos, diseños, textos, configuraciones, mediciones), cada pieza dice dónde va o a qué parte pertenece y para qué existe, de modo que nadie se pierda al juntarlas.
@@ -48,7 +50,14 @@ ANTES DE ENTREGAR
 
 // The exact format the machine needs: not pedagogy, only what Studium can read and draw.
 export const FORMAT_RULES = `Formato (para que Studium pueda leerlo y dibujarlo):
-- Gráficas en Mermaid válido (cualquier tipo de diagrama de Mermaid), sin comillas invertidas alrededor. En las etiquetas de nodo, el texto entre comillas dobles, por ejemplo A["Texto (con paréntesis)"] --> B{"¿Pregunta?"}, sin comillas dobles dentro; ids de nodo simples (letras y números).
-- Un "recorrido" usa un diagrama flowchart (es el que Studium anima): sus "pasos" nombran los ids de los nodos que participan en cada momento, en el orden en que pasa lo que pasa.
+- Para representar el objeto de estudio, una "escena" (Studium la dibuja y anima sus pasos): {"titulo": "…", "ancho": 800, "alto": 400, "elementos": [ … ], "pasos": [ … ]}. Coordenadas en ese espacio (hasta 1000 × 700), desde arriba a la izquierda; deja aire entre elementos para que los textos quepan y nada se encime.
+  Elementos (cada uno con "id" de letras, números o guiones; "color" opcional: azul, rojo, verde, naranja, violeta, amarillo, gris, rosa, cian; "oculto": true para lo que aparece en un paso):
+  · {"tipo":"caja","id","x","y","w","h","texto","sub","estilo":"contenedor"|"resaltado"|"tenue"}: un elemento con texto; "contenedor" agrupa otros dentro y pone su texto arriba.
+  · {"tipo":"celdas","id","x","y","n","w","h","textos":[…],"etiquetas":[…],"vertical":false,"texto"}: una fila o columna de elementos iguales y contiguos, con "etiquetas" opcionales junto a cada uno; cada uno se nombra "<id>.<n>" desde 0.
+  · {"tipo":"tabla","id","x","y","columnas":[…],"filas":[[…]],"anchoCol","altoFila","texto"}: cada celda es "<id>.<fila>.<columna>" (desde 0) y la cabecera "<id>.h.<columna>".
+  · {"tipo":"flecha","de","a","texto"}: de un elemento, celda o celda de tabla a otro (sus ids), o de "x1","y1" a "x2","y2".
+  · {"tipo":"texto","id","x","y","texto","tam","alinear":"inicio"|"medio"|"fin"}, {"tipo":"circulo","id","x","y","w","h","texto"}, {"tipo":"linea","x1","y1","x2","y2"}.
+  Pasos, en orden; cada uno conserva lo que hicieron los anteriores: {"texto": "qué cambia y por qué", "comando": "", "mostrar":[ids], "ocultar":[ids], "resaltar":[ids], "cambiar":[{"id","texto","color"}], "mover":[{"id","x","y"}]}.
+- Para una relación entre ideas o un flujo: Mermaid válido (cualquier tipo), sin comillas invertidas alrededor; en las etiquetas de nodo, el texto entre comillas dobles, por ejemplo A["Texto (con paréntesis)"] --> B{"¿Pregunta?"}, sin comillas dobles dentro; ids de nodo simples.
 - Fórmulas en LaTeX entre signos de dólar: $x^2$ dentro del texto, $$\\frac{a}{b}$$ para una fórmula sola. Las cantidades de dinero, con la moneda en letras o su código (USD 20, 20 dólares), para no confundirlas con fórmulas.
 - \`código\` dentro del texto entre comillas invertidas.`;

@@ -3,6 +3,7 @@
 // data, never markup: Studium draws it, so nothing an AI writes runs on the page.
 
 import { criteria, FORMAT_RULES } from './guia-criterios.js';
+import { cleanEscena } from './escena.js';
 
 export const LETTERS = 'ABCDEFGH';
 
@@ -58,12 +59,13 @@ export function outlinePrompt({ parts, course, deadline, prefs }) {
 Tarea: lee el enunciado y la rúbrica y devuelve el ESQUEMA de la guía (todavía sin el contenido de cada paso).
 - "de_que_trata": de qué se trata el trabajo por su CONTENIDO, de principio a fin, para alguien que no sabe nada del tema: qué se hace o se estudia, por qué y cómo encajan las partes, en unos pocos párrafos cortos. Nada de notas, entregables ni fechas aquí.
 - "reglas": lo técnico del trabajo, una sola vez y sin repetir lo de "de_que_trata": "entregables" (lo que se ENTREGA de verdad: archivos, formatos, nombres, dónde), "calificacion" (cómo se califica, con sus pesos), "modalidad" (grupo, individual, presencial…), "defensa" (cómo es, si la hay), "fechas" (las del enunciado).
-- "diagrama": la gráfica general del trabajo, la que conviene tener a mano mientras se lee toda la guía (Studium la muestra al principio y en un botón siempre visible). Elige qué mostrar según el trabajo: lo que ayude a no perderse.
+- "escena" (o "diagrama" en Mermaid, si es una relación entre ideas o un flujo): la gráfica general del trabajo, la que conviene tener a mano mientras se lee toda la guía (Studium la muestra al principio y en un botón siempre visible). Elige qué mostrar según el trabajo: lo que ayude a no perderse.
+- "fuentes": el material que usaste, una entrada por cada pieza de material, con un "titulo" claro, como lo llamaría el estudiante, su "tipo" y el "archivo" del que sale. Cada hito o tema dice en "fuentes" los ids de las que usa.
 - "avisos": lo que el grupo debe saber antes de empezar (lo que no se negocia, riesgos, lo que está prohibido), pocos y en una frase cada uno; vacío si no hay nada así.
 - "razonamiento": cómo entendiste el material: qué encontraste, qué supusiste y por qué (para quien quiera leerlo; se muestra plegado).
 - "enunciado_textual": si el enunciado te llegó como PDF, imagen u otro archivo que no es texto, transcríbelo aquí COMPLETO y tal cual, sin resumir ni corregir; si ya llegó como texto, vacío.
 - "requisitos": cada cosa verificable que pide el trabajo, con la cita exacta del enunciado y su peso en la rúbrica si lo tiene (por ejemplo "3.5/10"); "material" nombra el material del curso o la referencia en que se apoya, si el enunciado lo dice. Sirven para comprobar que la guía cubre todo; no son los pasos.
-- "glosario": los términos que alguien que llega sin experiencia necesita para entender el enunciado.
+- "glosario": los términos que alguien que llega sin experiencia necesita para entender el enunciado; si es una sigla, "siglas" dice qué significa.
 - "hitos": las etapas del trabajo, las que haga falta según su tamaño, ordenadas por lo que depende de qué, no por fechas${deadline ? ` (la fecha que cuenta es la entrega: ${deadline})` : ''}. Cada hito tiene algo verificable al terminarlo y "listo_cuando". Sus "pasos" son piezas que una persona puede hacer y entender de una sentada, cada una con su "parte".
 - "partes": para cada persona, en 1 o 2 frases claras, qué hace en el trabajo (su encargo).
 - El grupo tiene ${parts} ${parts === 1 ? 'parte' : 'partes'}: ${letters}. Reparte los pasos de forma equilibrada y para que las partes avancen en paralelo; lo que más pesa en la rúbrica no debe depender de una sola parte.
@@ -80,8 +82,10 @@ Formato exacto:
   "razonamiento": "…", "enunciado_textual": "",
   "partes": [{ "letra": "A", "resumen": "…" }],
   "requisitos": [{ "id": "R1", "texto": "…", "cita": "…", "peso": "…", "material": "…" }],
-  "glosario": [{ "termino": "…", "definicion": "…" }],
-  "hitos": [{ "id": "H0", "titulo": "…", "entregable": "…", "listo_cuando": "…", "depende": [],
+  "glosario": [{ "termino": "…", "siglas": "si es una sigla, qué significa", "definicion": "…" }],
+  "fuentes": [{ "id": "F1", "titulo": "…", "tipo": "…", "archivo": "…" }],
+  "escena": null,
+  "hitos": [{ "id": "H0", "titulo": "…", "entregable": "…", "listo_cuando": "…", "depende": [], "fuentes": ["F1"],
     "pasos": [{ "id": "H0.1", "titulo": "…", "parte": "A", "requisitos": ["R1"] }] }],
   "avisos": ["una frase: lo que el grupo debe saber antes de empezar"],
   "preguntas": [{ "pregunta": "lo que necesitas que el grupo confirme antes de escribir los capítulos", "por_que": "…" }]
@@ -98,10 +102,10 @@ Tarea: escribe COMPLETO el hito ${milestone.id} («${milestone.titulo}») de la 
 Para cada paso (cada campo se llena cuando sirve a ese paso; lo que no aplica va vacío):
 - "clave": la idea clave del paso en una sola frase (se muestra destacada, antes que todo).
 - "teoria": lo que hay que entender para hacer el paso, con el porqué, en párrafos cortos con su negrita.
-- "diagrama": una gráfica de este paso, cuando ayude a entenderlo.
+- "escena": la representación de lo que se trabaja en este paso, tal como es y con datos concretos del tema (ver LO QUE SE VE y el formato de "escena"), con sus "pasos" si algo pasa en el tiempo. Vacío si no hay nada que ver.
+- "diagrama": Mermaid, solo si lo que se explica es, en sí mismo, una relación entre ideas o un flujo; si no, vacío.
 - "tu_turno": lo que la persona hace en este paso y que acerca al entregable (escribir, calcular, construir, medir, redactar, configurar, organizar archivos, comprobar el resultado…), en puntos cortos, con lo exacto que necesite (comandos, valores, pasos del procedimiento).
 - "codigo": cuando el paso produce código, comandos, configuraciones u otro texto con forma exacta: en piezas, cada una con "archivo" (dónde va: su ruta, o "terminal" si son comandos), "proposito" (qué es y para qué existe, en una frase), "lenguaje" (el real del contenido, para que se lea bien) y "lineas": la explicación de cada línea con su número (desde 1 en esa pieza): qué hace y por qué así, y lo que haga falta saber de cada función, argumento, herramienta o librería que aparece.
-- "recorrido": cuando el paso es un proceso que avanza (algo que viaja, cambia, se transforma o se ejecuta por etapas), su animación: "diagrama" con los elementos del proceso y "pasos" en orden, cada uno con los "nodos" que participan, una frase de lo que ocurre ("texto") y, si lo hay, el "comando", la fórmula o la acción. Puede ser tan corto o tan completo como el proceso pida, hasta su simulación entera.
 - "librerias": las herramientas, librerías, instrumentos o recursos que aparecen por primera vez, con para qué sirven.
 - "esperado": qué debería obtener o ver la persona al hacerlo.
 - "comprueba": preguntas para comprobar que lo entendió, con su respuesta.
@@ -113,7 +117,7 @@ Formato exacto:
 \`\`\`json
 { "id": "${milestone.id}", "pasos": [{ "id": "…", "objetivo": "…", "clave": "…", "teoria": "…", "diagrama": "", "tu_turno": ["…"],
   "codigo": [{ "archivo": "…", "proposito": "…", "lenguaje": "…", "codigo": "…", "lineas": [{ "n": 1, "explicacion": "…" }] }],
-  "recorrido": { "diagrama": "flowchart LR\n  A[\"…\"] --> B[\"…\"]", "pasos": [{ "nodos": ["A", "B"], "texto": "…", "comando": "" }] },
+  "escena": { "titulo": "…", "ancho": 800, "alto": 360, "elementos": [{ "tipo": "…", "id": "…" }], "pasos": [{ "texto": "…" }] },
   "librerias": [{ "nombre": "…", "para_que": "…" }],
   "esperado": "…", "comprueba": [{ "pregunta": "…", "respuesta": "…" }],
   "defensa": [{ "pregunta": "…", "respuesta": "…" }], "commit": "", "reunion": "" }] }
@@ -149,7 +153,7 @@ ${B}`;
 // «Ajustar la guía»: the group points at parts of a guide already written and says what to change; the AI changes only
 // that and returns those parts in the same formats, everything else word for word. Adjusting costs far less than
 // writing again, and keeps what the group already read.
-export const ADJUST_KINDS = { simpler: 'explicarlo más simple, para alguien que empieza', shorter: 'hacerlo más corto, sin perder nada importante', deeper: 'explicarlo con más detalle', fix: 'corregir un error', diagram: 'agregar un diagrama que lo muestre', example: 'agregar un ejemplo concreto' };
+export const ADJUST_KINDS = { graphics: 'rehacer las gráficas de toda la guía según LO QUE SE VE: cada una representa el objeto de estudio tal como es, con datos concretos del tema, y lo que cambia ocurre sobre esa representación; donde haya nombres de conceptos en cajas unidas por flechas que no sean una relación entre ideas o un flujo, reemplázalos por una escena', simpler: 'explicarlo más simple, para alguien que empieza', shorter: 'hacerlo más corto, sin perder nada importante', deeper: 'explicarlo con más detalle', fix: 'corregir un error', diagram: 'agregar un diagrama que lo muestre', example: 'agregar un ejemplo concreto' };
 export function adjustPrompt({ outline, chapters, changes, prefs, files }) {
   const outlineFmt = outlinePrompt({ parts: 1, course: '', deadline: '', prefs: {} });
   const A = outlineFmt.slice(outlineFmt.indexOf('Formato exacto:')).trim();
@@ -209,6 +213,8 @@ export function cleanOutline(o, parts) {
     id: ID.test(h?.id) ? h.id : `H${i}`,
     titulo: str(h?.titulo, 160), entregable: str(h?.entregable, 600), listo_cuando: str(h?.listo_cuando, 400),
     depende: list(h?.depende, 10).filter((d) => typeof d === 'string' && ID.test(d)),
+    // The material this chapter is built on (ids of «fuentes»): its «Lo cubrí / Lo entendí» at the chapter's end.
+    fuentes: list(h?.fuentes, 20).filter((f) => typeof f === 'string' && /^F\d{1,3}$/.test(f)),
     pasos: list(h?.pasos, 40).map((p, j) => ({
       id: ID.test(p?.id) ? p.id : `${h?.id ?? `H${i}`}.${j + 1}`,
       titulo: str(p?.titulo, 160),
@@ -224,7 +230,10 @@ export function cleanOutline(o, parts) {
     razonamiento: str(o?.razonamiento, 6000), enunciado_textual: str(o?.enunciado_textual, 120000),
     partes: list(o?.partes, 8).map((x) => ({ letra: str(x?.letra, 1), resumen: str(x?.resumen, 600) })).filter((x) => letters.includes(x.letra) && x.resumen),
     requisitos: list(o?.requisitos, 80).map((r, i) => ({ id: /^R\d{1,3}$/.test(r?.id) ? r.id : `R${i + 1}`, texto: str(r?.texto, 600), cita: str(r?.cita, 800), peso: str(r?.peso, 30), material: str(r?.material, 300) })),
-    glosario: list(o?.glosario, 80).map((g) => ({ termino: str(g?.termino, 80), definicion: str(g?.definicion, 600) })).filter((g) => g.termino),
+    glosario: list(o?.glosario, 80).map((g) => ({ termino: str(g?.termino, 80), siglas: str(g?.siglas, 160), definicion: str(g?.definicion, 600) })).filter((g) => g.termino),
+    // The material the guide was made from (classes, labs, readings, past exams…), for its index and the person's progress.
+    fuentes: list(o?.fuentes, 60).map((f, i) => ({ id: /^F\d{1,3}$/.test(f?.id) ? f.id : `F${i + 1}`, titulo: str(f?.titulo, 160), tipo: str(f?.tipo, 30), archivo: str(f?.archivo, 200) })).filter((f) => f.titulo),
+    escena: cleanEscena(o?.escena),
     hitos,
     avisos: list(o?.avisos, 12).map((a) => str(a, 600)).filter(Boolean),
     preguntas: list(o?.preguntas, 10).map((q) => ({ pregunta: str(q?.pregunta, 400), por_que: str(q?.por_que, 400) })).filter((q) => q.pregunta),
@@ -255,6 +264,7 @@ export function cleanMilestone(m, milestone) {
     commit: str(p?.commit, 120),
     reunion: str(p?.reunion, 300),
     recorrido: cleanWalk(p?.recorrido),
+    escena: cleanEscena(p?.escena),
   }));
   if (!pasos.length) throw new Error(`La respuesta de tu IA no trae los pasos del hito ${milestone.id}.`);
   return { id: milestone.id, pasos };

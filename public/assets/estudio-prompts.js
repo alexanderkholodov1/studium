@@ -58,8 +58,10 @@ const OUTLINE_FORMAT = `Formato exacto:
   "razonamiento": "…", "enunciado_textual": "",
   "partes": [],
   "requisitos": [{ "id": "R1", "texto": "…", "cita": "…", "peso": "…", "material": "…" }],
-  "glosario": [{ "termino": "…", "definicion": "…" }],
-  "hitos": [{ "id": "H1", "titulo": "…", "entregable": "…", "listo_cuando": "…", "depende": [],
+  "glosario": [{ "termino": "…", "siglas": "si es una sigla, qué significa", "definicion": "…" }],
+  "fuentes": [{ "id": "F1", "titulo": "…", "tipo": "…", "archivo": "…" }],
+  "escena": null,
+  "hitos": [{ "id": "H1", "titulo": "…", "entregable": "…", "listo_cuando": "…", "depende": [], "fuentes": ["F1"],
     "pasos": [{ "id": "H1.1", "titulo": "…", "parte": "A", "requisitos": ["R1"] }] }],
   "avisos": ["una frase: un error típico o una trampa"],
   "preguntas": []
@@ -73,12 +75,13 @@ export function outlinePrompt({ course, deadline, prefs }) {
 Tarea: lee todo el material del estudiante y devuelve el ESQUEMA de la guía (todavía sin el contenido de cada concepto).
 - "de_que_trata": de qué trata lo que entra en la evaluación, por su CONTENIDO: el hilo que une los temas y por qué importan, para alguien que llega sin saber nada, en unos pocos párrafos cortos. Nada de fechas ni puntajes aquí.
 - "reglas": cómo es la evaluación, solo lo que el material o el estudiante digan: "calificacion" (sus partes, de qué tipo, cuánto vale cada una), "modalidad" (cómo se rinde, qué se puede usar, cuánto dura), "fechas". "entregables" y "defensa" van vacíos.
-- "diagrama": la gráfica general, la que conviene tener a mano mientras se estudia toda la guía (Studium la muestra al principio y en un botón siempre visible). Elige qué mostrar según la materia: lo que ayude a no perderse.
+- "escena" (o "diagrama" en Mermaid, si es una relación entre ideas o un flujo): la gráfica general, la que conviene tener a mano mientras se estudia toda la guía (Studium la muestra al principio y en un botón siempre visible). Elige qué mostrar según la materia: lo que ayude a no perderse.
+- "fuentes": el material que usaste, una entrada por cada pieza de material, con un "titulo" claro, como lo llamaría el estudiante, su "tipo" y el "archivo" del que sale. Cada hito o tema dice en "fuentes" los ids de las que usa.
 - "avisos": "Ojo con": los errores y las confusiones típicas de este tema, pocos y en una frase cada uno; vacío si no hay nada así.
 - "razonamiento": cómo leíste el material: qué encontraste, qué tomaste como lo que entra y por qué (se muestra plegado).
 - "enunciado_textual": vacío.
 - "requisitos": lo que el estudiante tiene que SABER o SABER HACER el día de la evaluación, cada cosa verificable, con la cita del material de donde sale y, si se sabe, cuánto pesa. Sirven para comprobar que la guía cubre todo.
-- "glosario": los términos (y fórmulas, nombres, fechas o lo que la materia tenga) que hay que saber, con su definición corta.
+- "glosario": los términos (y fórmulas, nombres, fechas o lo que la materia tenga) que hay que saber, con su definición corta; si es una sigla, "siglas" dice qué significa.
 - "hitos": los TEMAS, los que haga falta según lo que entra, en el orden en que se aprenden (lo que se necesita antes, primero), no por fechas${deadline ? ` (la evaluación es el ${deadline})` : ''}. "entregable": lo que el estudiante podrá hacer al terminar el tema; "listo_cuando": cómo sabe que ya lo domina. Sus "pasos" son los CONCEPTOS, procedimientos o ideas del tema, cada uno con "parte": "A".
 - "partes": vacío.
 - Los ids: requisitos "R1", "R2"…; temas "H1", "H2"…; conceptos "H1.1", "H1.2"…
@@ -92,13 +95,13 @@ const STEP_RULES = `Para cada concepto (cada campo se llena cuando sirve a ese c
 - "objetivo": qué podrá hacer o explicar el estudiante con este concepto, en una frase.
 - "clave": la idea clave en una sola frase (se muestra destacada, antes que todo).
 - "teoria": lo que hay que entender, con su porqué, en párrafos cortos con su negrita.
-- "diagrama": una gráfica de este concepto, cuando ayude a entenderlo.
+- "escena": la representación de lo que se trabaja en este concepto, tal como es y con datos concretos del tema (ver LO QUE SE VE y el formato de "escena"), con sus "pasos" si algo pasa en el tiempo. Vacío si no hay nada que ver.
+- "diagrama": Mermaid, solo si lo que se explica es, en sí mismo, una relación entre ideas o un flujo; si no, vacío.
 - "ejemplos": ejemplos trabajados, del tipo que se evalúa: "enunciado" (el problema, la pregunta, el caso o la consigna) y "solucion" (cómo se resuelve o se responde, paso a paso y con su porqué, hasta la respuesta, que va en negrita).
 - "tu_turno": práctica para que el estudiante la haga por su cuenta, del tipo que se evalúa: solo la consigna (su respuesta va en "comprueba").
 - "comprueba": preguntas para comprobar que lo entendió, con su respuesta (y las respuestas de "tu_turno").
 - "defensa": preguntas como las de la evaluación sobre este concepto, del tipo y nivel de quien evalúa, con su respuesta completa.
 - "codigo": cuando el concepto se aprende con código, comandos u otro texto de forma exacta: en piezas, cada una con "archivo" (dónde va, o "terminal"), "proposito" (qué es, en una frase), "lenguaje" (el real del contenido) y "lineas": la explicación de cada línea con su número (desde 1 en esa pieza).
-- "recorrido": cuando el concepto es un proceso que avanza (algo que viaja, cambia, se transforma, se ejecuta o se demuestra por etapas), su animación: "diagrama" con los elementos del proceso y "pasos" en orden, cada uno con los "nodos" que participan, una frase de lo que ocurre ("texto") y, si lo hay, el "comando", la fórmula o la acción. Puede ser tan corto o tan completo como el proceso pida, hasta su simulación entera.
 - "librerias": las herramientas, librerías, instrumentos o recursos que aparecen por primera vez, con para qué sirven.
 - "esperado": qué se obtiene o se ve al hacerlo, cuando haya algo que hacer.
 - "commit" y "reunion": vacíos.`;
@@ -108,7 +111,7 @@ const STEP_FORMAT = (id) => `Formato exacto:
 { "id": "${id}", "pasos": [{ "id": "…", "objetivo": "…", "clave": "…", "teoria": "…", "diagrama": "",
   "ejemplos": [{ "enunciado": "…", "solucion": "…" }], "tu_turno": ["…"],
   "comprueba": [{ "pregunta": "…", "respuesta": "…" }], "defensa": [{ "pregunta": "…", "respuesta": "…" }],
-  "codigo": [], "librerias": [], "esperado": "", "recorrido": null, "commit": "", "reunion": "" }] }
+  "escena": null, "codigo": [], "librerias": [], "esperado": "", "commit": "", "reunion": "" }] }
 \`\`\``;
 
 // One topic in full: each concept with its theory, worked examples, practice and exam-like questions.
@@ -147,7 +150,7 @@ ${STEP_FORMAT('H1')}`;
 }
 
 // «Ajustar la guía»: the student points at parts of the guide and says what to change; the AI changes only that.
-export const ADJUST_KINDS = { simpler: 'explicarlo más simple, para alguien que empieza', shorter: 'hacerlo más corto, sin perder nada importante', deeper: 'explicarlo con más detalle', fix: 'corregir un error', diagram: 'agregar una gráfica que lo muestre', example: 'agregar un ejemplo trabajado' };
+export const ADJUST_KINDS = { graphics: 'rehacer las gráficas de toda la guía según LO QUE SE VE: cada una representa el objeto de estudio tal como es, con datos concretos del tema, y lo que cambia ocurre sobre esa representación; donde haya nombres de conceptos en cajas unidas por flechas que no sean una relación entre ideas o un flujo, reemplázalos por una escena', simpler: 'explicarlo más simple, para alguien que empieza', shorter: 'hacerlo más corto, sin perder nada importante', deeper: 'explicarlo con más detalle', fix: 'corregir un error', diagram: 'agregar una gráfica que lo muestre', example: 'agregar un ejemplo trabajado' };
 export function adjustPrompt({ outline, chapters, changes, prefs, files }) {
   const fence = '```';
   const list = changes.map((c, i) => [

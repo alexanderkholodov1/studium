@@ -50,7 +50,7 @@ const clean = (p) => {
     .filter((g) => g.text);
   out.deadlines = (Array.isArray(out.deadlines) ? out.deadlines : []).slice(0, 60)
     .map((d) => ({ id: String(d.id ?? rid()).slice(0, 16), text: String(d.text ?? '').slice(0, 100), date: /^\d{4}-\d{2}-\d{2}$/.test(d.date) ? d.date : '', ...(d.course ? { course: String(d.course).slice(0, 80) } : {}),
-      ...(d.kind in EVENT_KINDS ? { kind: d.kind } : {}), ...(/^\d{2}:\d{2}$/.test(d.time ?? '') ? { time: d.time } : {}) }))
+      ...(d.kind in EVENT_KINDS ? { kind: d.kind } : {}), ...(/^[A-Za-z0-9]{20}$/.test(d.guide ?? '') ? { guide: d.guide } : {}), ...(/^\d{2}:\d{2}$/.test(d.time ?? '') ? { time: d.time } : {}) }))
     .filter((d) => d.text && d.date);
   // «Pendientes»: a to-do, done or not, with an optional time (a day, or a day and an hour) and an optional class of
   // «Mi horario» (its id and its name, as it was when linked).

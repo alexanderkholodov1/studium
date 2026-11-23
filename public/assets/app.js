@@ -137,6 +137,7 @@ function show(view) {
     $('#foot').hidden = ['guide', 'trabajo', 'map', 'boot'].includes(view);
     const quiet = view === 'map' || view === 'guide' || view === 'trabajo';
     root.classList.toggle('quiet', quiet);
+    root.classList.toggle('in-tjg', view === 'trabajo'); // a guide's own environment: its own «Pedir un cambio a tu IA» in place of the tutorial
     play.setQuiet(quiet);
     for (const a of document.querySelectorAll('[data-tab]')) a.setAttribute('aria-current', String(a.dataset.tab === TABS[view]));
     // On a phone the bar scrolls sideways when its tabs do not fit: the current one is kept in sight.
