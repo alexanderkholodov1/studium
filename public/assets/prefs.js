@@ -22,7 +22,9 @@ const LANG = /^en\b/i.test(globalThis.navigator?.language ?? '') ? 'en' : 'es';
 const DEFAULTS = { mode: 'examenes', ambience: 'vivo', sound: false, theme: 'auto', lang: LANG, avatar: 'blue', semester: 0, career: '', nickname: '', name: '', goals: [], progress: {},
   deadlines: [], todos: [], tiles: [], notes: '', links: [], focus: { study: 25, rest: 5 }, bubbles: false, courses: [], interests: [], known: [], malla: '', passed: [], plan: [] };
 // The tiles the home page can show (space.js draws them).
-const TILE_IDS = ['shelf', 'decor', 'schedule', 'todos', 'countdown', 'deadlines', 'week', 'goals', 'timer', 'notes', 'links', 'recent', 'news', 'explore'];
+const TILE_IDS = ['shelf', 'decor', 'schedule', 'todos', 'countdown', 'deadlines', 'week', 'goals', 'timer', 'notes', 'links', 'recent', 'news', 'explore', 'grade'];
+// The kinds of a dated event (Fechas y entregas, the month of «Mi horario»).
+export const EVENT_KINDS = { examen: 'Examen', entrega: 'Entrega', presentacion: 'Presentación', reunion: 'Reunión', otro: 'Otro' };
 const rid = () => Math.random().toString(36).slice(2, 10);
 const range = (v, lo, hi, d) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d; };
 const KEYS = Object.keys(DEFAULTS);
@@ -44,10 +46,11 @@ const clean = (p) => {
   if (!['es', 'en'].includes(out.lang)) out.lang = LANG;
   if (!AVATARS.includes(out.avatar)) out.avatar = 'blue';
   out.goals = (Array.isArray(out.goals) ? out.goals : []).slice(0, 60)
-    .map((g) => ({ id: String(g.id ?? Math.random().toString(36).slice(2, 10)).slice(0, 16), text: String(g.text ?? '').slice(0, 140), done: !!g.done, ...(g.guide ? { guide: String(g.guide).slice(0, 100) } : {}) }))
+    .map((g) => ({ id: String(g.id ?? Math.random().toString(36).slice(2, 10)).slice(0, 16), text: String(g.text ?? '').slice(0, 140), done: !!g.done, ...(g.guide ? { guide: String(g.guide).slice(0, 100) } : {}), ...(/^\d{4}-\d{2}-\d{2}$/.test(g.due ?? '') ? { due: g.due } : {}) }))
     .filter((g) => g.text);
   out.deadlines = (Array.isArray(out.deadlines) ? out.deadlines : []).slice(0, 60)
-    .map((d) => ({ id: String(d.id ?? rid()).slice(0, 16), text: String(d.text ?? '').slice(0, 100), date: /^\d{4}-\d{2}-\d{2}$/.test(d.date) ? d.date : '', ...(d.course ? { course: String(d.course).slice(0, 80) } : {}) }))
+    .map((d) => ({ id: String(d.id ?? rid()).slice(0, 16), text: String(d.text ?? '').slice(0, 100), date: /^\d{4}-\d{2}-\d{2}$/.test(d.date) ? d.date : '', ...(d.course ? { course: String(d.course).slice(0, 80) } : {}),
+      ...(d.kind in EVENT_KINDS ? { kind: d.kind } : {}), ...(/^\d{2}:\d{2}$/.test(d.time ?? '') ? { time: d.time } : {}) }))
     .filter((d) => d.text && d.date);
   // «Pendientes»: a to-do, done or not, with an optional time (a day, or a day and an hour) and an optional class of
   // «Mi horario» (its id and its name, as it was when linked).
@@ -56,6 +59,10 @@ const clean = (p) => {
       id: String(t.id ?? rid()).slice(0, 16), text: String(t.text ?? '').slice(0, 140), done: !!t.done,
       ...(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/.test(t.due ?? '') ? { due: t.due } : {}),
       ...(/^[a-z0-9]{1,24}$/i.test(t.cls ?? '') ? { cls: t.cls, label: String(t.label ?? '').slice(0, 80) } : {}),
+      // With an exact hour it may be placed in the week of «Mi horario», for its duration (minutes).
+      ...(t.sched && /T\d{2}:\d{2}$/.test(t.due ?? '') ? { sched: true, dur: range(t.dur, 10, 480, 60) } : {}),
+      // A pendiente may count toward a meta (its id).
+      ...(/^[a-z0-9]{1,16}$/i.test(t.goal ?? '') ? { goal: t.goal } : {}),
     }))
     .filter((t) => t.text);
   const tiles = new Set();

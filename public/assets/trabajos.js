@@ -897,7 +897,7 @@ function startDraft() {
 function newStudy(preset = {}) {
   return {
     id: `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, kind: 'estudio', at: 0, title: String(preset.title ?? ''), course: String(preset.course ?? ''),
-    text: '', files: [], parts: 1, group: '', date: '', time: '', pasting: false, workspace: 'temp', prefs: { ...STUDY_DEFAULT },
+    text: '', files: [], parts: 1, group: '', date: /^\d{4}-\d{2}-\d{2}$/.test(preset.date ?? '') ? preset.date : '', time: '', pasting: false, workspace: 'temp', prefs: { ...STUDY_DEFAULT },
     graph: true, route: preset.route ?? null, exams: preset.exams ?? [], links: preset.links ?? [],
   };
 }

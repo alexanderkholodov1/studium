@@ -9,9 +9,10 @@
 import { auth, loadSchedule, saveSchedule } from './data.js';
 import * as ai from './ai.js';
 import { sfx } from './sfx.js';
-import { prefs } from './prefs.js';
+import { prefs, EVENT_KINDS } from './prefs.js';
 import { parseOffer, termName } from './offer.js';
 import { prereqNote, norm } from './malla.js';
+import { dayStatus, classesThisWeek, weekOff, longDay, iso, TERMS } from './calendario.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const $ = (s, r = document) => r.querySelector(s);
@@ -183,22 +184,46 @@ function todayList(o) {
       <span>${now ? '<em>Ahora</em>' : next && next.s === s ? '<em>Sigue</em>' : ''}<b>${esc(label(c))}</b><small>${esc([c.room, c.prof].filter(Boolean).join(' · '))}</small></span></li>`;
   }).join('')}</ol>`;
 }
+// What the schedule says when the week has no classes: a holiday week, the finals, the end of the semester.
+function noClassesNote() {
+  const st = dayStatus();
+  const t = TERMS[0];
+  if (st.kind === 'finals') return `<p class="hs-term"><b>Semana de exámenes finales</b>: del ${esc(longDay(st.term.finals[0]))} al ${esc(longDay(st.term.finals[1]))}. Las clases terminaron el ${esc(longDay(st.term.classes[1]))}. <a href="#/horario">Tus exámenes, en el calendario</a></p>`;
+  if (st.kind === 'after') return `<p class="hs-term"><b>El semestre terminó.</b> Las clases terminaron el ${esc(longDay(st.term.classes[1]))}.</p>`;
+  if (st.kind === 'off') return `<p class="hs-term"><b>${esc(st.name)}</b>: no hay clases hasta después del ${esc(longDay(st.until))}.</p>`;
+  if (st.kind === 'none' && st.next) return `<p class="hs-term">Las clases empiezan el ${esc(longDay(st.next.classes[0]))}.</p>`;
+  return t ? '' : '';
+}
 function paintHome() {
   if (!homeEl) return;
   const o = state.mine;
   homeEl.classList.add('sched');
   const wide = homeEl.clientWidth >= 640;
+  const live = classesThisWeek();
   homeEl.innerHTML = o.classes.length ? (wide ? `
     <div class="hs-head"><h2>Mi horario</h2><span class="muted">${credits(o.classes)} de ${INCLUDED} créditos${state.term ? ` · ${esc(termName(state.term))}` : ''}</span>
       <div class="hs-actions"><a class="button ghost small" href="#/malla">Mi malla</a><a class="button ghost small" href="#/horario">Editar</a><button class="sched-special small" data-hs-prep>Preparar mi inscripción</button></div></div>
-    ${week(o, true)}` : `
+    ${live ? '' : noClassesNote()}${week(o, true)}` : `
     <div class="hs-head"><h2>Hoy</h2><a class="link" href="#/horario">La semana</a></div>
-    ${todayList(o)}`)
+    ${dayStatus().kind === 'classes' ? todayList(o) : noClassesNote()}`)
     : `<div class="hs-empty glass">
       <span class="sg-icon c-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></span>
       <div><h2>Tu horario, aquí</h2><p>Una captura de Banner, una foto o tu Excel: lo subes una vez y cada día ves qué clase sigue.</p></div>
       <div class="hs-actions"><button class="button primary" data-hs-upload>Subir mi horario</button><button class="link" data-hs-prep>o arma tu inscripción</button></div>
     </div>`;
+  fitWeek();
+}
+// The week fills the tile it was given (his words: the whole schedule, using the space it needs): the height of a
+// block follows the tile's height, so a taller tile shows bigger blocks and a shorter one still shows every block.
+function fitWeek() {
+  const sheet = homeEl?.querySelector('.sched-sheet.compact');
+  if (!sheet) return;
+  const tileBody = homeEl.closest('.tile-body') ?? homeEl;
+  const rows = Number(getComputedStyle(sheet).getPropertyValue('--rows')) || BLOCKS.length;
+  const head = sheet.querySelector('.sched-head')?.offsetHeight ?? 30;
+  const used = sheet.getBoundingClientRect().top - tileBody.getBoundingClientRect().top;
+  const free = tileBody.clientHeight - used - head - 24;
+  sheet.style.setProperty('--rowh', `${Math.max(22, Math.min(64, Math.floor(free / rows)))}px`);
 }
 // Whatever changed, both places show it.
 function refresh() {
@@ -238,19 +263,40 @@ setInterval(() => {
     }
   }
 }, 60_000);
+// The pendientes with an exact hour that the person put in «Mi horario», for this week (Monday first).
+function weekTodos() {
+  const now = new Date();
+  const monday = new Date(now); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 7);
+  return prefs.get().todos.filter((x) => x.sched && x.due?.length > 10).map((x) => {
+    const at = new Date(x.due);
+    if (at < monday || at >= sunday) return null;
+    const s = at.getHours() * 60 + at.getMinutes();
+    return { id: x.id, d: (at.getDay() + 6) % 7, s, e: Math.min(s + (x.dur || 60), 23 * 60), text: x.text, done: x.done };
+  }).filter((x) => x && x.d < 6);
+}
+// Why a day of a week with classes has none: a holiday's name, the end of classes, the finals.
+const offName = (k) => ({ after: 'Terminaron las clases', finals: 'Exámenes finales', none: 'Sin clases' })[k] ?? k;
 function week(o, compact = false) {
   const t = today();
+  const todos = weekTodos();
+  const off = weekOff();
+  // After the last day of classes (or before the first), the week shows no classes: only what the person put in it.
+  const live = classesThisWeek();
+  o = live ? o : { ...o, classes: [] };
   const clash = conflicts(o.classes);
-  const days = o.classes.some((c) => c.slots.some((s) => s.d === 5)) ? 6 : 5;
-  const late = Math.max(0, ...o.classes.flatMap((c) => c.slots.map((s) => Math.ceil(rowOf(s.e)) - BLOCKS.length)));
+  const days = o.classes.some((c) => c.slots.some((s) => s.d === 5)) || todos.some((x) => x.d === 5) ? 6 : 5;
+  const late = Math.max(0, ...o.classes.flatMap((c) => c.slots.map((s) => Math.ceil(rowOf(s.e)) - BLOCKS.length)), ...todos.map((x) => Math.ceil(rowOf(x.e)) - BLOCKS.length));
   const rows = BLOCKS.length + late;
   const inClash = (c, d, s) => clash.some((x) => x.d === d && x.s < s.e && x.e > s.s && (x.a === c || x.b === c));
   return `<div class="sched-sheet${compact ? ' compact' : ''}" style="--days:${days};--rows:${rows}">
     <div class="sched-head"><span></span>${DAYS.slice(0, days).map((d, i) => `<b class="${i === t.d ? 'today' : ''}"><span class="long">${d}</span><span class="short">${SHORT[i]}</span></b>`).join('')}</div>
     <div class="sched-grid">
       <div class="sched-hours">${Array.from({ length: rows }, (_, i) => { const b = BLOCKS[i]; return `<span style="--r:${i}">${b ? `<b>${hhmm(b.s)}</b><small>${hhmm(b.e)}</small>` : ''}</span>`; }).join('')}</div>
-      ${DAYS.slice(0, days).map((_, d) => `<div class="sched-day${d === t.d ? ' today' : ''}" data-day="${d}">${d === t.d ? nowLine(rows) : ''}
-        ${lanes(o.classes, d).map(({ c, s, lane, of }) => `<button class="sched-class c-${c.color}${inClash(c, d, s) ? ' clashing' : ''}${of > 1 ? ' narrow' : ''}${d === t.d && s.s <= t.m && t.m < s.e ? ' now' : ''}" data-span="${s.s}-${s.e}" draggable="${mode === 'prep'}" data-drag="${c.id}" data-edit="${c.id}"
+      ${DAYS.slice(0, days).map((_, d) => `<div class="sched-day${d === t.d ? ' today' : ''}${off[d] && live ? ' off' : ''}" data-day="${d}">${d === t.d ? nowLine(rows) : ''}
+        ${off[d] && live ? `<span class="sched-off" title="${esc(offName(off[d]))}">${esc(offName(off[d]))}</span>` : ''}
+        ${todos.filter((x) => x.d === d).map((x) => `<a class="sched-todo${x.done ? ' done' : ''}" href="#/" title="Pendiente: ${esc(x.text)} · ${hhmm(x.s)}–${hhmm(x.e)}" style="--top:${rowOf(x.s)};--bottom:${rowOf(x.e)}"><b>${esc(x.text)}</b><small>${hhmm(x.s)}</small></a>`).join('')}
+        ${(off[d] && live ? [] : lanes(o.classes, d)).map(({ c, s, lane, of }) => `<button class="sched-class c-${c.color}${inClash(c, d, s) ? ' clashing' : ''}${of > 1 ? ' narrow' : ''}${d === t.d && s.s <= t.m && t.m < s.e ? ' now' : ''}" data-span="${s.s}-${s.e}" draggable="${mode === 'prep'}" data-drag="${c.id}" data-edit="${c.id}"
           style="--top:${rowOf(s.s)};--bottom:${rowOf(s.e)};--lane:${lane};--of:${of}" title="${esc(which(c))}${c.nrc ? ` · NRC ${esc(c.nrc)}` : ''} · ${hhmm(s.s)}–${hhmm(s.e)}">
           <b>${esc(label(c))}</b><i class="code">${esc(shortLabel(c))}</i><small>${c.room ? esc(c.room) : `${hhmm(s.s)}–${hhmm(s.e)}`}</small></button>`).join('')}
       </div>`).join('')}
@@ -371,8 +417,9 @@ function paint() {
         <button data-mine-clear class="danger">Vaciar mi horario</button></div></details>` : ''}
     </div>
   </div>
-  ${has ? `<div class="sched-body">${week(o)}${side(o)}</div>`
-    : `<div class="sched-empty glass"><h2>Pon tu horario</h2><p>Studium lo pasa completo a tu semana, por bloques de clase.</p>${transcribeBox('mine')}</div>`}`
+  ${has ? `${classesThisWeek() ? '' : noClassesNote()}<div class="sched-body">${week(o)}${side(o)}</div>`
+    : `<div class="sched-empty glass"><h2>Pon tu horario</h2><p>Studium lo pasa completo a tu semana, por bloques de clase.</p>${transcribeBox('mine')}</div>`}
+  ${monthHTML()}`
   : `
   <div class="sched-toolbar prep">
     <div class="sched-where"><span class="sched-mode-pill">${PREP_ICON}Preparando tu inscripción</span>
@@ -396,6 +443,79 @@ function paint() {
   paintWhere();
   const box = $('.sched-empty [data-transcribe]', root);
   if (box) mountTranscribe(box);
+}
+
+/* ---------- the month: exams, presentations, meetings and the official calendar ---------- */
+// His words: under «Mi horario», the month, where exams, presentations, meetings and other events stand out. Its
+// events are the person's own dates (Fechas y entregas: the same list as Inicio), the pendientes with a date, and the
+// official calendar (calendario.js). «Descargar .ics» takes them to Google Calendar or Outlook (import once);
+// a live sync needs an app registered with Google or Microsoft (his decision, later).
+let monthAt = null; // the first day of the month shown
+const KIND_ICON = { examen: '📝', entrega: '📦', presentacion: '🎤', reunion: '👥', otro: '•' };
+function monthEvents(from, to) {
+  const p = prefs.get();
+  const out = [];
+  for (const d of p.deadlines) if (d.date >= from && d.date <= to) out.push({ day: d.date, time: d.time ?? '', text: d.text, course: d.course ?? '', kind: d.kind ?? 'otro', id: d.id, own: true });
+  for (const t of p.todos) if (t.due && !t.done && t.due.slice(0, 10) >= from && t.due.slice(0, 10) <= to) out.push({ day: t.due.slice(0, 10), time: t.due.slice(11, 16), text: t.text, kind: 'pendiente', todo: t.id });
+  for (const term of TERMS) {
+    for (const [day, text] of term.dates) if (day >= from && day <= to) out.push({ day, text, kind: 'oficial' });
+    for (const [a, b, text] of term.off) for (let d = new Date(`${a}T12:00`); iso(d) <= b; d.setDate(d.getDate() + 1)) if (iso(d) >= from && iso(d) <= to) out.push({ day: iso(d), text, kind: 'feriado' });
+  }
+  return out.sort((a, b) => (a.day + a.time).localeCompare(b.day + b.time));
+}
+function monthHTML() {
+  const now = new Date();
+  monthAt ??= new Date(now.getFullYear(), now.getMonth(), 1);
+  const y = monthAt.getFullYear(); const m = monthAt.getMonth();
+  const first = new Date(y, m, 1); const last = new Date(y, m + 1, 0);
+  const lead = (first.getDay() + 6) % 7;
+  const events = monthEvents(iso(first), iso(last));
+  const todayIso = iso(now);
+  const cells = [...Array.from({ length: lead }, () => '<div class="mc-day out"></div>'), ...Array.from({ length: last.getDate() }, (_, i) => {
+    const day = iso(new Date(y, m, i + 1));
+    const st = dayStatus(day);
+    const on = events.filter((e) => e.day === day);
+    const holiday = on.find((e) => e.kind === 'feriado');
+    return `<div class="mc-day${day === todayIso ? ' today' : ''}${holiday ? ' off' : ''}${st.kind === 'finals' ? ' finals' : ''}"><b>${i + 1}</b>
+      ${on.filter((e) => e.kind !== 'feriado').slice(0, 4).map((e) => `<span class="mc-ev k-${e.kind}" title="${esc([EVENT_KINDS[e.kind] ?? (e.kind === 'pendiente' ? 'Pendiente' : 'Calendario oficial'), e.time, e.text, e.course].filter(Boolean).join(' · '))}">${KIND_ICON[e.kind] ?? ''}${e.time ? `<i>${esc(e.time)}</i> ` : ''}${esc(e.text)}</span>`).join('')}
+      ${on.filter((e) => e.kind !== 'feriado').length > 4 ? `<span class="mc-more">+${on.filter((e) => e.kind !== 'feriado').length - 4}</span>` : ''}
+      ${holiday ? `<span class="mc-hol">${esc(holiday.text)}</span>` : ''}</div>`;
+  })].join('');
+  const mine = events.filter((e) => e.own);
+  const label = monthAt.toLocaleDateString('es-EC', { month: 'long', year: 'numeric' });
+  return `<section class="sched-month glass" id="sched-month">
+    <div class="mc-head"><h2>${esc(label[0].toUpperCase() + label.slice(1))}</h2>
+      <div class="mc-nav"><button class="button ghost small" data-month="-1" aria-label="Mes anterior">←</button><button class="button ghost small" data-month="0">Hoy</button><button class="button ghost small" data-month="1" aria-label="Mes siguiente">→</button></div>
+      <button class="button ghost small" data-ics title="Para importarlo en Google Calendar u Outlook">Descargar para Google u Outlook (.ics)</button></div>
+    <div class="mc-grid"><div class="mc-wd">Lun</div><div class="mc-wd">Mar</div><div class="mc-wd">Mié</div><div class="mc-wd">Jue</div><div class="mc-wd">Vie</div><div class="mc-wd">Sáb</div><div class="mc-wd">Dom</div>${cells}</div>
+    <form class="mc-add" data-event-add>
+      <select name="kind" aria-label="Qué es">${Object.entries(EVENT_KINDS).map(([k, v]) => `<option value="${k}">${KIND_ICON[k]} ${v}</option>`).join('')}</select>
+      <input name="text" maxlength="100" required placeholder="Examen final de Cálculo, presentación del proyecto…" aria-label="Qué" autocomplete="off">
+      <input name="date" type="date" required aria-label="Día"><input name="time" type="time" aria-label="Hora (opcional)">
+      <input name="course" maxlength="80" placeholder="Materia (opcional)" aria-label="Materia" list="mc-courses" autocomplete="off">
+      <datalist id="mc-courses">${[...new Set(state.mine.classes.map((c) => c.name))].map((n) => `<option value="${esc(n)}">`).join('')}</datalist>
+      <button class="button primary small">Agregar</button></form>
+    ${mine.length ? `<ul class="mc-list">${mine.map((e) => `<li><span class="k-${e.kind}">${KIND_ICON[e.kind]} ${esc(EVENT_KINDS[e.kind])}</span> <b>${esc(e.text)}</b> <span class="muted">${esc([longDay(e.day), e.time, e.course].filter(Boolean).join(' · '))}</span> <button class="icon x" data-event-remove="${esc(e.id)}" aria-label="Quitar"><svg><use href="#i-x"/></svg></button></li>`).join('')}</ul>` : ''}
+    <p class="fine">Los días sin clases y las fechas del semestre vienen del <a href="${esc(TERMS[0].source)}" target="_blank" rel="noopener noreferrer">calendario académico oficial</a>. Lo que agregues aquí también aparece en Inicio.</p>
+  </section>`;
+}
+// An .ics file (RFC 5545) with the person's dates, the pendientes with a date and the official calendar.
+function icsFile() {
+  const now = new Date();
+  const from = iso(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+  const to = iso(new Date(now.getFullYear() + 1, now.getMonth(), 1));
+  const stamp = `${now.toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`;
+  const txt = (v) => String(v ?? '').replace(/\\/g, '\\\\').replace(/[,;]/g, (c) => `\\${c}`).replace(/\n/g, '\\n');
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Studium//Mi horario//ES', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Studium'];
+  monthEvents(from, to).forEach((e, i) => {
+    const d = e.day.replace(/-/g, '');
+    const next = new Date(`${e.day}T12:00`); next.setDate(next.getDate() + 1);
+    lines.push('BEGIN:VEVENT', `UID:studium-${d}-${i}-${(e.id ?? e.todo ?? e.kind).replace(/[^\w-]/g, '')}@studium`, `DTSTAMP:${stamp}`,
+      ...(e.time ? [`DTSTART:${d}T${e.time.replace(':', '')}00`, `DURATION:PT1H`] : [`DTSTART;VALUE=DATE:${d}`, `DTEND;VALUE=DATE:${iso(next).replace(/-/g, '')}`]),
+      `SUMMARY:${txt(`${e.kind === 'feriado' ? 'Sin clases: ' : ''}${e.text}`)}`, ...(e.course ? [`DESCRIPTION:${txt(e.course)}`] : []), 'END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
 }
 
 /* ---------- adding a class, with what a student would want to know ---------- */
@@ -757,12 +877,16 @@ function confirmDialog(what) {
 
 /* ---------- events ---------- */
 export function mountSchedule() {
+  addEventListener('resize', () => { clearTimeout(fitWeek.t); fitWeek.t = setTimeout(fitWeek, 150); });
   document.addEventListener('click', (e) => {
     if (!root || !root.contains(e.target)) return;
     const b = e.target.closest('button');
     if (!b || b.disabled || b.closest('[data-transcribe]')) return;
     b.closest('details')?.removeAttribute('open');
     const d = b.dataset;
+    if (d.month !== undefined) { const n = Number(d.month); const t = new Date(); monthAt = n ? new Date(monthAt.getFullYear(), monthAt.getMonth() + n, 1) : new Date(t.getFullYear(), t.getMonth(), 1); paint(); $('#sched-month', root)?.scrollIntoView({ block: 'nearest' }); return; }
+    if ('ics' in d) { give(new Blob([icsFile()], { type: 'text/calendar;charset=utf-8' }), 'studium-calendario.ics'); return; }
+    if (d.eventRemove) { prefs.set({ deadlines: prefs.get().deadlines.filter((x) => x.id !== d.eventRemove) }); paint(); return; }
     if (d.mode) { mode = d.mode; catalog = []; asks = []; note = ''; paint(); sfx.tick(); scrollTo({ top: 0, behavior: 'smooth' }); return; }
     if (d.opt !== undefined) { state.active = Number(d.opt); asks = []; save(); paint(); sfx.tick(); return; }
     if ('optAdd' in d) { state.options.push(blankDraft(state.options.length + 1)); state.active = state.options.length - 1; save(); paint(); return; }
@@ -783,6 +907,17 @@ export function mountSchedule() {
     if (d.ask) return answer(d.ask);
     if (d.remove) { const o = view(); o.classes = o.classes.filter((c) => c.id !== d.remove); asks = asks.filter((x) => x.cls.id !== d.remove); save(); paint(); sfx.drop?.(); return; }
     if (d.edit) classDialog(d.edit);
+  });
+  document.addEventListener('submit', (e) => {
+    const f = e.target;
+    if (!root?.contains(f) || !f.matches('[data-event-add]')) return;
+    e.preventDefault();
+    const v = Object.fromEntries(new FormData(f));
+    const ev = { id: rid(), text: String(v.text).trim().slice(0, 100), date: v.date, kind: v.kind, ...(v.time ? { time: v.time } : {}), ...(String(v.course).trim() ? { course: String(v.course).trim().slice(0, 80) } : {}) };
+    if (!ev.text || !ev.date) return;
+    prefs.set({ deadlines: [...prefs.get().deadlines, ev] });
+    monthAt = new Date(Number(ev.date.slice(0, 4)), Number(ev.date.slice(5, 7)) - 1, 1);
+    sfx.tick?.(); paint(); $('#sched-month', root)?.scrollIntoView({ block: 'nearest' });
   });
   // The home's «Mi horario»: upload, go prepare enrollment, or open the page to edit.
   document.addEventListener('click', (e) => {

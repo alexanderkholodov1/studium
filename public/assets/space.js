@@ -3,7 +3,8 @@
 import { careers, careerPicker } from './malla.js';
 import { myClasses } from './schedule.js';
 import * as vault from './vault.js';
-import { prefs, MODES, AMBIENCES, THEMES, AVATARS } from './prefs.js';
+import { prefs, MODES, AMBIENCES, THEMES, AVATARS, EVENT_KINDS } from './prefs.js';
+const KIND_ICON = { examen: '📝', entrega: '📦', presentacion: '🎤', reunion: '👥', otro: '•' };
 import * as ai from './ai.js';
 import { when, nextMidnight } from './aierror.js';
 import { sfx } from './sfx.js';
@@ -92,11 +93,20 @@ export function remember(id) {
 // shows everything it can hold, the most important on the first screen; «Personalizar» lets the person move, resize,
 // remove and add tiles.
 export const TILE_NAMES = {
-  todos: 'Pendientes', countdown: 'Tu próximo examen', schedule: 'Hoy en tu horario', deadlines: 'Fechas y entregas', week: 'Tu semana', goals: 'Metas', timer: 'Enfoque',
+  todos: 'Pendientes', countdown: 'Tu próximo examen', schedule: 'Mi horario', deadlines: 'Fechas y entregas', week: 'Tu semana', goals: 'Metas', timer: 'Enfoque',
   notes: 'Bloc de notas', links: 'Accesos rápidos', recent: 'Sigue donde quedaste', news: 'Lo nuevo en tu comunidad', explore: 'Un concepto al azar',
-  shelf: 'Easter eggs', decor: 'Decoración',
+  grade: '¿Cuánto necesito?', shelf: 'Easter eggs', decor: 'Decoración',
 };
 let editing = false;
+// What each tile is for, in one line, so similar tiles are told apart when adding them (his words: each one must
+// do something the others do not).
+export const TILE_WHY = {
+  todos: 'Tareas sueltas; con hora, van a tu horario', goals: 'Objetivos grandes, que avanzan con sus pendientes', notes: 'Escribir libre; una línea se vuelve pendiente',
+  countdown: 'Prepararte para el examen que sigue', deadlines: 'Todas tus fechas: exámenes, entregas, reuniones', week: 'Los próximos 7 días, de un vistazo',
+  schedule: 'Tu semana de clases, y dónde estás ahora', timer: 'Bloques de estudio y descanso', links: 'Tus páginas de siempre, con su logo',
+  recent: 'Las guías que estabas leyendo', news: 'Lo último de tu comunidad', explore: 'Un concepto del grafo para curiosear', grade: 'La nota que te falta para aprobar',
+  shelf: 'Lo que encontraste en Studium', decor: 'Una escena en 3D',
+};
 // The Easter eggs join the home page by themselves once a secret is found (and can be removed like any tile).
 const shelfWanted = () => found().size && !seen('shelf-removed');
 const layout = () => {
@@ -130,19 +140,23 @@ function agenda() {
   const own = prefs.get().deadlines.filter((d) => (daysTo(d.date) ?? -1) >= 0).map((d) => ({ ...d, own: true, title: d.text }));
   return [...upcoming().map((g) => ({ ...g, own: false })), ...own].sort((a, b) => String(a.date).localeCompare(String(b.date)));
 }
+// «Tu próximo examen» is about getting ready for one exam (what «Fechas y entregas» lists is everything with a date):
+// how many days are left, the guide for it, and how much study that leaves per day.
+const isExam = (x) => !x.own || x.kind === 'examen' || (!x.kind && /examen|parcial|prueba|final|lecci[oó]n|quiz/i.test(x.text ?? ''));
 function countdownTile(span) {
-  const next = agenda()[0];
+  const next = agenda().find(isExam);
   if (!next) {
-    return tile('countdown', span, `<h2>Tu próximo examen</h2><p class="muted">No hay nada con fecha por venir. Agrega tus fechas en «Fechas y entregas», o crea la guía de tu próximo examen.</p>
-      <div class="actions"><button class="button ghost" data-tile-add="deadlines">Agregar fechas</button><a class="button primary" href="#/estudiar">Hacer una guía</a></div>`);
+    return tile('countdown', span, `<h2>Tu próximo examen</h2><p class="muted">Cuando agregues un examen, aquí ves cuánto falta y cómo prepararlo.</p>
+      <div class="actions"><a class="button primary" href="#/horario">Agregar un examen</a><a class="button ghost" href="#/estudiar/guia">Hacer una guía</a></div>`);
   }
   const n = daysTo(next.date);
   const sub = next.own ? next.course ?? '' : [next.professor, next.term].filter(Boolean).join(' · ');
   return tile('countdown', span, `
-    <p class="kicker d">${next.own ? 'Tu próxima fecha' : 'Tu próximo examen'} · ${esc(longDate(next.date))}</p>
+    <p class="kicker d">Tu próximo examen · ${esc(longDate(next.date))}${next.time ? ` · ${esc(next.time)}` : ''}</p>
     <div class="countdown d" style="--d:26"><span class="big">${n === 0 ? 'Hoy' : n}<small>${n === 0 ? '' : n === 1 ? ' día' : ' días'}</small></span>
       <h3>${next.own ? esc(next.text) : `${esc(next.course)}: ${esc(next.title)}`}</h3><p class="muted">${esc(sub)}</p></div>
-    <div class="actions d" style="--d:14">${next.own ? '<a class="button ghost" href="#/estudiar">Hacer su guía</a>'
+    ${n > 0 ? `<p class="cd-plan d" style="--d:18">${n === 1 ? 'Queda un día: repasa lo esencial y duerme bien.' : `Te quedan <b>${n} días</b>: con una guía de estudio, un tema por día alcanza.`}</p>` : ''}
+    <div class="actions d" style="--d:14">${next.own ? `<button class="button primary" data-study-for="${esc(next.id)}">Hacer su guía de estudio</button>`
       : `<a class="button primary" href="#/guia/${encodeURIComponent(next.id)}">Abrir la guía</a><button class="button ghost" data-goal-for="${esc(next.id)}">Ponérmelo como meta</button>`}</div>`, 'solid-blue', 'data-tilt="3"');
 }
 function deadlinesTile(span) {
@@ -153,12 +167,13 @@ function deadlinesTile(span) {
   return tile('deadlines', span, `<h2>Fechas y entregas <small>${next.length ? `${next.length} por venir` : ''}</small></h2>
     ${next.length ? `<ul class="dlist">${next.map((d) => { const n = daysTo(d.date); return `<li class="${n <= 2 ? 'near' : ''}">
       <span class="when"><b>${n === 0 ? 'Hoy' : n}</b><small>${n === 0 ? '' : n === 1 ? 'día' : 'días'}</small></span>
-      <span class="text"><strong>${esc(d.text)}</strong><span class="muted">${esc([d.course, longDate(d.date)].filter(Boolean).join(' · '))}</span></span>
+      <span class="text"><strong>${esc(KIND_ICON[d.kind] ?? '')} ${esc(d.text)}</strong><span class="muted">${esc([EVENT_KINDS[d.kind], d.course, longDate(d.date), d.time].filter(Boolean).join(' · '))}</span></span>
       <button class="icon x" data-deadline-remove="${esc(d.id)}" aria-label="Quitar esta fecha"><svg><use href="#i-x"/></svg></button></li>`; }).join('')}</ul>`
-      : '<p class="muted">Entregas, parciales, inscripciones: lo que tenga fecha, con cuánto falta.</p>'}
+      : '<p class="muted">Exámenes, entregas, presentaciones, reuniones: todo lo que tenga fecha, con cuánto falta. También en el calendario de «Mi horario».</p>'}
     <form class="dl-add" id="deadline-add">
+      <select name="kind" aria-label="Qué es">${Object.entries(EVENT_KINDS).map(([k, v]) => `<option value="${k}">${KIND_ICON[k]} ${v}</option>`).join('')}</select>
       <input name="text" maxlength="100" placeholder="Entrega del proyecto, Parcial 2…" aria-label="Qué" required autocomplete="off">
-      <input name="date" type="date" aria-label="Cuándo" required>
+      <input name="date" type="date" aria-label="Cuándo" required><input name="time" type="time" aria-label="Hora (opcional)">
       <input name="course" maxlength="80" list="home-courses" placeholder="Materia (opcional)" aria-label="Materia" autocomplete="off">
       <button class="button primary">Agregar</button>
       <datalist id="home-courses">${courses.map((c) => `<option value="${esc(c)}">`).join('')}</datalist>
@@ -179,15 +194,18 @@ function weekTile(span) {
 }
 function notesTile(span) {
   return tile('notes', span, `<h2>Bloc de notas <small id="notes-saved"></small></h2>
-    <textarea id="home-notes" maxlength="4000" rows="7" placeholder="Lo que no quieres olvidar: una fórmula, una idea, el aula del examen…" aria-label="Bloc de notas">${esc(prefs.get().notes)}</textarea>`);
+    <textarea id="home-notes" maxlength="4000" rows="7" placeholder="Escribe libre: una fórmula, una idea, el aula del examen… Una línea que sea una tarea se vuelve pendiente con el botón." aria-label="Bloc de notas">${esc(prefs.get().notes)}</textarea>
+    <button type="button" class="link small" data-note-todo title="La línea donde está el cursor, o lo que seleccionaste">→ Hacer pendiente esta línea</button>`);
 }
 function linksTile(span) {
   const { links } = prefs.get();
+  // His words: the links are set while personalizing; on the page, each one is the site's logo and its name.
+  const logo = (l) => { let o = ''; try { o = new URL(l.url).origin; } catch { /* no logo */ } return o ? `<img src="${esc(o)}/favicon.ico" alt="" loading="lazy" referrerpolicy="no-referrer" data-letter="${esc(l.label[0]?.toUpperCase() ?? '·')}">` : `<i>${esc(l.label[0]?.toUpperCase() ?? '·')}</i>`; };
   return tile('links', span, `<h2>Accesos rápidos</h2>
-    ${links.length ? `<ul class="qlinks">${links.map((l) => `<li><a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer"><i aria-hidden="true">${esc(l.label[0]?.toUpperCase() ?? '·')}</i>${esc(l.label)}</a>
-      <button class="icon x" data-link-remove="${esc(l.id)}" aria-label="Quitar ${esc(l.label)}"><svg><use href="#i-x"/></svg></button></li>`).join('')}</ul>`
-      : '<p class="muted">Tus páginas de siempre a un clic: el aula virtual, tu correo, el horario, un Drive.</p>'}
-    ${links.length < 12 ? `<form class="ql-add" id="link-add"><input name="label" maxlength="40" placeholder="Nombre" aria-label="Nombre" required autocomplete="off"><input name="url" type="url" maxlength="300" placeholder="https://…" aria-label="Dirección" required><button class="button primary">Agregar</button></form>` : ''}`);
+    ${links.length ? `<ul class="qlinks${editing ? '' : ' logos'}">${links.map((l) => `<li><a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" title="${esc(l.url)}"><span class="ql-logo" aria-hidden="true">${logo(l)}</span><span class="ql-name">${esc(l.label)}</span></a>
+      ${editing ? `<button class="icon x" data-link-remove="${esc(l.id)}" aria-label="Quitar ${esc(l.label)}"><svg><use href="#i-x"/></svg></button>` : ''}</li>`).join('')}</ul>`
+      : `<p class="muted">Tus páginas de siempre a un clic: el aula virtual, tu correo, un Drive. ${editing ? 'Agrégalas aquí abajo.' : 'Agrégalas en «Personalizar».'}</p>`}
+    ${editing && links.length < 12 ? `<form class="ql-add" id="link-add"><input name="label" maxlength="40" placeholder="Nombre" aria-label="Nombre" required autocomplete="off"><input name="url" type="url" maxlength="300" placeholder="https://…" aria-label="Dirección" required><button class="button primary">Agregar</button></form>` : ''}`);
 }
 
 // «Pendientes»: a post-it of to-dos. Each can have a time (overdue ones stand out) and a class of «Mi horario».
@@ -200,20 +218,28 @@ function dueText(due) {
 }
 const overdue = (t) => !t.done && t.due && new Date(t.due.length > 10 ? t.due : `${t.due}T23:59`) < new Date();
 function todosTile(span) {
-  const { todos } = prefs.get();
+  const { todos, goals } = prefs.get();
   // Not done first, the ones with a time by their time, then the rest as written; done ones last.
   const order = [...todos].sort((a, b) => (a.done - b.done) || ((a.due ? 0 : 1) - (b.due ? 0 : 1)) || String(a.due ?? '').localeCompare(String(b.due ?? '')));
   const left = todos.filter((t) => !t.done).length;
   return tile('todos', span, `<div class="pi-paper"><h2>Pendientes <small>${left ? `${left} por hacer` : todos.length ? 'todo hecho' : ''}</small></h2>
     ${order.length ? `<ul class="pi-list">${order.map((t) => `<li class="${t.done ? 'done' : ''} ${overdue(t) ? 'late' : ''}" data-todo="${esc(t.id)}">
         <label><input type="checkbox" ${t.done ? 'checked' : ''} data-todo-check="${esc(t.id)}"><span class="pi-box" aria-hidden="true"></span><span class="pi-text">${esc(t.text)}</span></label>
-        ${t.due || t.label ? `<span class="pi-meta">${t.due ? `<span class="pi-due">${overdue(t) ? 'venció · ' : ''}${esc(dueText(t.due))}</span>` : ''}${t.label ? `<a class="pi-cls" href="#/horario">${esc(t.label)}</a>` : ''}</span>` : ''}
+        ${t.due || t.label ? `<span class="pi-meta">${t.due ? `<span class="pi-due">${overdue(t) ? 'venció · ' : ''}${esc(dueText(t.due))}</span>` : ''}${t.label ? `<a class="pi-cls" href="#/horario">${esc(t.label)}</a>` : ''}${t.sched ? '<a class="pi-cls" href="#/horario" title="Está en tu horario">◷ en tu horario</a>' : ''}</span>` : ''}
         <button type="button" class="icon x" data-todo-remove="${esc(t.id)}" aria-label="Quitar este pendiente"><svg><use href="#i-x"/></svg></button></li>`).join('')}</ul>`
     : '<p class="pi-empty">Lo que tienes que hacer, a mano: «Leer el capítulo 3», «Entregar el deber de Redes»…</p>'}
     <form class="pi-add" data-todo-add><input name="text" maxlength="140" placeholder="Nuevo pendiente" aria-label="Nuevo pendiente" autocomplete="off" required>
-      <details class="pi-more"><summary>Fecha o clase</summary>
-        <label class="field"><span>Para cuándo</span><input type="datetime-local" name="due"></label>
+      <div class="pi-ask" data-pi-ask hidden><span>¿Tiene una hora exacta?</span>
+        <label class="pi-chip"><input type="radio" name="when" value="" checked> No</label>
+        <label class="pi-chip"><input type="radio" name="when" value="day"> Un día</label>
+        <label class="pi-chip"><input type="radio" name="when" value="hour"> Día y hora</label></div>
+      <div class="pi-when" data-pi-when hidden>
+        <input type="date" name="day" aria-label="Día"><input type="time" name="hour" aria-label="Hora" data-pi-hour>
+        <select name="dur" aria-label="Cuánto dura" data-pi-hour><option value="30">30 min</option><option value="60" selected>1 hora</option><option value="90">1 h 30</option><option value="120">2 horas</option><option value="180">3 horas</option></select>
+        <label class="pi-sched" data-pi-hour><input type="checkbox" name="sched" checked> Ponerlo en mi horario</label></div>
+      <details class="pi-more"><summary>Clase o meta</summary>
         <label class="field"><span>Con una clase de tu horario</span><select name="cls" data-todo-classes><option value="">Ninguna</option></select></label>
+        ${goals.length ? `<label class="field"><span>Cuenta para la meta</span><select name="goal"><option value="">Ninguna</option>${goals.filter((g) => !g.done).map((g) => `<option value="${esc(g.id)}">${esc(g.text)}</option>`).join('')}</select></label>` : ''}
       </details><button class="button primary small">Agregar</button></form></div>`, 'postit', 'id="todos-tile"');
 }
 function goalsTile(span) {
@@ -221,12 +247,13 @@ function goalsTile(span) {
   const done = goals.filter((g) => g.done).length;
   const p = goals.length ? Math.round((done / goals.length) * 100) : 0;
   const suggestions = upcoming().slice(0, 3).filter((g) => !goals.some((x) => x.guide === g.id));
-  return tile('goals', span, `<div class="goal-head"><div class="ring" style="--p:${p}">${done}/${goals.length}</div><div><h2>Metas</h2><p class="muted">${goals.length ? (done === goals.length ? 'Cumpliste todas. Pon la siguiente.' : 'Marca cada una cuando la cumplas.') : 'Pequeñas y concretas: «Subredes a mano», «Simulacro», «Repasar RIP».'}</p></div></div>
-    ${goals.length ? `<ul class="goals">${goals.map((g) => `<li class="goal ${g.done ? 'done' : ''}" data-goal="${esc(g.id)}">
+  return tile('goals', span, `<div class="goal-head"><div class="ring" style="--p:${p}">${done}/${goals.length}</div><div><h2>Metas</h2><p class="muted">${goals.length ? (done === goals.length ? 'Cumpliste todas. Pon la siguiente.' : 'Marca cada una cuando la cumplas.') : 'Lo grande que quieres lograr este semestre; los pendientes son sus pasos.'}</p></div></div>
+    ${goals.length ? `<ul class="goals">${goals.map((g) => { const mine = prefs.get().todos.filter((t) => t.goal === g.id); const ok = mine.filter((t) => t.done).length; return `<li class="goal ${g.done ? 'done' : ''}" data-goal="${esc(g.id)}">
         <label><input type="checkbox" ${g.done ? 'checked' : ''} data-goal-check="${esc(g.id)}"><span class="box"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span></label>
-        <span class="text">${esc(g.text)}</span>
-        <button class="icon x" data-goal-remove="${esc(g.id)}" aria-label="Quitar esta meta"><svg><use href="#i-x"/></svg></button></li>`).join('')}</ul>` : ''}
-    <form class="goal-add" id="goal-add"><input name="text" maxlength="140" placeholder="Nueva meta" aria-label="Nueva meta" autocomplete="off"><button class="button primary">Agregar</button></form>
+        <span class="text">${esc(g.text)}${g.due ? ` <small class="muted">· para el ${esc(longDate(g.due))}</small>` : ''}${mine.length ? `<span class="goal-bar" title="${ok} de ${mine.length} pendientes hechos"><i style="width:${Math.round((100 * ok) / mine.length)}%"></i></span><small class="muted">${ok} de ${mine.length} pendientes</small>` : ''}</span>
+        <button class="icon x" data-goal-remove="${esc(g.id)}" aria-label="Quitar esta meta"><svg><use href="#i-x"/></svg></button></li>`; }).join('')}</ul>` : ''}
+    <form class="goal-add" id="goal-add"><input name="text" maxlength="140" placeholder="Nueva meta: «Aprobar Cálculo II con 8»" aria-label="Nueva meta" autocomplete="off"><input name="due" type="date" aria-label="Para cuándo (opcional)" title="Para cuándo (opcional)"><button class="button primary">Agregar</button></form>
+    <p class="fine">Una meta avanza con los pendientes que cuentan para ella (elígela al crear un pendiente).</p>
     ${suggestions.length ? `<div class="suggest">${suggestions.map((g) => `<button class="chip new" data-goal-for="${esc(g.id)}">+ Terminar ${esc(g.title)}</button>`).join('')}</div>` : ''}`, 'glass', 'id="goals-tile"');
 }
 
@@ -270,6 +297,36 @@ function exploreTile(span) {
     : '<p class="muted">Cuando el grafo tenga conceptos, aquí aparece uno distinto cada vez.</p>'}`);
 }
 // What the easter eggs left on the home page: each find, to press, and a «?» for each secret still hidden.
+// «¿Cuánto necesito?»: the grade still missing to reach a target, from what is already graded and what is left.
+// Kept on this device (it is a calculation, not a record).
+const GRADE = 'studium-grade';
+const gradeOf = () => { try { return { scale: 10, target: 7, rows: [{ name: '', w: '', g: '' }], ...JSON.parse(localStorage.getItem(GRADE) ?? '{}') }; } catch { return { scale: 10, target: 7, rows: [{ name: '', w: '', g: '' }] }; } };
+function gradeMath(st) {
+  const rows = st.rows.filter((r) => Number(r.w) > 0);
+  const done = rows.filter((r) => r.g !== '' && !Number.isNaN(Number(r.g)));
+  const wDone = done.reduce((a, r) => a + Number(r.w), 0);
+  const wLeft = rows.filter((r) => !done.includes(r)).reduce((a, r) => a + Number(r.w), 0);
+  const sum = done.reduce((a, r) => a + Number(r.w) * Number(r.g), 0);
+  const total = wDone + wLeft;
+  if (!total) return null;
+  const now = sum / total;
+  const need = wLeft ? (Number(st.target) * total - sum) / wLeft : null;
+  return { now, need, wLeft, total };
+}
+function gradeTile(span) {
+  const st = gradeOf();
+  const r = gradeMath(st);
+  const msg = !r ? 'Escribe cuánto vale cada parte (en %) y la nota de las que ya tienes.'
+    : r.need === null ? `Tu nota final: <b>${r.now.toFixed(2)}</b> de ${st.scale}.`
+      : r.need <= 0 ? `Ya alcanzaste ${st.target}: aunque saques 0 en lo que falta, llegas.`
+        : r.need > st.scale ? `Para llegar a ${st.target} necesitarías <b>${r.need.toFixed(2)}</b> en lo que falta (${r.wLeft} %), más que el máximo.`
+          : `Necesitas <b>${r.need.toFixed(2)}</b> de ${st.scale} en lo que falta (${r.wLeft} %) para llegar a ${st.target}.`;
+  return tile('grade', span, `<h2>¿Cuánto necesito?</h2>
+    <form class="grade" data-grade><div class="grade-top"><label>Sobre <input name="scale" type="number" min="1" max="100" value="${esc(st.scale)}"></label><label>Quiero <input name="target" type="number" min="0" step="0.1" value="${esc(st.target)}"></label></div>
+      <div class="grade-rows">${st.rows.map((x, i) => `<div class="grade-row"><input name="name${i}" placeholder="Parte (Examen final…)" value="${esc(x.name)}" maxlength="40"><input name="w${i}" type="number" min="0" max="100" step="0.5" placeholder="%" value="${esc(x.w)}" aria-label="Cuánto vale (%)"><input name="g${i}" type="number" min="0" step="0.01" placeholder="nota" value="${esc(x.g)}" aria-label="Tu nota (vacía si falta)"></div>`).join('')}</div>
+      <button type="button" class="link small" data-grade-add>+ otra parte</button>
+      <p class="grade-out" aria-live="polite">${msg}</p></form>`);
+}
 function shelfTile(span) {
   const f = found();
   const crits = critCount();
@@ -298,7 +355,7 @@ function decorTile(span) {
   return tile('decor', span, `${menu}${k ? `<button type="button" class="decor-obj" ${POKE[k] ? `data-trinket="${POKE[k]}"` : 'data-decor-poke'} aria-label="${esc(decor.DECOR[k].name)}" title="${esc(decor.DECOR[k].name)}">${prop3d(decor.sceneOf(k))}</button>`
     : `<p class="decor-empty">${all.length ? 'Elige una decoración para este espacio.' : 'Los Easter eggs desbloquean escenas en 3D para este espacio: una fogata en la noche, un fonógrafo, una torta… Búscalos.'}</p>`}`, 'decor-tile');
 }
-const RENDER = { decor: decorTile, schedule: scheduleTile, shelf: shelfTile, todos: todosTile, countdown: countdownTile, deadlines: deadlinesTile, week: weekTile, goals: goalsTile, timer: timerTile, notes: notesTile, links: linksTile, recent: recentTile, news: newsTile, explore: exploreTile };
+const RENDER = { grade: gradeTile, decor: decorTile, schedule: scheduleTile, shelf: shelfTile, todos: todosTile, countdown: countdownTile, deadlines: deadlinesTile, week: weekTile, goals: goalsTile, timer: timerTile, notes: notesTile, links: linksTile, recent: recentTile, news: newsTile, explore: exploreTile };
 
 function onboardTile() {
   const p = prefs.get();
@@ -311,7 +368,7 @@ function trayTile() {
   const have = new Set(chosen().map(tileId));
   const missing = Object.keys(TILE_NAMES).filter((id) => !have.has(id) && (id !== 'shelf' || found().size));
   return `<section class="tile glass tray"><h2>Personaliza tu inicio <small>Arrastra cada cosa para moverla, estírala desde su esquina, o quítala con la ×</small></h2>
-    ${missing.length ? `<div class="chips">${missing.map((id) => `<button class="chip new" data-tile-add="${id}">+ ${esc(TILE_NAMES[id])}</button>`).join('')}${eggTray()}</div>` : `<p class="muted">Ya tienes todo a la vista.</p>${eggTray() ? `<div class="chips">${eggTray()}</div>` : ''}`}
+    ${missing.length ? `<div class="chips">${missing.map((id) => `<button class="chip new" data-tile-add="${id}" title="${esc(TILE_WHY[id] ?? '')}">+ ${esc(TILE_NAMES[id])}<small>${esc(TILE_WHY[id] ?? '')}</small></button>`).join('')}${eggTray()}</div>` : `<p class="muted">Ya tienes todo a la vista.</p>${eggTray() ? `<div class="chips">${eggTray()}</div>` : ''}`}
     <div class="actions"><button class="button ghost" data-tile-reset>Como venía</button><button class="button primary" data-home-edit>Listo</button></div></section>`;
 }
 // Things found in the easter eggs that can live on the screen.
@@ -401,10 +458,10 @@ function setTiles(items, focus) {
 }
 
 /* ---------- goals ---------- */
-function addGoal(text, guide) {
+function addGoal(text, guide, due = '') {
   const goals = prefs.get().goals;
   if (!text.trim() || goals.length >= 60) return;
-  prefs.set({ goals: [...goals, { id: Math.random().toString(36).slice(2, 10), text: text.trim(), done: false, ...(guide ? { guide } : {}) }] });
+  prefs.set({ goals: [...goals, { id: Math.random().toString(36).slice(2, 10), text: text.trim(), done: false, ...(guide ? { guide } : {}), ...(due ? { due } : {}) }] });
   sfx.tick();
   renderHome();
 }
@@ -466,14 +523,63 @@ document.addEventListener('submit', (e) => {
   const f = new FormData(form);
   const text = String(f.get('text') ?? '').trim();
   if (!text) return;
-  const due = String(f.get('due') ?? '');
+  const when = String(f.get('when') ?? '');
+  const day = String(f.get('day') ?? '');
+  const hour = String(f.get('hour') ?? '');
+  if (when && !day) { form.querySelector('[name="day"]')?.focus(); return; }
+  if (when === 'hour' && !hour) { form.querySelector('[name="hour"]')?.focus(); return; }
+  const due = when === 'hour' ? `${day}T${hour}` : when === 'day' ? day : '';
+  const sched = when === 'hour' && f.has('sched');
   const sel = form.querySelector('[data-todo-classes]');
   const cls = String(f.get('cls') ?? '');
   const label = cls ? sel.selectedOptions[0]?.textContent ?? '' : '';
-  prefs.set({ todos: [{ id: Math.random().toString(36).slice(2, 10), text, done: false, ...(due ? { due } : {}), ...(cls ? { cls, label } : {}) }, ...prefs.get().todos].slice(0, 80) });
+  const goal = String(f.get('goal') ?? '');
+  prefs.set({ todos: [{ id: Math.random().toString(36).slice(2, 10), text, done: false, ...(due ? { due } : {}), ...(sched ? { sched: true, dur: Number(f.get('dur')) || 60 } : {}), ...(cls ? { cls, label } : {}), ...(goal ? { goal } : {}) }, ...prefs.get().todos].slice(0, 80) });
+  if (sched) ctx?.toast?.('Listo: está en tu horario de esta semana.');
   sfx.tick();
   renderHome();
   document.querySelector('[data-todo-add] input[name="text"]')?.focus();
+});
+// While a pendiente is written, it asks whether it has an exact hour; with one, it may go to «Mi horario».
+document.addEventListener('input', (e) => {
+  const form = e.target.closest?.('[data-todo-add]');
+  if (!form || e.target.name !== 'text') return;
+  form.querySelector('[data-pi-ask]').hidden = !e.target.value.trim();
+});
+document.addEventListener('change', (e) => {
+  const form = e.target.closest?.('[data-todo-add]');
+  if (!form || e.target.name !== 'when') return;
+  const w = e.target.value;
+  form.querySelector('[data-pi-when]').hidden = !w;
+  for (const x of form.querySelectorAll('[data-pi-hour]')) x.hidden = w !== 'hour';
+  if (w) { const d = form.querySelector('[name="day"]'); if (!d.value) { const t = new Date(); d.value = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`; } }
+  fitTiles();
+});
+// A site without a logo at /favicon.ico shows its first letter instead (an inline handler would be blocked by the CSP).
+document.addEventListener('error', (e) => {
+  const img = e.target;
+  if (img?.tagName !== 'IMG' || !img.closest?.('.ql-logo')) return;
+  const i = document.createElement('i'); i.textContent = img.dataset.letter ?? '·'; img.replaceWith(i);
+}, true);
+// «¿Cuánto necesito?»: recalculated as it is typed, kept on this device.
+document.addEventListener('input', (e) => {
+  const f = e.target.closest?.('[data-grade]');
+  if (!f) return;
+  const st = gradeOf();
+  st.scale = Number(f.scale.value) || 10; st.target = Number(f.target.value) || 0;
+  st.rows = st.rows.map((_, i) => ({ name: f[`name${i}`]?.value ?? '', w: f[`w${i}`]?.value ?? '', g: f[`g${i}`]?.value ?? '' }));
+  try { localStorage.setItem(GRADE, JSON.stringify(st)); } catch { /* this time only */ }
+  const r = gradeMath(st);
+  const out = f.querySelector('.grade-out');
+  if (out) out.innerHTML = !r ? 'Escribe cuánto vale cada parte (en %) y la nota de las que ya tienes.' : r.need === null ? `Tu nota final: <b>${r.now.toFixed(2)}</b> de ${st.scale}.` : r.need <= 0 ? `Ya alcanzaste ${st.target}: aunque saques 0 en lo que falta, llegas.` : r.need > st.scale ? `Para llegar a ${st.target} necesitarías <b>${r.need.toFixed(2)}</b> en lo que falta (${r.wLeft} %), más que el máximo.` : `Necesitas <b>${r.need.toFixed(2)}</b> de ${st.scale} en lo que falta (${r.wLeft} %) para llegar a ${st.target}.`;
+});
+document.addEventListener('click', (e) => {
+  if (!e.target.closest?.('[data-grade-add]')) return;
+  const st = gradeOf();
+  if (st.rows.length >= 10) return;
+  st.rows.push({ name: '', w: '', g: '' });
+  try { localStorage.setItem(GRADE, JSON.stringify(st)); } catch { /* this time only */ }
+  refreshTile('grade');
 });
 document.addEventListener('change', (e) => {
   const box = e.target.closest?.('[data-todo-check]');
@@ -485,6 +591,26 @@ document.addEventListener('change', (e) => {
 document.addEventListener('click', (e) => {
   const x = e.target.closest?.('[data-todo-remove]');
   if (x) { prefs.set({ todos: prefs.get().todos.filter((t) => t.id !== x.dataset.todoRemove) }); renderHome(); }
+  // «Bloc de notas»: the selected text, or the line under the cursor, becomes a pendiente.
+  if (e.target.closest?.('[data-note-todo]')) {
+    const ta = $('#home-notes');
+    if (!ta) return;
+    const v = ta.value;
+    let text = v.slice(ta.selectionStart, ta.selectionEnd).trim();
+    if (!text) { const a = v.lastIndexOf('\n', ta.selectionStart - 1) + 1; const b = v.indexOf('\n', ta.selectionStart); text = v.slice(a, b < 0 ? v.length : b).trim(); }
+    text = text.replace(/^[-*•\s]+/, '').slice(0, 140);
+    if (!text) { ctx?.toast?.('Pon el cursor en una línea, o selecciona lo que quieres convertir.'); return; }
+    prefs.set({ notes: v, todos: [{ id: Math.random().toString(36).slice(2, 10), text, done: false }, ...prefs.get().todos].slice(0, 80) });
+    sfx.tick(); ctx?.toast?.(`Nuevo pendiente: «${text}»`);
+    if (!chosen().includes('todos')) ctx?.toast?.('Agrega «Pendientes» a tu inicio para verlo.');
+    renderHome();
+  }
+  // «Tu próximo examen»: its study guide, with the course, the exam and the date already answered.
+  const sf = e.target.closest?.('[data-study-for]');
+  if (sf) {
+    const d = prefs.get().deadlines.find((x) => x.id === sf.dataset.studyFor);
+    if (d) import('./trabajos.js').then((m) => { m.presetStudy({ course: d.course ?? '', title: d.text, date: d.date }); location.hash = '#/estudiar/guia'; });
+  }
 });
 document.addEventListener('toggle', async (e) => {
   const more = e.target;
@@ -994,10 +1120,10 @@ export function mountSpace(context) {
   });
   document.addEventListener('submit', (e) => {
     const f = e.target;
-    if (f.id === 'goal-add') { e.preventDefault(); addGoal(f.text.value); }
+    if (f.id === 'goal-add') { e.preventDefault(); addGoal(f.text.value, '', f.due?.value ?? ''); }
     if (f.id === 'deadline-add') {
       e.preventDefault();
-      const d = { id: rid(), text: f.text.value.trim(), date: f.date.value, ...(f.course.value.trim() ? { course: f.course.value.trim() } : {}) };
+      const d = { id: rid(), text: f.text.value.trim(), date: f.date.value, kind: f.kind?.value || 'otro', ...(f.time?.value ? { time: f.time.value } : {}), ...(f.course.value.trim() ? { course: f.course.value.trim() } : {}) };
       if (!d.text || !d.date) return;
       prefs.set({ deadlines: [...prefs.get().deadlines, d] }); sfx.tick(); renderHome();
     }

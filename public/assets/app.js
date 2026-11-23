@@ -158,11 +158,18 @@ function moveDrop() {
     const drop = tabs.querySelector('.drop');
     if (!tab || !drop) { if (drop) drop.style.opacity = '0'; continue; }
     drop.style.opacity = '1';
-    drop.style.width = `${tab.offsetWidth}px`;
-    drop.style.transform = `translateX(${tab.offsetLeft - 4}px)`;
+    // Measured from the tab's real box, relative to the bar: offsetLeft already counts the bar's padding (it was
+    // taken off again, so the light sat 4 px to the left), and the width changes when the web font arrives.
+    const bar = tabs.getBoundingClientRect();
+    const box = tab.getBoundingClientRect();
+    drop.style.width = `${box.width}px`;
+    drop.style.transform = `translateX(${box.left - bar.left - (parseFloat(getComputedStyle(tabs).borderLeftWidth) || 0)}px)`;
   }
 }
 addEventListener('resize', moveDrop);
+// The tabs change width when the fonts load, the language changes or the bar shrinks: the light follows them.
+document.fonts?.ready.then(moveDrop);
+if ('ResizeObserver' in window) { const ro = new ResizeObserver(() => moveDrop()); for (const t of document.querySelectorAll('#nav .tabs, #nav .tabs a')) ro.observe(t); }
 
 const MESSAGES = {
   'auth/invalid-credential': 'Correo o contraseña incorrectos.',

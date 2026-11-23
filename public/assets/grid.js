@@ -8,31 +8,32 @@ export const COLS = 12;
 
 // The smallest size each tile can take, and its size when added.
 export const SIZES = {
-  countdown: { min: [3, 2], add: [4, 3] },
+  countdown: { min: [3, 4], add: [4, 5] },
   todos: { min: [3, 3], add: [4, 5] },
-  schedule: { min: [3, 3], add: [4, 4] },
+  schedule: { min: [3, 3], add: [8, 8] },
   timer: { min: [3, 2], add: [4, 3] },
-  goals: { min: [3, 3], add: [4, 3] },
+  goals: { min: [3, 4], add: [4, 6] },
   deadlines: { min: [3, 3], add: [4, 4] },
   week: { min: [6, 2], add: [8, 3] },
-  notes: { min: [3, 2], add: [4, 3] },
+  notes: { min: [3, 3], add: [4, 5] },
   links: { min: [3, 2], add: [4, 3] },
   recent: { min: [3, 2], add: [4, 3] },
   news: { min: [4, 2], add: [8, 3] },
   explore: { min: [3, 2], add: [4, 3] },
   shelf: { min: [4, 2], add: [12, 3] },
   decor: { min: [3, 3], add: [4, 5] },
+  grade: { min: [3, 4], add: [4, 5] },
 };
 
-// What a person sees first: on the first screen what matters today (the next exam, what to do, today's classes,
-// focus and goals); below, everything else Studium can hold, so the home page shows what it can do from the start.
+// What a person sees first (his words, 2026-11-23): the whole week of classes with where they are now, the next exam
+// and the pendientes. Tiles that do a similar job are not all there by default: one of Pendientes / Metas / Bloc de
+// notas, and one of Tu próximo examen / Fechas y entregas; the others are one tap away in «Personalizar», each with
+// what it does that the rest do not.
 export const DEFAULT = [
-  ['countdown', 0, 0, 4, 4], ['todos', 4, 0, 4, 7], ['schedule', 8, 0, 4, 4],
-  ['timer', 0, 4, 4, 3], ['goals', 8, 4, 4, 3],
-  ['week', 0, 7, 8, 3], ['deadlines', 8, 7, 4, 4],
-  ['recent', 0, 10, 4, 3], ['news', 4, 10, 4, 3],
-  ['notes', 0, 13, 4, 4], ['links', 4, 13, 4, 4], ['explore', 8, 11, 4, 4],
-  ['shelf', 0, 17, 8, 5], ['decor', 8, 17, 4, 5],
+  ['schedule', 0, 0, 8, 9], ['countdown', 8, 0, 4, 5], ['todos', 8, 5, 4, 6],
+  ['timer', 0, 9, 4, 3], ['recent', 4, 9, 4, 3], ['links', 8, 11, 4, 3],
+  ['news', 0, 12, 8, 3], ['explore', 8, 12, 4, 4],
+  ['shelf', 0, 16, 8, 5], ['decor', 8, 16, 4, 5],
 ].map(([id, x, y, w, h]) => ({ id, x, y, w, h }));
 
 const clampItem = (it) => {
