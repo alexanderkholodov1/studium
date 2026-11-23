@@ -3556,3 +3556,17 @@ canvas.prop { display: block; }
 .fx-list li { grid-template-columns: minmax(180px, 280px) 1fr auto; }
 .fx-list li.fx-added { opacity: .75; }
 .fx-ok { font: 650 13px var(--display); color: var(--teal, #13987f); white-space: nowrap; }
+/* The error box on Studium's own pages (Trabajos, Estudiar), not only inside a guide: its buttons and the exact error
+   follow the page's light or dark theme (they were the browser's plain buttons and a light box on a dark page). */
+.tj-error { color: var(--ink); }
+.tj-error pre, .tj-error .src { background: color-mix(in oklab, var(--ink) 7%, transparent); color: var(--ink); border: 0; border-radius: 10px; padding: 10px 12px; }
+.tj-error .mut { color: var(--muted); }
+:is(#view-trabajos, #view-estudio) .tj-error .act { border: 0; border-radius: 999px; padding: 8px 16px; background: var(--blue); color: #fff; font: 700 14px var(--display); cursor: pointer; box-shadow: 0 8px 18px -10px var(--blue); }
+:is(#view-trabajos, #view-estudio) .tj-error .ask { border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; background: color-mix(in oklab, var(--ink) 6%, transparent); color: var(--ink); font: 650 14px var(--display); cursor: pointer; }
+:is(#view-trabajos, #view-estudio) .tj-error .ask:hover { background: color-mix(in oklab, var(--ink) 11%, transparent); }
+.tj-err-ai:not(:empty) { margin: 8px 0; padding: 10px 12px; border-radius: 12px; background: color-mix(in oklab, var(--blue) 9%, transparent); color: var(--ink); }
+/* Long file names never widen the questions: they are cut with «…», and any long word in a sentence breaks. */
+.tj-wizard { min-width: 0; max-width: min(680px, 100%); }
+.tj-wizard :is(p, li, .fine, label, .tj-kept, .tj-warn, .tj-sentence) { overflow-wrap: anywhere; }
+.tj-files li { min-width: 0; }
+.tj-files li small { flex: none; }

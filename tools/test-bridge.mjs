@@ -228,6 +228,11 @@ await test('claude works in a folder of the person, with the tools of its permis
     rmSync(work, { recursive: true, force: true });
   }
 });
+await test('«la carpeta donde abriste el puente» is lent without the folder dialog', async () => {
+  const r = await call('POST', '/v1/folders/pick', { body: { mode: 'read', hours: 1, here: true } });
+  check(r.status === 200 && r.data.folder && path.resolve(r.data.folder.path ?? '') === path.resolve(process.cwd()), `here: ${r.status} ${JSON.stringify(r.data)}`);
+  if (r.data.folder?.id) await call('POST', '/v1/folders/change', { body: { id: r.data.folder.id, remove: true } });
+});
 await test('an answer that talks about limits is an answer, not a usage limit', async () => {
   scenario({ claude: { answer: 'El límite de una función: usage limit reached en la nota del profe' } });
   const r = await run({ engine: 'claude', model: 'claude-sonnet-5-5' });
@@ -338,6 +343,9 @@ await test('«ver a Claude Code trabajando» opens the official CLI with the req
   check(!c.args.includes('-p') && c.args.includes('--session-id') && /LISTO/.test(c.args[0]), `args ${c.args.slice(0, 3).join(' | ')}`);
   check(prog.data.events?.some((e) => e.kind === 'Read'), `progress ${JSON.stringify(prog.data)}`);
   check(/claude --resume/.test(r.data.resume), 'resume');
+  // The window starts from the drive's root (as «start» does with a long OneDrive folder) and moves to the work folder
+  // itself: Claude Code must never work in C:\ (his report, 2026-11-23).
+  check(c.cwd && path.parse(c.cwd).root !== c.cwd && !/^[A-Z]:\?$/i.test(c.cwd), `the window's Claude Code ran in ${c.cwd}`);
 });
 await test('a limit said inside the Claude Code window comes back as a limit, not as «you closed it»', async () => {
   scenario({ claude: { saysLimit: true, windowOpen: 4000 } });

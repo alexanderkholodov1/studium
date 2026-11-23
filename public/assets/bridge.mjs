@@ -14,7 +14,7 @@ import { homedir, platform, tmpdir } from 'node:os';
 import path from 'node:path';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
-const VERSION = '1.7.0';
+const VERSION = '1.8.0';
 const NAME = 'studium-bridge';
 const DEFAULT_PORT = 41730;
 const MAX_BODY = 64 * 1024 * 1024;
@@ -186,8 +186,12 @@ async function addFolder(body) {
   const old = body?.renew ? folders().find((x) => x.id === body.renew) : null;
   const mode = MODES[body?.mode] ? body.mode : old?.mode ?? 'read';
   const hours = HOURS.includes(Number(body?.hours)) ? Number(body.hours) : 8;
-  console.log(old ? `\nStudium pidió elegir otra vez la carpeta ${old.path}: elígela en la ventana que se abrió encima del navegador (o ciérrala).` : '\nStudium pidió agregar una carpeta: elige una en la ventana que se abrió encima del navegador (o ciérrala para no agregar ninguna).');
-  const chosen = await pickFolder(old?.path ?? '');
+  // «La carpeta donde abriste el puente» (his words: it must not ask for the folder again): the bridge's own folder,
+  // known here and never by the browser, lent without a dialog. Any other folder opens the dialog.
+  const here = !!body?.here && !old;
+  if (here) console.log(`\nStudium pidió trabajar en la carpeta donde abriste el puente: ${process.cwd()}`);
+  else console.log(old ? `\nStudium pidió elegir otra vez la carpeta ${old.path}: elígela en la ventana que se abrió encima del navegador (o ciérrala).` : '\nStudium pidió agregar una carpeta: elige una en la ventana que se abrió encima del navegador (o ciérrala para no agregar ninguna).');
+  const chosen = here ? process.cwd() : await pickFolder(old?.path ?? '');
   if (!chosen) { console.log('  No se agregó ninguna carpeta.'); throw new Failure(400, 'no-folder', 'No elegiste ninguna carpeta.'); }
   let real = chosen;
   try { real = realpathSync.native(chosen); } catch { /* as chosen */ }
@@ -503,7 +507,9 @@ try {
   Add-Type -Namespace Studium -Name Win -MemberDefinition '[DllImport("kernel32.dll")] public static extern System.IntPtr GetConsoleWindow(); [DllImport("user32.dll")] public static extern bool SetForegroundWindow(System.IntPtr h); [DllImport("user32.dll")] public static extern bool ShowWindow(System.IntPtr h, int c); [DllImport("user32.dll")] public static extern void keybd_event(byte v, byte s, uint f, System.UIntPtr e);'
   $w = [Studium.Win]::GetConsoleWindow(); [Studium.Win]::keybd_event(0x87, 0, 0, [UIntPtr]::Zero); [Studium.Win]::keybd_event(0x87, 0, 2, [UIntPtr]::Zero); [void][Studium.Win]::ShowWindow($w, 9); [void][Studium.Win]::SetForegroundWindow($w)
 } catch {}
+if ($env:STUDIUM_CWD) { Set-Location -LiteralPath $env:STUDIUM_CWD }
 Write-Host 'Studium: Claude Code trabaja aqui en tu trabajo. Esc lo detiene; al terminar puedes seguir hablandole.' -ForegroundColor Cyan
+Write-Host ('Carpeta: ' + (Get-Location).Path) -ForegroundColor DarkCyan
 $a = @($env:STUDIUM_ARGS | ConvertFrom-Json)
 & $env:STUDIUM_EXE @a
 $code = $LASTEXITCODE
@@ -517,14 +523,17 @@ function claudeInWindow(b, { body, account, ask, allow, deny, cwd, dir, live, ti
   const args = [ask, '--model', String(body.model), '--allowedTools', ...allow, '--disallowedTools', ...deny, '--session-id', session].map((x) => String(x).replace(/"/g, '’'));
   if (body.effort) args.push('--effort', String(body.effort));
   const exitFile = path.join(dir, '.claude-code-exit');
-  const env = { ...process.env, ...(account.env ?? {}), STUDIUM_TITLE: `Studium · Claude Code · ${String(body.label ?? 'tu trabajo').slice(0, 60)}`, STUDIUM_EXE: b.cmd, STUDIUM_ARGS: JSON.stringify([...b.pre, ...args]), STUDIUM_EXIT: exitFile };
+  const env = { ...process.env, ...(account.env ?? {}), STUDIUM_TITLE: `Studium · Claude Code · ${String(body.label ?? 'tu trabajo').slice(0, 60)}`, STUDIUM_EXE: b.cmd, STUDIUM_ARGS: JSON.stringify([...b.pre, ...args]), STUDIUM_EXIT: exitFile,
+    // The folder travels by name too, and PowerShell moves there itself: cmd.exe's «start» cannot keep a long folder (as
+    // OneDrive's are) as its current one and opened the window in C:\ (his report, 2026-11-23: «Accessing workspace: C:\»).
+    STUDIUM_CWD: cwd };
   // A window of its own is `start`: Node's «detached» gives a Windows process no console at all, so Claude Code ran
   // unseen and the window «never opened» (his words). The command line holds only safe characters (PowerShell's path
   // and base64), and /wait keeps the bridge's child alive while the window is open. The tests run it hidden.
   const encoded = Buffer.from(WINDOW_SCRIPT, 'utf16le').toString('base64');
   const child = process.env.STUDIUM_BRIDGE_NO_WINDOW === '1'
-    ? spawn(POWERSHELL, ['-NoProfile', '-EncodedCommand', encoded], { cwd, windowsHide: true, stdio: 'ignore', shell: false, env })
-    : spawn(process.env.ComSpec || 'cmd.exe', [['/d /c start "Studium" /wait', `"${POWERSHELL}"`, '-NoProfile', '-EncodedCommand', encoded].join(' ')], { cwd, windowsHide: true, windowsVerbatimArguments: true, stdio: 'ignore', shell: false, env });
+    ? spawn(POWERSHELL, ['-NoProfile', '-EncodedCommand', encoded], { cwd: path.parse(cwd).root || undefined, windowsHide: true, stdio: 'ignore', shell: false, env }) // from the root, as «start» may: the script moves to the folder itself
+    : spawn(process.env.ComSpec || 'cmd.exe', [['/d /c start "Studium" /wait', `"${POWERSHELL}"`, '-NoProfile', '-EncodedCommand', encoded].join(' ')], { cwd: path.parse(cwd).root || undefined, windowsHide: true, windowsVerbatimArguments: true, stdio: 'ignore', shell: false, env });
   const home = account.env?.CLAUDE_CONFIG_DIR ?? process.env.CLAUDE_CONFIG_DIR ?? path.join(homedir(), '.claude');
   const transcript = path.join(home, 'projects', cwd.replace(/[^A-Za-z0-9]/g, '-'), `${session}.jsonl`);
   const done = path.join(dir, 'salida', 'LISTO');

@@ -26,6 +26,8 @@ try {
   await B.wait(`document.querySelector('input[type=password]')?.offsetParent`);
   await B.js(`const f = [...document.querySelectorAll('input')].filter((i) => i.offsetParent); const em = f.find((i) => i.type === 'email' || /mail/i.test(i.name)); const pw = f.find((i) => i.type === 'password'); em.value = ${JSON.stringify(email)}; pw.value = ${JSON.stringify(password)}; em.dispatchEvent(new Event('input', { bubbles: true })); pw.dispatchEvent(new Event('input', { bubbles: true })); pw.form.requestSubmit();`);
   await W(2500);
+  // THEME=dark runs it all in the dark theme (his report: the error screen mixed light and dark).
+  if (process.env.THEME === 'dark') { await B.js(`const { prefs } = await import('/studium/assets/prefs.js'); prefs.set({ theme: 'dark' }); return 1;`); await W(800); }
   await B.js(`location.hash = '#/trabajos';`);
   await B.wait(`document.querySelector('[data-tj="new"]')`);
   ok('signed in and on Trabajos', true);
@@ -38,10 +40,16 @@ try {
   await B.js(`const v = document.querySelector('.tj-wizard input[name="v"]'); v.value = 'Laboratorio 3 (prueba automática)'; v.dispatchEvent(new Event('input', { bubbles: true }));`);
   await next(); await next();
   ok('reached «Trae el enunciado»', /Trae el enunciado/.test(await step()), await step());
-  await B.setFiles('input[name="files"]', [file]);
+  // A file with a very long name (his report: the screen broke with long file names)
+  const longName = path.join(SHOTS, 'Enunciado_del_laboratorio_final_de_redes_de_computadores_con_rubrica_anexos_y_plantilla_de_informe_v2_definitivo.txt');
+  writeFileSync(longName, 'Anexo del laboratorio.');
+  await B.setFiles('input[name="files"]', [file, longName]);
   await B.wait(`document.querySelector('.tj-files li')`);
   appendFileSync(file, 'Cambio hecho en el disco después de elegir el archivo.\n');
   ok('the file shows in the list', true);
+  await W(500);
+  const wide = await B.js(`const w = document.querySelector('.tj-wizard').getBoundingClientRect(); return { w: Math.round(w.width), page: document.documentElement.scrollWidth - innerWidth, li: [...document.querySelectorAll('.tj-files li')].map((x) => x.scrollWidth - x.clientWidth) }`);
+  ok('a very long file name does not widen the screen', wide.w <= 690 && wide.page <= 0 && wide.li.length === 2 && wide.li.every((x) => x <= 1), JSON.stringify(wide));
   await B.shot('01-archivo');
   for (let i = 0; i < 12 && !/Todo listo/.test(await step()); i += 1) {
     const h = await step();
@@ -90,7 +98,7 @@ try {
   await B.js(`[...document.querySelectorAll('.tj-error button')].find((b) => /explique/.test(b.textContent)).click();`);
   await W(800);
   ok('«Pedir a tu IA…» answers even with no AI connected', /conecta una/i.test(await B.js(`return document.querySelector('[data-err-ai]')?.innerText ?? ''`)));
-  await B.shot('07-error');
+  await B.js(`document.querySelector('.tj-error, .tj-problem')?.scrollIntoView({ block: 'center' });`); await W(400); await B.shot('07-error');
   await B.js(`[...document.querySelectorAll('.tj-error button')].find((b) => /reporte/.test(b.textContent)).click();`);
   await W(800);
   ok('«Enviar reporte» opens Studium\'s report window', await B.js(`return !!document.querySelector('dialog[open]')`));

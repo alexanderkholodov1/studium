@@ -871,6 +871,15 @@ const FOLDER_GONE = 'Tu carpeta se desconectó del puente (se cerró o reinició
 const MODE_TEXT = { read: 'Solo leer', write: 'Leer y escribir archivos', git: 'Leer, escribir y usar git' };
 const MODE_WHY = { read: 'lee tus archivos; no cambia nada', write: 'también crea y edita archivos de esta carpeta, nunca fuera de ella; no ejecuta comandos', git: 'también usa git aquí (commits y push a tu nombre); nada más' };
 // The choice of where the AI works: a temporary folder, or one of the person's folders with its permission.
+// The folder where the person opened the bridge, which the bridge knows (and the browser never does): lent with one tap,
+// without the folder dialog (his words: «no me debe volver a preguntar la carpeta»; another one does open the dialog).
+const hereName = () => { const c = String(ai.bridgeOf()?.cwd ?? ''); return c && !ai.bridgeOld() ? c.split(/[\\/]/).filter(Boolean).pop() ?? '' : ''; };
+function hereHTML() {
+  const n = hereName();
+  if (!n) return '';
+  const same = draft?.broughtFolder && draft.broughtFolder === n;
+  return `<p><button type="button" class="button primary small" data-tj="folder-here" title="${esc(ai.bridgeOf().cwd)}">📁 Trabajar en «${esc(n)}»</button> <span class="fine">${same ? 'la carpeta que trajiste, ' : ''}donde abriste el puente. No te vuelve a preguntar.</span></p>`;
+}
 function placeHTML(now) {
   // One folder for this trabajo, lent only while the guide is written (the bridge forgets it after).
   const f = (ai.bridgeOf()?.folders ?? []).find((x) => x.id === now && !x.expired && x.exists !== false);
@@ -881,7 +890,7 @@ function placeHTML(now) {
       ${f ? `<label class="on"><input type="radio" name="workspace" value="${esc(f.id)}" data-tj-ws checked>📁 ${esc(f.name)}</label>` : ''}
     </div>
     ${f ? `<p class="tj-folder-now">${modeSel(f)} <small>${esc(MODE_WHY[f.mode] ?? '')}</small> <button type="button" class="link" data-tj="folder-pick">otra carpeta</button></p>`
-    : `<p><button type="button" class="button ghost small" data-tj="folder-pick">${draft?.broughtFolder ? `Trabajar en la carpeta «${esc(draft.broughtFolder)}» de mi computadora…` : 'Trabajar en una carpeta de mi computadora…'}</button> <span class="fine" id="tj-folder-status" role="status">Solo mientras escribe la guía.</span></p>`}`;
+    : hereHTML() + `<p><button type="button" class="${hereName() ? 'link' : 'button ghost small'}" data-tj="folder-pick">${hereName() ? 'Otra carpeta…' : draft?.broughtFolder ? `Elegir la carpeta «${esc(draft.broughtFolder)}» en mi computadora…` : 'Trabajar en una carpeta de mi computadora…'}</button> <span class="fine" id="tj-folder-status" role="status">Solo mientras escribe la guía.</span></p>`}`;
 }
 async function myName() {
   const p = await loadProfile(uid()).catch(() => null);
@@ -2313,6 +2322,15 @@ function wire(root) {
     }
     if (kind === 'bridge-recheck') {
       await busy(b, async () => { await ai.bridgeStatus(); if (draft) { keepAnswer(); renderDraft(); } else repaint(); ctx.toast(ai.bridgeOld() ? 'Sigue abierta la versión anterior del puente.' : `Puente ${ai.bridgeOf()?.version} listo.`); }).catch(() => {});
+      return;
+    }
+    if (kind === 'folder-here') {
+      say('#tj-folder-status', '');
+      await busy(b, async () => {
+        const f = await ai.pickBridgeFolder('read', { hours: 1, here: true });
+        if (draft) { keepAnswer(); draft.workspace = f.id; renderDraft(); } else if (T) { keepFolder(T.id, f.id); repaint(); }
+        ctx.toast(`Tu IA trabajará en ${f.name} (${MODE_TEXT[f.mode]}).`);
+      }).catch((e) => say('#tj-folder-status', e.message));
       return;
     }
     if (kind === 'folder-pick') {

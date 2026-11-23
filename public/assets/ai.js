@@ -502,7 +502,7 @@ export async function findBridge(port = BRIDGE_PORT) {
   try { const r = await fetch(`http://127.0.0.1:${port}/v1/hello`); return r.ok ? await r.json() : null; } catch { return null; }
 }
 // The bridge's version this page expects (bridge.mjs, VERSION): an older one is downloaded again.
-export const BRIDGE_VERSION = '1.7.0';
+export const BRIDGE_VERSION = '1.8.0';
 // «Ver a mi IA en una terminal»: the bridge opens a window that shows the exact instructions and, live, what the AI
 // does. Chosen by the person, kept in this browser.
 const WATCH = 'studium-ai-watch';
@@ -521,7 +521,9 @@ export function bridgeKnowsThisPage() {
   return ['https://alexanderkholodov.web.app', 'http://localhost:5173', 'http://127.0.0.1:5173'].includes(o)
     || /^https:\/\/(?:alexanderkholodov--studium-pr-\d+-[a-z0-9]+|studium101--[a-z0-9-]+)\.web\.app$/.test(o);
 }
-export const bridgeCommand = () => `node studium-bridge.mjs${bridgeKnowsThisPage() ? '' : ` --origin ${location.origin}`}`;
+// The command names the page it serves (his words: where the page is open counts — localhost and its port, a beta
+// link), except on the published site: a bridge downloaded earlier may not know the others.
+export const bridgeCommand = () => `node studium-bridge.mjs${location.origin === 'https://alexanderkholodov.web.app' ? '' : ` --origin ${location.origin}`}`;
 // Which Claude account and which of the bridge's AIs Studium uses: chosen by the person.
 export function setBridgeAccount(id) { patch((s) => { if (s.bridge) s.bridge.account = String(id ?? ''); }); }
 export function setBridgeUse(engine, on) {
@@ -568,11 +570,11 @@ export async function bridgeFolders() {
   patch((s) => { if (s.bridge) { s.bridge.folders = body.folders ?? []; s.bridge.modes = body.modes ?? {}; } });
   return body.folders ?? [];
 }
-export async function pickBridgeFolder(mode = 'read', { hours = 8, renew = '' } = {}) {
+export async function pickBridgeFolder(mode = 'read', { hours = 8, renew = '', here = false } = {}) {
   const hello = await findBridge(bridgeOf()?.port);
   if (!hello) throw new AIError('El puente no está abierto. Ábrelo en tu computadora y vuelve a intentarlo.', { kind: 'account', way: 'bridge:claude' });
   if (bridgeOld(hello.version)) throw new AIError(`Tu puente abierto es la versión ${hello.version ?? 'anterior'}: para elegir carpetas necesitas la ${BRIDGE_VERSION}. Ciérralo, descárgalo de nuevo desde Studium y ábrelo otra vez.`, { kind: 'account', way: 'bridge:claude' });
-  const body = await bridgeFetch('/v1/folders/pick', { method: 'POST', body: JSON.stringify({ mode, hours, renew }) });
+  const body = await bridgeFetch('/v1/folders/pick', { method: 'POST', body: JSON.stringify({ mode, hours, renew, here }) });
   await bridgeFolders();
   return body.folder;
 }
