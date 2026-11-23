@@ -191,11 +191,26 @@ try {
   // «Pedir un cambio a tu IA» in place of the tutorial
   const fab = await B.js(`const h = document.querySelector('.tour-help'); return { ask: !!document.querySelector('.tj-askai'), tour: h ? getComputedStyle(h).display : 'none' }`);
   ok('in a guide, «Pedir un cambio a tu IA» takes the tutorial\'s place', fab.ask && fab.tour === 'none', JSON.stringify(fab));
+  // His case: Studium dark, the guide in a light template, Gemini connected and the bridge not connected at this address
+  await B.js(`const ai = await import('/studium/assets/ai.js'); ai.setKey('gemini', 'AIza' + 'x'.repeat(35)); const { prefs } = await import('/studium/assets/prefs.js'); prefs.set({ theme: 'dark' }); const a = document.querySelector('.tjg-app'); a.dataset.template = 'cuaderno'; a.dataset.theme = 'light'; return 1;`); await W(600);
   await B.js(`document.querySelector('.tj-askai').click();`); await W(500);
   ok('…it asks about the whole guide, with «Rehacer las gráficas»', /toda la guía/.test(await B.js(`return document.querySelector('.tj-adjpop')?.innerText ?? ''`)) && /Rehacer las gráficas/.test(await B.js(`return document.querySelector('.tj-adjpop')?.innerText ?? ''`)));
-  ok('…with «Cómo lo hace»: who does it, in sight', await B.js(`return !!document.querySelector('.tj-adjpop .tj-howrun')`));
+  const how = await B.js(`const h = document.querySelector('.tj-adjpop .tj-howrun'); const lum = (c) => { const n = (c.match(/[0-9.]+/g) ?? []).map(Number); if (/^oklab|^oklch/.test(c)) return n[0] > 1 ? n[0] / 100 : n[0]; const [r, g, b] = n; return (0.299 * r + 0.587 * g + 0.114 * b) / 255; }; const pick = h?.querySelector('.ai-pick'); return { bgRaw: pick ? getComputedStyle(pick).backgroundColor : '', html: h ? h.innerHTML.slice(0, 300) : '', how: !!h, pickOpen: !!pick?.open, bridgeOffer: !!h?.querySelector('[data-tj="pair-guide"]'), opts: !!h?.querySelector('.tj-bridgeopts'), watch: !!h?.querySelector('[data-tj-watch]'), pickBg: pick ? lum(getComputedStyle(pick).backgroundColor) : -1 }`);
+  ok('«Cómo lo hace»: the AI with its model and effort in sight, the bridge offered even when not connected here, its options shown', how.how && how.pickOpen && how.bridgeOffer && how.opts && how.watch, JSON.stringify(how));
+  ok('…in the guide light colors though Studium is dark', how.pickBg > 0.75, JSON.stringify(how));
   await B.shot('21-pedir-cambio');
   await B.js(`document.querySelector('.tj-adjpop [data-tj="adj-close"]')?.click();`);
+  // A failed adjustment: the error box closes, shows the exact error first and, for an error it knows, what to do
+  await B.js(`window.__f = window.fetch; window.fetch = (u, o) => /generativelanguage/.test(String(u)) ? Promise.resolve(new Response(JSON.stringify({ error: { code: 400, message: 'API key not valid. Please pass a valid API key.', status: 'INVALID_ARGUMENT' } }), { status: 400, headers: { 'content-type': 'application/json' } })) : window.__f(u, o); const ai = await import('/studium/assets/ai.js'); ai.setChoice?.('solution', { provider: 'gemini' }); return 1;`);
+  await B.js(`document.querySelector('.tj-askai').click();`); await W(400);
+  await B.js(`const p = document.querySelector('.tj-adjpop'); const t = p.querySelector('textarea'); t.value = 'Haz más corta la introducción.'; t.dispatchEvent(new Event('input', { bubbles: true })); p.querySelector('[type=submit], [data-tj="adj-go"], .act').click();`);
+  await B.wait(`document.querySelector('.tj-error')`, 20000).catch(() => {});
+  const eb = await B.js(`const e = document.querySelector('.tj-error'); if (!e) return { box: false }; const pre = e.querySelector('.tj-error-msg'); return { box: true, x: !!e.querySelector('[data-tj="err-close"]'), exact: !!pre && pre.offsetParent !== null && !pre.closest('details') && /API key not valid/.test(pre.textContent), known: /clave o la cuenta/.test(e.innerText), generic: /Suele arreglarse solo|Mira la ventana del puente/.test(e.innerText) }`);
+  ok('a failed request: the error box shows the exact error first, closes with ✕, and says what to do only for a known error', eb.box && eb.x && eb.exact && eb.known && !eb.generic, JSON.stringify(eb));
+  await B.shot('22-error');
+  await B.js(`document.querySelector('.tj-error [data-tj="err-close"]').click();`); await W(300);
+  ok('…and ✕ closes it', await B.js(`return !document.querySelector('.tj-error')`));
+  await B.js(`window.fetch = window.__f; document.querySelector('.tj-adjpop [data-tj="adj-close"]')?.click(); return 1;`);
 
   // Sharing: by link, read by another account; private again
   await B.js(`document.querySelector('nav.top [data-tj="share-open"]').click();`); await W(400);

@@ -3634,3 +3634,21 @@ canvas.prop { display: block; }
 .tjg-app .tj-howrun .tj-pick { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0; font-size: 14px; }
 .tjg-app .tj-howrun h5 { margin: 10px 0 4px; font: 700 13px var(--gd); }
 .tjg-app .tj-adjpop .tj-adjcard { max-height: calc(100vh - 120px); overflow: auto; }
+/* Studium's own pieces inside a guide (the AI picker, the bridge steps, fields, buttons) take the guide's template
+   colors, light or dark, instead of the system theme's (his report: the picker stayed dark inside a light guide). */
+.tjg-app { --card: var(--panel); --card-2: var(--panel2); --ink-2: var(--ink2); --bg: var(--panel2); --bg-2: var(--panel2);
+  --glass: var(--panel); --glass-2: var(--panel); --rim: transparent; --rim-2: var(--line); --well: color-mix(in oklab, var(--ink) 6%, transparent);
+  --shadow: 0 18px 40px -26px rgba(0, 0, 0, .45); }
+.tjg-app :is(input, select, textarea) { color: var(--ink); background: var(--panel); border: 1px solid var(--line); }
+.tjg-app .ai-pick, .tjg-app .ai-pick-body, .tjg-app .ai-opt, .tjg-app .tj-bridge, .tjg-app .howto { color: var(--ink); }
+.tjg-app .ai-pick { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.tjg-app .tj-bridgeopts { margin: 10px 0 0; padding: 8px 12px 10px; border: 1px solid var(--line); border-radius: 12px; }
+.tjg-app .tj-bridgeopts legend { font: 700 13px var(--gd); padding: 0 6px; }
+.tjg-app .tj-bridgeopts.off { opacity: .55; }
+.tjg-app .tj-howbridge { margin: 10px 0; padding: 8px 12px; border-radius: 12px; background: color-mix(in oklab, var(--blue) 8%, var(--panel)); }
+.tj-error-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.tj-error-head h4 { margin: 0 0 8px; }
+.tj-error-x { flex: none; width: 30px; height: 30px; border: 0; border-radius: 50%; background: color-mix(in oklab, var(--ink) 8%, transparent); color: var(--ink); cursor: pointer; font-size: 14px; }
+.tj-error-x:hover { background: color-mix(in oklab, var(--ink) 15%, transparent); }
+.tj-error-msg { margin: 4px 0 6px; max-height: 220px; overflow: auto; }
+.tj-error-todo { margin: 4px 0 10px; padding-left: 20px; }

@@ -510,62 +510,56 @@ const lit = (ids) => { for (const id of ids) gRoot().querySelector(id === 'esque
 // AI's log of that request) to Studium's feedback, where the admins see it.
 const failed = new Map();
 const errInfo = (e, what) => ({ what, message: String(e?.message || e || 'sin detalle'), kind: e?.kind ?? '', way: e?.way || ai.choice('solution').provider, at: Date.now() });
-const MEANS = {
-  account: 'Studium no pudo usar esa IA: falta conectarla, su sesión venció, o su clave ya no sirve.',
-  transient: 'Fue un problema pasajero de esa IA o de la conexión. Suele arreglarse solo.',
-  rate: 'Esa IA pidió una pausa: recibió muchos pedidos seguidos.',
-  daily: 'Esa IA llegó a su límite de uso por ahora. No se cobró nada.',
-  model: 'El modelo elegido no sirve con esa cuenta.',
-  cancel: 'Lo detuviste tú.',
-};
-function tryThis(way) {
-  if (way.startsWith('bridge:')) return ['Mira la ventana del puente en tu computadora: ahí está, línea por línea, lo que hizo tu IA y dónde falló.', `Si dice que no hay sesión, abre una terminal, escribe <code>${way === 'bridge:codex' ? 'codex' : 'claude'}</code> e inicia sesión; luego vuelve aquí.`, 'Inténtalo otra vez. Si falla igual, elige otra IA para escribir la guía, aquí abajo.'];
-  if (way === 'gemini') return ['En Ajustes → Tu IA, pulsa «Probar» junto a Gemini: dice si tu clave sigue activa.', 'Elige un modelo «flash», que tiene uso gratis.', 'Inténtalo otra vez, o elige otra IA aquí abajo.'];
-  if (way === 'puter') return ['Vuelve a conectar Puter en Ajustes: su sesión a veces vence sin avisar.', 'Inténtalo otra vez, o elige otra IA aquí abajo.'];
-  if (way === 'openrouter') return ['Elige otro modelo gratis de OpenRouter: algunos se caen o cambian.', 'Inténtalo otra vez, o elige otra IA aquí abajo.'];
-  return ['Inténtalo otra vez en un momento.', 'Si falla igual, elige otra IA aquí abajo o revísala en Ajustes → Tu IA.'];
+// What an error means and what to do about it, only for errors Studium recognizes (his words: the generic text of every
+// error box was useless; only the exact error helped). Each answer names the concrete action; an unknown error gets
+// none rather than invented steps.
+function knownError(msg, way = '', kind = '') {
+  const m = String(msg ?? '');
+  const who = ai.WAYS[way]?.name ?? 'tu IA';
+  if (/puente no (responde|respondió|está abierto)|ECONNREFUSED|127\.0\.0\.1/i.test(m)) return { what: 'El puente no responde en esta computadora.', todo: [`Ábrelo otra vez en la terminal: <code>${esc(ai.bridgeCommand())}</code>`, 'Luego pulsa «Comprobar el puente» e inténtalo de nuevo.'], act: '<button type="button" class="ask" data-tj="bridge-recheck">Comprobar el puente</button>' };
+  if (/sin sesi[oó]n iniciada|not-signed-in|no tiene una sesión iniciada|no está listo/i.test(m)) return { what: `${who} no tiene una sesión iniciada en esta computadora.`, todo: [`Abre una terminal, escribe <code>${way === 'bridge:codex' ? 'codex' : 'claude'}</code> e inicia sesión; después vuelve a intentarlo.`] };
+  if (kind === 'daily' || kind === 'rate' || /usage limit|l[ií]mite de uso|hit your .{0,30}limit|429|quota/i.test(m)) return { what: `${who} llegó a su límite de uso por ahora.`, todo: ['Espera a que se renueve (el error exacto suele decir cuándo), o elige otra IA o modelo en «Cómo lo hace».'] };
+  if (kind === 'model' || /model.{0,40}(not found|not supported|does not exist|no existe)/i.test(m)) return { what: `El modelo elegido no sirve con esa cuenta de ${who}.`, todo: ['Elige otro modelo en «Cómo lo hace».'] };
+  if (kind === 'account') return { what: `Studium no pudo usar ${who}: falta conectarla, su sesión venció o su clave ya no sirve.`, todo: [way.startsWith('bridge:') ? `Abre una terminal, escribe <code>${way === 'bridge:codex' ? 'codex' : 'claude'}</code> e inicia sesión.` : 'Revísala en Ajustes → Tu IA con «Probar».'] };
+  if (/no respondió en|timed? ?out|504|ETIMEDOUT/i.test(m)) return { what: 'Tardó más de lo que Studium espera.', todo: ['Pide un cambio más pequeño (un capítulo o una parte a la vez), o vuelve a intentarlo.'] };
+  if (/no devolvió ninguna parte|no trae|JSON|Unexpected token|Unterminated|is not valid/i.test(m)) return { what: `${who} respondió, pero no en el formato que Studium lee.`, todo: ['Vuelve a intentarlo. Si se repite con este modelo, elige otro en «Cómo lo hace».'] };
+  if (/carpeta|folder/i.test(m) && /ya no|venció|no existe|no está/i.test(m)) return { what: 'La carpeta donde debía trabajar no está disponible.', todo: ['Elígela otra vez en «Cómo lo hace → Dónde trabaja».'] };
+  if (/API key|api_key|invalid.{0,20}key|clave|401|403|unauthori[sz]ed/i.test(m)) return { what: `La clave o la cuenta de ${who} no funciona.`, todo: ['Revísala en Ajustes → Tu IA con «Probar».'] };
+  if (/insufficient permissions|permission-denied|PERMISSION_DENIED/i.test(m)) return { what: 'La base de datos de Studium no aceptó el cambio.', todo: ['Si se repite, envía el reporte: es un problema de Studium.'] };
+  if (/could not be read|NotReadableError/i.test(m)) return { what: 'Un archivo cambió, se movió o se estaba sincronizando después de elegirlo.', todo: ['Quítalo y tráelo de nuevo.'] };
+  if (/Failed to fetch|NetworkError|network|offline/i.test(m)) return { what: 'No hubo conexión en ese momento.', todo: ['Revisa tu internet y vuelve a intentarlo.'] };
+  return null;
+}
+// One error box for everything: it closes, shows the exact error first, says what to do only when it knows, and offers
+// retry, an explanation from the person's AI, and a report to Studium.
+function errorCard({ what, message, way = '', kind = '', at = Date.now(), retry = '', ctx: context = '' }) {
+  const k = knownError(message, way, kind);
+  const who = way ? (ai.WAYS[way]?.name ?? way) : '';
+  const inGuide = !!T && !draft;
+  const btn = inGuide ? 'ask' : 'button ghost small';
+  return `<div class="tj-error" role="alert" data-ctx="${esc(context || `${what} en Studium${who ? `, con ${who} (${way})` : ''}. Error: ${message}`)}">
+      <div class="tj-error-head"><h4>${esc(what)}: no se pudo</h4><button type="button" class="tj-error-x" data-tj="err-close" aria-label="Cerrar este aviso" title="Cerrar">✕</button></div>
+      <pre class="src tj-error-msg">${esc(message)}</pre>
+      <p class="mut small">${who ? `IA: ${esc(who)} · ` : ''}${esc(new Date(at).toLocaleString('es'))}</p>
+      ${k ? `<p><b>${esc(k.what)}</b></p><ul class="tj-error-todo">${k.todo.map((t) => `<li>${t}</li>`).join('')}</ul>` : ''}
+      <div class="tj-err-ai" data-err-ai></div>
+      <p class="tj-error-act">${retry ? `<button type="button" class="act" data-tj="${esc(retry)}">Intentarlo otra vez</button> ` : ''}${k?.act ?? ''} <button type="button" class="${btn}" data-tj="err-explain">Pedir a tu IA que lo explique</button> <button type="button" class="${btn}" data-feedback="error" data-feedback-text="${esc(`${what}${who ? ` (${who})` : ''}: ${message}`.slice(0, 1800))}">Enviar reporte a Studium</button></p>
+    </div>`;
 }
 function errorBox(info, retry = '') {
   if (!info) return '';
   if (info.kind === 'folder') {
-    return `<div class="tj-error tj-gone" role="alert"><h4>Tu carpeta no está disponible</h4><p>${esc(info.message)}</p>
+    return `<div class="tj-error tj-gone" role="alert"><div class="tj-error-head"><h4>Tu carpeta no está disponible</h4><button type="button" class="tj-error-x" data-tj="err-close" aria-label="Cerrar este aviso">✕</button></div><p>${esc(info.message)}</p>
       ${hereHTML()}<p><button type="button" class="act" data-tj="folder-pick">Elegir la carpeta…</button> <button type="button" class="ask" data-tj="folder-forget">Seguir sin ella, solo con lo que trajiste</button></p><p class="fine" id="tj-folder-status" role="status"></p></div>`;
   }
   if (info.kind === 'cancel') return `<p class="tj-ok">Lo detuviste tú. Puedes volver a escribirla cuando quieras.</p>`;
-  const who = ai.WAYS[info.way]?.name ?? 'tu IA';
-  const means = MEANS[info.kind] ?? `${who} recibió el pedido, pero devolvió un error en vez de la guía.`;
-  const report = `${info.what} en «${T?.title ?? ''}», con ${who}. Studium mostró: ${info.message}`;
-  return `<div class="tj-error" role="alert" data-ctx="${esc(`${info.what} en un trabajo de Studium, con ${who} (${info.way}). Error: ${info.message}`)}">
-      <h4>${esc(info.what)}: no se pudo</h4>
-      <p><b>Qué pasó.</b> ${esc(means)} <span class="mut">(IA: ${esc(who)})</span></p>
-      <p><b>Qué puedes hacer:</b></p><ol>${tryThis(info.way).map((t) => `<li>${t}</li>`).join('')}</ol>
-      <details><summary>El error exacto</summary><pre class="src">${esc(info.message)}\n\nIA: ${esc(info.way)} · ${esc(new Date(info.at).toLocaleString('es'))}</pre></details>
-      <div class="tj-err-ai" data-err-ai></div>
-      <p class="tj-error-act">${retry ? `<button type="button" class="act" data-tj="${esc(retry)}">Intentarlo otra vez</button> ` : ''}<button type="button" class="ask" data-tj="err-explain">Pedir a tu IA que lo explique</button> <button type="button" class="ask" data-feedback="ia" data-feedback-text="${esc(report.slice(0, 300))}">Enviar reporte a Studium</button> <span class="mut small">El reporte va con el registro de ese pedido; los admins lo ven y te responden.</span></p>
-    </div>`;
+  return errorCard({ what: info.what, message: info.message, way: info.way, kind: info.kind, at: info.at, retry });
 }
-// A problem that is not the AI's (reading files, saving, the network…), in the same shape: what happened in plain
-// words, what to do, the exact error folded, «Pedir a tu IA que lo explique» and «Enviar reporte a Studium».
+// A problem that is not the AI's (reading files, saving, the network…): the same card.
 function problemBox(err, what) {
   const name = String(err?.name ?? '');
   const msg = String(err?.message ?? err ?? '');
-  const known = name === 'NotReadableError' || /could not be read/i.test(msg)
-    ? { means: 'Uno de los archivos que trajiste cambió, se movió o se estaba sincronizando (por ejemplo con OneDrive) después de elegirlo, y el navegador ya no podía leerlo.', todo: ['Vuelve a «Trae el enunciado», quita los archivos y tráelos de nuevo: ahora se leen en el momento.', 'Si están en una carpeta que se sincroniza, espera a que termine.'] }
-    : /insufficient permissions|permission-denied|PERMISSION_DENIED/i.test(msg)
-      ? { means: 'La base de datos de Studium no aceptó guardar el trabajo.', todo: ['Inténtalo otra vez.', 'Si se repite, envía el reporte: es un problema de Studium, no tuyo.'] }
-      : /Failed to fetch|NetworkError|network|offline/i.test(msg)
-        ? { means: 'No hubo conexión con Studium o con GitHub en ese momento.', todo: ['Revisa tu internet e inténtalo otra vez.'] }
-        : { means: msg || 'Algo falló sin dar detalles.', todo: ['Inténtalo otra vez.', 'Si se repite, pide a tu IA que lo explique o envía el reporte.'] };
-  const inGuide = !!T && !draft;
-  const btn = inGuide ? 'ask' : 'button ghost small';
-  return `<div class="tj-error" role="alert" data-ctx="${esc(`${what} en Studium. Error: ${name ? `${name}: ` : ''}${msg}`)}">
-      <h4>${esc(what)}: no se pudo</h4>
-      <p><b>Qué pasó.</b> ${esc(known.means)}</p>
-      <p><b>Qué puedes hacer:</b></p><ol>${known.todo.map((t) => `<li>${esc(t)}</li>`).join('')}</ol>
-      <details><summary>El error exacto</summary><pre class="src">${esc(`${name ? `${name}: ` : ''}${msg}`)}</pre></details>
-      <div class="tj-err-ai" data-err-ai></div>
-      <p class="tj-error-act"><button type="button" class="${btn}" data-tj="err-explain">Pedir a tu IA que lo explique</button> <button type="button" class="${btn}" data-feedback="error" data-feedback-text="${esc(`${what}: ${name ? `${name}: ` : ''}${msg}`.slice(0, 300))}">Enviar reporte a Studium</button></p>
-    </div>`;
+  return errorCard({ what, message: `${name && !msg.startsWith(name) ? `${name}: ` : ''}${msg || 'sin detalle'}` });
 }
 // «Pedir a tu IA que lo explique»: the person's quick AI reads the error and says, plainly, what it means and what to do.
 const SUPPORT = 'Eres el soporte de Studium, una plataforma de estudio. Una persona que no es técnica vio este error. Explícale en español, en 2 a 4 frases simples, qué significa y por qué pasa lo más probable; después, como máximo 3 pasos concretos para resolverlo. Si no puedes saber la causa exacta, dilo. Sin jerga; si usas un término técnico, explícalo. Texto simple, con **negrita** en lo importante.';
@@ -1584,8 +1578,19 @@ function afterRunChoice(el) {
   if (el?.closest?.('.tj-adjpop, .tj-tray')) { for (const box of document.querySelectorAll('#tjg-body [data-howrun]')) box.innerHTML = howRunHTML(); } else repaint();
 }
 function howRunHTML() {
-  const bridge = ai.choice('solution').provider === 'bridge:claude' && !ai.bridgeOld();
-  return `<details class="tj-howrun" open><summary>Cómo lo hace</summary>${aiBlock('solution')}${bridge ? `<div class="tj-where"><h5>Dónde trabaja</h5>${placeHTML(folderOf(T.id) || 'temp')}</div>` : ''}</details>`;
+  const ways = ai.connected();
+  const hasBridge = ways.some((w) => w.startsWith('bridge:'));
+  const claude = ai.choice('solution').provider === 'bridge:claude' && !ai.bridgeOld();
+  const pick = ai.ready() ? `<div class="pick">${ai.pickerHTML('solution', { open: true })}</div>` : '<p>Todavía no conectaste una IA en esta dirección. <button type="button" class="ask" data-tj="connect" data-vendor="gemini">Conectar Gemini, gratis</button></p>';
+  // The bridge is always offered: it is connected once per address (localhost, the beta link…), and a page where it is
+  // not connected said nothing of it (his report: only Gemini to choose, no bridge, no session, no model, no effort).
+  const bridge = hasBridge ? '' : `<div class="tj-howbridge"><p><b>Claude Code, por el puente</b> <small class="mut">no está conectado en esta dirección (${esc(location.host)}). Cada dirección se conecta una vez.</small></p>
+      <p><button type="button" class="ask" data-tj="pair-guide">Conectar el puente aquí</button></p><div class="tj-bridge ai-bridge" data-pair-box hidden></div></div>`;
+  const opts = `<fieldset class="tj-bridgeopts ${claude ? '' : 'off'}" ${claude ? '' : 'disabled'}><legend>Con Claude Code por el puente${claude ? '' : ' <small>(elígelo arriba en «Con qué IA» para usar estas opciones)</small>'}</legend>
+      ${watchBox()}
+      ${T && sessionOf(T.id) ? contBox() : '<p class="fine">Esta guía no tiene una sesión de Claude Code guardada en este dispositivo: el próximo pedido empieza una nueva.</p>'}
+      <h5>Dónde trabaja</h5>${claude ? placeHTML(folderOf(T.id) || 'temp') : '<p class="fine">En la carpeta que elijas, con Claude Code.</p>'}</fieldset>`;
+  return `<details class="tj-howrun" open><summary>Cómo lo hace</summary>${pick}${bridge}${opts}</details>`;
 }
 
 // Section 0 of a study guide: what enters, how the evaluation is, what to watch out for, the material as it came.
@@ -2325,9 +2330,14 @@ function wire(root) {
       draft.at += 1; renderDraft(); return;
     }
     if (kind === 'count') { draft.parts = Number(b.dataset.n); draft.at += 1; renderDraft(); return; }
+    if (kind === 'pair-guide') {
+      const box = b.closest('.tj-howbridge')?.querySelector('[data-pair-box]');
+      if (box) { box.hidden = false; box.innerHTML = bridgeSteps().replace('data-ai-pair>', 'data-tj="pair-code">'); }
+      return;
+    }
     if (kind === 'pair-code') {
       const code = b.closest('.tj-bridge')?.querySelector('[data-ai-pair-code]')?.value;
-      await busy(b, async () => { if (await pairBridge(code)) { draft.pairing = false; renderDraft(); } }).catch(() => {});
+      await busy(b, async () => { if (await pairBridge(code)) { if (draft) { draft.pairing = false; renderDraft(); } else afterRunChoice(b); } }).catch(() => {});
       return;
     }
     if (kind === 'answer' || kind === 'answer-skip') {
@@ -2465,6 +2475,13 @@ function wire(root) {
     }
     if (kind === 'folder-remove') {
       await busy(b, async () => { await ai.changeBridgeFolder(b.dataset.id, { remove: true }); if (draft) { if (draft.workspace === b.dataset.id) draft.workspace = 'temp'; keepAnswer(); renderDraft(); } else repaint(); }).catch(() => {});
+      return;
+    }
+    if (kind === 'err-close') {
+      const box = b.closest('.tj-error');
+      // closing the error of writing the guide forgets it; an adjustment's error only goes away (its request stays in the tray)
+      if (T && !draft && !b.closest('.tj-adjlive, .tj-traypanel')) { T.lastError = null; failed.delete(T.id); }
+      box?.remove();
       return;
     }
     if (kind === 'err-explain') { await busy(b, () => explainError(b.closest('.tj-error'))).catch(() => {}); return; }
