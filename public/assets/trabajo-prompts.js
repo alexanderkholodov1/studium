@@ -2,20 +2,20 @@
 // solution guide that a group can follow line by line, and the checks Studium runs on what comes back. The guide is
 // data, never markup: Studium draws it, so nothing an AI writes runs on the page.
 
+import { criteria } from './guia-criterios.js';
+
 export const LETTERS = 'ABCDEFGH';
 
-const COMMON = `Eres el autor de una guía de solución dentro de Studium, una plataforma de estudio. Un grupo de estudiantes que todavía no sabe programar ni conoce las librerías debe resolver un trabajo de curso y defenderlo: cada integrante tiene que entender CADA línea de código, cada función y librería, y la teoría detrás. La guía lleva la solución completa hasta el entregable final, pero escrita para que la escriban y entiendan ellos, no para copiar y pegar.
+const COMMON = `Eres el autor de una guía de solución dentro de Studium, una plataforma de estudio. Un grupo de estudiantes que todavía no sabe programar ni conoce las librerías debe resolver un trabajo de curso y defenderlo: cada integrante tiene que entender CADA línea de código, cada función y librería, y la teoría detrás. La guía lleva la solución completa hasta el entregable final, escrita para que la hagan y la entiendan ellos, no para copiar y pegar.
 
-Reglas:
-- Escribe en el idioma del enunciado (por defecto, español), claro y sin relleno.
-- Que se lea a simple vista: párrafos de 1 a 3 frases y listas cuando haya varias cosas. En CADA párrafo pon en **negrita** de 1 a 3 palabras que enganchen el ojo (el término, la cifra, la acción clave); nunca una frase entera. Un párrafo sin negrita está mal.
-- Largo: la guía COMPLETA, con todos sus capítulos, se lee en 1 a 2 horas. Sé conciso y no repitas nada: lo explicado una vez se nombra después por su término del glosario. Pero ningún concepto, término, comando ni proceso queda sin explicar.
-- El trabajo lo hacen ellos: la guía no es solo para leer. Según cómo lo quiera el grupo, cada paso dice qué hace el integrante con sus manos (escribir el código a partir de pistas, crear u organizar archivos, hacer commit, push y abrir un PR), y la solución queda para comprobar.
-- Escribe como una buena guía de estudio, no como una lista de etiquetas: explica en prosa, como un profesor paciente, de lo simple a lo complejo, con ejemplos concretos; cada idea nueva se explica antes de usarse. Frases cortas; nada de jerga sin explicar.
-- Diagramas en Mermaid válido: cada etiqueta de nodo entre comillas dobles, por ejemplo A["Cliente (en casa)"] --> B{"¿Conecta?"}; nunca comillas dobles dentro de una etiqueta.
-- Respeta exactamente lo que pide el enunciado y la rúbrica: requisitos, restricciones, prohibiciones (por ejemplo, privacidad de datos o no evadir CAPTCHA) y la guía del curso si se menciona.
+${criteria('trabajo')}
+
+Lo propio de un trabajo:
+- Escribe en el idioma del enunciado (por defecto, español).
+- Largo: la guía COMPLETA se lee en 1 a 2 horas. Lo explicado una vez se nombra después por su término del glosario.
+- El trabajo lo hacen ellos: según cómo lo quiera el grupo, cada paso dice qué hace el integrante con sus manos y la solución queda para comprobar.
 - No inventes datos, resultados ni números que no puedas saber: donde dependan de los datos reales, dilo ("aquí verás…").
-- El código debe ser correcto, moderno y ejecutable en el entorno que pide el trabajo (por ejemplo Google Colab).
+- El código es correcto, moderno y ejecutable en el entorno que pide el trabajo.
 - Responde SOLO con un bloque \`\`\`json válido, sin texto antes ni después.`;
 
 // How the person wants the guide (the questions of a new trabajo), said to the AI in plain words.
@@ -56,7 +56,7 @@ export function outlinePrompt({ parts, course, deadline, prefs }) {
 Tarea: lee el enunciado y la rúbrica y devuelve el ESQUEMA de la guía (todavía sin el código de cada paso).
 - "de_que_trata": de qué se trata el trabajo por su CONTENIDO, de principio a fin, para alguien que no sabe nada del tema: qué se construye o se estudia, por qué y cómo encajan las partes (3 a 6 párrafos cortos). Nada de notas, entregables ni fechas aquí.
 - "reglas": lo técnico del trabajo, una sola vez y sin repetir lo de "de_que_trata": "entregables" (lo que se ENTREGA de verdad: archivos, formatos, nombres, dónde), "calificacion" (cómo se califica, con sus pesos), "modalidad" (grupo, individual, presencial…), "defensa" (cómo es, si la hay), "fechas" (las del enunciado).
-- "diagrama": un diagrama de todo el trabajo en sintaxis Mermaid (flowchart, sequenceDiagram…), sin comillas invertidas: cómo se conectan las piezas o el flujo de principio a fin.
+- "diagrama": en sintaxis Mermaid, sin comillas invertidas. Si el enunciado trae una figura (la topología, el circuito, la arquitectura), ES esa figura, con sus nombres, interfaces y direcciones; si no, cómo se conectan las piezas del trabajo. Se muestra al principio y queda a mano en toda la guía.
 - "avisos": solo lo que el grupo debe saber antes de empezar (restricciones que no se negocian, riesgos, prohibiciones), como máximo 6, cada uno de UNA frase.
 - "razonamiento": cómo entendiste el material: qué encontraste, qué supusiste y por qué (para quien quiera leerlo; se muestra plegado).
 - "enunciado_textual": si el enunciado te llegó como PDF, imagen u otro archivo que no es texto, transcríbelo aquí COMPLETO y tal cual, sin resumir ni corregir; si ya llegó como texto, vacío.
@@ -66,7 +66,7 @@ Tarea: lee el enunciado y la rúbrica y devuelve el ESQUEMA de la guía (todaví
 - "partes": para cada persona, en 1 o 2 frases claras, qué hace en el trabajo (su encargo).
 - El grupo tiene ${parts} ${parts === 1 ? 'parte' : 'partes'}: ${letters}. Reparte los pasos de forma equilibrada y para que las partes avancen en paralelo; lo que más pesa en la rúbrica no debe depender de una sola parte.
 - Los ids: requisitos "R1", "R2"…; hitos "H0", "H1"…; pasos "H1.1", "H1.2"…
-- "preguntas": SOLO si, habiendo entendido la situación, hay algo que de verdad necesitas confirmar con el grupo antes de escribir los capítulos (una ambigüedad del enunciado, una decisión que es del grupo). Si no hace falta, déjalo vacío. Máximo 5.
+- "preguntas": SOLO si, habiendo entendido la situación, hay algo que de verdad necesitas confirmar con el grupo antes de escribir los capítulos (una ambigüedad del enunciado, una decisión que es del grupo, o un avance del grupo que se aparta de lo que pide el profesor). Si no hace falta, déjalo vacío. Máximo 5.
 ${course ? `- El curso: ${course}.` : ''}
 
 Formato exacto:
@@ -97,8 +97,9 @@ Para cada paso:
 - "clave": la idea clave del paso en una sola frase (se muestra destacada, antes que todo).
 - "teoria": lo mínimo que hay que entender antes de escribir el código, con el porqué (1 a 3 párrafos cortos, con su negrita; \`código\` entre comillas invertidas).
 - "diagrama": un diagrama en sintaxis Mermaid (flowchart, sequenceDiagram…), sin comillas invertidas, cuando ayude a ver el paso (un flujo, una arquitectura, una secuencia); cada hito trae al menos uno. Si no ayuda, vacío.
-- "tu_turno": lo que el integrante hace con sus manos en este paso (escribir este código a partir de las pistas, crear u organizar archivos, el commit, el push o el PR, con los comandos exactos), en 1 a 4 puntos cortos; vacío si el paso es solo para entender.
-- "codigo": el código del paso en piezas pequeñas. Cada pieza trae "lineas": UNA explicación por cada línea no vacía, con su número (desde 1 en esa pieza): qué hace, qué es cada función y argumento, de qué librería viene y por qué se usa así.
+- "tu_turno": lo que el integrante hace con sus manos en este paso y que acerca al entregable (escribir este código a partir de las pistas, crear u organizar archivos, ejecutar y comprobar, el commit, el push o el PR, con los comandos exactos), en 1 a 4 puntos cortos; vacío si el paso es solo para entender. Nunca una tarea que no sirva al entregable.
+- "codigo": el código del paso en piezas pequeñas. Cada pieza trae "archivo" (su ruta en la carpeta del trabajo, como "lab/topologia.yml", o "terminal" si son comandos), "proposito" (una frase: qué es ese archivo y para qué existe), "lenguaje" (el real: python, yaml, bash, cisco…; nunca "text") y "lineas": UNA explicación por cada línea no vacía, con su número (desde 1 en esa pieza): qué hace, qué es cada función y argumento, de qué librería viene y por qué se usa así.
+- "recorrido": SOLO cuando el paso es un proceso que avanza (un paquete que viaja por la red, una configuración que se aplica comando por comando, un algoritmo que corre): un diagrama Mermaid flowchart con los elementos ("diagrama", ids de nodo simples) y "pasos" en orden; cada paso marca los "nodos" que participan (sus ids, en el orden en que pasa lo que pasa), dice en una frase qué ocurre ("texto") y, si lo hay, el "comando" que lo hace. Studium lo anima. Si el paso no es un proceso, vacío.
 - "librerias": cada librería o módulo que aparece por primera vez, con para qué sirve.
 - "esperado": qué debería ver el estudiante al ejecutarlo.
 - "comprueba": 1 o 2 preguntas para comprobar que lo entendió, con su respuesta.
@@ -110,7 +111,8 @@ Si un paso no es de código (por ejemplo revisar los términos de uso de un siti
 Formato exacto:
 \`\`\`json
 { "id": "${milestone.id}", "pasos": [{ "id": "…", "objetivo": "…", "clave": "…", "teoria": "…", "diagrama": "", "tu_turno": ["…"],
-  "codigo": [{ "lenguaje": "python", "codigo": "…", "lineas": [{ "n": 1, "explicacion": "…" }] }],
+  "codigo": [{ "archivo": "carpeta/archivo.py", "proposito": "…", "lenguaje": "python", "codigo": "…", "lineas": [{ "n": 1, "explicacion": "…" }] }],
+  "recorrido": { "diagrama": "flowchart LR\n  A[\"…\"] --> B[\"…\"]", "pasos": [{ "nodos": ["A", "B"], "texto": "…", "comando": "" }] },
   "librerias": [{ "nombre": "…", "para_que": "…" }],
   "esperado": "…", "comprueba": [{ "pregunta": "…", "respuesta": "…" }],
   "defensa": [{ "pregunta": "…", "respuesta": "…" }], "commit": "[${milestone.id}.1] …", "reunion": "" }] }
@@ -228,11 +230,18 @@ export function cleanOutline(o, parts) {
   };
 }
 
+// A walkthrough: a flowchart and the frames that light its nodes in order (trabajos.js animates it).
+function cleanWalk(r) {
+  const diagrama = str(r?.diagrama, 4000).replace(/^```(?:mermaid)?\s*|```\s*$/g, '').trim();
+  const pasos = list(r?.pasos, 24).map((x) => ({ nodos: list(x?.nodos, 12).map((n) => str(n, 40)).filter((n) => /^[A-Za-z][\w-]{0,39}$/.test(n)), texto: str(x?.texto, 400), comando: str(x?.comando, 300) })).filter((x) => x.texto);
+  return diagrama && pasos.length >= 2 ? { diagrama, pasos } : null;
+}
 export function cleanMilestone(m, milestone) {
   const known = new Set(milestone.pasos.map((p) => p.id));
   const pasos = list(m?.pasos, 40).filter((p) => known.has(p?.id)).map((p) => ({
     id: p.id, objetivo: str(p?.objetivo, 600), clave: str(p?.clave, 400), tu_turno: list(p?.tu_turno, 8).map((x) => str(x, 600)).filter(Boolean), teoria: str(p?.teoria, 8000), diagrama: str(p?.diagrama, 4000).replace(/^```(?:mermaid)?\s*|```\s*$/g, '').trim(),
     codigo: list(p?.codigo, 12).map((c) => ({
+      archivo: str(c?.archivo, 200), proposito: str(c?.proposito, 400),
       lenguaje: str(c?.lenguaje, 20) || 'python', codigo: str(c?.codigo, 12000),
       lineas: list(c?.lineas, 300).map((l) => ({ n: Number.isInteger(l?.n) ? l.n : 0, explicacion: str(l?.explicacion, 1200) })).filter((l) => l.n > 0),
     })).filter((c) => c.codigo.trim()),
@@ -244,6 +253,7 @@ export function cleanMilestone(m, milestone) {
     defensa: list(p?.defensa, 5).map((q) => ({ pregunta: str(q?.pregunta, 400), respuesta: str(q?.respuesta, 1500) })).filter((q) => q.pregunta),
     commit: str(p?.commit, 120),
     reunion: str(p?.reunion, 300),
+    recorrido: cleanWalk(p?.recorrido),
   }));
   if (!pasos.length) throw new Error(`La respuesta de tu IA no trae los pasos del hito ${milestone.id}.`);
   return { id: milestone.id, pasos };

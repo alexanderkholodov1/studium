@@ -2809,6 +2809,8 @@ canvas.prop { display: block; }
 .tj-files li { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px; background: color-mix(in oklab, var(--ink) 5%, transparent); }
 .tj-files li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 650; }
 .tj-files small { color: var(--muted); }
+.tj-files .tj-role { flex: none; width: auto; padding: 4px 8px; border-radius: 9px; font: 600 13px var(--display, inherit); border: 1px solid var(--line); background: var(--panel, transparent); color: inherit; }
+.tj-rolehint { margin: 6px 0; }
 .tj-ways { display: grid; gap: 10px; }
 .tj-way { display: flex; align-items: center; gap: 14px; padding: 14px 18px; }
 .tj-way > div { flex: 1; }
@@ -3007,8 +3009,70 @@ canvas.prop { display: block; }
 /* The reader's dark mode keeps the template's shapes, with a dark palette. */
 .tjg-app[data-template="cuaderno"][data-theme="dark"], .tjg-app[data-template="revista"][data-theme="dark"] {
   --bg: #12161f; --grid: rgba(255, 255, 255, .04); --panel: #1a2030; --panel2: #202839; --ink: #ebeef5; --ink2: #c7cdda; --muted: #8e97aa; --line: rgba(255, 255, 255, .1);
-  --key-bg: linear-gradient(90deg, rgba(255, 207, 63, .18), rgba(255, 207, 63, .05)); --strong: #fff; color-scheme: dark; }
-.tjg-app[data-template="cuaderno"][data-theme="dark"] header.hero h1 { background: none; }
+  --key-bg: linear-gradient(90deg, rgba(255, 207, 63, .18), rgba(255, 207, 63, .05)); --strong: #fff; color-scheme: dark;
+  --signal-s: #3a2c12; --blue-s: #16264a; --green-s: #123326; --orange-s: #3a2412; --rose-s: #3d1a22; --violet-s: #2a2045; --brown-s: #33251b; --ok-s: #143321; --navy: #0a1424; --on-navy: #ebeef5; --on-navy2: #9aa7bc; }
+.tjg-app[data-template="revista"][data-theme="dark"] .trap { background: #3a1c21; color: var(--ink); }
+.tjg-app[data-template="cuaderno"][data-theme="dark"] header.hero h1 { background: linear-gradient(transparent 62%, rgba(255, 207, 63, .28) 62% 90%, transparent 90%); }
+.tjg-app[data-template="cuaderno"][data-theme="dark"] .trap { background: #3a3212; border-left-color: #f2c200; color: var(--ink); }
+.tjg-app[data-template="cuaderno"][data-theme="dark"] .fig .fh { background: #0d1220; }
+.tjg-app[data-template="revista"][data-theme="dark"] .fig .fh { background: #000; }
+.tjg-app[data-template="revista"][data-theme="dark"] section.sec > h2 { border-bottom-color: var(--ink); }
+/* Pizarra in light: a pale slate, same shapes, chalk turned to ink. */
+.tjg-app[data-template="pizarra"][data-theme="light"] {
+  --bg: #eef2f7; --grid: rgba(31, 60, 110, .07); --panel: #ffffff; --panel2: #e6ecf4; --ink: #142033; --ink2: #34435a; --muted: #66748a; --line: rgba(20, 32, 51, .12);
+  --navy: #142033; --navy2: #233551; --on-navy: #f3f6fb; --on-navy2: #b9c4d6; --signal: #c97a12; --signal-s: #fbecd2;
+  --blue: #2f62c9; --blue-s: #e3ebfa; --green: #11896b; --green-s: #dcf1ea; --orange: #c9661c; --orange-s: #fbe7d6; --rose: #c93a48; --rose-s: #fbe2e5; --violet: #6d4bc4; --violet-s: #ece6f9; --brown: #8a5a3a; --brown-s: #f1e6dd; --okc: #11896b; --ok-s: #dcf1ea;
+  --key-bg: linear-gradient(90deg, rgba(201, 122, 18, .14), rgba(201, 122, 18, .03)); --key-line: #c97a12; --strong: #000; color-scheme: light;
+}
+.tjg-app[data-template="pizarra"][data-theme="light"] header.hero h1 { text-shadow: none; }
+.tjg-app[data-template="pizarra"][data-theme="light"] section.sec > h2 { color: var(--ink); }
+.tjg-app[data-template="pizarra"][data-theme="light"] article.step { box-shadow: 0 22px 40px -30px rgba(20, 32, 51, .45), inset 0 0 0 1px var(--line), inset 3px 0 0 var(--pc); }
+
+/* Code: the file and its path, what it is, and what each column means (his words: «solo dice TEXT»). */
+.tjg-app .fig .fh .file { text-transform: none; letter-spacing: 0; font: 600 13.5px var(--gm); color: var(--on-navy); }
+.tjg-app .fig .fh .lang { opacity: .8; }
+.tjg-app .fig .fpurpose { margin: 0; padding: 8px 14px; font-size: 14.5px; color: var(--ink2); background: var(--panel2); border-bottom: 1px solid var(--line); }
+.tjg-app .fig.code thead th.ln { width: 2.6em; text-align: right; }
+.tjg-app.readonly nav.top .pct, .tjg-app.readonly nav.top .prog { display: none; }
+.tjg-app .fig.code thead th { padding: 4px 10px; font: 600 11.5px var(--gd); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); text-align: left; border-bottom: 1px solid var(--line); }
+/* «Recorrido»: a process, frame by frame. */
+.tjg-app figure.walk { margin: 16px 0; padding: 12px 14px 14px; border-radius: 16px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line), 0 18px 36px -30px rgba(0, 0, 0, .5); }
+.tjg-app figure.walk pre.mermaid { margin: 0; background: none; text-align: center; }
+.tjg-app figure.walk svg g.node > * { transition: filter .3s, opacity .3s; }
+.tjg-app figure.walk svg g.node:not(.lit) { opacity: .45; }
+.tjg-app figure.walk svg g.node.lit rect, .tjg-app figure.walk svg g.node.lit polygon, .tjg-app figure.walk svg g.node.lit circle { stroke: var(--c, var(--blue)) !important; stroke-width: 3px !important; filter: drop-shadow(0 0 8px color-mix(in oklab, var(--c, var(--blue)) 55%, transparent)); }
+.tjg-app figure.walk svg path.walk-edge { stroke: var(--c, var(--blue)) !important; stroke-width: 3px !important; }
+.tjg-app figure.walk svg .walk-dot { fill: var(--signal); stroke: var(--panel); stroke-width: 2px; filter: drop-shadow(0 0 6px var(--signal)); }
+.tjg-app .walk-bar { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.tjg-app .walk-steps { list-style: none; margin: 8px 0 0; padding: 0; }
+.tjg-app .walk-steps li { display: none; gap: 10px; align-items: baseline; flex-wrap: wrap; padding: 10px 14px; border-radius: 12px; background: color-mix(in oklab, var(--c, var(--blue)) 8%, var(--panel)); }
+.tjg-app .walk-steps li.on { display: flex; }
+.tjg-app .walk-steps code { font: 13.5px var(--gm); }
+@media (prefers-reduced-motion: reduce) { .tjg-app figure.walk svg g.node > * { transition: none; } }
+/* The general figure, over the guide, without losing the place. */
+.tjg-app .tj-figpop { position: fixed; inset: 64px 0 0; z-index: 40; display: grid; place-items: start center; padding: 20px; background: color-mix(in oklab, var(--bg) 60%, transparent); backdrop-filter: blur(4px); overflow: auto; }
+.tjg-app .tj-figcard { width: min(1100px, 100%); padding: 14px 18px; border-radius: 18px; background: var(--panel); box-shadow: 0 30px 60px -30px rgba(0, 0, 0, .6), inset 0 0 0 1px var(--line); }
+.tjg-app .tj-fighead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+/* Who did it: their faces, not a line of names. */
+.tjg-app .who-did { display: inline-flex; align-items: center; gap: 4px; }
+.tjg-app .who-did .av { width: 24px; height: 24px; font-size: 12px; margin-right: -6px; box-shadow: 0 0 0 2px var(--panel); }
+.tjg-app .who-did .mut { margin-left: 10px; }
+/* Who sees the guide: the panel, and a shared copy read by someone outside (nothing to mark or change). */
+.tjg-app .tj-sharepop { position: fixed; top: 60px; right: 16px; z-index: 45; width: min(460px, calc(100vw - 32px)); }
+.tjg-app .tj-sharecard { padding: 14px 18px; border-radius: 18px; background: var(--panel); box-shadow: 0 30px 60px -30px rgba(0, 0, 0, .6), inset 0 0 0 1px var(--line); display: grid; gap: 8px; }
+.tjg-app .tj-sharecard .tj-pick { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; }
+.tjg-app .tj-sharecard .tj-pick.on { box-shadow: inset 0 0 0 2px var(--blue); background: var(--blue-s); }
+.tjg-app .tj-sharecard .tj-pick input { margin-top: 4px; }
+.tjg-app .tj-sharecard small { color: var(--muted); }
+.tjg-app .tj-sharelink { display: flex; gap: 8px; margin: 0; }
+.tjg-app .tj-sharelink input { flex: 1; min-width: 0; padding: 6px 10px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel2); color: var(--ink); font: 13px var(--gm); }
+.tjg-app .tj-warn { color: color-mix(in oklab, var(--rose) 80%, var(--ink)); }
+.tjg-app nav.top .ro-tag { font: 600 12.5px var(--gd); padding: 4px 10px; border-radius: 999px; background: color-mix(in oklab, var(--ink) 8%, transparent); }
+.tjg-app .ro-note { padding: 8px 14px; border-radius: 12px; background: color-mix(in oklab, var(--blue) 9%, var(--panel)); }
+.tjg-app.readonly .checks, .tjg-app.readonly .adj, .tjg-app.readonly .tj-tray, .tjg-app.readonly .capfoot button, .tjg-app.readonly .card.soft, .tjg-app.readonly .parts button, .tjg-app.readonly .parts .who, .tjg-app.readonly header .team { display: none !important; }
+/* Mermaid labels never cut: the wrapped label may use its box's full height. */
+.tjg-app figure svg foreignObject { overflow: visible; }
+.tjg-app figure svg .nodeLabel, .tjg-app figure svg .edgeLabel { white-space: normal; line-height: 1.25; }
 
 /* Choosing a template: a real sample, scaled down. */
 .tpl-pick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }

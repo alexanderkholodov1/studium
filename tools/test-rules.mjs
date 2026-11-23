@@ -680,6 +680,24 @@ try {
     expect('the owner removes a member', await commit(s.token, [remove(`trabajos/${tid}/miembros/${c.uid}`)]), 200);
     expect('a removed member cannot read the trabajo', await status(c.token, 'GET', at('')), 403);
     expect('a removed member cannot write progress', await commit(c.token, [put(`trabajos/${tid}/avance/${c.uid}`, { steps: {} })]), 403);
+    // Sharing the guide outside the group: a read-only copy in publicas/{tid}, written only by the trabajo's owner.
+    const pub = (over = {}) => ({ title: 'Guía compartida', course: 'Redes', kind: 'trabajo', visibility: 'link', owner: s.uid, ownerName: 'Ana', outline: gz('{}'), encoding: 'gzip', ...over });
+    expect('a classmate cannot publish someone else\'s trabajo', await commit(c.token, [stamped(`publicas/${tid}`, pub({ owner: c.uid }), ['updated'], true)]), 403);
+    expect('a copy carrying more fields (the invitation code) is refused', await commit(s.token, [stamped(`publicas/${tid}`, pub({ code }), ['updated'], true)]), 403);
+    expect('a visibility that does not exist is refused', await commit(s.token, [stamped(`publicas/${tid}`, pub({ visibility: 'everyone' }), ['updated'], true)]), 403);
+    expect('the owner shares the guide by link, with its chapters', await commit(s.token, [stamped(`publicas/${tid}`, pub(), ['updated'], true), stamped(`publicas/${tid}/hitos/H1`, { data: gz('{}'), encoding: 'gzip' }, ['updated'])]), 200);
+    expect('any member with the link reads it', await status(accounts.otherStudent?.token ?? c.token, 'GET', `/publicas/${tid}`), 200);
+    expect('…and its chapters', await status(c.token, 'GET', `/publicas/${tid}/hitos/H1`), 200);
+    expect('otherDomain cannot read it', await status(accounts.otherDomain.token, 'GET', `/publicas/${tid}`), 403);
+    expect('a link-only guide is not listed', await list(c.token, 'publicas', { fieldFilter: { field: { fieldPath: 'visibility' }, op: 'EQUAL', value: { stringValue: 'link' } } }), 403);
+    expect('a classmate cannot change the copy', await commit(c.token, [stamped(`publicas/${tid}`, pub({ title: 'Otra' }), ['updated'])]), 403);
+    expect('a classmate cannot add a chapter to the copy', await commit(c.token, [stamped(`publicas/${tid}/hitos/H2`, { data: gz('{}'), encoding: 'gzip' }, ['updated'])]), 403);
+    expect('the owner makes it public', await commit(s.token, [stamped(`publicas/${tid}`, pub({ visibility: 'public' }), ['updated'])]), 200);
+    expect('members list the public guides', await list(c.token, 'publicas', { fieldFilter: { field: { fieldPath: 'visibility' }, op: 'EQUAL', value: { stringValue: 'public' } } }), 200);
+    expect('listing every copy (private ones too) is refused', await list(c.token, 'publicas'), 403);
+    expect('a classmate cannot unshare it', await commit(c.token, [remove(`publicas/${tid}`)]), 403);
+    expect('the owner makes it private again (chapters, then the copy)', await commit(s.token, [remove(`publicas/${tid}/hitos/H1`), remove(`publicas/${tid}`)]), 200);
+    expect('once private, nobody outside reads it', await status(c.token, 'GET', `/publicas/${tid}`), 403);
     expect('the owner deletes the trabajo', await commit(s.token, [remove(`trabajos/${tid}`)]), 200);
   }
 

@@ -9,7 +9,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { open } from './cdp.mjs';
 
-const [, , ACCOUNT, SHOTS, PORT = '5191'] = process.argv;
+const [, , ACCOUNT, SHOTS, PORT = '5191', READER = ''] = process.argv;
 mkdirSync(SHOTS, { recursive: true });
 const { email, password } = JSON.parse(readFileSync(ACCOUNT, 'utf8'));
 const B = await open({ shots: SHOTS });
@@ -91,8 +91,9 @@ try {
   await B.shot('09-sin-escribir');
 
   // A guide as an AI returns it, written into the database by its owner.
-  const outline = { titulo: 'Examen 2', curso: 'Cálculo II', resumen: 'Optimización con varias variables.', de_que_trata: 'Entra la **optimización** de funciones de dos variables: dónde una función crece más rápido y cómo hallar máximos con una restricción.', diagrama: 'flowchart LR\n  A["Derivadas parciales"] --> B["Gradiente"] --> C["Lagrange"]', reglas: { entregables: [], calificacion: ['4 problemas de desarrollo, 25 % cada uno'], modalidad: 'Escrito, sin calculadora, 2 horas', defensa: '', fechas: ['4 de diciembre'] }, razonamiento: 'Tus apuntes cubren las semanas 9 a 11.', enunciado_textual: '', partes: [], requisitos: [{ id: 'R1', texto: 'Calcular el **gradiente** de una función', cita: 'Semana 10', peso: '25 %', material: 'apuntes, semana 10' }], glosario: [{ termino: 'gradiente', definicion: 'El vector de las derivadas parciales: apunta hacia donde la función crece más rápido.' }, { termino: 'multiplicador', definicion: 'El número λ que iguala los gradientes en el método de Lagrange.' }], hitos: [{ id: 'H1', titulo: 'Gradiente', entregable: 'podrás calcular el gradiente y la derivada direccional', listo_cuando: 'resuelves un ejercicio del examen 1 sin mirar', depende: [], pasos: [{ id: 'H1.1', titulo: 'El gradiente', parte: 'A', requisitos: ['R1'] }] }, { id: 'H2', titulo: 'Multiplicadores de Lagrange', entregable: 'podrás hallar máximos con una restricción', listo_cuando: 'resuelves el ejercicio del examen 1', depende: ['H1'], pasos: [{ id: 'H2.1', titulo: 'El método', parte: 'A', requisitos: [] }] }], avisos: ['Olvidar comprobar los **bordes** del dominio.'], preguntas: [] };
-  const h1 = { id: 'H1', pasos: [{ id: 'H1.1', objetivo: 'Calcular el gradiente de cualquier función de dos variables.', clave: 'El **gradiente** apunta hacia donde la función sube más rápido.', teoria: 'Para $f(x,y)$, el gradiente es $\\nabla f = (f_x, f_y)$.\n\nSu **longitud** dice qué tan rápido sube: $$|\\nabla f| = \\sqrt{f_x^2 + f_y^2}$$', diagrama: '', ejemplos: [{ enunciado: 'Halla $\\nabla f$ para $f(x,y) = x^2 y$.', solucion: 'Derivamos: $f_x = 2xy$ y $f_y = x^2$.\n\nEntonces **$\\nabla f = (2xy, x^2)$**.' }], tu_turno: ['Calcula $\\nabla f$ para $f = e^{xy}$.'], codigo: [], librerias: [], esperado: '', comprueba: [{ pregunta: '¿Hacia dónde apunta el gradiente?', respuesta: 'Hacia donde la función **crece más rápido**.' }], defensa: [{ pregunta: 'Halla la derivada direccional de $f = xy$ en $(1,2)$ hacia $(3,4)/5$.', respuesta: '$\\nabla f = (2, 1)$; el producto con $(3,4)/5$ da **$2$**.' }], commit: '', reunion: '' }] };
+  const outline = { titulo: 'Examen 2', curso: 'Cálculo II', resumen: 'Optimización con varias variables.', de_que_trata: 'Entra la **optimización** de funciones de dos variables: dónde una función crece más rápido y cómo hallar máximos con una restricción.', diagrama: 'flowchart LR\n  A["eth0 gestión (ruta por defecto hacia Internet)"] --> B["Gradiente"] --> C["Lagrange"]', reglas: { entregables: [], calificacion: ['4 problemas de desarrollo, 25 % cada uno'], modalidad: 'Escrito, sin calculadora, 2 horas', defensa: '', fechas: ['4 de diciembre'] }, razonamiento: 'Tus apuntes cubren las semanas 9 a 11.', enunciado_textual: '', partes: [], requisitos: [{ id: 'R1', texto: 'Calcular el **gradiente** de una función', cita: 'Semana 10', peso: '25 %', material: 'apuntes, semana 10' }], glosario: [{ termino: 'gradiente', definicion: 'El vector de las derivadas parciales: apunta hacia donde la función crece más rápido.' }, { termino: 'multiplicador', definicion: 'El número λ que iguala los gradientes en el método de Lagrange.' }], hitos: [{ id: 'H1', titulo: 'Gradiente', entregable: 'podrás calcular el gradiente y la derivada direccional', listo_cuando: 'resuelves un ejercicio del examen 1 sin mirar', depende: [], pasos: [{ id: 'H1.1', titulo: 'El gradiente', parte: 'A', requisitos: ['R1'] }] }, { id: 'H2', titulo: 'Multiplicadores de Lagrange', entregable: 'podrás hallar máximos con una restricción', listo_cuando: 'resuelves el ejercicio del examen 1', depende: ['H1'], pasos: [{ id: 'H2.1', titulo: 'El método', parte: 'A', requisitos: [] }] }], avisos: ['Olvidar comprobar los **bordes** del dominio.'], preguntas: [] };
+  const h1 = { id: 'H1', pasos: [{ id: 'H1.1', objetivo: 'Calcular el gradiente de cualquier función de dos variables.', clave: 'El **gradiente** apunta hacia donde la función sube más rápido.', teoria: 'Para $f(x,y)$, el gradiente es $\\nabla f = (f_x, f_y)$.\n\nSu **longitud** dice qué tan rápido sube: $$|\\nabla f| = \\sqrt{f_x^2 + f_y^2}$$', diagrama: '', ejemplos: [{ enunciado: 'Halla $\\nabla f$ para $f(x,y) = x^2 y$.', solucion: 'Derivamos: $f_x = 2xy$ y $f_y = x^2$.\n\nEntonces **$\\nabla f = (2xy, x^2)$**.' }], tu_turno: ['Calcula $\\nabla f$ para $f = e^{xy}$.'], codigo: [{ archivo: 'calculo/gradiente.py', proposito: 'Calcula el gradiente con SymPy para comprobar tus cuentas.', lenguaje: 'python', codigo: 'import sympy as sp\nx, y = sp.symbols("x y")', lineas: [{ n: 1, explicacion: 'Importa **SymPy**.' }, { n: 2, explicacion: 'Crea los símbolos.' }] }, { archivo: 'terminal', proposito: 'Instala SymPy.', lenguaje: 'text', codigo: 'pip install sympy', lineas: [{ n: 1, explicacion: 'Lo instala.' }] }],
+    recorrido: { diagrama: 'flowchart LR\n  P["Punto"] --> G["Gradiente"] --> D["Dirección"]', pasos: [{ nodos: ['P'], texto: 'Partes de un punto.', comando: '' }, { nodos: ['P', 'G'], texto: 'Calculas el gradiente ahí.', comando: 'grad = (fx, fy)' }, { nodos: ['G', 'D'], texto: 'Apunta hacia donde sube más.', comando: '' }] }, librerias: [], esperado: '', comprueba: [{ pregunta: '¿Hacia dónde apunta el gradiente?', respuesta: 'Hacia donde la función **crece más rápido**.' }], defensa: [{ pregunta: 'Halla la derivada direccional de $f = xy$ en $(1,2)$ hacia $(3,4)/5$.', respuesta: '$\\nabla f = (2, 1)$; el producto con $(3,4)/5$ da **$2$**.' }], commit: '', reunion: '' }] };
   const id = (await B.js('return location.hash')).split('/')[2];
   await B.js(`const F = await import('https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-lite.js'); const { db, gzip, auth } = await import('/studium/assets/data.js');
     const pack = async (v) => F.Bytes.fromUint8Array(await gzip(JSON.stringify(v)));
@@ -125,6 +126,64 @@ try {
   const end = await B.js(`return document.querySelector('#cap-entrega')?.innerText ?? ''`);
   ok('final review: understood %, mock exam, flashcards', /Entiendes/.test(end) && /Simulacro/.test(end) && /Tarjetas de términos/.test(end), end.slice(0, 160));
 
+  // Code says its file; a walkthrough moves; the general figure is at hand; diagrams are not cut
+  const head1 = await B.js(`return [...document.querySelectorAll('#paso-H1\\\\.1 .fig.code .fh')].map((x) => x.innerText).join(' | ')`);
+  ok('code says its file, its path and its language («text» is gone)', /calculo\/gradiente\.py/.test(head1) && /python/i.test(head1) && /terminal/i.test(head1) && !/\bTEXT\b/i.test(head1), head1);
+  ok('…and what the file is for', /SymPy para comprobar/.test(await B.js(`return document.querySelector('#paso-H1\\\\.1 .fpurpose')?.textContent ?? ''`)));
+  await B.js(`document.querySelector('#paso-H1\\\\.1 figure.walk').scrollIntoView({ block: 'center' });`); await W(800);
+  const lit0 = await B.js(`return document.querySelectorAll('#paso-H1\\\\.1 figure.walk g.node.lit').length`);
+  await B.js(`document.querySelector('#paso-H1\\\\.1 figure.walk [data-go="1"]').click();`); await W(500);
+  const walk = await B.js(`const f = document.querySelector('#paso-H1\\\\.1 figure.walk'); return { lit: f.querySelectorAll('g.node.lit').length, edge: f.querySelectorAll('path.walk-edge').length, dot: f.querySelectorAll('.walk-dot').length, text: f.querySelector('.walk-steps li.on')?.innerText, n: f.querySelector('[data-walk-n]').textContent }`);
+  ok('the walkthrough lights its first frame', lit0 === 1, String(lit0));
+  ok('▶ moves to the next frame: two nodes, their edge, a travelling dot, the command', walk.lit === 2 && walk.edge === 1 && walk.dot === 1 && /gradiente ahí/.test(walk.text) && /grad =/.test(walk.text) && walk.n === '2 de 3', JSON.stringify(walk));
+  await W(400); await B.shot('14-recorrido');
+  await B.js(`document.querySelector('nav.top [data-tj="figure"]').click();`); await W(1500);
+  ok('«🗺 Diagrama» shows the general figure over the guide', await B.js(`return !!document.querySelector('.tj-figpop svg')`));
+  const cut = await B.js(`return [...document.querySelectorAll('.tj-figpop svg g.node')].map((g) => { const fo = g.querySelector('foreignObject'); const d = fo?.querySelector('div, span'); if (!fo || !d) return 0; return d.scrollWidth - fo.getBoundingClientRect().width; }).filter((x) => x > 2).length`);
+  ok('a long label is not cut', cut === 0, String(cut));
+  await B.shot('15-diagrama-general');
+  await B.js(`document.querySelector('nav.top [data-tj="figure"]').click();`);
+  // Every template, light and dark
+  for (const tpl of ['cuaderno', 'pizarra', 'revista']) {
+    for (const mode of ['light', 'dark']) {
+      await B.js(`const a = document.querySelector('.tjg-app'); a.dataset.template = '${tpl}'; a.dataset.theme = '${mode}'; document.querySelector('#cap-inicio').scrollIntoView();`);
+      await W(300);
+      const c = await B.js(`const a = document.querySelector('.tjg-app'); const lum = (rgb) => { const [r, g, b] = rgb.match(/[\\d.]+/g).map(Number); return (0.299 * r + 0.587 * g + 0.114 * b) / 255; }; const bg = getComputedStyle(a).backgroundColor; const trap = document.querySelector('.trap'); return { bg: lum(bg), trap: trap ? Math.abs(lum(getComputedStyle(trap).backgroundColor) - lum(getComputedStyle(trap).color)) : 1 };`);
+      ok(`${tpl} ${mode}: the page is ${mode}, «Ojo con» readable`, (mode === 'dark' ? c.bg < 0.3 : c.bg > 0.7) && c.trap > 0.4, JSON.stringify(c));
+      await B.shot(`16-${tpl}-${mode}`);
+    }
+  }
+  await B.js(`const a = document.querySelector('.tjg-app'); a.dataset.template = 'cuaderno'; a.dataset.theme = 'light';`);
+
+  // Sharing: by link, read by another account; private again
+  await B.js(`document.querySelector('nav.top [data-tj="share-open"]').click();`); await W(400);
+  ok('the owner finds «¿Quién ve esta guía?» in the guide', /Quién ve esta guía/.test(await B.js(`return document.querySelector('.tj-sharepop')?.innerText ?? ''`)));
+  await B.js(`document.querySelector('.tj-sharepop input[value="link"]').click(); document.querySelector('.tj-sharepop [type=submit]').click();`);
+  await B.wait(`/Con enlace/.test(document.querySelector('nav.top [data-tj="share-open"]')?.textContent)`, 15000);
+  ok('shared by link: the top bar says so', true);
+  await B.shot('17-compartir');
+  if (READER) {
+    const R = JSON.parse(readFileSync(READER, 'utf8'));
+    const C = await open({ shots: SHOTS, port: 9335 });
+    await C.go(`${BASE}#/entrar`);
+    await C.wait(`document.querySelector('input[type=password]')?.offsetParent`);
+    await C.js(`const f = [...document.querySelectorAll('input')].filter((i) => i.offsetParent); const em = f.find((i) => i.type === 'email' || /mail/i.test(i.name)); const pw = f.find((i) => i.type === 'password'); em.value = ${JSON.stringify(R.email)}; pw.value = ${JSON.stringify(R.password)}; em.dispatchEvent(new Event('input', { bubbles: true })); pw.dispatchEvent(new Event('input', { bubbles: true })); pw.form.requestSubmit();`);
+    await W(2500);
+    await C.js(`location.hash = '#/estudio/${id}';`);
+    await C.wait(`document.querySelector('#tjg-body .tjg-app')`, 20000); await W(1500);
+    const rt = await C.js(`return document.querySelector('#tjg-body')?.innerText ?? ''`);
+    ok('another account reads the shared guide', /Gradiente/.test(rt) && /(Solo|Only) lectura/i.test(rt) && /compartida por/.test(rt), rt.slice(0, 160));
+    ok('…without the owner\'s marks, buttons or material', !/Lo practiqué|Tu material, tal cual|Ajustar/.test(rt));
+    await C.shot('18-lector');
+    await B.js(`document.querySelector('nav.top [data-tj="share-open"]').click();`); await W(400);
+    await B.js(`document.querySelector('.tj-sharepop input[value="private"]').click(); document.querySelector('.tj-sharepop [type=submit]').click();`);
+    await B.wait(`/Privada/.test(document.querySelector('nav.top [data-tj="share-open"]')?.textContent)`, 15000);
+    await C.js(`location.hash = '#/guias';`); await W(800); await C.js(`location.reload();`); await W(2500);
+    await C.js(`location.hash = '#/estudio/${id}';`); await W(3000);
+    ok('private again: the other account no longer reads it', /no existe, o no es tuya/.test(await C.js(`return document.querySelector('#tjg-body')?.innerText ?? ''`)));
+    C.close();
+  }
+
   // «Tus guías» and a draft
   await B.js(`location.hash = '#/guias';`);
   await B.wait(`document.querySelector('#my-guides .tj-card')`);
@@ -145,6 +204,9 @@ try {
   ok('Trabajos does not list study guides', !/Examen 2/.test(await B.js(`return document.querySelector('#tj-body')?.innerText ?? ''`)));
 } catch (e) {
   ok('ran to the end', false, e.message);
+  console.log('STATE', await B.js(`return JSON.stringify({ hash: location.hash, wiz: document.querySelector('#eg-body #tj-wizard')?.dataset.d, shelf: document.querySelector('#my-guides')?.innerText.slice(0, 300), hidden: document.querySelector('#my-guides')?.hidden })`).catch((x) => x.message));
+  console.log(B.logs.slice(-8).join('
+'));
   await B.shot('99-error').catch(() => {});
 } finally {
   const errs = B.logs.filter((l) => /EXCEPTION|ERROR/.test(l) && !/favicon|net::ERR|Failed to load resource/.test(l));

@@ -7,7 +7,7 @@
 // the group downloads the citation of how AI was used.
 // Data (firestore.rules, «Trabajos»): trabajos/{tid} with miembros, partes, hitos, avance and ia; misTrabajos/{uid}.
 import {
-  doc, getDoc, getDocs, setDoc, deleteDoc, collection, writeBatch, serverTimestamp, Bytes,
+  doc, getDoc, getDocs, setDoc, deleteDoc, collection, writeBatch, serverTimestamp, Bytes, query, where, limit,
 } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-lite.js';
 import { db, auth, gzip, gunzip, loadProfile } from './data.js';
 import * as ai from './ai.js';
@@ -129,10 +129,79 @@ async function loadTrabajo(tid) {
   for (const l of ia.docs) t.ia[l.id] = l.data().log ?? [];
   return t;
 }
+/* ---------- who sees the guide: private, by link, public ---------- */
+// His words: he did not find natively where to set who sees a guide (private, shared by link, public). The trabajo
+// itself never leaves its group (its invitation code would let anyone in): what is shared is a read-only copy in
+// publicas/{tid} (firestore.rules), the outline and the chapters, plus the statement of a trabajo. Never the members,
+// the progress, the AI log or a student's own notes. The owner's copy follows the guide after every write of the AI.
+const VIS = {
+  private: { icon: '🔒', name: 'Privada' },
+  link: { icon: '🔗', name: 'Con enlace' },
+  public: { icon: '🌍', name: 'Pública' },
+};
+const visOf = (t = T) => (VIS[t?.prefs?.visibility] ? t.prefs.visibility : 'private');
+const pRef = (tid, ...rest) => doc(db, 'publicas', tid, ...rest);
+async function loadPublic(tid) {
+  const snap = await getDoc(pRef(tid));
+  if (!snap.exists()) return null;
+  const d = snap.data();
+  const hitos = {};
+  for (const h of (await getDocs(collection(db, 'publicas', tid, 'hitos'))).docs) { try { hitos[h.id] = JSON.parse(await unpack(h.data().data)); } catch { /* skipped */ } }
+  return {
+    id: tid, viewer: uid(), readonly: true, title: d.title, course: d.course ?? '', deadline: d.deadline ?? '', owner: d.owner, ownerName: d.ownerName ?? '',
+    prefs: { kind: d.kind === 'estudio' ? 'estudio' : undefined, template: d.template, visibility: d.visibility },
+    statement: d.statement ? await unpack(d.statement) : '', outline: JSON.parse(await unpack(d.outline)),
+    members: [], taken: {}, hitos, avance: {}, ia: {}, parts: 1,
+  };
+}
+async function publishCopy(vis) {
+  if (!T?.outline) throw new Error('Primero tu IA tiene que escribir la guía.');
+  const batch = writeBatch(db);
+  batch.set(pRef(T.id), {
+    title: String(T.title).slice(0, 160), course: String(T.course ?? '').slice(0, 120), kind: study() ? 'estudio' : 'trabajo', visibility: vis, owner: uid(),
+    ownerName: (await myName()).slice(0, 40), outline: await pack({ ...T.outline, razonamiento: undefined }), template: templateOf(), deadline: String(T.deadline ?? '').slice(0, 40),
+    ...(study() ? {} : { statement: await fitStatement(T.statement ?? '') }), encoding: 'gzip', updated: serverTimestamp(),
+  });
+  for (const [hid, h] of Object.entries(T.hitos)) { const { by: _b, ai: _a, ...data } = h; batch.set(pRef(T.id, 'hitos', hid), { data: await pack(data), encoding: 'gzip', updated: serverTimestamp() }); }
+  await batch.commit();
+}
+async function unpublish() {
+  const batch = writeBatch(db);
+  for (const h of (await getDocs(collection(db, 'publicas', T.id, 'hitos')).catch(() => null))?.docs ?? []) batch.delete(h.ref);
+  batch.delete(pRef(T.id));
+  await batch.commit().catch((e) => { if (!/not-found|permission/i.test(String(e?.code ?? e))) throw e; });
+}
+async function setVisibility(vis) {
+  if (vis === 'private') await unpublish(); else await publishCopy(vis);
+  T.prefs = { ...(T.prefs ?? {}), visibility: vis };
+  await setDoc(tRef(T.id), { prefs: T.prefs, updated: serverTimestamp() }, { merge: true });
+}
+let syncing = null;
+function syncPublic() {
+  if (!T || T.readonly || T.owner !== uid() || visOf() === 'private') return;
+  clearTimeout(syncing);
+  const tid = T.id;
+  syncing = setTimeout(() => { if (T?.id === tid) publishCopy(visOf()).catch((e) => console.warn('public copy', e)); }, 1500);
+}
+const shareLink = () => `${location.origin}${location.pathname}#/${study() ? 'estudio' : 'trabajos'}/${T.id}`;
+function sharePanel() {
+  const now = visOf();
+  const s = study();
+  const opt = (v, why) => `<label class="tj-pick ${now === v ? 'on' : ''}"><input type="radio" name="vis" value="${v}" ${now === v ? 'checked' : ''}> <span><b>${VIS[v].icon} ${VIS[v].name}</b><br><small>${why}</small></span></label>`;
+  return `<form class="tj-sharecard" data-share-form><div class="tj-fighead"><b>¿Quién ve esta guía?</b><button type="button" class="ask" data-tj="share-close">Cerrar</button></div>
+      ${opt('private', s ? 'Solo tú.' : 'Solo los miembros del grupo, los que invitas.')}
+      ${opt('link', 'Cualquiera con una cuenta de Studium que tenga el enlace puede leerla. No aparece en ninguna lista.')}
+      ${opt('public', 'Aparece en Guías para todos en Studium, con tu nombre.')}
+      ${s ? '' : `<p class="tj-warn small" data-share-warn ${now === 'private' ? 'hidden' : ''}>Antes de compartirla: si el trabajo todavía no se entrega, otros grupos podrían copiarlo; y si el enunciado pide que no se publique (por ejemplo, un repositorio privado), déjala privada.</p>`}
+      <p class="mut small">Se comparte ${s ? 'la guía, sin tu material ni lo que marcaste' : 'la guía y el enunciado; nunca los miembros, el avance ni el registro de uso de IA'}. Quien la abre la lee sin poder cambiar nada. Cuando tu IA la ajusta, la copia compartida se actualiza sola.</p>
+      <p class="tj-sharelink" ${now === 'private' ? 'hidden' : ''}><input readonly value="${esc(shareLink())}" aria-label="Enlace de la guía"> <button type="button" class="act" data-tj="share-copy">Copiar el enlace</button></p>
+      <p><button type="submit" class="act">Guardar</button> <span class="mut small" data-share-status role="status"></span></p></form>`;
+}
 async function saveAvance() {
   await setDoc(tRef(T.id, 'avance', uid()), { steps: T.avance[uid()] ?? {}, updated: serverTimestamp() });
 }
 async function logAI(entry) {
+  if (entry.task === 'solution') syncPublic();
   const log = [...(T.ia[uid()] ?? []), { at: new Date().toISOString(), ...entry, prompt: String(entry.prompt ?? '').slice(0, MAX_PROMPT) }].slice(-MAX_LOG);
   T.ia[uid()] = log;
   await setDoc(tRef(T.id, 'ia', uid()), { log, updated: serverTimestamp() }).catch((e) => console.warn('ia log', e));
@@ -384,6 +453,7 @@ async function applyAdjust(list, box) {
 }
 async function undoAdjust() {
   if (!undo) return;
+  setTimeout(syncPublic, 0);
   const u = undo;
   undo = null;
   if (u.changed.includes('esquema') && T.owner === uid()) { await setDoc(tRef(T.id), { outline: await pack(u.outline), updated: serverTimestamp() }, { merge: true }); T.outline = u.outline; }
@@ -586,6 +656,13 @@ function saveDraft() {
   }, 300);
 }
 // A trabajo's list shows its drafts; Estudiar's shows the drafts of study guides.
+// Saved at once, waiting for the database: «Guardar y salir» leaves only once the draft is really kept.
+async function saveDraftNow() {
+  if (!draft || !uid()) return;
+  clearTimeout(saving);
+  const keep = { ...draft, pairing: false, owner: uid(), saved: Date.now() };
+  await draftStore('readwrite', (st) => st.put(keep, keep.id)).catch((e) => console.warn('draft', e));
+}
 const listDrafts = (kind = '') => draftStore('readonly', (st) => st.getAll()).then((all) => (all ?? []).filter((d) => d.owner === uid() && d.kind !== 'files' && (d.kind ?? '') === kind).sort((a, b) => b.saved - a.saved)).catch(() => []);
 const dropDraft = (id) => draftStore('readwrite', (st) => st.delete(id)).catch(() => {});
 const getDraft = (id) => draftStore('readonly', (st) => st.get(id)).catch(() => null);
@@ -624,7 +701,7 @@ async function renderList() {
           <a href="#/trabajos/${esc(r.id)}">Abrir la guía</a>
           <button type="button" data-tj="share" data-id="${esc(r.id)}" data-code="${esc(r.code)}">Invitar a mi grupo</button>
           ${r.owner === uid() ? `<button type="button" data-tj="edit-open" data-id="${esc(r.id)}">Editar los datos</button>` : ''}
-          <span class="tj-menu-note">Lo ven <b>solo los miembros</b> del grupo: quienes invitas.</span>
+          <span class="tj-menu-note">${visOf(r) === 'private' ? 'Lo ven <b>solo los miembros</b> del grupo: quienes invitas.' : visOf(r) === 'link' ? '🔗 Lo lee <b>quien tenga el enlace</b>; el avance sigue siendo del grupo.' : '🌍 <b>Pública</b> en Guías; el avance sigue siendo del grupo.'} Cámbialo en la guía, arriba.</span>
           ${r.owner === uid() ? `<button type="button" class="danger" data-tj="delete-ask" data-id="${esc(r.id)}">Eliminar…</button>` : `<button type="button" class="danger" data-tj="leave-ask" data-id="${esc(r.id)}">Salir del trabajo…</button>`}
         </div></details>
         <div class="tj-card-extra" data-extra></div></div>`).join('')}</div>` : '<p class="fine">Todavía no tienes trabajos.</p>'}`;
@@ -635,6 +712,9 @@ let listRows = [];
 function cardExtra(id, html) { const el = root.querySelector(`.tj-card[data-id="${CSS.escape(id)}"] [data-extra]`); if (el) el.innerHTML = html; root.querySelectorAll('.tj-menu[open]').forEach((m) => { m.open = false; }); }
 // Deleting a trabajo: its parts the owner may remove first (the rules let the owner clean them), then the trabajo.
 async function deleteTrabajo(id) {
+  const shared = await getDocs(collection(db, 'publicas', id, 'hitos')).catch(() => null);
+  for (const d of shared?.docs ?? []) await deleteDoc(d.ref).catch(() => {});
+  await deleteDoc(doc(db, 'publicas', id)).catch(() => {});
   for (const sub of ['hitos', 'partes', 'avance', 'ia', 'disponible', 'reunion', 'miembros']) {
     const snap = await getDocs(collection(db, 'trabajos', id, sub)).catch(() => null);
     for (const d of snap?.docs ?? []) if (sub !== 'miembros' || d.id !== uid()) await deleteDoc(d.ref).catch(() => {});
@@ -828,6 +908,26 @@ export async function startStudy(preset = {}) {
   saveDraft();
   location.hash = '#/estudiar/guia';
 }
+// Who made each file brought (his words: the professor's instructions and files come first; what the group or an AI
+// made is progress, with its due notes). Guessed from the name, changed by the person; the AI reads it as a tag.
+const ROLES = { trabajo: [['prof', 'Del profe'], ['avance', 'Nuestro avance'], ['otro', 'Otro']], estudio: [['prof', 'Del profe'], ['mio', 'Mis apuntes'], ['otro', 'Otro']] };
+const ROLE_WORDS = { prof: 'del profesor', avance: 'avance del grupo', mio: 'apuntes del estudiante', otro: 'otro material' };
+const PROF = /(enunciado|r[uú]brica|instrucci|consigna|lab(oratorio)?[\s_-]?\d|deber|tarea|proyecto|examen|prueba|parcial|s[ií]labo|syllabus|programa|diapositiva|slides?|clase|cap[ií]tulo|tema[\s_-]?\d|semana|gu[ií]a[\s_-]de[\s_-]lab|plantilla|template|starter|inicio)/i;
+const OWN = /(soluci[oó]n|nuestr|avance|borrador|draft|mi[\s_-]|mis[\s_-]|apunte|nota|resumen|claude|chatgpt|gpt|gemini|ia[\s_-]|salida|output|respuesta)/i;
+function roleOf(f, d = draft) {
+  const key = `${f.name}|${f.size}`;
+  const set = d?.roles?.[key];
+  if (set) return set;
+  const own = isStudy(d) ? 'mio' : 'avance';
+  if (OWN.test(f.name)) return own;
+  if (PROF.test(f.name)) return 'prof';
+  return isStudy(d) ? 'mio' : 'prof';
+}
+function roleSelect(f, i) {
+  const now = roleOf(f);
+  return `<select class="tj-role" data-tj-role="${i}" aria-label="De quién es ${esc(f.name)}">${ROLES[isStudy(draft) ? 'estudio' : 'trabajo'].map(([v, l]) => `<option value="${v}" ${v === now ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+}
+const roleHint = () => `<p class="fine tj-rolehint">Marca de quién es cada archivo: lo <b>del profe</b> manda; ${isStudy(draft) ? 'tus apuntes' : 'su avance'} y lo que escribió una IA se toman como avance.</p>`;
 const sameFile = (a, b) => a.name === b.name && a.size === b.size && a.lastModified === b.lastModified;
 // A folder brought whole: its files keep their place in it («carpeta/sub/archivo.py»). Skipped: hidden files and the
 // folders that are never material (git, dependencies, caches); at most 400 files and 40 MB.
@@ -900,7 +1000,7 @@ function renderDraft(error = '') {
         ${draft.broughtFolder ? `<span class="fine">Trajiste la carpeta <b>${esc(draft.broughtFolder)}</b>${draft.folderNote ? ` (${esc(draft.folderNote)})` : ''}. Si tu IA trabaja con el puente, en «Tu IA» puedes hacer que trabaje directamente en ella.</span>` : ''}</p>
       ${draft.kept ? `<p class="tj-kept">Ya está guardado ${isStudy(draft) ? 'el material' : 'el enunciado'} que trajiste${draft.kept.files.length ? `, con ${draft.kept.files.slice(0, 4).map((f) => `«${esc(f.name)}»`).join(', ')}${draft.kept.files.length > 4 ? ` y ${draft.kept.files.length - 4} más` : ''}` : ''}. Lo que traigas ahora se agrega a eso.</p>` : ''}
       ${draft.unread?.length ? `<p class="tj-warn">No pude leer ${draft.unread.map((n) => `«${esc(n)}»`).join(', ')}: puede que esté abierto en otro programa, se haya movido o se esté sincronizando (OneDrive). Ciérralo o espera, y vuelve a traerlo.</p>` : ''}
-      ${draft.files.length ? `<ul class="tj-files">${draft.files.slice(0, 8).map((f, i) => `<li><span>${esc(f.name)}</span><small>${sizeText(f.size)}</small><button type="button" class="link" data-tj="drop-file" data-i="${i}" aria-label="Quitar ${esc(f.name)}">quitar</button></li>`).join('')}${draft.files.length > 8 ? `<li class="fine">y ${draft.files.length - 8} archivos más · <button type="button" class="link" data-tj="drop-all">quitar todos</button></li>` : ''}</ul>` : ''}
+      ${draft.files.length ? `${roleHint()}<ul class="tj-files">${draft.files.slice(0, 8).map((f, i) => `<li><span>${esc(f.name)}</span>${roleSelect(f, i)}<small>${sizeText(f.size)}</small><button type="button" class="link" data-tj="drop-file" data-i="${i}" aria-label="Quitar ${esc(f.name)}">quitar</button></li>`).join('')}${draft.files.length > 8 ? `<li class="fine">y ${draft.files.length - 8} archivos más · <button type="button" class="link" data-tj="drop-all">quitar todos</button></li>` : ''}</ul>` : ''}
       ${draft.pasting || draft.text ? `<textarea class="tj-paste plain" name="text" rows="5" placeholder="${isStudy(draft) ? 'Pega aquí tus apuntes, el temario o lo que entra' : 'Pega aquí el enunciado y la rúbrica'}">${esc(draft.text)}</textarea>` : '<button type="button" class="link" data-tj="paste">Prefiero pegar el texto</button>'}
       ${isStudy(draft) ? graphLine() : ''}`;
   }
@@ -982,7 +1082,7 @@ function renderDraft(error = '') {
       ${ai.promptHTML((ai.choice('solution').provider === 'bridge:claude' && draft.prefs.writeAll !== 'outline' && !ai.bridgeOld() ? wholePrompt : outlinePrompt)({ parts: draft.parts, course: draft.course, deadline: deadlineText(draftDeadline()), prefs: s ? studyPrefs(draft) : draft.prefs }), '', s ? 'tu material' : 'el enunciado y lo que trajiste')}
       <p class="tj-vis">${s ? '🔒 Solo la ves tú.' : '🔒 Lo ven solo tú y quienes invites después: tus amigos de Studium, o quien tenga su enlace.'}</p>`;
   }
-  root.innerHTML = `<form class="tj-wizard panel glass" id="tj-wizard">
+  root.innerHTML = `<form class="tj-wizard panel glass" id="tj-wizard" data-d="${esc(draft.id)}" data-at="${draft.at}">
       <div class="tj-dots" aria-hidden="true">${dots}</div>
       ${draft.tid ? `<p class="tj-editing">Estás cambiando las respuestas de ${isStudy(draft) ? 'una guía' : 'un trabajo'} que ya creaste: «Atrás» llega a cualquier pregunta, y al final tu IA escribe la guía con lo nuevo.</p>` : ''}
       <h1>${esc(q.ask)}</h1>
@@ -1052,18 +1152,19 @@ function nextQuestion() {
 
 // Everything brought, read in the browser as Studium reads any material (files.js): its text goes in the statement,
 // its PDFs and pictures go to the AI as they are.
-async function readAll(files) {
+async function readAll(files, d = draft) {
   const texts = [];
   const binaries = [];
   const notes = [];
   for (const file of files) {
+    const tag = `[${ROLE_WORDS[roleOf(file, d)] ?? 'otro material'}]`;
     let p;
     try { p = await prepare(file); } catch (e) { notes.push(`«${file.name}» no se pudo leer (${e.name === 'NotReadableError' ? 'cambió en tu computadora después de traerlo' : e.message}): quítalo y tráelo de nuevo`); continue; }
     if (p.skipped) { notes.push(`${p.name}: ${p.skipped}`); continue; }
     for (const u of p.units.filter((x) => x.selected !== false)) {
       for (const part of await u.make()) {
-        if (part.text) texts.push(`# ${part.name}\n\n${part.text}`);
-        else binaries.push(part);
+        if (part.text) texts.push(`# ${tag} ${part.name}\n\n${part.text}`);
+        else binaries.push({ ...part, role: tag });
       }
     }
     for (const n of p.notes ?? []) notes.push(n);
@@ -1152,7 +1253,7 @@ async function createTrabajo() {
   const batch = writeBatch(db);
   batch.set(ref, {
     title: titleOf(draft).slice(0, 160), course: draft.course.slice(0, 120), group: draft.group.slice(0, 80), deadline: draftDeadline(), prefs: { ...draft.prefs, inFolder: !!(draft.workspace && draft.workspace !== 'temp') },
-    parts: s ? 1 : draft.parts, owner: uid(), code, ...repoOf(draft.prefs), statement: await fitStatement(statement + (binaries.length ? `\n\n(Archivos entregados a la IA tal como son: ${binaries.map((p) => p.name).join(', ')})` : '')),
+    parts: s ? 1 : draft.parts, owner: uid(), code, ...repoOf(draft.prefs), statement: await fitStatement(statement + (binaries.length ? `\n\n(Archivos entregados a la IA tal como son: ${binaries.map((p) => `${p.role ?? ''} ${p.name}`.trim()).join(', ')})` : '')),
     encoding: 'gzip', created: serverTimestamp(), updated: serverTimestamp(),
   });
   batch.set(doc(db, 'trabajos', ref.id, 'miembros', uid()), { name: await myName(), code, joined: serverTimestamp() });
@@ -1286,6 +1387,12 @@ async function join(form) {
 // chapters and a progress line, a hero, numbered chapter bands, steps with the theory beside what to expect, the code
 // with each line explained, and the questions folded. Its own light and dark theme, kept in this browser.
 const THEME = 'studium-tjg-theme';
+// Light or dark: the reader's choice, kept in this browser; else the system's. Every template has both.
+function themeNow() {
+  let t = '';
+  try { t = localStorage.getItem(THEME) ?? ''; } catch { /* the system's */ }
+  return t === 'light' || t === 'dark' ? t : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
 const steps = () => (T.outline?.hitos ?? []).flatMap((h, i) => h.pasos.map((p, j) => ({ ...p, hito: h.id, num: `${i + 1}.${j + 1}` })));
 const partOf = (u) => Object.entries(T.taken).find(([, x]) => x === u)?.[0] ?? '';
 const myPart = () => partOf(uid());
@@ -1336,14 +1443,16 @@ function topbar() {
   const caps = T.outline ? (s ? [['inicio', '0 · Qué entra'], ...T.outline.hitos.map((h, i) => [h.id, `${i + 1} · ${short(h.titulo)}`]), ['entrega', '✓ · Repaso']]
     : [['inicio', '0 · El trabajo'], ['reunion', '◷ · Reunirse'], ...T.outline.hitos.map((h, i) => [h.id, `${i + 1} · ${short(h.titulo)}`]), ['entrega', '✓ · Entregar']]) : [];
   return `<nav class="top"><div class="in">
-      <a class="back" href="${s ? '#/guias' : '#/trabajos'}" title="Volver a Studium">← Studium</a>
+      <a class="back" href="${s || T.readonly ? '#/guias' : '#/trabajos'}" title="Volver a Studium">← Studium</a>
       <span class="brand">${esc(short((T.course || T.title).toUpperCase(), 26))} · ${s ? 'GUÍA DE ESTUDIO' : 'GUÍA DE SOLUCIÓN'}</span>
       ${caps.map(([id, label]) => `<a href="#cap-${esc(id)}" data-tj="jump" data-cap="${esc(id)}">${esc(label)}</a>`).join('')}
       <span class="sp"></span>
+      ${T.outline?.diagrama ? '<button type="button" data-tj="figure" title="Ver el diagrama general, sin perder tu lugar">🗺 Diagrama</button>' : ''}
+      ${T.readonly ? '<span class="ro-tag">Solo lectura</span>' : T.owner === uid() ? `<button type="button" data-tj="share-open" title="Quién ve esta guía">${VIS[visOf()].icon} ${VIS[visOf()].name}</button>` : `<span class="ro-tag" title="Quién ve esta guía">${VIS[visOf()].icon} ${VIS[visOf()].name}</span>`}
       ${myPart() ? `<label class="mine"><input type="checkbox" data-tj="mine" ${onlyMine ? 'checked' : ''}> Solo mi parte</label>` : ''}
       <span class="pct" title="${s ? 'Conceptos que ya entiendes' : 'Pasos hechos por el grupo'}">${s ? pct(all.filter((x) => mark(x.id).u).length, all.length) : total}%</span>
       <select data-tj-template aria-label="Plantilla de la guía">${Object.entries(TEMPLATES).map(([k, v]) => `<option value="${k}" ${templateOf() === k ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>
-      <button type="button" data-tj="theme">Claro / oscuro</button>
+      <button type="button" data-tj="theme" title="Cambiar entre claro y oscuro">${themeNow() === 'dark' ? '☀ Claro' : '☾ Oscuro'}</button>
     </div><div class="prog" style="width:${s ? pct(all.filter((x) => mark(x.id).u).length, all.length) : total}%"></div></nav>`;
 }
 
@@ -1354,8 +1463,14 @@ function hero() {
     const left = days === null ? '' : days > 1 ? ` · faltan ${days} días` : days === 1 ? ' · es mañana' : days === 0 ? ' · es hoy' : '';
     return `<header class="hero">
       <div><h1 class="no-i18n">${esc(T.title)}</h1>
+      ${T.readonly ? `<p class="ro-note">Guía compartida por <b class="no-i18n">${esc(T.ownerName || 'alguien de Studium')}</b>. La lees tal como la escribió; no se puede cambiar desde aquí.</p>` : ''}
       <p>Guía de estudio${T.course ? ` · <span class="no-i18n">${esc(T.course)}</span>` : ''}${T.deadline ? ` · ${esc(deadlineText(T.deadline))}${left}` : ''} · pasa el cursor sobre lo subrayado con puntos para ver su definición</p></div>
     </header>`;
+  }
+  if (T.readonly) {
+    return `<header class="hero"><div><h1 class="no-i18n">${esc(T.title)}</h1>
+      <p class="ro-note">Guía de solución compartida por <b class="no-i18n">${esc(T.ownerName || 'alguien de Studium')}</b>. La lees tal como la escribió su grupo; no se puede cambiar desde aquí.</p>
+      <p>Guía de solución${T.course ? ` · ${esc(T.course)}` : ''}</p></div></header>`;
   }
   return `<header class="hero">
       <div><h1 class="no-i18n">${esc(T.title)}</h1>
@@ -1377,7 +1492,7 @@ function stepChecks(key, label, doneWord = study() ? 'Lo practiqué' : 'Lo hice'
       <label class="tick ${m.d ? 'on' : ''}"><input type="checkbox" data-tj="d" data-key="${esc(key)}" ${m.d ? 'checked' : ''}> ${doneWord}</label>
       <label class="tick ${m.u ? 'on' : ''}"><input type="checkbox" data-tj="u" data-key="${esc(key)}" ${m.u ? 'checked' : ''}> Lo entiendo</label>
       <button type="button" class="ask" data-tj="ask" data-key="${esc(key)}" data-label="${esc(label)}">No lo entiendo</button>
-      ${others.length ? `<span class="mut">Ya lo hizo ${esc(others.join(', '))}</span>` : ''}${m.c ? `<span class="mut mono">commit ${esc(m.c.slice(0, 7))}</span>` : ''}
+      ${others.length ? `<span class="who-did" title="Ya lo hizo: ${esc(others.join(', '))}">${doneBy(key).filter((x) => x.uid !== uid()).map((x) => avatar(partOf(x.uid), x.name)).join('')}<span class="mut small">${others.length === 1 ? esc(others[0]) : `${others.length} del grupo`}</span></span>` : ''}${m.c ? `<span class="mut mono">commit ${esc(m.c.slice(0, 7))}</span>` : ''}
     </div>${a ? `<div class="answer">${a.busy ? '<span class="mut">Tu IA te lo está explicando…</span>' : a.error ? `<span class="bad">${esc(a.error)}</span>` : `${md(a.text)}<p class="mut small">Explicado por ${esc(a.model)}.</p>`}</div>` : ''}`;
 }
 
@@ -1402,9 +1517,9 @@ function studyIntro() {
           ${o.razonamiento ? `<details class="q reading"><summary class="qh">Cómo leyó tu IA el material</summary><div class="ans no-i18n">${md(o.razonamiento)}</div></details>` : ''}</div></div>
       ${reqs.length ? `<h3>Lo que tienes que saber hacer</h3><p>Al terminar la guía, cada una de estas cosas te sale sola. Márcalas cuando las domines.</p>
         <ul class="tight no-i18n">${reqs.map((x) => `<li>${inline(x.texto)}${x.peso ? ` <span class="wt">${esc(x.peso)}</span>` : ''}${x.material ? ` <span class="mut small">· ${esc(x.material)}</span>` : ''}</li>`).join('')}</ul>` : ''}
-      <div class="card source"><h3>Tu material, tal cual</h3>
+      ${T.readonly ? '' : `<div class="card source"><h3>Tu material, tal cual</h3>
         <p class="mut">Lo que leyó tu IA para escribir la guía: tus archivos${/# Studium: contexto/.test(T.statement ?? '') ? ' y lo que la comunidad sabe de la materia' : ''}.</p>
-        <details class="q"><summary class="qh">Ver el material</summary><pre class="src">${esc(T.statement)}</pre></details></div>
+        <details class="q"><summary class="qh">Ver el material</summary><pre class="src">${esc(T.statement)}</pre></details></div>`}
       ${missing ? `<div class="card soft"><p>${missing === o.hitos.length ? 'Los temas todavía no están escritos.' : missing === 1 ? 'Falta un tema por escribir.' : `Faltan ${missing} temas por escribir.`} Quedó lo que tu IA alcanzó a escribir.</p>${aiBlock('solution')}<p><button type="button" class="act" data-tj="gen-all">Escribir ${missing === 1 ? 'el tema que falta' : `los ${missing} temas`}</button> <span class="mut" id="tj-gen-status" role="status"></span></p></div>` : ''}
       ${(o.preguntas ?? []).length && !T.prefs?.answers ? `<div class="card soft questions"><h4>Antes de seguir, tu IA quiere confirmar contigo</h4>
         ${o.preguntas.map((q, i) => `<label class="qa"><b>${esc(q.pregunta)}</b>${q.por_que ? `<span class="mut small">${esc(q.por_que)}</span>` : ''}<textarea data-tj-answer="${i}" rows="2" placeholder="Tu respuesta"></textarea></label>`).join('')}
@@ -1475,13 +1590,94 @@ function rulesBlock() {
 }
 
 let MEET = { at: '', others: new Set(), html: '' };
+// A language as a person reads it: «text» said nothing (his words: «solo dice TEXT»); the file's extension tells more.
+const LANGS = { python: 'Python', py: 'Python', yaml: 'YAML · configuración', yml: 'YAML · configuración', bash: 'Bash · terminal', sh: 'Bash · terminal', shell: 'Terminal', powershell: 'PowerShell', ps1: 'PowerShell', json: 'JSON · datos', js: 'JavaScript', javascript: 'JavaScript', ts: 'TypeScript', java: 'Java', c: 'C', cpp: 'C++', 'c++': 'C++', sql: 'SQL', r: 'R', html: 'HTML', css: 'CSS', cisco: 'Cisco IOS', ios: 'Cisco IOS', dockerfile: 'Dockerfile', ini: 'Configuración', conf: 'Configuración', cfg: 'Configuración', toml: 'TOML · configuración', md: 'Markdown', csv: 'CSV · datos', latex: 'LaTeX', tex: 'LaTeX', matlab: 'MATLAB', m: 'MATLAB' };
+function langName(lang, file = '') {
+  const l = String(lang ?? '').toLowerCase().trim();
+  if (LANGS[l]) return LANGS[l];
+  const ext = (String(file).match(/\.([a-z0-9+]+)$/i)?.[1] ?? '').toLowerCase();
+  if (LANGS[ext]) return LANGS[ext];
+  if (/^(text|plain|plaintext|txt|)$/.test(l)) return /^(terminal|consola)$/i.test(file) ? 'Terminal' : 'Archivo de texto';
+  return l;
+}
+// «Recorrido»: a process that moves (a packet crossing the network, a configuration applied command by command), drawn
+// once and animated frame by frame: the nodes of each frame light up, a dot travels between them, the sentence and the
+// command of that frame show below. ◀ ▶ and ▶ Reproducir.
+function walkHTML(key, w) {
+  if (!w) return '';
+  return `<figure class="walk" data-walk="${esc(key)}"><pre class="mermaid">${esc(w.diagrama)}</pre>
+      <div class="walk-bar"><button type="button" class="ask" data-tj="walk" data-go="-1" aria-label="Anterior">◀</button><button type="button" class="act" data-tj="walk" data-go="play">▶ Reproducir</button><button type="button" class="ask" data-tj="walk" data-go="1" aria-label="Siguiente">▶</button><span class="walk-n mut small" data-walk-n>1 de ${w.pasos.length}</span></div>
+      <ol class="walk-steps no-i18n">${w.pasos.map((x, i) => `<li data-i="${i}" data-nodes="${esc(x.nodos.join(' '))}" ${i ? '' : 'class="on"'}><span>${inline(x.texto)}</span>${x.comando ? `<code>${esc(x.comando)}</code>` : ''}</li>`).join('')}</ol></figure>`;
+}
+const walks = new Map(); // figure key -> { i, timer }
+function walkShow(fig, i) {
+  const items = [...fig.querySelectorAll('.walk-steps li')];
+  if (!items.length) return;
+  const n = ((i % items.length) + items.length) % items.length;
+  const st = walks.get(fig.dataset.walk) ?? {};
+  st.i = n; walks.set(fig.dataset.walk, st);
+  items.forEach((li, k) => li.classList.toggle('on', k === n));
+  const label = fig.querySelector('[data-walk-n]');
+  if (label) label.textContent = `${n + 1} de ${items.length}`;
+  const ids = items[n].dataset.nodes.split(' ').filter(Boolean);
+  const svg = fig.querySelector('svg');
+  if (!svg) return;
+  const nodeOf = (id) => svg.querySelector(`g.node[id*="flowchart-${CSS.escape(id)}-"], g.node[data-id="${CSS.escape(id)}"]`);
+  svg.querySelectorAll('g.node.lit, .walk-edge').forEach((x) => { x.classList.remove('lit', 'walk-edge'); });
+  svg.querySelectorAll('.walk-dot').forEach((x) => x.remove());
+  ids.forEach((id) => nodeOf(id)?.classList.add('lit'));
+  // The edges between consecutive nodes of the frame, and a dot that travels along them.
+  for (let k = 0; k + 1 < ids.length; k += 1) {
+    const edge = svg.querySelector(`path[id*="L_${CSS.escape(ids[k])}_${CSS.escape(ids[k + 1])}_"], path[id^="L-${CSS.escape(ids[k])}-${CSS.escape(ids[k + 1])}"], path[data-id^="L_${CSS.escape(ids[k])}_${CSS.escape(ids[k + 1])}_"]`)
+      ?? svg.querySelector(`path[id*="L_${CSS.escape(ids[k + 1])}_${CSS.escape(ids[k])}_"], path[data-id^="L_${CSS.escape(ids[k + 1])}_${CSS.escape(ids[k])}_"]`);
+    if (!edge) continue;
+    edge.classList.add('walk-edge');
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches || typeof edge.getTotalLength !== 'function') continue;
+    const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dot.setAttribute('r', '6'); dot.setAttribute('class', 'walk-dot');
+    edge.parentNode.append(dot);
+    const len = edge.getTotalLength();
+    const reverse = !`${edge.id} ${edge.dataset.id ?? ""}`.includes(`L_${ids[k]}_${ids[k + 1]}_`) && !edge.id.includes(`L-${ids[k]}-${ids[k + 1]}`);
+    const t0 = performance.now() + k * 700;
+    const move = (t) => {
+      if (!dot.isConnected) return;
+      const f = Math.min(1, Math.max(0, (t - t0) / 900));
+      const pt = edge.getPointAtLength((reverse ? 1 - f : f) * len);
+      dot.setAttribute('cx', pt.x); dot.setAttribute('cy', pt.y);
+      if (f < 1) requestAnimationFrame(move);
+    };
+    requestAnimationFrame(move);
+  }
+}
+function walkGo(fig, how) {
+  const st = walks.get(fig.dataset.walk) ?? { i: 0 };
+  const total = fig.querySelectorAll('.walk-steps li').length;
+  if (how === 'play') {
+    const button = fig.querySelector('[data-go="play"]');
+    if (st.timer) { clearInterval(st.timer); st.timer = null; button.textContent = '▶ Reproducir'; walks.set(fig.dataset.walk, st); return; }
+    button.textContent = '❚❚ Pausa';
+    walkShow(fig, 0);
+    let i = 0;
+    st.timer = setInterval(() => {
+      i += 1;
+      if (i >= total || !fig.isConnected) { clearInterval(st.timer); st.timer = null; button.textContent = '▶ Reproducir'; return; }
+      walkShow(fig, i);
+    }, 2400);
+    walks.set(fig.dataset.walk, st);
+    return;
+  }
+  walkShow(fig, (st.i ?? 0) + Number(how));
+}
 function stepHTML(s, step) {
   const holder = T.taken[s.parte];
   const code = (step?.codigo ?? []).map((c) => {
     const lines = c.codigo.replace(/\n$/, '').split('\n');
     const expl = new Map(c.lineas.map((l) => [l.n, l.explicacion]));
-    return `<div class="fig code"><div class="fh"><span>${esc(c.lenguaje)}</span><span class="sp"></span><button type="button" class="ask" data-tj="copy" data-text="${esc(c.codigo)}">copiar</button></div>
-      <table>${lines.map((line, i) => `<tr><td class="ln">${i + 1}</td><td class="cd">${esc(line) || ' '}</td><td class="ex">${expl.has(i + 1) ? inline(expl.get(i + 1)) : ''}</td></tr>`).join('')}</table></div>`;
+    const term = /^(terminal|consola|shell)$/i.test(c.archivo ?? '');
+    const where = term ? '⌨ En la terminal' : c.archivo ? `📄 ${esc(c.archivo)}` : '';
+    return `<div class="fig code"><div class="fh">${where ? `<span class="file no-i18n" title="${term ? 'Comandos para escribir en la terminal' : 'El archivo y su ruta en la carpeta'}">${where}</span>` : ''}<span class="lang">${esc(langName(c.lenguaje, c.archivo))}</span><span class="sp"></span><button type="button" class="ask" data-tj="copy" data-text="${esc(c.codigo)}">copiar</button></div>
+      ${c.proposito ? `<p class="fpurpose no-i18n">${inline(c.proposito)}</p>` : ''}
+      <table><thead><tr><th class="ln">#</th><th>${term ? 'Comando' : 'Línea'}</th><th>Qué hace</th></tr></thead>${lines.map((line, i) => `<tr><td class="ln">${i + 1}</td><td class="cd">${esc(line) || ' '}</td><td class="ex">${expl.has(i + 1) ? inline(expl.get(i + 1)) : ''}</td></tr>`).join('')}</table></div>`;
   }).join('');
   if (study()) return studyStep(s, step, code);
   return `<article class="step" id="paso-${esc(s.id)}" style="--pc:${colorOf(s.parte)}">
@@ -1492,7 +1688,7 @@ function stepHTML(s, step) {
         <div>${step.esperado ? `<div class="def"><h4>Al correrlo verás</h4>${md(step.esperado)}</div>` : ''}
           ${step.comprueba.map((q) => `<details class="q"><summary class="qh">${inline(q.pregunta)}</summary><div class="ans">${md(q.respuesta)}</div></details>`).join('')}
           ${step.commit ? `<p class="small mut">Al guardarlo en GitHub: <code>${esc(step.commit)}</code> <button type="button" class="ask" data-tj="copy" data-text="${esc(step.commit)}">copiar</button></p>` : ''}</div></div>
-        ${code}${(step.tu_turno ?? []).length ? `<div class="turn no-i18n"><h4>✋ Tu turno</h4><ul>${step.tu_turno.map((x) => `<li>${inline(x)}</li>`).join('')}</ul></div>` : ''}${stepChecks(s.id, `el paso «${s.titulo}»${step.objetivo ? `: ${step.objetivo}` : ''}`)}` : ''}
+        ${walkHTML(`w-${s.id}`, step.recorrido)}${code}${(step.tu_turno ?? []).length ? `<div class="turn no-i18n"><h4>✋ Tu turno</h4><ul>${step.tu_turno.map((x) => `<li>${inline(x)}</li>`).join('')}</ul></div>` : ''}${stepChecks(s.id, `el paso «${s.titulo}»${step.objetivo ? `: ${step.objetivo}` : ''}`)}` : ''}
       ${s.id === MEET.at ? MEET.html : MEET.others.has(s.id) ? `<p class="rn-also">👥 <b>Este paso se hace juntos:</b> ${esc(step.reunion)} <a href="#cap-reunion" data-tj="jump">Ver cuándo se reúnen</a></p>` : ''}
     </article>`;
 }
@@ -1506,7 +1702,7 @@ function studyStep(s, step, code) {
         <div>${step.comprueba.length ? `<div class="def"><h4>¿Lo entendiste?</h4>${step.comprueba.map(qa).join('')}</div>` : ''}
           ${step.esperado ? `<div class="def"><h4>Al correrlo verás</h4>${md(step.esperado)}</div>` : ''}</div></div>
         ${(step.ejemplos ?? []).map((x, k) => `<div class="worked no-i18n"><h4>Ejemplo resuelto${step.ejemplos.length > 1 ? ` ${k + 1}` : ''}</h4>${md(x.enunciado)}<details class="q"><summary class="qh">Intenta resolverlo y luego mira la solución</summary><div class="ans">${md(x.solucion)}</div></details></div>`).join('')}
-        ${code}${(step.tu_turno ?? []).length ? `<div class="turn no-i18n"><h4>✋ Ahora tú, a mano</h4><ul>${step.tu_turno.map((x) => `<li>${inline(x)}</li>`).join('')}</ul></div>` : ''}
+        ${walkHTML(`w-${s.id}`, step.recorrido)}${code}${(step.tu_turno ?? []).length ? `<div class="turn no-i18n"><h4>✋ Ahora tú, a mano</h4><ul>${step.tu_turno.map((x) => `<li>${inline(x)}</li>`).join('')}</ul></div>` : ''}
         ${step.defensa.length ? `<div class="exam no-i18n"><h4>Así te lo pueden preguntar</h4>${step.defensa.map(qa).join('')}</div>` : ''}
         ${stepChecks(s.id, `el concepto «${s.titulo}»${step.objetivo ? `: ${step.objetivo}` : ''}`)}` : ''}
     </article>`;
@@ -1570,6 +1766,12 @@ function studyClosing() {
 }
 function closing() {
   if (study()) return studyClosing();
+  if (T.readonly) {
+    const defense = T.outline.hitos.flatMap((h) => (T.hitos[h.id]?.pasos ?? []).flatMap((p) => p.defensa));
+    return `<section class="sec" id="cap-entrega" style="--c:var(--rose);--cs:var(--rose-s)"><h2><span class="n">✓</span>Para repasar</h2>
+      ${defense.length ? `<h3>Preguntas de defensa</h3><div class="cols2">${defense.map((q) => `<details class="q"><summary class="qh">${inline(q.pregunta)}</summary><div class="ans">${md(q.respuesta)}</div></details>`).join('')}</div>` : ''}
+      ${T.outline.glosario.length ? `<h3>Tarjetas de términos</h3><div class="fc-trainer" data-fc>${flashHTML()}</div>` : ''}</section>`;
+  }
   const all = steps();
   const repo = T.repo ? `${T.repo.owner}/${T.repo.name}` : '';
   const token = !!ai.keyOf('github');
@@ -1634,12 +1836,12 @@ function noOutlineFor() {
 function paint() {
   if (!T) return;
   prepareTerms();
-  const theme = localStorage.getItem(THEME) ?? '';
+  const theme = themeNow();
   // The meeting goes where the AI said the group works together (the first such step shown), else at the end.
   const together = T.outline ? steps().filter((s) => (!onlyMine || s.parte === myPart()) && T.hitos[s.hito]?.pasos?.find((p) => p.id === s.id)?.reunion) : [];
   const why = together[0] ? T.hitos[together[0].hito].pasos.find((p) => p.id === together[0].id).reunion : '';
   MEET = { at: together[0]?.id ?? '', others: new Set(together.slice(1).map((s) => s.id)), html: T.outline && !study() ? reunionBlock(T, { repaint, ref: tRef, people: () => T?.members ?? [], why }) : '' };
-  gRoot().innerHTML = `<div class="tjg-app" data-template="${templateOf()}" ${theme ? `data-theme="${theme}"` : ''}>${topbar()}<div class="wrap">${hero()}${T.outline ? intro() + T.outline.hitos.map(chapter).join('') + closing() : noOutlineFor()}</div></div>`;
+  gRoot().innerHTML = `<div class="tjg-app ${T.readonly ? 'readonly' : ''}" data-template="${templateOf()}" ${theme ? `data-theme="${theme}"` : ''}>${topbar()}<div class="wrap">${hero()}${T.outline ? intro() + T.outline.hitos.map(chapter).join('') + closing() : noOutlineFor()}</div></div>`;
   markChapter();
   drawDiagrams();
   drawMath();
@@ -1703,10 +1905,13 @@ async function drawDiagrams() {
     const svg = drawn.get(n.textContent);
     if (svg) { n.innerHTML = svg; n.dataset.processed = 'true'; } else nodes.push(n);
   }
-  if (!nodes.length) return;
+  if (!nodes.length) { for (const fig of gRoot().querySelectorAll('figure.walk')) walkShow(fig, walks.get(fig.dataset.walk)?.i ?? 0); return; }
   const sources = nodes.map((n) => n.textContent);
   try {
-    mermaidLib ??= import('https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs').then((m) => { m.default.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'neutral' }); return m.default; });
+    // Labels were cut («eth0 gestión (ruta por defe»): Mermaid measured them before the guide's font arrived, and the
+    // wider font overflowed the boxes. Now it waits for the fonts, measures with the same font, and wraps long labels.
+    await document.fonts?.ready;
+    mermaidLib ??= import('https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs').then((m) => { m.default.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'neutral', fontFamily: '"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif', themeVariables: { fontFamily: '"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif', fontSize: '15px' }, flowchart: { htmlLabels: true, wrappingWidth: 200, padding: 14, useMaxWidth: true }, sequence: { useMaxWidth: true, wrap: true } }); return m.default; });
     const mermaid = await mermaidLib;
     // A diagram with a mistake is never drawn as Mermaid's «Syntax error» bomb: first its labels are put in quotes (the
     // usual mistake: parentheses or quotes inside [ ] or { }); if it still does not parse, the figure is left out.
@@ -1720,6 +1925,7 @@ async function drawDiagrams() {
     }
     if (ok.length) await mermaid.run({ nodes: ok, suppressErrors: true });
     ok.forEach((n) => { if (n.isConnected && n.querySelector('svg') && !/Syntax error/.test(n.textContent)) drawn.set(sources[nodes.indexOf(n)], n.innerHTML); else n.closest('figure')?.remove(); });
+    for (const fig of gRoot().querySelectorAll('figure.walk')) walkShow(fig, walks.get(fig.dataset.walk)?.i ?? 0);
   } catch { for (const n of nodes) n.closest('figure')?.classList.add('as-text'); }
 }
 // The chapter being read is lit in the top bar.
@@ -1735,7 +1941,7 @@ async function openTrabajo(tid) {
   fonts();
   if (T?.id !== tid || T.viewer !== uid()) {
     gRoot().innerHTML = `<p class="tjg-status">${location.hash.startsWith('#/estudio/') ? 'Abriendo tu guía…' : 'Abriendo el trabajo…'}</p>`;
-    T = await loadTrabajo(tid);
+    T = await loadTrabajo(tid).catch(() => null) ?? await loadPublic(tid).catch(() => null);
     asking.clear();
     resetReunion();
     if (!T) { gRoot().innerHTML = `<p class="tjg-status">${location.hash.startsWith('#/estudio/') ? 'Esa guía no existe, o no es tuya. <a href="#/guias">Volver</a>' : 'Ese trabajo no existe, o no eres parte de él. <a href="#/trabajos">Volver</a>'}</p>`; return; }
@@ -1856,6 +2062,18 @@ function wire(root) {
       await busy(button, async () => { st.textContent = 'Enviando el pedido y los archivos del enunciado…'; await sendAskFriend(form); repaint(); ctx.toast('Pedido enviado: tu amigo lo ve en sus Trabajos.'); }).catch((e) => { st.textContent = e.message || 'No se pudo enviar.'; });
       return;
     }
+    if (form.matches('[data-share-form]')) {
+      const vis = String(new FormData(form).get('vis') ?? 'private');
+      const st = form.querySelector('[data-share-status]');
+      if (vis === visOf()) { form.closest('.tj-sharepop')?.remove(); return; }
+      await busy(button, async () => {
+        st.textContent = vis === 'private' ? 'Quitando la copia compartida…' : 'Compartiendo…';
+        await setVisibility(vis);
+        repaint();
+        ctx.toast(vis === 'private' ? 'Ahora es privada.' : vis === 'link' ? 'Lista: quien tenga el enlace puede leerla.' : 'Lista: aparece en Guías para todos en Studium.');
+      }).catch((e) => { st.textContent = e.message || 'No se pudo cambiar.'; });
+      return;
+    }
     if (form.matches('[data-adj-form]')) {
       const f = new FormData(form);
       const t = targetOf(form.dataset.key);
@@ -1946,6 +2164,13 @@ function wire(root) {
     }
     else if (el.dataset?.tj === 'share-git' && draft) { keepAnswer(); draft.prefs.share = el.value === 'none' ? 'each' : (['repo', 'newrepo'].includes(draft.prefs.share) ? draft.prefs.share : 'repo'); renderDraft(); }
     else if (el.dataset?.tj === 'share-repo' && draft) { keepAnswer(); draft.prefs.share = el.value; renderDraft(); }
+    else if (el.name === 'vis' && el.closest('[data-share-form]')) {
+      const f = el.closest('form');
+      f.querySelectorAll('.tj-pick').forEach((x) => x.classList.toggle('on', x.contains(el)));
+      f.querySelector('[data-share-warn]')?.toggleAttribute('hidden', el.value === 'private');
+      f.querySelector('.tj-sharelink')?.toggleAttribute('hidden', el.value === 'private');
+    }
+    else if (el.dataset?.tjRole !== undefined && draft) { const f = draft.files[Number(el.dataset.tjRole)]; if (f) { draft.roles = { ...(draft.roles ?? {}), [`${f.name}|${f.size}`]: el.value }; saveDraft(); } }
     else if (el.dataset?.tjGraph !== undefined && draft) { keepAnswer(); draft.graph = el.checked; renderDraft(); }
     else if (el.dataset?.tjPref) { keepAnswer(); draft.prefs[el.dataset.tjPref] = el.type === 'checkbox' ? el.checked : el.value; renderDraft(); }
     else if (el.closest?.('[data-ai-pick]')) { const task = el.closest('[data-ai-pick]').dataset.aiPick; ai.setChoice(task, ai.picked(task, root)); }
@@ -1973,11 +2198,12 @@ function wire(root) {
     const kind = b.dataset.tj;
     if (kind === 'new') { startDraft(); return; }
     if (kind === 'cancel') {
-      keepAnswer(); saveDraft();
+      keepAnswer();
+      await saveDraftNow();
       const was = isStudy(draft);
       draft = null;
       ctx.toast(was ? 'Quedó en «Tus guías»: puedes retomarla cuando quieras.' : 'Quedó en tus borradores: puedes retomarlo cuando quieras.');
-      if (was) setTimeout(() => { location.hash = '#/guias'; }, 400); else setTimeout(renderList, 400);
+      if (was) location.hash = '#/guias'; else renderList();
       return;
     }
     if (kind === 'draft-resume') { const d = await getDraft(b.dataset.id); if (d) { draft = d; renderDraft(); } return; }
@@ -2145,11 +2371,33 @@ function wire(root) {
     if (kind === 'connect') { if (draft) keepAnswer(); await connectWay(b.dataset.vendor, !!b.dataset.bridge); return; }
     if (kind === 'paste') { draft.pasting = true; renderDraft(); return; }
     if (kind === 'jump') { ev.preventDefault(); const el = document.getElementById(b.getAttribute('href').slice(1)); if (el) { const sc = scroller(); sc.scrollTo({ top: el.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - 56, behavior: 'smooth' }); } return; }
+    if (kind === 'share-open') {
+      const open = gRoot().querySelector('.tj-sharepop');
+      if (open) { open.remove(); return; }
+      const pop = document.createElement('div');
+      pop.className = 'tj-sharepop';
+      pop.innerHTML = sharePanel();
+      gRoot().querySelector('.tjg-app')?.append(pop);
+      return;
+    }
+    if (kind === 'share-close') { b.closest('.tj-sharepop')?.remove(); return; }
+    if (kind === 'share-copy') { const v = b.closest('form').querySelector('.tj-sharelink input').value; await navigator.clipboard.writeText(v).then(() => ctx.toast('Enlace copiado.'), () => ctx.toast(`No pude copiarlo. El enlace: ${v}`)); return; }
+    if (kind === 'walk') { const fig = b.closest('figure.walk'); if (fig) walkGo(fig, b.dataset.go); return; }
+    if (kind === 'figure') {
+      const open = gRoot().querySelector('.tj-figpop');
+      if (open) { open.remove(); return; }
+      const pop = document.createElement('div');
+      pop.className = 'tj-figpop';
+      pop.innerHTML = `<div class="tj-figcard"><div class="tj-fighead"><b>El diagrama general</b><button type="button" class="ask" data-tj="figure">Cerrar</button></div><figure class="diagram"><pre class="mermaid">${esc(T.outline.diagrama)}</pre></figure></div>`;
+      gRoot().querySelector('.tjg-app')?.append(pop);
+      drawDiagrams();
+      return;
+    }
     if (kind === 'theme') {
       const app = gRoot().querySelector('.tjg-app');
-      const dark = app.dataset.theme ? app.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-      app.dataset.theme = dark ? 'light' : 'dark';
-      localStorage.setItem(THEME, app.dataset.theme);
+      app.dataset.theme = app.dataset.theme === 'dark' ? 'light' : 'dark';
+      try { localStorage.setItem(THEME, app.dataset.theme); } catch { /* this time only */ }
+      b.textContent = app.dataset.theme === 'dark' ? '☀ Claro' : '☾ Oscuro';
       return;
     }
     if (kind === 'ask') { await ask(b.dataset.key, b.dataset.label); return; }
@@ -2208,6 +2456,17 @@ export async function renderTrabajos(arg = []) {
   return renderList();
 }
 
+// Guías made public in Studium (study guides and trabajos' guides), under «Tus guías».
+export async function publicShelf(el) {
+  if (!el || !uid()) return;
+  const snap = await getDocs(query(collection(db, 'publicas'), where('visibility', '==', 'public'), limit(60))).catch(() => null);
+  const rows = (snap?.docs ?? []).map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (b.updated?.seconds ?? 0) - (a.updated?.seconds ?? 0));
+  if (!rows.length) { el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+  el.innerHTML = `<h2 class="tj-sub">Compartidas en Studium</h2><div class="tj-cards">${rows.map((r) => `<div class="tj-card glass">
+      <a class="tj-card-main" href="#/${r.kind === 'estudio' ? 'estudio' : 'trabajos'}/${esc(r.id)}"><b class="no-i18n">${esc(r.title)}</b><span class="fine"><span class="no-i18n">${esc(r.course ?? '')}</span> · ${r.kind === 'estudio' ? 'guía de estudio' : 'guía de solución'}${r.ownerName ? ` · <span class="no-i18n">${esc(r.ownerName)}</span>` : ''}</span></a></div>`).join('')}</div>`;
+}
+
 /* ---------- «Estudiar»: a study guide, with this same engine ---------- */
 // #/estudiar/guia: the questions of a new guide (or the one being answered); #/estudiar/guia/<course>: a new one for
 // that course (links from the graph); #/estudio/<id>: the guide, in its own environment.
@@ -2219,6 +2478,10 @@ export async function renderStudy(arg = []) {
   const named = given ? graphOf?.nameOf?.(given) ?? given.replace(/^course:/, '') : '';
   if (!isStudy(draft) || (named && draft.course !== named && draft.at > 0)) draft = newStudy({ course: named });
   if (named && !draft.course) { draft.course = named; draft.at = 1; }
+  // The route may run twice while the page loads: the questions already on screen are not drawn again under the
+  // person's fingers (a click on the replaced screen was lost).
+  const shown = root.querySelector('#tj-wizard');
+  if (shown && shown.dataset.d === draft.id && Number(shown.dataset.at) === draft.at) return;
   renderDraft();
 }
 export const openStudy = (id) => openTrabajo(id);
@@ -2243,7 +2506,7 @@ export async function studyShelf(el) {
         <a class="tj-card-main" href="#/estudio/${esc(r.id)}"><b class="no-i18n">${esc(r.title)}</b><span class="fine"><span class="no-i18n">${esc(r.course ?? '')}</span>${r.deadline ? ` · ${esc(date(r.deadline))}` : ''}${r.outline ? '' : ' · <b>sin escribir</b>'}</span></a>
         <details class="tj-menu"><summary aria-label="Más opciones de ${esc(r.title)}">⋯</summary><div class="tj-menu-list glass">
           <a href="#/estudio/${esc(r.id)}">Abrir la guía</a>
-          <span class="tj-menu-note">Solo la ves <b>tú</b>.</span>
+          <span class="tj-menu-note">${visOf(r) === 'private' ? 'Solo la ves <b>tú</b>.' : visOf(r) === 'link' ? '🔗 La lee <b>quien tenga el enlace</b>.' : '🌍 <b>Pública</b> en Guías.'} Cámbialo en la guía, arriba.</span>
           <button type="button" class="danger" data-eg="delete-ask" data-id="${esc(r.id)}" data-title="${esc(r.title)}">Eliminar…</button>
         </div></details><div class="tj-card-extra" data-extra></div></div>`).join('')}
     ${drafts.map((d) => `<div class="tj-card tj-draft glass" data-id="${esc(d.id)}">

@@ -39,7 +39,7 @@ import { mountAdmin, renderAdmin } from './admin.js';
 import { mountFeedback } from './feedback.js';
 import * as vault from './vault.js';
 import { mountComunidad, renderComunidad } from './comunidad.js';
-import { mountTrabajos, renderTrabajos, renderStudy, openStudy, studyShelf, useGraph } from './trabajos.js';
+import { mountTrabajos, renderTrabajos, renderStudy, openStudy, studyShelf, publicShelf, useGraph } from './trabajos.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -540,7 +540,7 @@ async function route() {
       acerca: ['about', 'Acerca', null],
       novedades: ['news', 'Novedades', () => renderNews($('#news'))],
       // Guías: the person's own study guides on top («Tus guías»), then everyone's.
-      guias: ['catalog', 'Guías', () => { renderCatalog(); return studyShelf($('#my-guides')); }],
+      guias: ['catalog', 'Guías', () => { renderCatalog(); return Promise.all([studyShelf($('#my-guides')), publicShelf($('#public-guides'))]); }],
       // A study guide opens apart from Studium's page, in the same environment as a trabajo's guide.
       estudio: ['trabajo', 'Guía de estudio', () => openStudy(arg[0])],
       comunidad: ['comunidad', 'Comunidad', renderComunidad],
@@ -559,7 +559,8 @@ async function route() {
     // The older guide (a page the AI writes, to publish in Guías) stays at #/estudiar/guia-html.
     if (page === 'estudiar' && arg[0] === 'guia') {
       document.title = `${t('Hacer una guía')} · Studium`;
-      $('#eg-body').innerHTML = '<p class="status">Cargando…</p>'; // never the previous guide's last screen
+      // Never the previous guide's last screen; the questions of this draft stay if they are already there.
+      if (!$('#eg-body #tj-wizard')) $('#eg-body').innerHTML = '<p class="status">Cargando…</p>';
       show('estudio');
       await load();
       if (ticket !== routing) return;
