@@ -276,6 +276,16 @@ function startWork() { ctl = new AbortController(); return ctl; }
 async function askAI(task, system, text, files = [], label = '', live = null) {
   // The trabajo's own folder, when its writer is Claude through the bridge.
   const folder = task === 'solution' && T && ai.choice(task).provider === 'bridge:claude' ? folderOf(T.id) : '';
+  if (folder && (await folderStateNow(folder)) === 'gone') {
+    live?.stop();
+    const w = wantedOf(T.id);
+    throw Object.assign(new Error(`Tu carpeta${w ? ` «${w.name}»` : ''} ya no está prestada al puente (se cerró o reinició el puente, o pasó la hora que la prestaste). No escribí nada en otra carpeta: elígela otra vez, o sigue sin ella si quieres.`), { kind: 'folder', way: 'bridge:claude' });
+  }
+  // Where it works, said before it starts.
+  if (task === 'solution' && ai.choice(task).provider.startsWith('bridge:')) {
+    const f = folder ? (ai.bridgeOf()?.folders ?? []).find((x) => x.id === folder) : null;
+    for (const el of document.querySelectorAll('[data-live] [data-live-now]')) el.textContent = f ? `Trabaja en tu carpeta «${f.name}» (${f.path}).` : 'Trabaja en una carpeta temporal de Studium, solo con lo que trajiste (no elegiste una carpeta tuya).';
+  }
   try {
     return await ai.run({ system, text, files, task, label, folder, signal: task === 'solution' ? ctl?.signal : undefined, maxTokens: task === 'solution' ? ai.longest(ai.choice(task)) : 4000, onEvent: live?.onEvent, onProgress: live?.onProgress });
   } finally { live?.stop(); }
@@ -508,6 +518,10 @@ function tryThis(way) {
 }
 function errorBox(info, retry = '') {
   if (!info) return '';
+  if (info.kind === 'folder') {
+    return `<div class="tj-error tj-gone" role="alert"><h4>Tu carpeta no está disponible</h4><p>${esc(info.message)}</p>
+      ${hereHTML()}<p><button type="button" class="act" data-tj="folder-pick">Elegir la carpeta…</button> <button type="button" class="ask" data-tj="folder-forget">Seguir sin ella, solo con lo que trajiste</button></p><p class="fine" id="tj-folder-status" role="status"></p></div>`;
+  }
   if (info.kind === 'cancel') return `<p class="tj-ok">Lo detuviste tú. Puedes volver a escribirla cuando quieras.</p>`;
   const who = ai.WAYS[info.way]?.name ?? 'tu IA';
   const means = MEANS[info.kind] ?? `${who} recibió el pedido, pero devolvió un error en vez de la guía.`;
@@ -844,8 +858,19 @@ const RESUME = 'studium-tj-resume';
 const resumeOf = (tid) => { try { return JSON.parse(localStorage.getItem(RESUME) ?? '{}')[tid] ?? ''; } catch { return ''; } };
 function keepResume(tid, cmd) { if (!cmd) return; try { const m = JSON.parse(localStorage.getItem(RESUME) ?? '{}'); m[tid] = cmd; localStorage.setItem(RESUME, JSON.stringify(m)); } catch { /* this device only */ } }
 const folderOf = (tid) => { try { return JSON.parse(localStorage.getItem(FOLDERS) ?? '{}')[tid] ?? ''; } catch { return ''; } };
+const WANT = 'studium-tj-folder-names';
+const wantedOf = (key) => { try { return JSON.parse(localStorage.getItem(WANT) ?? '{}')[key] ?? null; } catch { return null; } };
+function keepWanted(key, id) {
+  try {
+    const m = JSON.parse(localStorage.getItem(WANT) ?? '{}');
+    const f = id && id !== 'temp' && id !== 'gone' ? (ai.bridgeOf()?.folders ?? []).find((x) => x.id === id) : null;
+    if (f) m[key] = { name: f.name, path: f.path }; else if (!id || id === 'temp') delete m[key];
+    localStorage.setItem(WANT, JSON.stringify(m));
+  } catch { /* this device only */ }
+}
 function keepFolder(tid, id) {
-  try { const m = JSON.parse(localStorage.getItem(FOLDERS) ?? '{}'); if (id && id !== 'temp') m[tid] = id; else delete m[tid]; localStorage.setItem(FOLDERS, JSON.stringify(m)); } catch { /* this device only */ }
+  try { const m = JSON.parse(localStorage.getItem(FOLDERS) ?? '{}'); if (id && id !== 'temp' && id !== 'gone') m[tid] = id; else delete m[tid]; localStorage.setItem(FOLDERS, JSON.stringify(m)); } catch { /* this device only */ }
+  keepWanted(tid, id);
 }
 // A folder is lent for one task: once the guide is written, the bridge forgets it (his words: «acceso único»).
 async function releaseFolder(tid) {
@@ -867,7 +892,7 @@ async function folderStateNow(id) {
   return folderState(id);
 }
 const usesFolder = () => ai.choice('solution').provider === 'bridge:claude' && !ai.bridgeOld();
-const FOLDER_GONE = 'Tu carpeta se desconectó del puente (se cerró o reinició el puente, o pasó el tiempo que la prestaste). Elígela otra vez aquí abajo, o sigue solo con lo que trajiste.';
+const FOLDER_GONE = 'Tu carpeta se desconectó del puente (se cerró o reinició el puente, o pasó el tiempo que la prestaste). No escribí nada en otra carpeta: elígela otra vez aquí abajo, o elige «Solo lo que trajiste».';
 const MODE_TEXT = { read: 'Solo leer', write: 'Leer y escribir archivos', git: 'Leer, escribir y usar git' };
 const MODE_WHY = { read: 'lee tus archivos; no cambia nada', write: 'también crea y edita archivos de esta carpeta, nunca fuera de ella; no ejecuta comandos', git: 'también usa git aquí (commits y push a tu nombre); nada más' };
 // The choice of where the AI works: a temporary folder, or one of the person's folders with its permission.
@@ -886,7 +911,7 @@ function placeHTML(now) {
   const modeSel = (x) => `<select data-tj-mode="${esc(x.id)}" aria-label="Permiso en ${esc(x.name)}">${Object.entries(MODE_TEXT).map(([k, v]) => `<option value="${k}" ${x.mode === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
   if (ai.bridgeOld()) return `<p class="tj-warn">Para usar tus carpetas, actualiza el puente: <a href="${esc(ai.BRIDGE_URL)}" download="studium-bridge.mjs">descárgalo</a>, ciérralo (Ctrl+C) y ábrelo con <code>${esc(ai.bridgeCommand())}</code>. <button type="button" class="link" data-tj="bridge-recheck">Ya lo abrí</button></p>`;
   return `<div class="tj-seg" role="radiogroup">
-      <label class="${f ? '' : 'on'}"><input type="radio" name="workspace" value="temp" data-tj-ws ${f ? '' : 'checked'}>Solo lo que trajiste</label>
+      <label class="${f || now === 'gone' ? '' : 'on'}"><input type="radio" name="workspace" value="temp" data-tj-ws ${f || now === 'gone' ? '' : 'checked'}>Solo lo que trajiste</label>
       ${f ? `<label class="on"><input type="radio" name="workspace" value="${esc(f.id)}" data-tj-ws checked>📁 ${esc(f.name)}</label>` : ''}
     </div>
     ${f ? `<p class="tj-folder-now">${modeSel(f)} <small>${esc(MODE_WHY[f.mode] ?? '')}</small> <button type="button" class="link" data-tj="folder-pick">otra carpeta</button></p>`
@@ -1096,7 +1121,7 @@ function renderDraft(error = '') {
       ${draft.tid ? `<p class="tj-editing">Estás cambiando las respuestas de ${isStudy(draft) ? 'una guía' : 'un trabajo'} que ya creaste: «Atrás» llega a cualquier pregunta, y al final tu IA escribe la guía con lo nuevo.</p>` : ''}
       <h1>${esc(q.ask)}</h1>
       ${hint ? `<p class="lede-small">${esc(hint)}</p>` : ''}
-      ${error === FOLDER_GONE ? `<p class="tj-warn" role="alert">${esc(error)}</p>` : ''}
+      ${error === FOLDER_GONE ? `<p class="tj-warn" role="alert">${esc(wantedOf(draft.id) ? error.replace('Tu carpeta', `Tu carpeta «${wantedOf(draft.id).name}»`) : error)}</p>` : ''}
       ${control}
       ${error && error !== FOLDER_GONE ? (typeof error === 'string' ? `<p class="tj-warn">${esc(error)}</p>` : problemBox(error, isStudy(draft) ? 'Crear la guía' : 'Crear el trabajo')) : ''}
       <div class="tj-wizard-nav">
@@ -2098,8 +2123,9 @@ function wire(root) {
     if (form.id === 'tj-wizard') {
       if (questionsOf(draft)[draft.at].input !== 'ready') { nextQuestion(); return; }
       const later = !!ev.submitter?.dataset.later;
-      if (!later && usesFolder() && (await folderStateNow(draft.workspace)) === 'gone') {
-        draft.workspace = 'temp';
+      if (!later && usesFolder() && (draft.workspace === 'gone' || (await folderStateNow(draft.workspace)) === 'gone')) {
+        keepWanted(draft.id, draft.workspace);
+        draft.workspace = 'gone';
         draft.at = questionsOf(draft).findIndex((x) => x.input === 'ai');
         renderDraft(FOLDER_GONE);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2328,7 +2354,7 @@ function wire(root) {
       say('#tj-folder-status', '');
       await busy(b, async () => {
         const f = await ai.pickBridgeFolder('read', { hours: 1, here: true });
-        if (draft) { keepAnswer(); draft.workspace = f.id; renderDraft(); } else if (T) { keepFolder(T.id, f.id); repaint(); }
+        if (draft) { keepAnswer(); draft.workspace = f.id; keepWanted(draft.id, f.id); renderDraft(); } else if (T) { keepFolder(T.id, f.id); repaint(); }
         ctx.toast(`Tu IA trabajará en ${f.name} (${MODE_TEXT[f.mode]}).`);
       }).catch((e) => say('#tj-folder-status', e.message));
       return;
@@ -2340,7 +2366,7 @@ function wire(root) {
       const close = pickingNotice();
       await busy(b, async () => {
         const f = await ai.pickBridgeFolder(mode, { hours }).finally(close);
-        if (draft) { keepAnswer(); draft.workspace = f.id; renderDraft(); } else if (T) { keepFolder(T.id, f.id); repaint(); }
+        if (draft) { keepAnswer(); draft.workspace = f.id; keepWanted(draft.id, f.id); renderDraft(); } else if (T) { keepFolder(T.id, f.id); repaint(); }
         ctx.toast(`Carpeta lista: ${f.name} (${MODE_TEXT[f.mode]}).`);
       }).catch((e) => say('#tj-folder-status', e.message));
       return;
@@ -2356,7 +2382,7 @@ function wire(root) {
       return;
     }
     if (kind === 'ask-drop') { await busy(b, async () => { await amigos.dropRequest(b.dataset.tid); await renderList(); }).catch(() => {}); return; }
-    if (kind === 'folder-forget') { keepFolder(T.id, ''); repaint(); ctx.toast('Tu IA trabajará solo con lo que trajiste.'); return; }
+    if (kind === 'folder-forget') { if (!T) return; keepFolder(T.id, 'temp'); T.lastError = null; failed.delete(T.id); repaint(); ctx.toast('Tu IA trabajará solo con lo que trajiste, en una carpeta temporal.'); return; }
     if (kind === 'edit-questions') { await busy(b, () => draftFromTrabajo(b.dataset.at === 'ai' ? questionsOf(T).findIndex((x) => x.input === 'ai') : undefined)).catch(() => {}); return; }
     if (kind === 'folder-renew') {
       say('#tj-folder-status', '');

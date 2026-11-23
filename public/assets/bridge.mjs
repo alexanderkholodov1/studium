@@ -507,9 +507,18 @@ try {
   Add-Type -Namespace Studium -Name Win -MemberDefinition '[DllImport("kernel32.dll")] public static extern System.IntPtr GetConsoleWindow(); [DllImport("user32.dll")] public static extern bool SetForegroundWindow(System.IntPtr h); [DllImport("user32.dll")] public static extern bool ShowWindow(System.IntPtr h, int c); [DllImport("user32.dll")] public static extern void keybd_event(byte v, byte s, uint f, System.UIntPtr e);'
   $w = [Studium.Win]::GetConsoleWindow(); [Studium.Win]::keybd_event(0x87, 0, 0, [UIntPtr]::Zero); [Studium.Win]::keybd_event(0x87, 0, 2, [UIntPtr]::Zero); [void][Studium.Win]::ShowWindow($w, 9); [void][Studium.Win]::SetForegroundWindow($w)
 } catch {}
-if ($env:STUDIUM_CWD) { Set-Location -LiteralPath $env:STUDIUM_CWD }
+if ($env:STUDIUM_CWD) {
+  try { Set-Location -LiteralPath $env:STUDIUM_CWD -ErrorAction Stop }
+  catch {
+    Write-Host ('Studium no pudo entrar a la carpeta ' + $env:STUDIUM_CWD + ': ' + $_.Exception.Message) -ForegroundColor Yellow
+    Write-Host 'Claude Code no se abre en otra carpeta. Revisa que exista y que tengas permiso, y vuelve a intentarlo desde Studium.' -ForegroundColor Yellow
+    Set-Content -LiteralPath $env:STUDIUM_EXIT -Value '3' -Encoding ascii
+    Read-Host 'Pulsa Enter para cerrar esta ventana' | Out-Null
+    exit 3
+  }
+}
 Write-Host 'Studium: Claude Code trabaja aqui en tu trabajo. Esc lo detiene; al terminar puedes seguir hablandole.' -ForegroundColor Cyan
-Write-Host ('Carpeta: ' + (Get-Location).Path) -ForegroundColor DarkCyan
+Write-Host $env:STUDIUM_PLACE -ForegroundColor DarkCyan
 $a = @($env:STUDIUM_ARGS | ConvertFrom-Json)
 & $env:STUDIUM_EXE @a
 $code = $LASTEXITCODE
@@ -526,7 +535,9 @@ function claudeInWindow(b, { body, account, ask, allow, deny, cwd, dir, live, ti
   const env = { ...process.env, ...(account.env ?? {}), STUDIUM_TITLE: `Studium · Claude Code · ${String(body.label ?? 'tu trabajo').slice(0, 60)}`, STUDIUM_EXE: b.cmd, STUDIUM_ARGS: JSON.stringify([...b.pre, ...args]), STUDIUM_EXIT: exitFile,
     // The folder travels by name too, and PowerShell moves there itself: cmd.exe's «start» cannot keep a long folder (as
     // OneDrive's are) as its current one and opened the window in C:\ (his report, 2026-11-23: «Accessing workspace: C:\»).
-    STUDIUM_CWD: cwd };
+    STUDIUM_CWD: cwd,
+    // Said in the window: the person's folder, or plainly that it is Studium's temporary one (no folder of theirs chosen).
+    STUDIUM_PLACE: body.place ? `Tu carpeta: ${cwd}` : `Carpeta temporal de Studium (${cwd}): aqui esta solo lo que trajiste, porque no elegiste una carpeta tuya.` };
   // A window of its own is `start`: Node's «detached» gives a Windows process no console at all, so Claude Code ran
   // unseen and the window «never opened» (his words). The command line holds only safe characters (PowerShell's path
   // and base64), and /wait keeps the bridge's child alive while the window is open. The tests run it hidden.
