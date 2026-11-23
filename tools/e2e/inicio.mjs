@@ -20,7 +20,7 @@ try {
   await B.go(`${BASE}#/entrar`);
   await B.wait(`document.querySelector('input[type=password]')?.offsetParent`);
   await B.js(`const f = [...document.querySelectorAll('input')].filter((i) => i.offsetParent); const em = f.find((i) => i.type === 'email' || /mail/i.test(i.name)); const pw = f.find((i) => i.type === 'password'); em.value = ${JSON.stringify(email)}; pw.value = ${JSON.stringify(password)}; em.dispatchEvent(new Event('input', { bubbles: true })); pw.dispatchEvent(new Event('input', { bubbles: true })); pw.form.requestSubmit();`);
-  await W(2500);
+  await B.wait(`document.querySelector('#nav')?.dataset.mode === 'member'`, 20000); await W(1000);
   // A week of classes, as the person would have put it; Inicio as it comes.
   await B.js(`const { saveSchedule, auth } = await import('/studium/assets/data.js');
     const cls = (id, name, slots, color) => ({ id, name, code: 'X', room: 'H' + id.length, credits: 3, color, slots });
@@ -28,7 +28,7 @@ try {
       cls('a1', 'Redes de Computadores', [{ d: 0, s: 510, e: 590 }, { d: 2, s: 510, e: 590 }], 'blue'),
       cls('b22', 'Cálculo Vectorial', [{ d: 1, s: 600, e: 680 }, { d: 3, s: 600, e: 680 }], 'red'),
       cls('c333', 'Física II', [{ d: 0, s: 780, e: 860 }, { d: 4, s: 870, e: 950 }], 'teal')] }, options: [{ id: 'o1', name: 'Borrador 1', classes: [] }], active: 0, term: '202610' });
-    const { prefs } = await import('/studium/assets/prefs.js'); prefs.set({ tiles: [], todos: [], goals: [], links: [{ id: 'l1', label: 'Aula virtual', url: 'https://www.google.com' }, { id: 'l2', label: 'Correo', url: 'https://outlook.office.com' }] });
+    const { prefs } = await import('/studium/assets/prefs.js'); prefs.set({ tiles: [], todos: [], goals: [], deadlines: [], links: [{ id: 'l1', label: 'Aula virtual', url: 'https://www.google.com' }, { id: 'l2', label: 'Correo', url: 'https://outlook.office.com' }] });
     sessionStorage.setItem('studium-onboarded', '1'); return true;`);
   await W(2000); // the profile is saved to the account a moment later
   await B.js(`location.reload();`); await W(3000);
@@ -85,8 +85,25 @@ try {
   const ex = await B.js(`const t = document.querySelector('#dash [data-tile="explore"]'); if (!t) return null; const b = t.querySelector('.tile-body'); return { over: b.scrollHeight - b.clientHeight, w: b.scrollWidth - b.clientWidth }`);
   ok('«Un concepto al azar» fits its tile', !ex || (ex.over <= 2 && ex.w <= 2), JSON.stringify(ex));
   // «Mi horario»: the month
+  // Inicio suggests the first final while no exam was added
+  await B.js(`location.hash = '#/';`); await W(2500);
+  ok('«Tu próximo examen» suggests the first final, without adding it', await B.js(`return /tu primer final sería/.test(document.querySelector('#dash [data-tile="countdown"]')?.innerText ?? '') && !!document.querySelector('[data-final-home]')`));
+  await B.js(`location.hash = '#/estudiar/escritorio';`); await W(2500);
+  ok('the material desk lives at #/estudiar/escritorio, titled «Tu escritorio»', await B.js(`return !document.querySelector('#view-contribute').hidden && document.querySelector('#c-title').textContent === 'Tu escritorio' && !!document.querySelector('#pane-estudia [data-es-drop]')`));
   await B.js(`location.hash = '#/horario';`);
   await B.wait(`document.querySelector('#sched-month .mc-grid')`, 15000);
+  // The finals, worked out from the classes and the official table (calendario.js)
+  const fx = await B.js(`return [...document.querySelectorAll('.sched-finals .fx-list li')].map((li) => li.innerText.replace(/\\s+/g, ' '))`);
+  ok('«Tus exámenes finales»: LI 08:30 → miércoles 16, 12:00–14:00', fx.some((x) => /Redes/.test(x) && /16 de diciembre/.test(x) && /12:00–14:00/.test(x)), JSON.stringify(fx));
+  ok('…MJ 10:00 → jueves 17, 09:00–11:00', fx.some((x) => /Cálculo/.test(x) && /17 de diciembre/.test(x) && /09:00–11:00/.test(x)), JSON.stringify(fx));
+  ok('…a class with another schedule → the professor coordinates', fx.some((x) => /Física/.test(x) && /coordina/.test(x)), JSON.stringify(fx));
+  const inMonth = await B.js(`return [...document.querySelectorAll('#sched-month .mc-ev.k-examen')].map((x) => x.textContent).join('|')`);
+  ok('the finals are suggestions: not in the calendar until added', !/Final de/.test(inMonth), inMonth);
+  ok('…each with «Agregar», and a warning that not every course follows the table', await B.js(`return document.querySelectorAll('.sched-finals [data-final-add]').length === 2 && /No todas las materias/.test(document.querySelector('.sched-finals').innerText)`));
+  await B.js(`document.querySelector('.sched-finals').scrollIntoView();`); await W(400);
+  await B.shot('07-finales');
+  await B.js(`document.querySelector('.sched-finals [data-final-add]').click();`); await W(1000);
+  ok('«Agregar» puts that final in the calendar (an exam of the person), marked as added', await B.js(`const { prefs } = await import('/studium/assets/prefs.js'); return !!document.querySelector('.sched-finals .fx-ok') && prefs.get().deadlines.some((d) => d.kind === 'examen' && /^Final de/.test(d.text))`));
   await B.js(`const f = document.querySelector('[data-event-add]'); f.kind.value = 'examen'; f.text.value = 'Examen final de Redes'; f.date.value = '2026-12-14'; f.time.value = '09:00'; f.course.value = 'Redes de Computadores'; f.requestSubmit();`);
   await W(1200);
   const month = await B.js(`const m = document.querySelector('#sched-month'); return { title: m.querySelector('h2').textContent, exam: !![...m.querySelectorAll('.mc-ev.k-examen')].find((x) => /Examen final de Redes/.test(x.textContent)), finals: m.querySelectorAll('.mc-day.finals').length, holiday: [...m.querySelectorAll('.mc-hol')].map((x) => x.textContent).join('|'), official: m.querySelectorAll('.mc-ev.k-oficial').length }`);

@@ -12,7 +12,7 @@ import { sfx } from './sfx.js';
 import { prefs, EVENT_KINDS } from './prefs.js';
 import { parseOffer, termName } from './offer.js';
 import { prereqNote, norm } from './malla.js';
-import { dayStatus, classesThisWeek, weekOff, longDay, iso, TERMS } from './calendario.js';
+import { dayStatus, classesThisWeek, weekOff, longDay, iso, TERMS, finalFor, examTable, keepOwnTable } from './calendario.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const $ = (s, r = document) => r.querySelector(s);
@@ -417,7 +417,7 @@ function paint() {
         <button data-mine-clear class="danger">Vaciar mi horario</button></div></details>` : ''}
     </div>
   </div>
-  ${has ? `${classesThisWeek() ? '' : noClassesNote()}<div class="sched-body">${week(o)}${side(o)}</div>`
+  ${has ? `${classesThisWeek() ? '' : noClassesNote()}<div class="sched-body">${week(o)}${side(o)}</div>${finalsHTML()}`
     : `<div class="sched-empty glass"><h2>Pon tu horario</h2><p>Studium lo pasa completo a tu semana, por bloques de clase.</p>${transcribeBox('mine')}</div>`}
   ${monthHTML()}`
   : `
@@ -443,6 +443,90 @@ function paint() {
   paintWhere();
   const box = $('.sched-empty [data-transcribe]', root);
   if (box) mountTranscribe(box);
+}
+
+/* ---------- final exams, computed from the official table ---------- */
+// His words: depending on the course, Studium helps to work out when each final is. USFQ assigns it by the days and
+// the hour of the class (calendario.js); departmental exams by course; any other schedule is coordinated with the
+// professor. Not every course follows the table (his words, 2026-11-23), so these are SUGGESTIONS: the person adds
+// the ones that apply with a tap, and only then are they exams of their calendar and of «Tu próximo examen».
+const termNow = () => TERMS.find((t) => iso(new Date()) <= t.end) ?? null;
+export function myFinals() {
+  const term = termNow();
+  if (!term || loadedFor === null) return [];
+  const own = prefs.get().deadlines.filter((d) => d.kind === 'examen');
+  return state.mine.classes.map((c) => ({ c, f: finalFor(c, term) })).filter((x) => x.f)
+    .map((x) => ({ ...x, added: own.some((d) => d.course && norm(d.course) === norm(x.c.name) && d.date >= term.finals[0] && d.date <= term.finals[1]) }));
+}
+// A suggested final, added as an exam of the person's own (Fechas y entregas), which they can change or remove.
+export function addFinal(classId) {
+  const x = myFinals().find((y) => y.c.id === classId && y.f.date && !y.added);
+  if (!x) return false;
+  prefs.set({ deadlines: [...prefs.get().deadlines, { id: rid(), kind: 'examen', text: `Final de ${x.c.name}`.slice(0, 100), date: x.f.date, time: x.f.from, course: x.c.name.slice(0, 80) }] });
+  return true;
+}
+function finalsHTML() {
+  const term = termNow();
+  if (!term || !state.mine.classes.length || iso(new Date()) > term.finals[1]) return '';
+  const table = examTable(term);
+  if (!table) {
+    return `<section class="sched-finals glass"><h2>Tus exámenes finales</h2>
+      <p>Studium todavía no tiene el calendario de exámenes finales de este semestre. Si tú lo tienes (una captura o el PDF de Registro), súbelo: tu IA lo lee y Studium calcula el día y la hora del final de cada materia.</p>
+      ${transcribeFinalsBox()}</section>`;
+  }
+  const rows = myFinals();
+  const perDay = rows.filter((x) => x.f.date).reduce((m, x) => m.set(x.f.date, (m.get(x.f.date) ?? 0) + 1), new Map());
+  const busy = [...perDay].filter(([, n]) => n > 3);
+  const line = ({ c, f, added }) => f.kind === 'coordinar'
+    ? `<li class="fx-coord"><b>${esc(label(c))}</b><span>Tu clase tiene otro horario que los de la tabla: <b>tu profesor coordina contigo</b> la hora del final.</span></li>`
+    : `<li class="${f.kind === 'departamental' ? 'fx-dep' : ''}${added ? ' fx-added' : ''}"><b>${esc(label(c))}</b><span>${esc(longDay(f.date))}, <b>${esc(f.from)}–${esc(f.to)}</b>${f.kind === 'departamental' ? ` · examen departamental de ${esc(f.name)}${f.choose ? `. ${esc(f.choose)}` : ''}` : ''}</span>
+        ${added ? '<span class="fx-ok">✓ En tu calendario</span>' : `<button class="button ghost small" data-final-add="${esc(c.id)}">Agregar</button>`}</li>`;
+  const open = rows.filter((x) => x.f.date && !x.added);
+  return `<section class="sched-finals glass"><h2>Tus exámenes finales, sugeridos <small>del ${esc(longDay(term.finals[0]))} al ${esc(longDay(term.finals[1]))}</small></h2>
+    <p class="muted">Según el calendario de exámenes finales y tu horario, así te tocarían. <b>No todas las materias siguen esta tabla</b>: agrega los que tu profesor confirme.</p>
+    ${rows.length ? `<ul class="fx-list">${rows.sort((a, b) => String(a.f.date ?? 'z').localeCompare(String(b.f.date ?? 'z')) || String(a.f.from).localeCompare(String(b.f.from))).map(line).join('')}</ul>` : '<p class="muted">Tus clases de este semestre no tienen un final en la tabla.</p>'}
+    ${open.length > 1 ? `<p><button class="button ghost small" data-final-all>Agregar los ${open.length} sugeridos a mi calendario</button></p>` : ''}
+    ${busy.length ? `<p class="tj-warn">Según la tabla, te tocarían más de 3 exámenes el ${busy.map(([d]) => esc(longDay(d))).join(' y el ')}: el reglamento permite hasta 3 por día. Habla con tus profesores para buscar alternativas.</p>` : ''}
+    <p class="fine">Calculado con ${table.own ? 'el calendario que subiste' : `el ${esc(table.source)}`}. Lo que agregas queda en tu calendario de abajo y en «Tu próximo examen» de Inicio; ahí lo cambias o lo quitas.</p>
+  </section>`;
+}
+// When Studium has no finals table for the term: the person's AI reads the one they have, once, on this device.
+function transcribeFinalsBox() {
+  return `<div class="fx-up" data-finals-up>
+    <label class="button ghost small"><input type="file" accept="image/*,.pdf" hidden data-finals-file> Subir el calendario de exámenes</label>
+    ${ai.ready() ? ai.pickerHTML('schedule') : '<span class="fine">Necesitas una IA conectada en Ajustes (Gemini es gratis).</span>'}
+    <span class="fine" data-finals-msg role="status"></span></div>`;
+}
+const FINALS_SYSTEM = `Lees el calendario de exámenes finales de una universidad (una imagen o un PDF) y lo devuelves en JSON.
+Devuelve SOLO un objeto JSON, sin texto antes ni después, con esta forma:
+{"byClass":[{"days":["Lunes","Miércoles"],"start":"11:30","date":"2026-12-14","from":"09:00","to":"11:00"}],"departmental":[{"name":"Química","date":"2026-12-11","from":"09:00","to":"12:00"}],"notes":["…"]}
+- "byClass": cada fila que asigna el examen según el horario de la clase: los días en que se dicta la clase ("LI" es Lunes y Miércoles, "MJ" es Martes y Jueves; usa los nombres completos), la hora en que empieza la clase, y el día (fecha completa, AAAA-MM-DD) y las horas del examen.
+- "departmental": los exámenes comunes por materia o área, con su nombre como aparece.
+- "notes": las consideraciones importantes, tal como aparecen.
+- Horas en 24 h, "HH:MM". No inventes nada: lo que no aparezca, déjalo fuera.`;
+async function transcribeFinals(file, box) {
+  const msg = $('[data-finals-msg]', box);
+  const term = termNow();
+  msg.textContent = 'Tu IA está leyendo el calendario…';
+  try {
+    const part = await ai.readFile(file);
+    if (part.skipped) throw new Error(`No pude abrir ${file.name}: ${part.skipped}.`);
+    const parts = [part];
+    const res = await ai.run({ system: FINALS_SYSTEM, text: 'El calendario de exámenes finales está en lo adjunto.', files: parts, maxTokens: 4000, use: ai.picked('schedule', box) });
+    const j = parseAnswer(res.text);
+    const dayIx = (n) => DAYS.findIndex((d) => d.toLowerCase().startsWith(String(n).toLowerCase().slice(0, 2)));
+    const ok = (t) => /^\d{2}:\d{2}$/.test(t ?? '');
+    const table = {
+      byClass: (j.byClass ?? []).map((r) => ({ days: (r.days ?? []).map(dayIx).filter((d) => d >= 0).sort(), start: r.start, date: r.date, from: r.from, to: r.to }))
+        .filter((r) => r.days.length && ok(r.start) && /^\d{4}-\d{2}-\d{2}$/.test(r.date ?? '') && ok(r.from) && ok(r.to)).slice(0, 80),
+      departmental: (j.departmental ?? []).filter((d) => d.name && /^\d{4}-\d{2}-\d{2}$/.test(d.date ?? '')).map((d) => ({ name: String(d.name).slice(0, 60), date: d.date, from: d.from, to: d.to })).slice(0, 20),
+      notes: (j.notes ?? []).map((x) => String(x).slice(0, 300)).slice(0, 6),
+      source: `el calendario que subiste (${file.name})`,
+    };
+    if (!table.byClass.length) throw new Error('Tu IA no encontró filas de exámenes por horario en ese archivo.');
+    keepOwnTable(term, table);
+    paint();
+  } catch (e) { msg.textContent = e.message === 'json' ? 'Tu IA no devolvió la tabla. Prueba con una captura más nítida.' : e.message || 'No se pudo leer.'; }
 }
 
 /* ---------- the month: exams, presentations, meetings and the official calendar ---------- */
@@ -885,6 +969,8 @@ export function mountSchedule() {
     b.closest('details')?.removeAttribute('open');
     const d = b.dataset;
     if (d.month !== undefined) { const n = Number(d.month); const t = new Date(); monthAt = n ? new Date(monthAt.getFullYear(), monthAt.getMonth() + n, 1) : new Date(t.getFullYear(), t.getMonth(), 1); paint(); $('#sched-month', root)?.scrollIntoView({ block: 'nearest' }); return; }
+    if (d.finalAdd) { if (addFinal(d.finalAdd)) { sfx.tick?.(); paint(); } return; }
+    if ('finalAll' in d) { let n = 0; for (const x of myFinals()) if (x.f.date && !x.added && addFinal(x.c.id)) n += 1; if (n) sfx.tick?.(); paint(); return; }
     if ('ics' in d) { give(new Blob([icsFile()], { type: 'text/calendar;charset=utf-8' }), 'studium-calendario.ics'); return; }
     if (d.eventRemove) { prefs.set({ deadlines: prefs.get().deadlines.filter((x) => x.id !== d.eventRemove) }); paint(); return; }
     if (d.mode) { mode = d.mode; catalog = []; asks = []; note = ''; paint(); sfx.tick(); scrollTo({ top: 0, behavior: 'smooth' }); return; }
@@ -907,6 +993,11 @@ export function mountSchedule() {
     if (d.ask) return answer(d.ask);
     if (d.remove) { const o = view(); o.classes = o.classes.filter((c) => c.id !== d.remove); asks = asks.filter((x) => x.cls.id !== d.remove); save(); paint(); sfx.drop?.(); return; }
     if (d.edit) classDialog(d.edit);
+  });
+  document.addEventListener('change', (e) => {
+    const input = e.target.closest?.('[data-finals-file]');
+    if (!input || !root?.contains(input) || !input.files[0]) return;
+    transcribeFinals(input.files[0], input.closest('[data-finals-up]'));
   });
   document.addEventListener('submit', (e) => {
     const f = e.target;

@@ -1443,7 +1443,7 @@ function topbar() {
   const caps = T.outline ? (s ? [['inicio', '0 · Qué entra'], ...T.outline.hitos.map((h, i) => [h.id, `${i + 1} · ${short(h.titulo)}`]), ['entrega', '✓ · Repaso']]
     : [['inicio', '0 · El trabajo'], ['reunion', '◷ · Reunirse'], ...T.outline.hitos.map((h, i) => [h.id, `${i + 1} · ${short(h.titulo)}`]), ['entrega', '✓ · Entregar']]) : [];
   return `<nav class="top"><div class="in">
-      <a class="back" href="${s || T.readonly ? '#/guias' : '#/trabajos'}" title="Volver a Studium">← Studium</a>
+      <a class="back" href="${s ? '#/estudiar' : T.readonly ? '#/guias' : '#/trabajos'}" title="Volver a Studium">← Studium</a>
       <span class="brand">${esc(short((T.course || T.title).toUpperCase(), 26))} · ${s ? 'GUÍA DE ESTUDIO' : 'GUÍA DE SOLUCIÓN'}</span>
       ${caps.map(([id, label]) => `<a href="#cap-${esc(id)}" data-tj="jump" data-cap="${esc(id)}">${esc(label)}</a>`).join('')}
       <span class="sp"></span>
@@ -1944,7 +1944,7 @@ async function openTrabajo(tid) {
     T = await loadTrabajo(tid).catch(() => null) ?? await loadPublic(tid).catch(() => null);
     asking.clear();
     resetReunion();
-    if (!T) { gRoot().innerHTML = `<p class="tjg-status">${location.hash.startsWith('#/estudio/') ? 'Esa guía no existe, o no es tuya. <a href="#/guias">Volver</a>' : 'Ese trabajo no existe, o no eres parte de él. <a href="#/trabajos">Volver</a>'}</p>`; return; }
+    if (!T) { gRoot().innerHTML = `<p class="tjg-status">${location.hash.startsWith('#/estudio/') ? 'Esa guía no existe, o no es tuya. <a href="#/estudiar">Volver</a>' : 'Ese trabajo no existe, o no eres parte de él. <a href="#/trabajos">Volver</a>'}</p>`; return; }
   }
   paint();
   scroller()?.scrollTo({ top: 0 });
@@ -2197,13 +2197,14 @@ function wire(root) {
     if (!b || b.tagName === 'INPUT') return;
     const kind = b.dataset.tj;
     if (kind === 'new') { startDraft(); return; }
+    if (kind === 'study-new') { draft = newStudy(); renderDraft(); return; }
     if (kind === 'cancel') {
       keepAnswer();
       await saveDraftNow();
       const was = isStudy(draft);
       draft = null;
       ctx.toast(was ? 'Quedó en «Tus guías»: puedes retomarla cuando quieras.' : 'Quedó en tus borradores: puedes retomarlo cuando quieras.');
-      if (was) location.hash = '#/guias'; else renderList();
+      if (was) { if (location.hash === '#/estudiar') renderStudyList(); else location.hash = '#/estudiar'; } else renderList();
       return;
     }
     if (kind === 'draft-resume') { const d = await getDraft(b.dataset.id); if (d) { draft = d; renderDraft(); } return; }
@@ -2299,13 +2300,15 @@ function wire(root) {
     if (kind === 'delete-ask' || kind === 'leave-ask') {
       const r = listRows.find((x) => x.id === b.dataset.id);
       cardExtra(r.id, kind === 'delete-ask'
-        ? `<p><b>¿Eliminar «${esc(r.title)}» para todo el grupo?</b> Se borran su guía, el reparto, el avance y el registro de uso de IA. No se puede deshacer.</p><p><button type="button" class="button small red" data-tj="delete" data-id="${esc(r.id)}">Sí, eliminarlo</button> <button type="button" class="link" data-tj="extra-close">No</button></p>`
+        ? isStudy(r) ? `<p><b>¿Eliminar «${esc(r.title)}»?</b> Se borran la guía, lo que marcaste y su copia compartida, si la tiene. No se puede deshacer.</p><p><button type="button" class="button small red" data-tj="delete" data-id="${esc(r.id)}">Sí, eliminarla</button> <button type="button" class="link" data-tj="extra-close">No</button></p>`
+        : `<p><b>¿Eliminar «${esc(r.title)}» para todo el grupo?</b> Se borran su guía, el reparto, el avance y el registro de uso de IA. No se puede deshacer.</p><p><button type="button" class="button small red" data-tj="delete" data-id="${esc(r.id)}">Sí, eliminarlo</button> <button type="button" class="link" data-tj="extra-close">No</button></p>`
         : `<p><b>¿Salir de «${esc(r.title)}»?</b> Tu parte queda libre; para volver necesitas otra vez el enlace.</p><p><button type="button" class="button small red" data-tj="leave-trabajo" data-id="${esc(r.id)}">Sí, salir</button> <button type="button" class="link" data-tj="extra-close">No</button></p>`);
       return;
     }
     if (kind === 'extra-close') { b.closest('[data-extra]').innerHTML = ''; return; }
     if (kind === 'delete' || kind === 'leave-trabajo') {
-      await busy(b, async () => { if (kind === 'delete') await deleteTrabajo(b.dataset.id); else await leaveTrabajo(b.dataset.id); ctx.toast(kind === 'delete' ? 'Trabajo eliminado.' : 'Saliste del trabajo.'); await renderList(); }).catch(() => {});
+      const studyList = root?.id === 'eg-body';
+      await busy(b, async () => { if (kind === 'delete') await deleteTrabajo(b.dataset.id); else await leaveTrabajo(b.dataset.id); ctx.toast(kind === 'delete' ? (studyList ? 'Guía eliminada.' : 'Trabajo eliminado.') : 'Saliste del trabajo.'); await (studyList ? renderStudyList() : renderList()); }).catch(() => {});
       return;
     }
     if (kind === 'bridge-recheck') {
@@ -2470,6 +2473,37 @@ export async function publicShelf(el) {
 /* ---------- «Estudiar»: a study guide, with this same engine ---------- */
 // #/estudiar/guia: the questions of a new guide (or the one being answered); #/estudiar/guia/<course>: a new one for
 // that course (links from the graph); #/estudio/<id>: the guide, in its own environment.
+// #/estudiar: the list, as Trabajos' — a title, «Empezar una guía nueva», the drafts, «Tus guías» with the same ⋯ menu,
+// and the guides shared in Studium; the questions show here when a guide is being answered (as in Trabajos).
+export async function renderStudyHome() {
+  T = null;
+  root = $('#eg-body');
+  if (isStudy(draft)) { const shown = root.querySelector('#tj-wizard'); if (shown && shown.dataset.d === draft.id && Number(shown.dataset.at) === draft.at) return; renderDraft(); return; }
+  return renderStudyList();
+}
+async function renderStudyList() {
+  root.innerHTML = '<p class="status">Cargando…</p>';
+  const [drafts, ids] = await Promise.all([listDrafts('estudio'), myIds()]);
+  const rows = (await Promise.all(ids.map((id) => getDoc(tRef(id)).then((x) => (x.exists() ? { id, ...x.data() } : null)).catch(() => null))))
+    .filter((r) => r && isStudy(r) && r.owner === uid()).sort((a, b) => (b.updated?.seconds ?? 0) - (a.updated?.seconds ?? 0));
+  const shared = await getDocs(query(collection(db, 'publicas'), where('visibility', '==', 'public'), limit(60))).then((q) => q.docs.map((d) => ({ id: d.id, ...d.data() }))).catch(() => []);
+  const date = (d) => (d ? new Date(`${d.slice(0, 10)}T12:00`).toLocaleDateString('es', { day: 'numeric', month: 'short' }) : '');
+  root.innerHTML = `<div class="page-head"><h1>Estudiar</h1><button type="button" class="button primary" data-tj="study-new">Empezar una guía nueva</button></div>
+    <p class="lede-small tj-lede">Prepara una evaluación con una guía de estudio, tema por tema, entendiendo cada concepto.</p>
+    ${draftsHTML(drafts)}${drafts.length && rows.length ? '<h2 class="tj-sub">Tus guías</h2>' : ''}
+    ${rows.length ? `<div class="tj-cards">${rows.map((r) => `<div class="tj-card glass" data-id="${esc(r.id)}">
+        <a class="tj-card-main" href="#/estudio/${esc(r.id)}"><b class="no-i18n">${esc(r.title)}</b><span class="fine"><span class="no-i18n">${esc(r.course ?? '')}</span>${r.deadline ? `<br>evaluación: ${esc(date(r.deadline))}` : ''}${r.outline ? '' : '<br><b>todavía sin escribir</b>'}</span></a>
+        <details class="tj-menu"><summary aria-label="Más opciones de ${esc(r.title)}">⋯</summary><div class="tj-menu-list glass">
+          <a href="#/estudio/${esc(r.id)}">Abrir la guía</a>
+          <span class="tj-menu-note">${visOf(r) === 'private' ? 'Solo la ves <b>tú</b>.' : visOf(r) === 'link' ? '🔗 La lee <b>quien tenga el enlace</b>.' : '🌍 <b>Pública</b> en Studium.'} Cámbialo en la guía, arriba.</span>
+          <button type="button" class="danger" data-tj="delete-ask" data-id="${esc(r.id)}">Eliminar…</button>
+        </div></details>
+        <div class="tj-card-extra" data-extra></div></div>`).join('')}</div>` : drafts.length ? '' : '<p class="fine">Todavía no tienes guías de estudio.</p>'}
+    ${shared.length ? `<h2 class="tj-sub">Compartidas en Studium</h2><div class="tj-cards">${shared.map((r) => `<div class="tj-card glass">
+        <a class="tj-card-main" href="#/${r.kind === 'estudio' ? 'estudio' : 'trabajos'}/${esc(r.id)}"><b class="no-i18n">${esc(r.title)}</b><span class="fine"><span class="no-i18n">${esc(r.course ?? '')}</span> · ${r.kind === 'estudio' ? 'guía de estudio' : 'guía de solución'}${r.ownerName ? ` · <span class="no-i18n">${esc(r.ownerName)}</span>` : ''}</span></a></div>`).join('')}</div>` : ''}
+    <p class="fine tj-more-links">También en Estudiar: <a href="#/estudiar/escritorio">Tu escritorio</a>, todo el material de tus materias ordenado en carpetas; y las <a href="#/guias">guías de la comunidad</a>.</p>`;
+  listRows = rows;
+}
 export async function renderStudy(arg = []) {
   T = null;
   root = $('#eg-body');

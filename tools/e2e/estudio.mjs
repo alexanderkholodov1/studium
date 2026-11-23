@@ -30,12 +30,15 @@ try {
   await W(2500);
   await B.js(`localStorage.setItem('studium-lang', 'es');`);
 
-  // Guías: one action to make a guide
-  await B.js(`location.hash = '#/guias';`);
-  await B.wait(`document.querySelector('#view-catalog:not([hidden]) a[href="#/estudiar/guia"]')`);
-  ok('Guías offers «Hacer una guía» → the new questions', true);
-  await B.shot('01-guias');
-  await B.js(`document.querySelector('#view-catalog a[href="#/estudiar/guia"]').click();`);
+  // Estudiar: the same page as Trabajos — a title, «Empezar una guía nueva», no tabs, no «en construcción» tape
+  await B.js(`location.hash = '#/estudiar';`);
+  await B.wait(`document.querySelector('#view-estudio:not([hidden]) [data-tj="study-new"]')`);
+  const page = await B.js(`const v = document.querySelector('#view-estudio'); return { h1: v.querySelector('.page-head h1')?.textContent, tape: !!document.querySelector('#view-estudio .wip-tape, #view-catalog .wip-tape'), tabs: !!document.querySelector('.subtabs'), desk: !!v.querySelector('a[href="#/estudiar/escritorio"]'), trabajosLike: !!v.querySelector('.page-head .button.primary') && !!v.querySelector('.tj-lede') }`);
+  ok('Estudiar opens as Trabajos: title, «Empezar una guía nueva», no tabs, no tape', page.h1 === 'Estudiar' && page.trabajosLike && !page.tape && !page.tabs && page.desk, JSON.stringify(page));
+  await B.shot('01-estudiar');
+  await B.js(`location.hash = '#/trabajos';`); await W(1500); await B.shot('01b-trabajos');
+  await B.js(`location.hash = '#/estudiar';`); await W(1500);
+  await B.js(`document.querySelector('#eg-body [data-tj="study-new"]').click();`);
   await B.wait(`document.querySelector('#eg-body .tj-wizard h1')`);
   ok('1 · asks what to study', /Qué vas a estudiar/.test(await head()), await head());
   await B.shot('02-materia');
@@ -184,18 +187,18 @@ try {
     C.close();
   }
 
-  // «Tus guías» and a draft
-  await B.js(`location.hash = '#/guias';`);
-  await B.wait(`document.querySelector('#my-guides .tj-card')`);
-  ok('«Tus guías» lists it on Guías', /Examen 2/.test(await B.js(`return document.querySelector('#my-guides')?.innerText ?? ''`)));
-  await B.js(`location.hash = '#/estudiar/guia';`);
+  // «Tus guías» and a draft, in Estudiar as in Trabajos
+  await B.js(`location.hash = '#/estudiar';`);
+  await B.wait(`document.querySelector('#eg-body .tj-card a[href^="#/estudio/"]')`);
+  ok('Estudiar lists the guide, with the ⋯ menu', /Examen 2/.test(await B.js(`return document.querySelector('#eg-body')?.innerText ?? ''`)) && await B.js(`return !!document.querySelector('#eg-body .tj-card .tj-menu')`));
+  await B.js(`document.querySelector('#eg-body [data-tj="study-new"]').click();`);
   await B.wait(`/Qué vas a estudiar/.test(document.querySelector('#eg-body .tj-wizard h1')?.textContent)`);
   await type('#eg-body input[name="v"]', 'Física I');
   await click('Guardar y salir');
-  await B.wait(`location.hash === '#/guias' && document.querySelector('#my-guides .tj-draft')`, 15000);
-  ok('«Guardar y salir» keeps it in «Tus guías»', /Física I/.test(await B.js(`return document.querySelector('#my-guides')?.innerText ?? ''`)));
+  await B.wait(`location.hash === '#/estudiar' && document.querySelector('#eg-body .tj-draft')`, 15000);
+  ok('«Guardar y salir» keeps it as a draft in Estudiar', /Física I/.test(await B.js(`return document.querySelector('#eg-body')?.innerText ?? ''`)));
   await B.shot('13-tus-guias');
-  await B.js(`document.querySelector('#my-guides [data-eg="resume"]').click();`);
+  await B.js(`document.querySelector('#eg-body [data-tj="draft-resume"]').click();`);
   await B.wait(`document.querySelector('#eg-body .tj-wizard h1')`);
   ok('«Seguir» brings it back where it was', await B.js(`return document.querySelector('#eg-body input[name="v"]')?.value`) === 'Física I');
 
@@ -204,9 +207,8 @@ try {
   ok('Trabajos does not list study guides', !/Examen 2/.test(await B.js(`return document.querySelector('#tj-body')?.innerText ?? ''`)));
 } catch (e) {
   ok('ran to the end', false, e.message);
-  console.log('STATE', await B.js(`return JSON.stringify({ hash: location.hash, wiz: document.querySelector('#eg-body #tj-wizard')?.dataset.d, shelf: document.querySelector('#my-guides')?.innerText.slice(0, 300), hidden: document.querySelector('#my-guides')?.hidden })`).catch((x) => x.message));
-  console.log(B.logs.slice(-8).join('
-'));
+  console.log('STATE', await B.js(`return JSON.stringify({ hash: location.hash, wiz: document.querySelector('#eg-body #tj-wizard')?.dataset.d, list: document.querySelector('#eg-body')?.innerText.slice(0, 300) })`).catch((x) => x.message));
+  console.log(B.logs.slice(-8).join(' | '));
   await B.shot('99-error').catch(() => {});
 } finally {
   const errs = B.logs.filter((l) => /EXCEPTION|ERROR/.test(l) && !/favicon|net::ERR|Failed to load resource/.test(l));

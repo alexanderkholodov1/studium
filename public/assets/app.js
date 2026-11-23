@@ -39,7 +39,7 @@ import { mountAdmin, renderAdmin } from './admin.js';
 import { mountFeedback } from './feedback.js';
 import * as vault from './vault.js';
 import { mountComunidad, renderComunidad } from './comunidad.js';
-import { mountTrabajos, renderTrabajos, renderStudy, openStudy, studyShelf, publicShelf, useGraph } from './trabajos.js';
+import { mountTrabajos, renderTrabajos, renderStudy, renderStudyHome, openStudy, useGraph } from './trabajos.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -380,7 +380,7 @@ function renderCatalog() {
   list.sort((a, b) => rank(a) - rank(b));
   $('#gallery').innerHTML = list.length ? list.map(guideCard).join('') : `<div class="empty glass">${state.catalog.length
     ? `<h2>Nada por aquí</h2><p>${filter === 'all' ? 'Prueba con otra materia, tema o profe.' : 'Cambia el filtro para ver más guías.'}</p>`
-    : '<h2>Studium está empezando</h2><p>Aporta tus exámenes, deberes o apuntes: con ellos se arma el grafo y se crean las guías.</p><a class="button primary" href="#/estudiar">Soltar material en Estudiar</a>'}</div>`;
+    : '<h2>Studium está empezando</h2><p>Aporta tus exámenes, deberes o apuntes: con ellos se arma el grafo y se crean las guías.</p><a class="button primary" href="#/estudiar/escritorio">Soltar material en Estudiar</a>'}</div>`;
   rise($('#gallery'));
 }
 $('#q').addEventListener('input', renderCatalog);
@@ -547,7 +547,8 @@ async function route() {
       acerca: ['about', 'Acerca', null],
       novedades: ['news', 'Novedades', () => renderNews($('#news'))],
       // Guías: the person's own study guides on top («Tus guías»), then everyone's.
-      guias: ['catalog', 'Guías', () => { renderCatalog(); return Promise.all([studyShelf($('#my-guides')), publicShelf($('#public-guides'))]); }],
+      // Guías de la comunidad (the person's own study guides live in Estudiar, as Trabajos keeps its own).
+      guias: ['catalog', 'Guías', renderCatalog],
       // A study guide opens apart from Studium's page, in the same environment as a trabajo's guide.
       estudio: ['trabajo', 'Guía de estudio', () => openStudy(arg[0])],
       comunidad: ['comunidad', 'Comunidad', renderComunidad],
@@ -564,6 +565,17 @@ async function route() {
     // «Lo que subiste» (what was published, to change who sees it or delete it) is reached from «Estudiar».
     // «Hacer una guía»: one question per screen, written by the person's AI with Trabajos' engine (trabajos.js).
     // The older guide (a page the AI writes, to publish in Guías) stays at #/estudiar/guia-html.
+    // «Estudiar» works as «Trabajos» (his words, 2026-11-23: one way of working): its page lists the study guides, with
+    // «Empezar una guía nueva»; the questions of a guide show there too. The material desk is #/estudiar/escritorio.
+    if (page === 'estudiar' && !arg[0]) {
+      document.title = `${t('Estudiar')} · Studium`;
+      if (!$('#eg-body #tj-wizard')) $('#eg-body').innerHTML = '<p class="status">Cargando…</p>';
+      show('estudio');
+      await load();
+      if (ticket !== routing) return;
+      await renderStudyHome();
+      return;
+    }
     if (page === 'estudiar' && arg[0] === 'guia') {
       document.title = `${t('Hacer una guía')} · Studium`;
       // Never the previous guide's last screen; the questions of this draft stay if they are already there.
@@ -576,10 +588,10 @@ async function route() {
     }
     if (page === 'estudiar' || page === 'mis-aportes') {
       const mine = page === 'mis-aportes';
-      const pane = mine ? 'mine' : arg[0] === 'guia-html' ? 'guide' : arg[0] === 'grafo' ? 'material' : arg[0] === 'materia' ? 'desk' : 'estudia';
+      const pane = mine ? 'mine' : arg[0] === 'guia-html' ? 'guide' : arg[0] === 'grafo' ? 'material' : arg[0] === 'materia' ? 'desk' : 'estudia'; // #/estudiar/escritorio
       const title = mine ? 'Lo que subiste' : pane === 'desk' ? arg[1] : 'Estudiar';
       document.title = `${mine ? t(title) : title === 'Estudiar' ? t('Estudiar') : title} · Studium`;
-      $('#c-title').textContent = mine ? t('Lo que subiste') : t('Estudiar');
+      $('#c-title').textContent = mine ? t('Lo que subiste') : pane === 'estudia' ? t('Tu escritorio') : t('Estudiar');
       for (const a of document.querySelectorAll('#view-contribute .subtabs a')) a.setAttribute('aria-current', String(a.dataset.sub === ({ mine: 'mine', guide: 'guia' }[pane] ?? 'material')));
       $('#c-anon').hidden = pane !== 'estudia';
       show('contribute');

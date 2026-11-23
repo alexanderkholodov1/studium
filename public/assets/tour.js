@@ -52,13 +52,17 @@ const SECTIONS = {
     { sel: '#docs', text: 'Los documentos de tu comunidad.' },
   ],
   'view-comunidad': [{ sel: '#cm-body', text: 'Lo que piden y ofrecen los demás. Todo entre miembros, con buena onda.' }],
+  'view-estudio': [
+    { sel: '#eg-body [data-tj="study-new"]', text: 'Estudiar funciona como Trabajos: empiezas una guía, respondes unas pocas preguntas y tu IA la escribe.' },
+    { sel: '#eg-body .tj-cards', text: 'Tus guías: ábrelas para estudiar tema por tema. El ⋯ de cada una la elimina; quién la ve se cambia dentro de la guía.' },
+    { sel: '#eg-body .tj-more-links', text: 'Tu escritorio guarda todo el material de tus materias; las guías de la comunidad, lo que otros compartieron.' },
+  ],
   'view-contribute': [
     { sel: '#pane-estudia:not([hidden]) [data-es-drop]', text: 'Tu escritorio: todo lo de tus materias en un solo lugar. Suelta aquí lo que tengas, archivos, carpetas enteras o fotos del cuaderno, sin llenar nada.' },
     { sel: '#pane-estudia:not([hidden]) [data-es-link]', text: 'Un enlace también vale: una página del profe o un repositorio de GitHub.' },
     { sel: '#pane-estudia:not([hidden]) .es-how, #pane-estudia:not([hidden]) .es-workdesk', text: 'Yo lo ordeno: cada cosa a su montón y cada materia a su carpeta. Lo que no sepa de qué es, te lo pregunto una sola vez.' },
     { sel: '#pane-estudia:not([hidden]) [data-es-table]:not([hidden])', text: 'Al final eliges qué hacemos: guardarlo, hacer una guía de estudio o sumarlo al grafo. Puedes volver a tus carpetas y decidir después.' },
     { sel: '#pane-estudia:not([hidden]) .es-surface', text: 'Toca una carpeta para ver lo de esa materia y hacer una guía con eso cuando la necesites.' },
-    { sel: '#view-contribute .subtabs [data-sub="guias"]', text: 'Guías: las que hizo tu comunidad, para estudiar ya.' },
     { sel: '#pane-estudia:not([hidden]) .es-mine', text: 'Lo que subiste: ahí cambias quién lo ve, o lo borras.' },
     { sel: '#pane-guide:not([hidden]) .q-progress', text: 'Tu guía se arma con unas pocas preguntas, una a la vez. Esta barra es lo que falta.' },
     { sel: '#pane-guide:not([hidden]) [data-q].now', text: 'Responde lo que sepas; lo opcional se salta. La última pregunta crea la guía con tu IA.' },

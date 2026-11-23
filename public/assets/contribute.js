@@ -1187,7 +1187,7 @@ function minePane() {
   const items = [...catalog, ...contributions].filter((x) => x.mine).sort((a, b) => b.updated - a.updated);
   if (!items.length) {
     return `<div class="empty glass"><h2>Todavía no aportaste nada</h2><p>Tus aportes y guías aparecen aquí: puedes cambiar quién los ve, reemplazarlos o borrarlos.</p>
-      <a class="button primary" href="#/estudiar">Soltar material en Estudiar</a></div>${HISTORY}`;
+      <a class="button primary" href="#/estudiar/escritorio">Soltar material en Estudiar</a></div>${HISTORY}`;
   }
   return `<ul class="mine">${items.map((x) => `<li class="glass" style="${themeStyle(x.theme)}" data-item="${esc(x.type)}:${esc(x.id)}">
       <div class="what"><span class="badge">${x.type === 'guide' ? 'Guía' : esc(KINDS[x.kind] ?? 'Aporte')}</span>

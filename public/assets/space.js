@@ -17,7 +17,7 @@ import { seen, markSeen, unmarkSeen, hintsOn, setHints } from './hints.js';
 import { luckyHit, found, radioOn, openRadio, radioDocked, placeRadio, rescueRadio, critCount, eggCount, prop3d, poke, backdrop, EGGS, openStations } from './eggs.js';
 import { props, pokeProp } from './props3d.js';
 import { SKINS, skinOpen, specterSkin, setSpecterSkin } from './specter.js';
-import { renderHomeSchedule } from './schedule.js';
+import { renderHomeSchedule, myFinals, addFinal } from './schedule.js';
 import * as grid from './grid.js';
 import * as decor from './decor.js';
 
@@ -138,16 +138,23 @@ const tile = (id, it, inner, cls = 'glass', attrs = '') => `<section class="tile
 // Exams of the guides and the person's own dates, together, from the nearest.
 function agenda() {
   const own = prefs.get().deadlines.filter((d) => (daysTo(d.date) ?? -1) >= 0).map((d) => ({ ...d, own: true, title: d.text }));
-  return [...upcoming().map((g) => ({ ...g, own: false })), ...own].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  return [...upcoming().map((g) => ({ ...g, own: false })), ...own].sort((a, b) => String(a.date + (a.time ?? '')).localeCompare(String(b.date + (b.time ?? ''))));
 }
 // «Tu próximo examen» is about getting ready for one exam (what «Fechas y entregas» lists is everything with a date):
 // how many days are left, the guide for it, and how much study that leaves per day.
 const isExam = (x) => !x.own || x.kind === 'examen' || (!x.kind && /examen|parcial|prueba|final|lecci[oó]n|quiz/i.test(x.text ?? ''));
+// The finals the official table suggests for «Mi horario» and the person has not added (they decide: not every
+// course follows the table).
+const suggested = () => myFinals().filter((x) => x.f.date && !x.added && (daysTo(x.f.date) ?? -1) >= 0).sort((a, b) => (a.f.date + a.f.from).localeCompare(b.f.date + b.f.from));
 function countdownTile(span) {
   const next = agenda().find(isExam);
+  const sug = suggested();
   if (!next) {
-    return tile('countdown', span, `<h2>Tu próximo examen</h2><p class="muted">Cuando agregues un examen, aquí ves cuánto falta y cómo prepararlo.</p>
-      <div class="actions"><a class="button primary" href="#/horario">Agregar un examen</a><a class="button ghost" href="#/estudiar/guia">Hacer una guía</a></div>`);
+    const s0 = sug[0];
+    return tile('countdown', span, `<h2>Tu próximo examen</h2>${s0 ? `<p class="muted">Según el calendario de finales, tu primer final sería <b>${esc(s0.c.name)}</b>, el ${esc(longDate(s0.f.date))} a las ${esc(s0.f.from)}. No todas las materias siguen la tabla: agrégalo si tu profesor lo confirma.</p>
+      <div class="actions"><button class="button primary" data-final-home="${esc(s0.c.id)}">Agregarlo</button><a class="button ghost" href="#/horario">Ver ${sug.length > 1 ? `los ${sug.length} sugeridos` : 'el sugerido'}</a></div>`
+      : `<p class="muted">Cuando agregues un examen, aquí ves cuánto falta y cómo prepararlo.</p>
+      <div class="actions"><a class="button primary" href="#/horario">Agregar un examen</a><a class="button ghost" href="#/estudiar/guia">Hacer una guía</a></div>`}`);
   }
   const n = daysTo(next.date);
   const sub = next.own ? next.course ?? '' : [next.professor, next.term].filter(Boolean).join(' · ');
@@ -156,7 +163,8 @@ function countdownTile(span) {
     <div class="countdown d" style="--d:26"><span class="big">${n === 0 ? 'Hoy' : n}<small>${n === 0 ? '' : n === 1 ? ' día' : ' días'}</small></span>
       <h3>${next.own ? esc(next.text) : `${esc(next.course)}: ${esc(next.title)}`}</h3><p class="muted">${esc(sub)}</p></div>
     ${n > 0 ? `<p class="cd-plan d" style="--d:18">${n === 1 ? 'Queda un día: repasa lo esencial y duerme bien.' : `Te quedan <b>${n} días</b>: con una guía de estudio, un tema por día alcanza.`}</p>` : ''}
-    <div class="actions d" style="--d:14">${next.own ? `<button class="button primary" data-study-for="${esc(next.id)}">Hacer su guía de estudio</button>`
+    ${sug.length ? `<p class="cd-plan d" style="--d:20"><a href="#/horario">${sug.length === 1 ? 'Hay un final sugerido' : `Hay ${sug.length} finales sugeridos`}</a> por agregar.</p>` : ''}
+    <div class="actions d" style="--d:14">${next.own ? `<button class="button primary" data-study-for="${esc(next.id)}" data-course="${esc(next.course ?? '')}" data-title="${esc(next.text)}" data-date="${esc(next.date)}">Hacer su guía de estudio</button>`
       : `<a class="button primary" href="#/guia/${encodeURIComponent(next.id)}">Abrir la guía</a><button class="button ghost" data-goal-for="${esc(next.id)}">Ponérmelo como meta</button>`}</div>`, 'solid-blue', 'data-tilt="3"');
 }
 function deadlinesTile(span) {
@@ -392,7 +400,8 @@ export function renderHome() {
   $('#dash').innerHTML = `${top}${editing ? trayTile() : ''}<div class="dash-grid" id="dash-grid" style="--rows:${grid.rows(items)}">${tiles}</div>`;
   placeRadio();
   props($('#dash'));
-  renderHomeSchedule($('#dash [data-home-schedule]')).then?.(() => fitTiles());
+  // Once «Mi horario» is loaded, the finals it gives may be the next exam.
+  renderHomeSchedule($('#dash [data-home-schedule]')).then?.(() => { if (myFinals().length && document.querySelector('#dash [data-tile="countdown"]')) refreshTile('countdown'); fitTiles(); });
   fitTiles();
   $('#dash').classList.toggle('editing', editing);
   $('#home-edit').textContent = editing ? 'Listo' : 'Personalizar';
@@ -605,10 +614,12 @@ document.addEventListener('click', (e) => {
     if (!chosen().includes('todos')) ctx?.toast?.('Agrega «Pendientes» a tu inicio para verlo.');
     renderHome();
   }
+  const fh = e.target.closest?.('[data-final-home]');
+  if (fh) { if (addFinal(fh.dataset.finalHome)) { sfx.tick(); ctx?.toast?.('Agregado a tu calendario.'); } renderHome(); return; }
   // «Tu próximo examen»: its study guide, with the course, the exam and the date already answered.
   const sf = e.target.closest?.('[data-study-for]');
   if (sf) {
-    const d = prefs.get().deadlines.find((x) => x.id === sf.dataset.studyFor);
+    const d = prefs.get().deadlines.find((x) => x.id === sf.dataset.studyFor) ?? { course: sf.dataset.course, text: sf.dataset.title, date: sf.dataset.date };
     if (d) import('./trabajos.js').then((m) => { m.presetStudy({ course: d.course ?? '', title: d.text, date: d.date }); location.hash = '#/estudiar/guia'; });
   }
 });

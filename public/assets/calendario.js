@@ -27,6 +27,27 @@ export const TERMS = [
       ['2026-12-18', 'Terminan los exámenes finales'],
       ['2026-12-22', 'Notas finales en Banner'],
     ],
+    // «Calendario de Exámenes Finales», USFQ Registro, Primer Semestre 2026/2027 (a picture in the students' SharePoint,
+    // behind the university login; transcribed from his screenshot of 2026-11-23). Days: 0 Monday … 5 Saturday.
+    exams: {
+      source: 'USFQ Registro, «Calendario de Exámenes Finales, Primer Semestre 2026/2027» (SharePoint de estudiantes)',
+      byClass: [
+        [[0, 2], '11:30', '2026-12-14', '09:00', '11:00'], [[0, 2], '14:30', '2026-12-14', '12:00', '14:00'], [[0, 2], '16:00', '2026-12-14', '15:00', '17:00'],
+        [[1, 3], '11:30', '2026-12-15', '09:00', '11:00'], [[1, 3], '14:30', '2026-12-15', '12:00', '14:00'], [[1, 3], '16:00', '2026-12-15', '15:00', '17:00'],
+        [[0, 2], '08:30', '2026-12-16', '12:00', '14:00'], [[0, 2], '10:00', '2026-12-16', '09:00', '11:00'], [[0, 2], '13:00', '2026-12-16', '15:00', '17:00'],
+        [[1, 3], '08:30', '2026-12-17', '12:00', '14:00'], [[1, 3], '10:00', '2026-12-17', '09:00', '11:00'], [[1, 3], '13:00', '2026-12-17', '15:00', '17:00'],
+        [[0, 2], '07:00', '2026-12-18', '09:00', '11:00'], [[0, 2], '17:30', '2026-12-18', '15:00', '17:00'], [[1, 3], '07:00', '2026-12-18', '12:00', '14:00'], [[1, 3], '17:30', '2026-12-18', '18:00', '20:00'],
+      ].map(([days, start, date, from, to]) => ({ days, start, date, from, to })),
+      // Departmental exams: one exam for every section of a course area. Matched by the course's code or name.
+      departmental: [
+        { name: 'Química', code: /^QUI/i, words: /qu[ií]mica/i, date: '2026-12-11', from: '09:00', to: '12:00' },
+        { name: 'Arquitectura', code: /^ARQ/i, words: /^$/, date: '2026-12-11', from: '09:00', to: '14:00' },
+        { name: 'Biología General', code: /^$/, words: /biolog[ií]a general/i, date: '2026-12-11', from: '15:00', to: '18:00' },
+        { name: 'Matemáticas', code: /^MAT/i, words: /^$/, date: '2026-12-12', from: '09:00', to: '14:00' },
+        { name: 'Inglés (niveles ESL 1 a 6)', code: /^ESL/i, words: /\bESL\b|ingl[eé]s/i, date: '2026-12-11', from: '08:00', to: '18:00', choose: 'Eliges una hora el viernes 11 o el sábado 12, entre 08:00 y 18:00; dura 1 h 15.' },
+      ],
+      notes: ['Puedes tener hasta 3 exámenes en un día; si te tocan más, habla con tus profesores para buscar alternativas.', 'Si tu clase tiene otro horario que los de la tabla, tu profesor coordina contigo la hora del final.'],
+    },
   },
 ];
 
@@ -59,3 +80,31 @@ export function weekOff(date = new Date()) {
   return Array.from({ length: 6 }, (_, i) => { const d = new Date(monday); d.setDate(d.getDate() + i); const s = dayStatus(d); return s.kind === 'off' ? s.name : s.kind === 'classes' ? '' : s.kind; });
 }
 export const longDay = (day) => new Date(`${day}T12:00`).toLocaleDateString('es-EC', { weekday: 'long', day: 'numeric', month: 'long' });
+
+/* ---------- final exams: when each class has its final ---------- */
+// The term's table, or one the person transcribed with their AI when Studium does not have it yet (kept on this device).
+const OWN = (code) => `studium-finales-${code}`;
+export function examTable(term) {
+  if (term?.exams) return term.exams;
+  try {
+    const t = JSON.parse(localStorage.getItem(OWN(term?.code)) ?? 'null');
+    return t?.byClass?.length ? { ...t, own: true, departmental: (t.departmental ?? []).map((d) => ({ ...d, code: /^$/, words: new RegExp(String(d.name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') })) } : null;
+  } catch { return null; }
+}
+export function keepOwnTable(term, table) { try { localStorage.setItem(OWN(term.code), JSON.stringify(table)); } catch { /* this time only */ } }
+const minOf = (hhmm) => { const [h, m] = String(hhmm).split(':').map(Number); return h * 60 + m; };
+// One class of «Mi horario» (its slots: d = day, s = start in minutes): a departmental exam, its slot in the table, or
+// «coordinate with the professor» (another schedule). Exercises and labs have no final of their own.
+export function finalFor(c, term = TERMS[0]) {
+  const table = examTable(term);
+  if (!table || !c?.slots?.length) return null;
+  const theory = !c.kind || /^teor/i.test(c.kind);
+  if (!theory) return null;
+  const dep = table.departmental.find((d) => d.code.test(c.code ?? '') || d.words.test(c.name ?? ''));
+  if (dep) return { kind: 'departamental', name: dep.name, date: dep.date, from: dep.from, to: dep.to, choose: dep.choose ?? '' };
+  const days = [...new Set(c.slots.map((x) => x.d))].sort();
+  const starts = [...new Set(c.slots.map((x) => x.s))];
+  const hit = starts.length === 1 && table.byClass.find((r) => r.days.length === days.length && r.days.every((d, i) => d === days[i]) && Math.abs(minOf(r.start) - starts[0]) <= 10);
+  if (hit) return { kind: 'materia', date: hit.date, from: hit.from, to: hit.to };
+  return { kind: 'coordinar' };
+}

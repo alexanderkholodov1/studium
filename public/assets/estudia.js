@@ -720,7 +720,7 @@ async function goOn(table, status) {
   const done = chosen; batch = [];
   if (toGraph && files.length && !toGuide) { processing(table, started, course); return; }
   if (toGuide) api.startGuide(files, { course, piles: [...new Set(done.map((x) => x.kind))], exams: done.filter((x) => x.kind === 'exam').map((x) => x.name), links: done.filter((x) => x.url).map((x) => x.url) });
-  else location.hash = toGraph && files.length ? '#/estudiar/grafo' : toDesk ? `#/estudiar/materia/${encodeURIComponent(course)}` : '#/estudiar';
+  else location.hash = toGraph && files.length ? '#/estudiar/grafo' : toDesk ? `#/estudiar/materia/${encodeURIComponent(course)}` : '#/estudiar/escritorio';
 }
 
 // The folders of a drop: everything under the same top folder goes together; things dropped loose go together too.
@@ -932,10 +932,10 @@ export async function renderDesk(el, course, deps) {
   const mine = [...catalog.map((x) => ({ ...x, type: 'guide' })), ...contributions].filter((x) => x.mine && keyOf(x.course) === keyOf(course));
   const kinds = [...new Set(items.map((x) => x.kind))].sort((a, b) => { const o = Object.keys(PILES); return (o.indexOf(a) + 1 || 99) - (o.indexOf(b) + 1 || 99); });
   el.innerHTML = `
-    <p class="kicker"><a class="link" href="#/estudiar">← Estudia</a></p>
+    <p class="kicker"><a class="link" href="#/estudiar/escritorio">← Tu escritorio</a></p>
     <h2 class="es-desk-title">${esc(course)}</h2>
     <div class="es-piles desk">${kinds.map((k) => `<div class="pile" style="--c:${pileOf(k).color}"><div class="pile-tab">${esc(pileOf(k).name)} <b>${items.filter((x) => x.kind === k).length}</b></div><div class="pile-body">${items.filter((x) => x.kind === k).map((it) => sheet(it).replace('<div class="es-sheet', `<div data-open="${it.id}" class="es-sheet`)).join('')}</div></div>`).join('') || '<p class="muted">Este escritorio está vacío en este dispositivo.</p>'}</div>
-    <div class="actions"><button class="button primary" data-desk-guide>Generar una guía con esto</button><a class="button ghost" href="#/estudiar">Soltar más</a></div>
+    <div class="actions"><button class="button primary" data-desk-guide>Generar una guía con esto</button><a class="button ghost" href="#/estudiar/escritorio">Soltar más</a></div>
     ${mine.length ? `<h3>Lo que hiciste de esta materia</h3><ul class="es-made">${mine.map((x) => `<li>${x.type === 'guide' ? `<a href="#/guia/${encodeURIComponent(x.id)}">${esc(x.title)}</a> <small class="muted">guía</small>` : `${esc(x.title)} <small class="muted">en el grafo</small>`}</li>`).join('')}</ul>` : ''}`;
   el.onclick = (e) => {
     const open = e.target.closest('[data-open]');

@@ -609,7 +609,7 @@ function panel(n) {
       <div class="actions">
         <button class="button primary" data-act="route">Trazar una ruta</button>
         <button class="button ghost" data-act="timeline">Línea de tiempo</button>
-        ${n.contributions.length || n.guides.length ? `<a class="button ghost" href="#/estudiar/guia/${encodeURIComponent(n.id)}">Crear una guía</a>` : '<a class="button ghost" href="#/estudiar">Soltar material en Estudia</a>'}
+        ${n.contributions.length || n.guides.length ? `<a class="button ghost" href="#/estudiar/guia/${encodeURIComponent(n.id)}">Crear una guía</a>` : '<a class="button ghost" href="#/estudiar/escritorio">Soltar material en Estudiar</a>'}
       </div>
       ${nodeActions(n)}
       ${before.length ? `<h3>Se necesita antes</h3><div class="chips small">${chipsOf(before)}</div>` : ''}
