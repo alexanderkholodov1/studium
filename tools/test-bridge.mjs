@@ -36,7 +36,7 @@ if (!args.includes('-p')) {
   // The official CLI in its own window: it keeps its transcript, writes its answer to «salida» and says LISTO.
   const { mkdirSync, writeFileSync } = await import('node:fs');
   const { join } = await import('node:path');
-  const sid = args[args.indexOf('--session-id') + 1];
+  const sid = args.includes('--resume') ? args[args.indexOf('--resume') + 1] : args[args.indexOf('--session-id') + 1];
   const tdir = join(process.env.CLAUDE_CONFIG_DIR ?? join(process.env.USERPROFILE ?? process.env.HOME, '.claude'), 'projects', process.cwd().replace(/[^A-Za-z0-9]/g, '-'));
   mkdirSync(tdir, { recursive: true });
   writeFileSync(join(tdir, sid + '.jsonl'), JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Read', input: { file_path: 'enunciado.txt' } }] } }) + '\\n');
@@ -49,7 +49,12 @@ if (s.sleep) { setTimeout(() => {}, s.sleep); } else {
   if (s.error) { out({ type: 'result', subtype: 'success', is_error: true, result: s.error }); process.exit(1); }
   if (s.limit) { out({ type: 'result', subtype: 'success', is_error: true, result: 'Claude AI usage limit reached|1894614400' }); process.exit(1); }
   if (s.steps) { out({ type: 'assistant', message: { content: [{ type: 'thinking', thinking: 'Primero leo el enunciado.' }, { type: 'tool_use', name: 'Read', input: { file_path: 'enunciado.txt' } }, { type: 'text', text: 'La guía.' }] } }); out('\\n'); }
-  out({ type: 'result', subtype: 'success', is_error: false, result: s.answer ?? 'respuesta de claude' }); process.exit(0);
+  // Its session: the one resumed, or a new one, kept in Claude Code's record for this folder (as the real CLI does).
+  const { mkdirSync: mk, writeFileSync: wf } = await import('node:fs'); const { join: jn } = await import('node:path');
+  const sess = args.includes('--resume') ? args[args.indexOf('--resume') + 1] : 'ses-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const td = jn(process.env.CLAUDE_CONFIG_DIR ?? jn(process.env.USERPROFILE ?? process.env.HOME, '.claude'), 'projects', process.cwd().replace(/[^A-Za-z0-9]/g, '-'));
+  mk(td, { recursive: true }); wf(jn(td, sess + '.jsonl'), '{}' + String.fromCharCode(10), { flag: 'a' });
+  out({ type: 'result', subtype: 'success', is_error: false, result: s.answer ?? 'respuesta de claude', session_id: sess }); process.exit(0);
 }
 }`,
   codex: `const CLI = 'codex';${common}
@@ -227,6 +232,20 @@ await test('claude works in a folder of the person, with the tools of its permis
     writeFileSync(cfg, JSON.stringify(before));
     rmSync(work, { recursive: true, force: true });
   }
+});
+await test('a second request on the same guide continues its Claude Code session, in the same folder', async () => {
+  scenario({ claude: { answer: 'la guía' } });
+  const first = await run({ engine: 'claude', model: 'claude-haiku-5-5' });
+  const [c1] = calls();
+  check(first.status === 200 && first.data.session, `first: ${first.status} ${JSON.stringify(first.data).slice(0, 200)}`);
+  scenario({ claude: { answer: 'ajustada' } });
+  const second = await run({ engine: 'claude', model: 'claude-haiku-5-5', continue: first.data.session });
+  const [c2] = calls();
+  check(second.status === 200 && second.data.continued === true, `continued: ${JSON.stringify(second.data).slice(0, 200)}`);
+  check(c2.args.includes('--resume') && c2.args[c2.args.indexOf('--resume') + 1] === first.data.session, `args ${c2.args.join(' ').slice(0, 200)}`);
+  check(c1.cwd.toLowerCase() === c2.cwd.toLowerCase(), `same folder: ${c1.cwd} vs ${c2.cwd}`);
+  const unknown = await run({ engine: 'claude', model: 'claude-haiku-5-5', continue: 'no-existe-12345' });
+  check(unknown.status === 200 && unknown.data.continued === false && /Sesión nueva/.test(unknown.data.note), `unknown: ${JSON.stringify(unknown.data).slice(0, 200)}`);
 });
 await test('«la carpeta donde abriste el puente» is lent without the folder dialog', async () => {
   const r = await call('POST', '/v1/folders/pick', { body: { mode: 'read', hours: 1, here: true } });

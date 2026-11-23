@@ -502,11 +502,13 @@ export async function findBridge(port = BRIDGE_PORT) {
   try { const r = await fetch(`http://127.0.0.1:${port}/v1/hello`); return r.ok ? await r.json() : null; } catch { return null; }
 }
 // The bridge's version this page expects (bridge.mjs, VERSION): an older one is downloaded again.
-export const BRIDGE_VERSION = '1.8.0';
+export const BRIDGE_VERSION = '1.9.0';
 // «Ver a mi IA en una terminal»: the bridge opens a window that shows the exact instructions and, live, what the AI
 // does. Chosen by the person, kept in this browser.
 const WATCH = 'studium-ai-watch';
-export const watchTerminal = () => { try { return localStorage.getItem(WATCH) === 'on'; } catch { return false; } };
+// On unless the person turned it off (his words: he expects to see Claude Code working; the choice is kept per address,
+// so on a new address — a beta link — it was off and the window never opened).
+export const watchTerminal = () => { try { return localStorage.getItem(WATCH) !== 'off'; } catch { return true; } };
 export function setWatchTerminal(on) { try { localStorage.setItem(WATCH, on ? 'on' : 'off'); } catch { /* this time only */ } }
 // Is the bridge that answered older than this page needs? (Compared number by number.)
 export function bridgeOld(version = load().bridge?.version) {
@@ -691,7 +693,7 @@ const TIMEOUT_OF = { solution: 15 * 60_000 };
 const BRIDGE_SOLUTION = 60 * 60_000;
 const limitOf = (task, way) => (task === 'solution' && way.startsWith('bridge:') ? BRIDGE_SOLUTION + 2 * 60_000 : TIMEOUT_OF[task] ?? TIMEOUT);
 export const longest = (c) => (c.provider === 'anthropic' || c.provider === 'bridge:claude' ? 64000 : 32000);
-export async function run({ system, text, files = [], maxTokens = 32000, onProgress, onEvent = null, signal, task = 'guide', use = null, label = '', entry = null, folder = '' } = {}) {
+export async function run({ system, text, files = [], maxTokens = 32000, onProgress, onEvent = null, signal, task = 'guide', use = null, label = '', entry = null, folder = '', cont = '' } = {}) {
   // Keys and passwords never reach the AI: whatever text goes, from a file or typed, is filtered here first.
   if (text) text = redact(text).text;
   files = files.map((f) => (f?.text ? { ...f, text: redact(f.text).text } : f));
@@ -720,7 +722,7 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
     // Adapters report a count of characters written (or -1: «waiting, nothing yet»).
     const watched = (n) => { if (typeof n === 'number' && n >= 0) { rec.received = n; rec.phase = 'receiving'; } tell(rec); onProgress?.(n); };
     const out = await Promise.race([
-      send({ way, model, effort, system, text, files: usable, maxTokens, onProgress: watched, signal, folder, onEvent, timeoutMs: task === 'solution' ? BRIDGE_SOLUTION : undefined }),
+      send({ way, model, effort, system, text, files: usable, maxTokens, onProgress: watched, signal, folder, cont, onEvent, timeoutMs: task === 'solution' ? BRIDGE_SOLUTION : undefined }),
       new Promise((_, reject) => { const limit = limitOf(task, way); timer = setTimeout(() => reject(new AIError(`${model} no respondió en ${limit / 60000} minutos: Studium cortó el pedido.`, { kind: 'transient', way })), limit); }),
     ]).finally(() => clearTimeout(timer));
     rec.phase = 'done'; rec.ms = Date.now() - rec.started; rec.response = String(out.text ?? '').slice(0, 60000);
@@ -843,7 +845,7 @@ function geminiThinking(model, effort, maxTokens) {
   const budget = { low: 1024, medium: 4096, high: 12288, xhigh: 24576 }[effort] ?? 4096;
   return { thinkingConfig: { thinkingBudget: Math.min(budget, Math.floor(maxTokens / 2)) } };
 }
-async function send({ way, model, effort, system, text, files, maxTokens, onProgress, signal, folder = '', onEvent = null, timeoutMs = undefined }) {
+async function send({ way, model, effort, system, text, files, maxTokens, onProgress, signal, folder = '', cont = '', onEvent = null, timeoutMs = undefined }) {
   if (way === 'anthropic') {
     const client = await claude(keyOf(way));
     // Pictures carry their name in a line before them, so the AI knows their order («hoja 1», «hoja 2»).
@@ -951,10 +953,10 @@ async function send({ way, model, effort, system, text, files, maxTokens, onProg
   try {
     body = await bridgeFetch('/v1/run', {
       method: 'POST', signal, engine,
-      body: JSON.stringify({ runId, watch: watchTerminal(), timeoutMs, engine, account: engine === 'claude' ? load().bridge?.account ?? '' : '', folder: engine === 'claude' ? folder : '', model, effort, system, text, files: files.map((f) => (f.data ? { name: f.name, type: f.type, data: f.data } : { name: f.name, type: 'text/plain', text: f.text })) }),
+      body: JSON.stringify({ runId, watch: watchTerminal(), timeoutMs, engine, account: engine === 'claude' ? load().bridge?.account ?? '' : '', folder: engine === 'claude' ? folder : '', ...(engine === 'claude' && cont ? { continue: cont } : {}), model, effort, system, text, files: files.map((f) => (f.data ? { name: f.name, type: f.type, data: f.data } : { name: f.name, type: 'text/plain', text: f.text })) }),
     });
   } finally { if (watch) clearInterval(watch); }
-  return { text: String(body.text ?? ''), resume: String(body.resume ?? ''), outputs: body.outputs && typeof body.outputs === 'object' ? body.outputs : {} };
+  return { text: String(body.text ?? ''), resume: String(body.resume ?? ''), session: String(body.session ?? ''), continued: !!body.continued, note: String(body.note ?? ''), outputs: body.outputs && typeof body.outputs === 'object' ? body.outputs : {} };
 }
 
 // The HTML page inside an answer: tolerant of code fences and text around it.

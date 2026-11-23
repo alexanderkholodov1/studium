@@ -193,6 +193,7 @@ try {
   ok('in a guide, «Pedir un cambio a tu IA» takes the tutorial\'s place', fab.ask && fab.tour === 'none', JSON.stringify(fab));
   await B.js(`document.querySelector('.tj-askai').click();`); await W(500);
   ok('…it asks about the whole guide, with «Rehacer las gráficas»', /toda la guía/.test(await B.js(`return document.querySelector('.tj-adjpop')?.innerText ?? ''`)) && /Rehacer las gráficas/.test(await B.js(`return document.querySelector('.tj-adjpop')?.innerText ?? ''`)));
+  ok('…with «Cómo lo hace»: who does it, in sight', await B.js(`return !!document.querySelector('.tj-adjpop .tj-howrun')`));
   await B.shot('21-pedir-cambio');
   await B.js(`document.querySelector('.tj-adjpop [data-tj="adj-close"]')?.click();`);
 

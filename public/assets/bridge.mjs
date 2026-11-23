@@ -14,7 +14,7 @@ import { homedir, platform, tmpdir } from 'node:os';
 import path from 'node:path';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
-const VERSION = '1.8.0';
+const VERSION = '1.9.0';
 const NAME = 'studium-bridge';
 const DEFAULT_PORT = 41730;
 const MAX_BODY = 64 * 1024 * 1024;
@@ -22,6 +22,8 @@ const DEFAULT_TIMEOUT = 20 * 60 * 1000;
 const MAX_TIMEOUT = 60 * 60 * 1000;
 const DETECT_CACHE_MS = 60_000;
 const TEMP_PREFIX = 'studium-run-';
+// The temporary folder by its real, long path (the one Claude Code knows a session by).
+const realTmp = () => { try { return realpathSync.native(tmpdir()); } catch { return tmpdir(); } };
 const WIN = platform() === 'win32';
 const SITE = 'https://alexanderkholodov.web.app';
 
@@ -46,6 +48,38 @@ const originAllowed = (origin) => !!origin && (ORIGINS.has(origin) || PREVIEW.te
 /* ---------- the pairing code ---------- */
 // Kept in the home folder, so a restart keeps the pairing; --reset makes a new one.
 const CONFIG = path.join(homedir(), '.studium-bridge.json');
+// Claude Code sessions this bridge ran (his words, 2026-11-23: a change to a guide must continue the session that wrote
+// it, in its own window). Claude Code keeps a session per folder, so each one is kept with the folder it worked in; a
+// session can be continued only from that same folder. The last 40, in the bridge's settings.
+const sessionsKept = () => (Array.isArray(readConfig().sessions) ? readConfig().sessions : []);
+function keepSession(id, cwd) {
+  if (!id || !cwd) return;
+  const list = [{ id, cwd, at: new Date().toISOString() }, ...sessionsKept().filter((x) => x.id !== id)].slice(0, 40);
+  try { writeConfig({ sessions: list }); } catch { /* not kept: the next request is a new session */ }
+}
+// A session the bridge did not record (written by an older bridge): found among Claude Code's own records, in any of
+// this computer's Claude folders; its folder is known when it is the folder lent now, or one of the bridge's own
+// temporary folders (their names are rebuilt from the record's folder name).
+const mangle = (p) => p.replace(/[^A-Za-z0-9]/g, '-');
+function findSession(id, placePath = '') {
+  const kept = sessionsKept().find((x) => x.id === id);
+  if (kept) return kept;
+  if (!/^[\w-]{8,80}$/.test(id)) return null;
+  const homes = [...new Set([process.env.CLAUDE_CONFIG_DIR, path.join(homedir(), '.claude'), ...(() => { try { return readdirSync(homedir()).filter((n) => /^\.claude[\w-]*$/.test(n)).map((n) => path.join(homedir(), n)); } catch { return []; } })()].filter(Boolean))];
+  const tmpKey = `${mangle(path.join(realTmp(), TEMP_PREFIX))}`;
+  for (const h of homes) {
+    let dirs = [];
+    try { dirs = readdirSync(path.join(h, 'projects')); } catch { continue; }
+    for (const d of dirs) {
+      if (!existsSync(path.join(h, 'projects', d, `${id}.jsonl`))) continue;
+      if (placePath && d === mangle(placePath)) return { id, cwd: placePath };
+      if (d.toLowerCase().startsWith(tmpKey.toLowerCase())) return { id, cwd: path.join(realTmp(), TEMP_PREFIX + d.slice(tmpKey.length)) };
+      return { id, cwd: '', where: d };
+    }
+  }
+  return null;
+}
+const sessionFile = (account, cwd, id) => path.join(account.env?.CLAUDE_CONFIG_DIR ?? process.env.CLAUDE_CONFIG_DIR ?? path.join(homedir(), '.claude'), 'projects', cwd.replace(/[^A-Za-z0-9]/g, '-'), `${id}.jsonl`);
 function readConfig() { try { return JSON.parse(readFileSync(CONFIG, 'utf8')) ?? {}; } catch { return {}; } }
 function writeConfig(patch) {
   writeFileSync(CONFIG, `${JSON.stringify({ ...readConfig(), ...patch }, null, 2)}\n`, { mode: 0o600 });
@@ -526,10 +560,10 @@ Set-Content -LiteralPath $env:STUDIUM_EXIT -Value "$code" -Encoding ascii
 if ($code -ne 0) { Write-Host ''; Write-Host "Claude Code termino con un error (codigo $code); arriba esta el detalle. Studium ya lo sabe." -ForegroundColor Yellow; Read-Host 'Pulsa Enter para cerrar esta ventana' | Out-Null }`;
 // What Claude Code says when a plan's limit is reached (in its session record, as its own message).
 const LIMIT_SAID = /hit your .{0,30}limit|usage limit|limit reached|out of (?:usage|extra) (?:credits|usage)/i;
-function claudeInWindow(b, { body, account, ask, allow, deny, cwd, dir, live, timeoutMs }) {
-  const session = randomUUID();
+function claudeInWindow(b, { body, account, ask, allow, deny, cwd, dir, live, timeoutMs, resumeId = '', note = '' }) {
+  const session = resumeId || randomUUID();
   // No straight double quotes reach Windows' argument rules (PowerShell 5 mangles them); the text keeps its meaning.
-  const args = [ask, '--model', String(body.model), '--allowedTools', ...allow, '--disallowedTools', ...deny, '--session-id', session].map((x) => String(x).replace(/"/g, '’'));
+  const args = [ask, '--model', String(body.model), '--allowedTools', ...allow, '--disallowedTools', ...deny, ...(resumeId ? ['--resume', session] : ['--session-id', session])].map((x) => String(x).replace(/"/g, '’'));
   if (body.effort) args.push('--effort', String(body.effort));
   const exitFile = path.join(dir, '.claude-code-exit');
   const env = { ...process.env, ...(account.env ?? {}), STUDIUM_TITLE: `Studium · Claude Code · ${String(body.label ?? 'tu trabajo').slice(0, 60)}`, STUDIUM_EXE: b.cmd, STUDIUM_ARGS: JSON.stringify([...b.pre, ...args]), STUDIUM_EXIT: exitFile,
@@ -537,7 +571,7 @@ function claudeInWindow(b, { body, account, ask, allow, deny, cwd, dir, live, ti
     // OneDrive's are) as its current one and opened the window in C:\ (his report, 2026-11-23: «Accessing workspace: C:\»).
     STUDIUM_CWD: cwd,
     // Said in the window: the person's folder, or plainly that it is Studium's temporary one (no folder of theirs chosen).
-    STUDIUM_PLACE: body.place ? `Tu carpeta: ${cwd}` : `Carpeta temporal de Studium (${cwd}): aqui esta solo lo que trajiste, porque no elegiste una carpeta tuya.` };
+    STUDIUM_PLACE: `${body.place ? `Tu carpeta: ${cwd}` : `Carpeta temporal de Studium (${cwd}): aqui esta solo lo que trajiste, porque no elegiste una carpeta tuya.`}${resumeId ? ' Sigue la misma sesion de Claude Code que escribio esta guia.' : note ? ` ${note}` : ''}` };
   // A window of its own is `start`: Node's «detached» gives a Windows process no console at all, so Claude Code ran
   // unseen and the window «never opened» (his words). The command line holds only safe characters (PowerShell's path
   // and base64), and /wait keeps the bridge's child alive while the window is open. The tests run it hidden.
@@ -552,7 +586,9 @@ function claudeInWindow(b, { body, account, ask, allow, deny, cwd, dir, live, ti
   console.log(`  Se abrió Claude Code en su propia ventana («Studium · Claude Code», sesión ${session}). Ahí lo ves trabajar; Esc lo detiene.`);
   const signal = asking.getStore();
   return new Promise((resolve, reject) => {
-    let offset = 0; let rest = ''; let exited = false; let finished = false; let lastSaid = '';
+    // A continued session already has its earlier turns in its record: only what comes now is read.
+    let offset = 0; try { if (resumeId) offset = statSync(transcript).size; } catch { /* a new record */ }
+    let rest = ''; let exited = false; let finished = false; let lastSaid = '';
     let poll = null; let timer = null;
     const stop = () => { console.log('  Studium detuvo el pedido: se cerró la ventana de Claude Code.'); killTree(child); end(() => reject(new Failure(499, 'cancelled', 'Lo detuviste desde Studium.'))); };
     const end = (then) => { if (finished) return; finished = true; clearInterval(poll); clearTimeout(timer); signal?.removeEventListener('abort', stop); if (live) live.done = true; then(); };
@@ -648,10 +684,20 @@ const ENGINES = {
       const deny = mode ? [...mode.deny, ...NEVER] : ['Bash', 'MultiEdit', 'NotebookEdit', ...NEVER];
       const ask = (body.place ? placePrompt(names, body.place) : prompt(names)) + outNote(body.place);
       const cwd = body.place ? body.place.path : dir;
+      // The session to continue, only from the folder it worked in and while Claude Code still keeps it.
+      const prevS = body.continue ? findSession(body.continue, body.place?.path ?? '') : null;
+      const same = prevS?.cwd && path.resolve(prevS.cwd).toLowerCase() === path.resolve(cwd).toLowerCase() && existsSync(sessionFile(account, cwd, prevS.id));
+      const resumeId = same ? prevS.id : '';
+      const note = body.continue && !same ? (prevS?.cwd ? `Sesión nueva: la anterior trabajó en ${prevS.cwd}; para seguirla, presta esa carpeta otra vez.` : prevS ? 'Sesión nueva: la anterior trabajó en otra carpeta; para seguirla, presta la carpeta donde se escribió la guía.' : 'Sesión nueva: esta computadora ya no tiene la sesión anterior de esta guía.') : '';
+      if (resumeId) console.log(`  Sigue la sesión ${resumeId} de Claude Code, en la misma carpeta.`); else if (note) console.log(`  ${note}`);
       console.log(`\nTu IA trabaja (${account.email || account.id}, ${body.model}${body.place ? `, en ${body.place.path}, puede ${MODES[body.place.mode].label}` : ', en una carpeta temporal'})…`);
       const live = progressOf(body.runId);
-      if (body.watch && WIN) return claudeInWindow(b, { body, account, ask: ask + windowNote(body.place), allow, deny, cwd, dir, live, timeoutMs });
-      const args = ['-p', ask, '--output-format', 'stream-json', '--verbose', '--allowedTools', ...allow, '--disallowedTools', ...deny, '--model', String(body.model)];
+      if (body.watch && WIN) {
+        const got = await claudeInWindow(b, { body, account, ask: ask + windowNote(body.place), allow, deny, cwd, dir, live, timeoutMs, resumeId, note });
+        keepSession(got.session, cwd);
+        return { ...got, continued: !!resumeId, note };
+      }
+      const args = ['-p', ask, '--output-format', 'stream-json', '--verbose', '--allowedTools', ...allow, '--disallowedTools', ...deny, '--model', String(body.model), ...(resumeId ? ['--resume', resumeId] : [])];
       if (body.effort) args.push('--effort', String(body.effort));
       const r = await runCli(b, args, { cwd, timeoutMs, env: account.env, onLine: (l) => showStep(l, live) });
       if (live) live.done = true;
@@ -661,8 +707,9 @@ const ENGINES = {
       if (result && !result.is_error && result.subtype !== 'error' && typeof result.result === 'string') {
         if (result.session_id) {
           const again = resumeCommand(account, result.session_id);
+          keepSession(result.session_id, cwd);
           console.log(`  Para seguir hablando con tu IA sobre este pedido, en ${body.place ? body.place.path : 'cualquier carpeta'}:\n      ${again}`);
-          return { text: result.result, session: result.session_id, resume: again };
+          return { text: result.result, session: result.session_id, resume: again, continued: !!resumeId, note };
         }
         return result.result;
       }
@@ -909,7 +956,11 @@ async function handleRun(body) {
     if (body.engine !== 'claude') throw new Failure(400, 'bad-request', 'Por ahora solo Claude Code trabaja en tus carpetas.');
     place = { ...f, rel: `.studium/run-${randomBytes(4).toString('hex')}` };
   }
-  const made = place ? path.join(place.path, place.rel) : mkdtempSync(path.join(tmpdir(), TEMP_PREFIX));
+  // Continuing a session that worked in a temporary folder: the same folder again (Claude Code finds its session by it).
+  const prev = body.engine === 'claude' && typeof body.continue === 'string' ? findSession(body.continue, place?.path ?? '') : null;
+  const again = !place && prev && path.basename(prev.cwd).startsWith(TEMP_PREFIX) && path.resolve(path.dirname(prev.cwd)).toLowerCase() === path.resolve(realTmp()).toLowerCase() ? prev.cwd : '';
+  if (again) { try { rmSync(again, { recursive: true, force: true }); } catch { /* reused as it is */ } mkdirSync(again, { recursive: true }); }
+  const made = place ? path.join(place.path, place.rel) : again || mkdtempSync(path.join(tmpdir(), TEMP_PREFIX));
   if (place) mkdirSync(made, { recursive: true });
   let dir = made;
   try { dir = realpathSync.native(made); } catch { /* keep the path as made */ }
@@ -921,7 +972,7 @@ async function handleRun(body) {
     const got = await engine.run(await bin(body.engine === 'antigravity' ? 'agy' : body.engine), dir, run, names, timeoutMs);
     const text = typeof got === 'string' ? got : got.text;
     if (run.keepFolder) body.keepFolder = true;
-    return { text, outputs: readOutputs(path.join(dir, 'salida')), session: got?.session ?? '', resume: got?.resume ?? '', engine: body.engine, model: String(body.model ?? ''), effort: String(body.effort ?? ''), ms: Date.now() - started, folder: place ? place.path : '' };
+    return { text, outputs: readOutputs(path.join(dir, 'salida')), session: got?.session ?? '', resume: got?.resume ?? '', continued: !!got?.continued, note: got?.note ?? '', engine: body.engine, model: String(body.model ?? ''), effort: String(body.effort ?? ''), ms: Date.now() - started, folder: place ? place.path : '' };
   } finally {
     if (!body.keepFolder) removeFolder(dir);
     if (place && !body.keepFolder) { try { rmSync(path.join(place.path, '.studium'), { recursive: false }); } catch { /* not empty, or gone */ } try { const left = readdirSync(path.join(place.path, '.studium')); if (!left.length) rmSync(path.join(place.path, '.studium'), { recursive: true, force: true }); } catch { /* gone */ } }

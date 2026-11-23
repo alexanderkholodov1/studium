@@ -3628,3 +3628,9 @@ canvas.prop { display: block; }
   background: var(--blue); color: #fff; font: 700 14px var(--gd); box-shadow: 0 14px 30px -12px color-mix(in oklab, var(--blue) 70%, black); }
 .tjg-app .tj-askai:hover { transform: translateY(-2px); }
 @media (max-width: 640px) { .tjg-app .tj-askai { right: 64px; padding: 9px 12px; font-size: 13px; } }
+/* «Cómo lo hace»: who does a request on a guide, where, in which window and whether the session goes on. */
+.tjg-app .tj-howrun { margin: 10px 0; padding: 10px 12px; border-radius: 12px; background: color-mix(in oklab, var(--ink) 4%, transparent); }
+.tjg-app .tj-howrun > summary { cursor: pointer; font: 700 13.5px var(--gd); }
+.tjg-app .tj-howrun .tj-pick { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0; font-size: 14px; }
+.tjg-app .tj-howrun h5 { margin: 10px 0 4px; font: 700 13px var(--gd); }
+.tjg-app .tj-adjpop .tj-adjcard { max-height: calc(100vh - 120px); overflow: auto; }

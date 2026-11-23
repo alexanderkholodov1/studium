@@ -289,7 +289,12 @@ async function askAI(task, system, text, files = [], label = '', live = null) {
     for (const el of document.querySelectorAll('[data-live] [data-live-now]')) el.textContent = f ? `Trabaja en tu carpeta «${f.name}» (${f.path}).` : 'Trabaja en una carpeta temporal de Studium, solo con lo que trajiste (no elegiste una carpeta tuya).';
   }
   try {
-    return await ai.run({ system, text, files, task, label, folder, signal: task === 'solution' ? ctl?.signal : undefined, maxTokens: task === 'solution' ? ai.longest(ai.choice(task)) : 4000, onEvent: live?.onEvent, onProgress: live?.onProgress });
+    // The Claude Code session that wrote this guide is continued (his words: the same session, in its window).
+    const cont = task === 'solution' && T && ai.choice(task).provider === 'bridge:claude' && contOn(T.id) ? sessionOf(T.id) : '';
+    const r = await ai.run({ system, text, files, task, label, folder, cont, signal: task === 'solution' ? ctl?.signal : undefined, maxTokens: task === 'solution' ? ai.longest(ai.choice(task)) : 4000, onEvent: live?.onEvent, onProgress: live?.onProgress });
+    if (task === 'solution' && T && r.session) keepSessionOf(T.id, r.session);
+    if (task === 'solution' && cont) ctx?.toast?.(r.continued ? 'Siguió la misma sesión de Claude Code que escribió la guía.' : (r.note || 'Claude Code empezó una sesión nueva.'));
+    return r;
   } finally { live?.stop(); }
 }
 // «Conectar» opens exactly the recommended option in the settings, and the answers given so far wait here.
@@ -371,6 +376,7 @@ function adjOpen(key, quote = '') {
       ${quote ? `<blockquote class="no-i18n">${esc(quote.slice(0, 600))}${quote.length > 600 ? '…' : ''}</blockquote><input type="hidden" name="quote" value="${esc(quote.slice(0, 1200))}">` : ''}
       <div class="tj-adjkinds">${Object.entries(t.kind === 'todo' ? { graphics: 'Rehacer las gráficas', simpler: 'Más simple', shorter: 'Más corto', deeper: 'Más detalle', fix: 'Hay un error', example: 'Más ejemplos' } : { simpler: 'Más simple', shorter: 'Más corto', deeper: 'Más detalle', fix: 'Hay un error', diagram: 'Una gráfica', example: 'Un ejemplo' }).map(([k, v]) => `<label><input type="checkbox" name="kinds" value="${k}"> ${esc(v)}</label>`).join('')}</div>
       <textarea name="note" rows="3" maxlength="1500" placeholder="Qué cambiar, mejorar o corregir, en tus palabras (opcional si marcaste algo arriba)"></textarea>
+      <div data-howrun>${howRunHTML()}</div>
       <p class="tj-adjbtns"><button type="submit" class="act" data-now="1">Ajustar ahora</button><button type="submit" class="ask">Agregar a la lista</button><button type="button" class="ask" data-tj="adj-close">Cancelar</button></p>
       <p class="mut small">${t.kind === 'todo' ? 'La IA que escribió esta guía hace el cambio en toda la guía y conserva lo demás. Ves el resultado al terminar, y puedes deshacerlo.' : 'Tu IA cambia solo esto; el resto de la guía queda igual. Puedes juntar varios cambios y aplicarlos de una vez.'}</p>
     </form>`;
@@ -405,7 +411,7 @@ function trayHTML() {
   return `<div class="tj-traybar">${list.length ? `<button type="button" class="act" data-tj="tray-open">✎ ${list.length} ${list.length === 1 ? 'cambio' : 'cambios'} por aplicar</button>` : ''}
       ${undo ? `<button type="button" class="ask" data-tj="adj-undo">Deshacer el último ajuste</button>` : ''}</div>
     <div class="tj-traypanel" hidden><h4>Cambios por aplicar</h4><ol>${list.map((c, i) => `<li><b>${esc(c.label)}</b>${c.quote ? `<q class="no-i18n">${esc(c.quote.slice(0, 160))}${c.quote.length > 160 ? '…' : ''}</q>` : ''}<span class="mut small">${esc([...(c.kinds ?? []).map((k) => ADJ_KINDS()[k] ?? k), c.note].filter(Boolean).join(' · '))}</span><button type="button" class="ask" data-tj="adj-drop" data-i="${i}" aria-label="Quitar este cambio">quitar</button></li>`).join('')}</ol>
-      ${aiBlock('solution')}
+      <div data-howrun>${howRunHTML()}</div>
       <p class="tj-adjbtns"><button type="button" class="act" data-tj="adj-apply">Aplicar con tu IA</button><button type="button" class="ask" data-tj="adj-clear">Descartar todos</button><button type="button" class="ask" data-tj="tray-close">Cerrar</button></p>
       <div data-adj-live></div></div>`;
 }
@@ -858,6 +864,11 @@ function accountPick() {
 }
 const FOLDERS = 'studium-tj-folders';
 const RESUME = 'studium-tj-resume';
+// The Claude Code session of each guide (on this device), to continue it on the next request.
+const SESS = 'studium-tj-sessions';
+// A guide written before sessions were kept still has its «claude --resume <session>» command.
+const sessionOf = (tid) => { try { return JSON.parse(localStorage.getItem(SESS) ?? '{}')[tid] ?? (resumeOf(tid).match(/--resume\s+([\w-]{8,80})/)?.[1] ?? ''); } catch { return ''; } };
+function keepSessionOf(tid, id) { try { const m = JSON.parse(localStorage.getItem(SESS) ?? '{}'); m[tid] = id; localStorage.setItem(SESS, JSON.stringify(m)); } catch { /* this device only */ } }
 const resumeOf = (tid) => { try { return JSON.parse(localStorage.getItem(RESUME) ?? '{}')[tid] ?? ''; } catch { return ''; } };
 function keepResume(tid, cmd) { if (!cmd) return; try { const m = JSON.parse(localStorage.getItem(RESUME) ?? '{}'); m[tid] = cmd; localStorage.setItem(RESUME, JSON.stringify(m)); } catch { /* this device only */ } }
 const folderOf = (tid) => { try { return JSON.parse(localStorage.getItem(FOLDERS) ?? '{}')[tid] ?? ''; } catch { return ''; } };
@@ -1559,7 +1570,22 @@ function stepChecks(key, label, doneWord = study() ? 'Lo practiqué' : 'Lo hice'
 
 function aiBlock(task) {
   if (!ai.ready()) return `<p>Todavía no conectaste una IA en Studium. <button type="button" class="ask" data-tj="connect" data-vendor="${task === 'tutor' ? 'gemini' : 'anthropic'}" data-bridge="${task === 'tutor' ? '' : '1'}">Conectar ${task === 'tutor' ? 'Gemini, gratis' : 'tu Claude'}</button></p>`;
-  return `<div class="pick">${ai.pickerHTML(task)}</div>${task === 'solution' && ai.choice(task).provider.startsWith('bridge:') ? watchBox() : ''}`;
+  const claude = task === 'solution' && ai.choice(task).provider === 'bridge:claude';
+  return `<div class="pick">${ai.pickerHTML(task)}</div>${task === 'solution' && ai.choice(task).provider.startsWith('bridge:') ? watchBox() : ''}${claude && T && sessionOf(T.id) ? contBox() : ''}`;
+}
+// «Seguir la misma sesión»: a choice of the person, per guide, in sight wherever the guide's AI is asked to work.
+const CONT = 'studium-tj-continue';
+const contOn = (tid) => { try { return JSON.parse(localStorage.getItem(CONT) ?? '{}')[tid] !== false; } catch { return true; } };
+function setCont(tid, on) { try { const m = JSON.parse(localStorage.getItem(CONT) ?? '{}'); m[tid] = !!on; localStorage.setItem(CONT, JSON.stringify(m)); } catch { /* this time only */ } }
+const contBox = () => `<label class="tj-pick ${contOn(T.id) ? 'on' : ''}"><input type="checkbox" data-tj-cont ${contOn(T.id) ? 'checked' : ''}> <span><b>Seguir la sesión de Claude Code que escribió esta guía</b><br><small>Recuerda todo lo que leyó e hizo. Si la apagas, empieza una sesión nueva. Solo puede seguirla en la misma carpeta donde trabajó.</small></span></label>`;
+// «Cómo lo hace»: who does it and, through the bridge, where and how — the same choices for every request on a guide.
+// A choice made inside an open card (adjusting, the tray) redraws only the choices, so the card stays open.
+function afterRunChoice(el) {
+  if (el?.closest?.('.tj-adjpop, .tj-tray')) { for (const box of document.querySelectorAll('#tjg-body [data-howrun]')) box.innerHTML = howRunHTML(); } else repaint();
+}
+function howRunHTML() {
+  const bridge = ai.choice('solution').provider === 'bridge:claude' && !ai.bridgeOld();
+  return `<details class="tj-howrun" open><summary>Cómo lo hace</summary>${aiBlock('solution')}${bridge ? `<div class="tj-where"><h5>Dónde trabaja</h5>${placeHTML(folderOf(T.id) || 'temp')}</div>` : ''}</details>`;
 }
 
 // Section 0 of a study guide: what enters, how the evaluation is, what to watch out for, the material as it came.
@@ -2228,10 +2254,11 @@ function wire(root) {
     else if (el.name === 'files' && draft) { keepAnswer(); const list = [...el.files]; reading(); addFiles(list).then(() => renderDraft()); }
     else if (el.name === 'folder' && draft && el.files.length) { keepAnswer(); const list = [...el.files]; reading(); addFolderFiles(list, list[0].webkitRelativePath.split('/')[0]).then(() => renderDraft()); }
     else if (el.dataset?.tjUse) { ai.setChoice(el.dataset.tjUse, { provider: el.value, model: '', effort: '' }); keepAnswer(); renderDraft(); }
+    else if (el.dataset?.tjCont !== undefined && T) { setCont(T.id, el.checked); el.closest('.tj-pick')?.classList.toggle('on', el.checked); }
     else if (el.dataset?.tjWatch !== undefined) { ai.setWatchTerminal(el.checked); el.closest(".tj-pick")?.classList.toggle("on", el.checked); }
     else if (el.dataset?.tjTemplate !== undefined) { keepTemplate(el.value); gRoot().querySelector('.tjg-app')?.setAttribute('data-template', el.value); }
     else if (el.dataset?.tjAccount !== undefined) { ai.setBridgeAccount(el.value); if (draft) { keepAnswer(); renderDraft(); } else repaint(); }
-    else if (el.dataset?.tjWs !== undefined) { if (draft) { draft.workspace = el.value; renderDraft(); } else if (T) { keepFolder(T.id, el.value); repaint(); } }
+    else if (el.dataset?.tjWs !== undefined) { if (draft) { draft.workspace = el.value; renderDraft(); } else if (T) { keepFolder(T.id, el.value); afterRunChoice(el); } }
     else if (el.dataset?.tjMode) {
       try { await ai.changeBridgeFolder(el.dataset.tjMode, { mode: el.value }); ctx.toast(`Permiso cambiado: ${MODE_TEXT[el.value]}.`); } catch (e) { ctx.toast(e.message); }
       if (draft) { keepAnswer(); renderDraft(); } else repaint();
@@ -2247,7 +2274,10 @@ function wire(root) {
     else if (el.dataset?.tjRole !== undefined && draft) { const f = draft.files[Number(el.dataset.tjRole)]; if (f) { draft.roles = { ...(draft.roles ?? {}), [`${f.name}|${f.size}`]: el.value }; saveDraft(); } }
     else if (el.dataset?.tjGraph !== undefined && draft) { keepAnswer(); draft.graph = el.checked; renderDraft(); }
     else if (el.dataset?.tjPref) { keepAnswer(); draft.prefs[el.dataset.tjPref] = el.type === 'checkbox' ? el.checked : el.value; renderDraft(); }
-    else if (el.closest?.('[data-ai-pick]')) { const task = el.closest('[data-ai-pick]').dataset.aiPick; ai.setChoice(task, ai.picked(task, root)); }
+    else if (el.closest?.('[data-ai-pick]')) {
+      const task = el.closest('[data-ai-pick]').dataset.aiPick; ai.setChoice(task, ai.picked(task, el.closest('[data-ai-pick]').parentElement ?? root));
+      for (const box of document.querySelectorAll('#tjg-body [data-howrun]')) box.innerHTML = howRunHTML();
+    }
   });
   // Files dropped on the question that asks for them.
   root.addEventListener('dragover', (ev) => { if (ev.target.closest?.('[data-tj-drop]')) { ev.preventDefault(); ev.target.closest('[data-tj-drop]').classList.add('over'); } });
@@ -2393,7 +2423,7 @@ function wire(root) {
       say('#tj-folder-status', '');
       await busy(b, async () => {
         const f = await ai.pickBridgeFolder('read', { hours: 8, here: true });
-        if (draft) { keepAnswer(); draft.workspace = f.id; keepWanted(draft.id, f.id); renderDraft(); } else if (T) { keepFolder(T.id, f.id); repaint(); }
+        if (draft) { keepAnswer(); draft.workspace = f.id; keepWanted(draft.id, f.id); renderDraft(); } else if (T) { keepFolder(T.id, f.id); afterRunChoice(b); }
         ctx.toast(`Tu IA trabajará en ${f.name} (${MODE_TEXT[f.mode]}).`);
       }).catch((e) => say('#tj-folder-status', e.message));
       return;
@@ -2405,7 +2435,7 @@ function wire(root) {
       const close = pickingNotice();
       await busy(b, async () => {
         const f = await ai.pickBridgeFolder(mode, { hours }).finally(close);
-        if (draft) { keepAnswer(); draft.workspace = f.id; keepWanted(draft.id, f.id); renderDraft(); } else if (T) { keepFolder(T.id, f.id); repaint(); }
+        if (draft) { keepAnswer(); draft.workspace = f.id; keepWanted(draft.id, f.id); renderDraft(); } else if (T) { keepFolder(T.id, f.id); afterRunChoice(b); }
         ctx.toast(`Carpeta lista: ${f.name} (${MODE_TEXT[f.mode]}).`);
       }).catch((e) => say('#tj-folder-status', e.message));
       return;
