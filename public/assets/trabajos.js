@@ -898,7 +898,9 @@ const MODE_WHY = { read: 'lee tus archivos; no cambia nada', write: 'también cr
 // The choice of where the AI works: a temporary folder, or one of the person's folders with its permission.
 // The folder where the person opened the bridge, which the bridge knows (and the browser never does): lent with one tap,
 // without the folder dialog (his words: «no me debe volver a preguntar la carpeta»; another one does open the dialog).
-const hereName = () => { const c = String(ai.bridgeOf()?.cwd ?? ''); return c && !ai.bridgeOld() ? c.split(/[\\/]/).filter(Boolean).pop() ?? '' : ''; };
+// Not offered for folders too broad to lend (a drive, a user's home folder): the bridge refuses them anyway.
+const tooWide = (c) => /^[A-Za-z]:[\\/]?$/.test(c) || /^[A-Za-z]:[\\/]Users[\\/][^\\/]+[\\/]?$/i.test(c) || /^\/(home|Users)\/[^/]+\/?$/.test(c) || c === '/';
+const hereName = () => { const c = String(ai.bridgeOf()?.cwd ?? ''); return c && !ai.bridgeOld() && !tooWide(c) ? c.split(/[\\/]/).filter(Boolean).pop() ?? '' : ''; };
 function hereHTML() {
   const n = hereName();
   if (!n) return '';
@@ -2353,7 +2355,7 @@ function wire(root) {
     if (kind === 'folder-here') {
       say('#tj-folder-status', '');
       await busy(b, async () => {
-        const f = await ai.pickBridgeFolder('read', { hours: 1, here: true });
+        const f = await ai.pickBridgeFolder('read', { hours: 8, here: true });
         if (draft) { keepAnswer(); draft.workspace = f.id; keepWanted(draft.id, f.id); renderDraft(); } else if (T) { keepFolder(T.id, f.id); repaint(); }
         ctx.toast(`Tu IA trabajará en ${f.name} (${MODE_TEXT[f.mode]}).`);
       }).catch((e) => say('#tj-folder-status', e.message));
@@ -2361,7 +2363,7 @@ function wire(root) {
     }
     if (kind === 'folder-pick') {
       const mode = 'read';
-      const hours = 1; // lent for writing the guide; the page releases it when the guide is written
+      const hours = 8; // lent for writing the guide (the questions may take a while); released once it is written
       say('#tj-folder-status', '');
       const close = pickingNotice();
       await busy(b, async () => {
