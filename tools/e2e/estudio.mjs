@@ -228,6 +228,9 @@ try {
       if (path === '/v1/status') return J({ version: ai.BRIDGE_VERSION, cwd: 'C:\\\\Users\\\\Prueba\\\\OneDrive\\\\Quiz 2', engines });
       if (path === '/v1/run') return window.__runOk ? J({ text: 'listo', outputs: { 'H1.json': ch('AJUSTADO-DOS') }, engine: 'claude', model: 'claude-sonnet-5-5' }) : J({ error: { code: 'failed', message: 'El puente tuvo un problema inesperado.' } }, 502);
       if (path === '/v1/result') return J({ id: new URL(url).searchParams.get('id'), text: 'listo', outputs: { 'H1.json': ch('RECOGIDO-UNO') }, engine: 'claude', model: 'claude-sonnet-5-5' });
+      if (path === '/v1/recoverable') return J({ sessions: [{ session: 'f013abdd-0000-4d41-82af-77028a1919bb', at: '2026-11-24T04:47:07.591Z', cwd: 'C:\\Users\\Prueba\\OneDrive\\Quiz 2', files: { 'H1.json': 900, 'H9.json': 800 } }] });
+      if (path === '/v1/recover') return J({ session: 'f013abdd-0000-4d41-82af-77028a1919bb', at: '2026-11-24T04:47:07.591Z', cwd: 'C:\\Users\\Prueba\\OneDrive\\Quiz 2', outputs: { 'H1.json': ch('DEL-REGISTRO-TRES') } });
+      if (path === '/v1/results') return J({ results: [] });
       if (path === '/v1/progress') return J({ unknown: true }); if (path === '/v1/folders') return J({ folders: [], modes: {} }); return J({}); }; return 1;`);
   // His report: the bridge closed, and the card offered its models and no way to reconnect. Now its state comes first.
   await B.js(`document.querySelector('.tj-askai').click();`); await B.wait(`/no responde/.test(document.querySelector('.tj-adjpop [data-bridge-state]')?.innerText ?? '')`, 10000).catch(() => {});
@@ -261,6 +264,19 @@ try {
   await B.wait(`/AJUSTADO-DOS/.test(document.querySelector('#tjg-body')?.innerText ?? '')`, 15000).catch(() => {});
   const okRun = await B.js(`return { applied: /AJUSTADO-DOS/.test(document.querySelector('#tjg-body').innerText), err: document.querySelector('.tj-error')?.innerText ?? '' }`);
   ok('an adjustment that goes well is applied, with no error', okRun.applied && !okRun.err, JSON.stringify(okRun));
+  // «Recoger lo que hizo tu IA» is always in the guide, and lists what Claude Code wrote (rebuilt by the bridge from its
+  // record) with when, where and which parts fit this guide; applying it needs no AI request
+  const cfab = await B.js(`const f = document.querySelector('.tj-collectfab'); return f ? { text: f.textContent, shown: f.getBoundingClientRect().width > 0 && getComputedStyle(f).display !== 'none' } : null`);
+  ok('the guide always shows «Recoger lo que hizo tu IA»', !!cfab?.shown && /Recoger lo que hizo tu IA/.test(cfab.text), JSON.stringify(cfab));
+  await B.js(`window.__b = []; document.querySelector('.tj-collectfab').click(); return 1;`);
+  await B.wait(`document.querySelector('.tj-collectpop [data-tj="collect-apply"]')`, 12000).catch(() => {});
+  const list = await B.js(`const p = document.querySelector('.tj-collectpop'); return { state: p?.querySelector('[data-bridge-state]')?.innerText ?? '', row: p?.querySelector('.tj-collectitems li')?.innerText ?? '', btn: p?.querySelector('[data-tj="collect-apply"]')?.innerText ?? '' }`);
+  ok('…its panel shows the bridge first, then each session: when, in which folder, what it wrote, and «Aplicar a esta guía»', /responde/.test(list.state) && /Quiz 2/.test(list.row) && /H1, H9/.test(list.row) && /Aplicar a esta guía \(1 parte\)/.test(list.btn), JSON.stringify(list));
+  await B.shot('25-recoger');
+  await B.js(`document.querySelector('.tj-collectpop [data-tj="collect-apply"]').click(); return 1;`);
+  await B.wait(`/DEL-REGISTRO-TRES/.test(document.querySelector('#tjg-body')?.innerText ?? '')`, 15000).catch(() => {});
+  const ap = await B.js(`return { applied: /DEL-REGISTRO-TRES/.test(document.querySelector('#tjg-body').innerText), runs: window.__b.filter((x) => x === '/v1/run').length, recover: window.__b.filter((x) => x.startsWith('/v1/recover?')).length, closed: !document.querySelector('.tj-collectpop'), undo: !!document.querySelector('[data-tj="adj-undo"]') }`);
+  ok('…«Aplicar» puts it in the guide with no AI request, and it can be undone', ap.applied && ap.runs === 0 && ap.recover === 1 && ap.closed && ap.undo, JSON.stringify(ap));
   await B.js(`window.fetch = window.__f2; return 1;`);
   await B.js(`document.querySelector('.tj-adjpop [data-tj="adj-close"]')?.click(); const v = await import('/studium/assets/vault.js'); await v.set({ ...v.get(), bridge: '' }); const raw = JSON.parse(localStorage.getItem('studium-ai') ?? '{}'); raw.bridge = null; localStorage.setItem('studium-ai', JSON.stringify(raw)); const ai = await import('/studium/assets/ai.js'); ai.setChoice('solution', { provider: 'gemini', model: '', effort: '' }); return 1;`);
 

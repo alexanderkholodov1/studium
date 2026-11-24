@@ -502,7 +502,7 @@ export async function findBridge(port = BRIDGE_PORT) {
   try { const r = await fetch(`http://127.0.0.1:${port}/v1/hello`); return r.ok ? await r.json() : null; } catch { return null; }
 }
 // The bridge's version this page expects (bridge.mjs, VERSION): an older one is downloaded again.
-export const BRIDGE_VERSION = '1.10.0';
+export const BRIDGE_VERSION = '1.11.0';
 // «Ver a mi IA en una terminal»: the bridge opens a window that shows the exact instructions and, live, what the AI
 // does. Chosen by the person, kept in this browser.
 const WATCH = 'studium-ai-watch';
@@ -968,6 +968,13 @@ export async function bridgeResult(id) {
   return { text: String(body.text ?? ''), outputs: body.outputs && typeof body.outputs === 'object' ? body.outputs : {}, session: String(body.session ?? ''), resume: String(body.resume ?? ''), model: String(body.model ?? ''), effort: String(body.effort ?? ''), way: `bridge:${body.engine ?? 'claude'}`, provider: 'anthropic', error: String(body.error ?? ''), at: body.at, label: body.label ?? '' };
 }
 export async function bridgeResults() { return (await bridgeFetch('/v1/results')).results ?? []; }
+// What a Claude Code session wrote in «salida», rebuilt by the bridge (1.11.0) from Claude Code's own record.
+export async function bridgeRecoverable(also = []) { return (await bridgeFetch(`/v1/recoverable${also.length ? `?also=${encodeURIComponent(also.join(','))}` : ''}`)).sessions ?? []; }
+export async function bridgeRecover(session) {
+  const body = await bridgeFetch(`/v1/recover?session=${encodeURIComponent(session)}`);
+  if (!body || body.unknown) return null;
+  return { text: '', outputs: body.outputs ?? {}, at: body.at, cwd: body.cwd ?? '', way: 'bridge:claude', provider: 'anthropic', model: '', session };
+}
 
 // The HTML page inside an answer: tolerant of code fences and text around it.
 export function htmlFrom(text) {

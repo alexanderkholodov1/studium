@@ -14,7 +14,7 @@ import { homedir, platform, tmpdir } from 'node:os';
 import path from 'node:path';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
-const VERSION = '1.10.0';
+const VERSION = '1.11.0';
 const NAME = 'studium-bridge';
 const DEFAULT_PORT = 41730;
 const MAX_BODY = 64 * 1024 * 1024;
@@ -78,6 +78,57 @@ function findSession(id, placePath = '') {
     }
   }
   return null;
+}
+// What the AI wrote, rebuilt from Claude Code's own record of the session (his words, 2026-11-24: collect what the AI
+// did even when it never reached the guide). The run folder is deleted after each request, but Claude Code keeps every
+// tool call with its full content: each «Write» to «salida/<file>» (and each «Edit» after it) is replayed in order,
+// skipping calls that failed. Deterministic: the same record always gives the same files. Read only.
+const claudeHomes = () => [...new Set([process.env.CLAUDE_CONFIG_DIR, path.join(homedir(), '.claude'), ...(() => { try { return readdirSync(homedir()).filter((n) => /^\.claude[\w-]*$/.test(n)).map((n) => path.join(homedir(), n)); } catch { return []; } })()].filter(Boolean))];
+function sessionRecord(id) {
+  if (!/^[\w-]{8,80}$/.test(id)) return '';
+  let best = ''; let size = -1;
+  for (const h of claudeHomes()) {
+    let dirs = [];
+    try { dirs = readdirSync(path.join(h, 'projects')); } catch { continue; }
+    for (const d of dirs) {
+      const f = path.join(h, 'projects', d, `${id}.jsonl`);
+      try { const st = statSync(f); if (st.size > size) { best = f; size = st.size; } } catch { /* not here */ }
+    }
+  }
+  return best;
+}
+function editText(text, e) {
+  const from = String(e?.old_string ?? ''); const to = String(e?.new_string ?? '');
+  if (!from || !text.includes(from)) return text;
+  return e?.replace_all ? text.split(from).join(to) : text.replace(from, () => to);
+}
+function recoverRecord(file) {
+  const ops = []; const failed = new Set(); let at = ''; let cwd = '';
+  let lines = [];
+  try { lines = readFileSync(file, 'utf8').split('\n'); } catch { return null; }
+  for (const line of lines) {
+    let o; try { o = JSON.parse(line); } catch { continue; }
+    if (o.timestamp) at = o.timestamp;
+    if (o.cwd && !cwd) cwd = o.cwd;
+    const content = o.message?.content;
+    if (!Array.isArray(content)) continue;
+    for (const b of content) {
+      if (b?.type === 'tool_result' && b.is_error) failed.add(b.tool_use_id);
+      if (b?.type !== 'tool_use') continue;
+      const m = String(b.input?.file_path ?? '').match(/[\\/]salida[\\/]([^\\/]+)$/);
+      if (m && m[1] !== 'LISTO') ops.push({ id: b.id, tool: b.name, name: m[1], input: b.input, at: o.timestamp ?? at });
+    }
+  }
+  const outputs = {}; const when = {};
+  for (const op of ops) {
+    if (failed.has(op.id)) continue;
+    if (op.tool === 'Write' && typeof op.input.content === 'string') outputs[op.name] = op.input.content;
+    else if (op.tool === 'Edit' && typeof outputs[op.name] === 'string') outputs[op.name] = editText(outputs[op.name], op.input);
+    else if (op.tool === 'MultiEdit' && typeof outputs[op.name] === 'string') for (const e of op.input.edits ?? []) outputs[op.name] = editText(outputs[op.name], e);
+    else continue;
+    when[op.name] = op.at;
+  }
+  return { outputs, at, cwd, when };
 }
 const sessionFile = (account, cwd, id) => path.join(account.env?.CLAUDE_CONFIG_DIR ?? process.env.CLAUDE_CONFIG_DIR ?? path.join(homedir(), '.claude'), 'projects', cwd.replace(/[^A-Za-z0-9]/g, '-'), `${id}.jsonl`);
 function readConfig() { try { return JSON.parse(readFileSync(CONFIG, 'utf8')) ?? {}; } catch { return {}; } }
@@ -1044,6 +1095,23 @@ const server = createServer(async (req, res) => {
       return send(res, 200, r ?? { unknown: true }, ok);
     }
     if (req.method === 'GET' && pathname === '/v1/results') return send(res, 200, { results: listResults() }, ok);
+    if (req.method === 'GET' && pathname === '/v1/recover') {
+      const id = new URL(req.url, 'http://127.0.0.1').searchParams.get('session') ?? '';
+      const f = sessionRecord(id);
+      const r = f ? recoverRecord(f) : null;
+      return send(res, 200, r ? { session: id, ...r } : { unknown: true }, ok);
+    }
+    if (req.method === 'GET' && pathname === '/v1/recoverable') {
+      // The sessions this bridge ran (and any asked for), each with the files it wrote in «salida».
+      const ids = [...new Set([...sessionsKept().map((x) => x.id), ...(new URL(req.url, 'http://127.0.0.1').searchParams.get('also') ?? '').split(',').filter(Boolean)])].slice(0, 45);
+      const list = [];
+      for (const id of ids) {
+        const f = sessionRecord(id);
+        const r = f ? recoverRecord(f) : null;
+        if (r && Object.keys(r.outputs).length) list.push({ session: id, at: r.at, cwd: r.cwd, files: Object.fromEntries(Object.entries(r.outputs).map(([n, t]) => [n, t.length])) });
+      }
+      return send(res, 200, { sessions: list.sort((a, b) => String(b.at).localeCompare(String(a.at))) }, ok);
+    }
     if (req.method === 'GET' && pathname === '/v1/folders') return send(res, 200, { folders: folders().map(folderView), modes: Object.fromEntries(Object.entries(MODES).map(([k, m]) => [k, m.label])) }, ok);
     if (req.method === 'POST' && pathname === '/v1/repo') {
       let body;

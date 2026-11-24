@@ -528,6 +528,47 @@ async function collectAdjust() {
   if (p?.list) adjKeep(adjList().filter((c) => !p.list.some((x) => x.at === c.at)));
   return { changed, notes, from, partial: r.error ? `Tu IA no terminó (${r.error}); recogí lo que alcanzó a escribir.` : '' };
 }
+// The panel of «Recoger lo que hizo tu IA»: the bridge's state first; once it answers, every Claude Code session the
+// bridge ran with the files it wrote in «salida» (rebuilt from Claude Code's record) and the results the bridge kept.
+// Each says when, where and what it wrote, and whether its parts are this guide's; «Aplicar a esta guía» applies it.
+function collectOpen() {
+  gRoot().querySelector('.tj-adjpop')?.remove();
+  const box = document.createElement('div');
+  box.className = 'tj-adjpop tj-collectpop';
+  box.innerHTML = `<div class="tj-adjcard" role="dialog" aria-label="Recoger lo que hizo tu IA">
+      <h4>Recoger lo que hizo tu IA</h4>
+      <p class="fine">Lo que Claude Code escribió para tus guías, aunque no haya llegado a la guía (se cortó, se cerró la página o falló al mostrarlo). Studium lo lee del registro que Claude Code guarda en tu computadora y de las copias del puente, y lo aplica tal cual, sin volver a pedírselo a tu IA. Después puedes deshacerlo.</p>
+      <div data-bridge-state>${bridgeStateHTML()}</div>
+      <div class="tj-collectlist" data-collect-list>${bridgeLive.state === 'ok' ? '<p class="mut">Buscando lo que escribió tu IA…</p>' : '<p class="mut">Cuando el puente responda, aquí aparece lo que encontró.</p>'}</div>
+      <p class="tj-adjbtns"><button type="button" class="ask" data-tj="collect-close">Cerrar</button></p>
+    </div>`;
+  gRoot().querySelector('.tjg-app')?.append(box);
+  kickBridge();
+  if (bridgeLive.state === 'ok') loadCollect();
+}
+const shortWhen = (at) => { const d = new Date(at); return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('es', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); };
+async function loadCollect() {
+  const el = document.querySelector('[data-collect-list]');
+  if (!el || !T) return;
+  if (ai.bridgeOld()) { el.innerHTML = '<p class="mut">Actualiza el puente (arriba dice cómo) para poder recoger.</p>'; return; }
+  const mine = sessionOf(T.id);
+  const pend = pendingOf(T.id);
+  const ids = new Set((T.outline?.hitos ?? []).map((h) => `${h.id}.json`));
+  let sessions = []; let results = [];
+  try { [sessions, results] = await Promise.all([ai.bridgeRecoverable(mine ? [mine] : []), ai.bridgeResults().catch(() => [])]); } catch (e) { el.innerHTML = `<p class="tj-warn">No pude preguntarle al puente: ${esc(e.message)}</p>`; return; }
+  const row = (key, value, when, where, files, ours, extra = '') => {
+    const names = Object.keys(files);
+    const fits = names.filter((n) => ids.has(n) || n === 'esquema.json');
+    const label = names.map((n) => n.replace(/\.json$/, '')).join(', ');
+    return `<li class="${ours ? 'ours' : ''}"><p><b>${esc(when)}</b>${ours ? ' <span class="tag rec">de esta guía</span>' : ''}${extra}<br><small class="mut">${where ? `en ${esc(where)} · ` : ''}escribió ${esc(label)} (${names.length} ${names.length === 1 ? 'archivo' : 'archivos'})</small></p>
+        ${fits.length ? `<button type="button" class="act" data-tj="collect-apply" data-${key}="${esc(value)}">Aplicar a esta guía (${fits.length} ${fits.length === 1 ? 'parte' : 'partes'})</button>` : '<small class="mut">Sus partes no corresponden a esta guía.</small>'}</li>`;
+  };
+  const items = [
+    ...results.filter((r) => r.files?.length).map((r) => ({ at: r.at, html: row('result', r.id, `${shortWhen(r.at)} · ${r.label || 'pedido de Studium'}`, '', Object.fromEntries(r.files.map((n) => [n, 1])), pend?.runId === r.id, r.error ? ' <span class="tag">no terminó</span>' : '') })),
+    ...sessions.map((x) => ({ at: x.at, html: row('session', x.session, `${shortWhen(x.at)} · sesión de Claude Code`, String(x.cwd ?? '').split(/[\\/]/).filter(Boolean).pop() ?? '', x.files, x.session === mine) })),
+  ].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  el.innerHTML = items.length ? `<ol class="tj-collectitems">${items.map((x) => x.html).join('')}</ol>` : '<p class="mut">El puente no tiene nada escrito por tu IA en «salida»: ni sesiones de Claude Code que haya corrido, ni resultados guardados.</p>';
+}
 async function undoAdjust() {
   if (!undo) return;
   setTimeout(syncPublic, 0);
@@ -1694,6 +1735,7 @@ async function watchBridge(force = false) {
     for (const box of document.querySelectorAll('#tjg-body [data-howrun]')) box.innerHTML = howRunHTML();
     for (const el of document.querySelectorAll('[data-bridge-state]')) if (!el.closest('[data-howrun]')) el.innerHTML = bridgeStateHTML();
     if (was !== 'checking' && bridgeLive.state === 'ok') ctx.toast(`El puente responde (versión ${bridgeLive.version}).`);
+    if (bridgeLive.state === 'ok' && document.querySelector('[data-collect-list]')) loadCollect();
   }
   if (bridgeLive.state !== 'ok' && document.querySelector('[data-bridge-state]')) bridgeTimer = setTimeout(watchBridge, 4000);
 }
@@ -2096,6 +2138,9 @@ function paint() {
   for (const fig of gRoot().querySelectorAll('figure.escena')) { const e = scenes.get(fig.dataset.escena); try { if (e) escenaShow(fig, e, sceneAt.get(fig.dataset.escena) ?? -1); } catch (err) { console.warn('escena', err); } }
   // «Pedir un cambio a tu IA»: the whole guide, in place of the tutorial (his words, 2026-11-23).
   if (T.outline && !T.readonly) gRoot().querySelector('.tjg-app')?.insertAdjacentHTML('beforeend', '<button type="button" class="tj-askai" data-tj="adj" data-key="todo" title="Pide a la IA que escribió esta guía cualquier cambio en toda la guía">✎ Pedir un cambio a tu IA</button>');
+  // «Recoger lo que hizo tu IA», always at hand (his words: the AI advanced and, for one reason or another, it never
+  // reached the guide): what Claude Code wrote, from its own record on this computer, applied with no AI involved.
+  if (T.outline && !T.readonly && (ai.bridgeOf()?.token || sessionOf(T.id) || pendingOf(T.id))) gRoot().querySelector('.tjg-app')?.insertAdjacentHTML('beforeend', `<button type="button" class="tj-collectfab ${pendingOf(T.id) ? 'hot' : ''}" data-tj="collect-open" title="Lo que tu IA escribió y no llegó a la guía: se aplica tal cual, sin volver a pedírselo">⤓ Recoger lo que hizo tu IA</button>`);
   paintTray();
 }
 // Formulas written in LaTeX between $ (study guides ask for them), drawn by KaTeX (jsDelivr, pinned) only when the
@@ -2622,13 +2667,35 @@ function wire(root) {
     if (kind === 'err-explain') { await busy(b, () => explainError(b.closest('.tj-error'))).catch(() => {}); return; }
     if (kind === 'adj') { adjOpen(b.dataset.key); return; }
     if (kind === 'adj-collect') {
+      // The answer kept for this request (in this browser or by the bridge); if neither has it, the panel searches
+      // Claude Code's records.
+      let got;
+      try { got = await collectAdjust(); } catch (e) { if (/No encontré/.test(e.message)) { collectOpen(); return; } got = null; ctx.toast(e.message); return; }
       await busy(b, async () => {
-        const { changed, notes, from, partial } = await collectAdjust();
+        const { changed, notes, from, partial } = got;
         b.closest('.tj-error')?.remove();
         paintTray();
         repaint();
         lit(changed);
         ctx.toast(`Recogido de ${from} y aplicado: ${changed.map((x) => (x === 'esquema' ? 'la sección 0' : `el capítulo ${T.outline.hitos.findIndex((h) => h.id === x) + 1}`)).join(', ')}.${partial ? ` ${partial}` : ''}${notes.length ? ` ${notes.join(' ')}` : ''}`);
+      }).catch(() => {});
+      return;
+    }
+    if (kind === 'collect-open') { collectOpen(); return; }
+    if (kind === 'collect-close') { b.closest('.tj-adjpop')?.remove(); return; }
+    if (kind === 'collect-apply') {
+      await busy(b, async () => {
+        const r = b.dataset.session ? await ai.bridgeRecover(b.dataset.session) : await ai.bridgeResult(b.dataset.result);
+        if (!r || !Object.keys(r.outputs ?? {}).length) throw new Error('El puente ya no tiene esos archivos.');
+        const { changed, notes } = await adoptAdjust(r);
+        const p = pendingOf(T.id);
+        if (p?.list) adjKeep(adjList().filter((c) => !p.list.some((x) => x.at === c.at)));
+        forgetPending(T.id);
+        b.closest('.tj-adjpop')?.remove();
+        paintTray();
+        repaint();
+        lit(changed);
+        ctx.toast(`Recogido y aplicado: ${changed.map((x) => (x === 'esquema' ? 'la sección 0' : `el capítulo ${T.outline.hitos.findIndex((h) => h.id === x) + 1}`)).join(', ')}. Si no era esto, «Deshacer el último ajuste».${notes.length ? ` ${notes.join(' ')}` : ''}`);
       }).catch(() => {});
       return;
     }
