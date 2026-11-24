@@ -215,7 +215,7 @@ try {
   // cannot be chosen) and «Dónde trabaja» is one list with one choice marked (a simulated bridge: nothing is sent to it)
   await B.js(`const v = await import('/studium/assets/vault.js'); const ai = await import('/studium/assets/ai.js'); await v.set({ ...v.get(), bridge: 'prueba' });
     const raw = JSON.parse(localStorage.getItem('studium-ai') ?? '{}');
-    raw.bridge = { at: Date.now(), version: ai.BRIDGE_VERSION, cwd: 'C:\\\\Users\\\\Prueba\\\\OneDrive\\\\Quiz 2', account: 'claude-a', folders: [], engines: [{ id: 'claude', name: 'Claude Code', ready: true, models: [{ id: 'claude-sonnet-5-5' }], accounts: [{ id: 'claude-a', email: 'a@prueba.ec', plan: 'pro', ready: true }, { id: 'claude-b', email: 'b@prueba.ec', plan: 'max', ready: true }, { id: 'claude-c', email: 'c@prueba.ec', ready: false }] }] };
+    raw.bridge = { at: Date.now(), port: 41799, version: ai.BRIDGE_VERSION, cwd: 'C:\\\\Users\\\\Prueba\\\\OneDrive\\\\Quiz 2', account: 'claude-a', folders: [], engines: [{ id: 'claude', name: 'Claude Code', ready: true, models: [{ id: 'claude-sonnet-5-5' }], accounts: [{ id: 'claude-a', email: 'a@prueba.ec', plan: 'pro', ready: true }, { id: 'claude-b', email: 'b@prueba.ec', plan: 'max', ready: true }, { id: 'claude-c', email: 'c@prueba.ec', ready: false }] }] };
     raw.models = { ...(raw.models ?? {}), 'bridge:claude': ['claude-sonnet-5-5'] }; localStorage.setItem('studium-ai', JSON.stringify(raw));
     ai.setChoice('solution', { provider: 'bridge:claude', model: '', effort: '' }); return 1;`);
   await B.js(`document.querySelector('.tj-askai').click();`); await W(500);
@@ -226,6 +226,28 @@ try {
   const acc2 = await B.js(`const p = document.querySelector('.tj-adjpop'); const ai = await import('/studium/assets/ai.js'); return { open: !!p, chosen: ai.bridgeOf()?.account, on: p ? [...p.querySelectorAll('.tj-accounts .tj-pick')].findIndex((r) => r.classList.contains('on')) : -1 }`);
   ok('…choosing another subscription keeps the card open and is the one used', acc2.open && acc2.chosen === 'claude-b' && acc2.on === 1, JSON.stringify(acc2));
   await B.js(`document.querySelector('.tj-adjpop .tj-places').scrollIntoView({ block: 'center' });`); await W(300); await B.shot('23-cuenta-carpeta');
+  // His case: the AI finished, but the page could not apply it. The bridge (simulated: its answers are faked in the
+  // page) failed the request; it kept what the AI wrote, and «Recoger lo que escribió tu IA» applies it without the AI.
+  await B.js(`window.__b = []; window.__f2 = window.fetch; const J = (o, st = 200) => Promise.resolve(new Response(JSON.stringify(o), { status: st, headers: { 'content-type': 'application/json' } }));
+    const ch = (t) => JSON.stringify({ id: 'H1', pasos: [{ id: 'H1.1', objetivo: 'Calcular el gradiente', teoria: t, tu_turno: ['Hazlo'] }] });
+    window.fetch = (u, o) => { const url = String(u); if (!/127\.0\.0\.1:41799/.test(url)) return window.__f2(u, o); const path = new URL(url).pathname; window.__b.push(path + new URL(url).search);
+      if (path === '/v1/run') return window.__runOk ? J({ text: 'listo', outputs: { 'H1.json': ch('AJUSTADO-DOS') }, engine: 'claude', model: 'claude-sonnet-5-5' }) : J({ error: { code: 'failed', message: 'El puente tuvo un problema inesperado.' } }, 502);
+      if (path === '/v1/result') return J({ id: new URL(url).searchParams.get('id'), text: 'listo', outputs: { 'H1.json': ch('RECOGIDO-UNO') }, engine: 'claude', model: 'claude-sonnet-5-5' });
+      if (path === '/v1/progress') return J({ unknown: true }); if (path === '/v1/folders') return J({ folders: [], modes: {} }); return J({}); }; return 1;`);
+  await B.js(`const p = document.querySelector('.tj-adjpop'); const t = p.querySelector('textarea'); t.value = 'Explica mejor el gradiente.'; p.querySelector('[type=submit][data-now]').click(); return 1;`);
+  await B.wait(`document.querySelector('.tj-error [data-tj="adj-collect"]')`, 20000).catch(() => {});
+  ok('a failed adjustment by the bridge offers «Recoger lo que escribió tu IA»', await B.js(`return !!document.querySelector('.tj-error [data-tj="adj-collect"]')`), await B.js(`return JSON.stringify({ calls: window.__b, live: document.querySelector('.tj-adjlive, [data-adj-live]')?.innerText?.slice(0, 300) ?? '', pop: !!document.querySelector('.tj-adjpop'), toast: document.querySelector('.toast, [role=status]')?.innerText ?? '' })`));
+  await B.js(`document.querySelector('.tj-error [data-tj="adj-collect"]').click(); return 1;`);
+  await B.wait(`/RECOGIDO-UNO/.test(document.querySelector('#tjg-body')?.innerText ?? '')`, 15000).catch(() => {});
+  const col = await B.js(`return { applied: /RECOGIDO-UNO/.test(document.querySelector('#tjg-body').innerText), asked: window.__b.filter((x) => x.startsWith('/v1/result?id=r')).length, runs: window.__b.filter((x) => x === '/v1/run').length, pend: !!JSON.parse(localStorage.getItem('studium-tj-pending') ?? '{}')[location.hash.split('/').pop()], err: !!document.querySelector('.tj-error') }`);
+  ok('…which takes the result the bridge kept for that request and applies it, without asking the AI again', col.applied && col.asked === 1 && col.runs === 1 && !col.pend && !col.err, JSON.stringify(col));
+  // and a request that goes well applies its answer (it failed with «Cannot destructure property 'changed'»)
+  await B.js(`window.__runOk = true; document.querySelector('.tj-askai').click(); return 1;`); await W(500);
+  await B.js(`const p = document.querySelector('.tj-adjpop'); const t = p.querySelector('textarea'); t.value = 'Otra vez, más claro.'; p.querySelector('[type=submit][data-now]').click(); return 1;`);
+  await B.wait(`/AJUSTADO-DOS/.test(document.querySelector('#tjg-body')?.innerText ?? '')`, 15000).catch(() => {});
+  const okRun = await B.js(`return { applied: /AJUSTADO-DOS/.test(document.querySelector('#tjg-body').innerText), err: document.querySelector('.tj-error')?.innerText ?? '' }`);
+  ok('an adjustment that goes well is applied, with no error', okRun.applied && !okRun.err, JSON.stringify(okRun));
+  await B.js(`window.fetch = window.__f2; return 1;`);
   await B.js(`document.querySelector('.tj-adjpop [data-tj="adj-close"]')?.click(); const v = await import('/studium/assets/vault.js'); await v.set({ ...v.get(), bridge: '' }); const raw = JSON.parse(localStorage.getItem('studium-ai') ?? '{}'); raw.bridge = null; localStorage.setItem('studium-ai', JSON.stringify(raw)); const ai = await import('/studium/assets/ai.js'); ai.setChoice('solution', { provider: 'gemini', model: '', effort: '' }); return 1;`);
 
   // Sharing: by link, read by another account; private again

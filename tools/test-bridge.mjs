@@ -353,6 +353,23 @@ await test('what the AI writes in «salida» comes back to Studium', async () =>
   const allowed = calls()[0].args.slice(calls()[0].args.indexOf('--allowedTools') + 1, calls()[0].args.indexOf('--disallowedTools'));
   check(allowed.includes('Write(./salida/**)') && !allowed.includes('Write') && !allowed.includes('Bash'), `allowed ${allowed.join(' ')}`);
 });
+await test('the bridge keeps each result, and Studium collects it again by its request id (also after a failure)', async () => {
+  scenario({ claude: { writes: { 'H2.json': '{"c":3}' }, answer: 'listo' } });
+  const r = await run({ engine: 'claude', model: 'claude-sonnet-5-5', runId: 'rkeep0001', label: 'Ajustes a «Quiz»' });
+  check(r.status === 200, `status ${r.status}`);
+  const got = await call('GET', '/v1/result?id=rkeep0001');
+  check(got.status === 200 && got.data.outputs?.['H2.json'] === '{"c":3}' && got.data.text === 'listo' && got.data.label === 'Ajustes a «Quiz»', JSON.stringify(got.data).slice(0, 200));
+  const list = await call('GET', '/v1/results');
+  check(list.data.results?.some((x) => x.id === 'rkeep0001' && x.files.includes('H2.json')), JSON.stringify(list.data).slice(0, 200));
+  check((await call('GET', '/v1/result?id=rnadie0001')).data.unknown === true, 'an unknown id is unknown');
+  check((await call('GET', '/v1/result?id=../../x')).data.unknown === true, 'a path is not an id');
+  check((await call('GET', '/v1/result?id=rkeep0001', { auth: null })).status === 401, 'without the code it is refused');
+  // a request that fails after writing: what it wrote is kept, with the error
+  scenario({ claude: { writes: { 'H3.json': '{"d":4}' }, sleep: 60000 } });
+  const t = await run({ engine: 'claude', model: 'claude-sonnet-5-5', runId: 'rkeep0002', timeoutMs: 5000 });
+  const kept = await call('GET', '/v1/result?id=rkeep0002');
+  check(t.status === 504 && kept.data.outputs?.['H3.json'] === '{"d":4}' && /tard|time|minut|504|respond/i.test(kept.data.error ?? ''), JSON.stringify(kept.data).slice(0, 200));
+});
 await test('«ver a Claude Code trabajando» opens the official CLI with the request, follows it live, and gets its answer', async () => {
   scenario({ claude: {} });
   const r = await run({ engine: 'claude', model: 'claude-sonnet-5-5', runId: 'ventana-123', watch: true });

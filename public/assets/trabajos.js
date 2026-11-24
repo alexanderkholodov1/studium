@@ -275,7 +275,7 @@ function aiLine(task) {
 let ctl = null;
 const stopped = () => !!ctl?.signal.aborted;
 function startWork() { ctl = new AbortController(); return ctl; }
-async function askAI(task, system, text, files = [], label = '', live = null) {
+async function askAI(task, system, text, files = [], label = '', live = null, runId = '') {
   // The trabajo's own folder, when its writer is Claude through the bridge.
   const folder = task === 'solution' && T && ai.choice(task).provider === 'bridge:claude' ? folderOf(T.id) : '';
   if (folder && (await folderStateNow(folder)) === 'gone') {
@@ -291,7 +291,7 @@ async function askAI(task, system, text, files = [], label = '', live = null) {
   try {
     // The Claude Code session that wrote this guide is continued (his words: the same session, in its window).
     const cont = task === 'solution' && T && ai.choice(task).provider === 'bridge:claude' && contOn(T.id) ? sessionOf(T.id) : '';
-    const r = await ai.run({ system, text, files, task, label, folder, cont, signal: task === 'solution' ? ctl?.signal : undefined, maxTokens: task === 'solution' ? ai.longest(ai.choice(task)) : 4000, onEvent: live?.onEvent, onProgress: live?.onProgress });
+    const r = await ai.run({ system, text, files, task, label, folder, cont, runId, signal: task === 'solution' ? ctl?.signal : undefined, maxTokens: task === 'solution' ? ai.longest(ai.choice(task)) : 4000, onEvent: live?.onEvent, onProgress: live?.onProgress });
     if (task === 'solution' && T && r.session) keepSessionOf(T.id, r.session);
     if (task === 'solution' && cont) ctx?.toast?.(r.continued ? 'Siguió la misma sesión de Claude Code que escribió la guía.' : (r.note || 'Claude Code empezó una sesión nueva.'));
     return r;
@@ -407,10 +407,12 @@ function showSelButton() {
 // The tray: the changes waiting, and «Deshacer» after an adjustment.
 function trayHTML() {
   const list = adjList();
-  if (!list.length && !undo) return '';
-  return `<div class="tj-traybar">${list.length ? `<button type="button" class="act" data-tj="tray-open">✎ ${list.length} ${list.length === 1 ? 'cambio' : 'cambios'} por aplicar</button>` : ''}
+  const pend = T && !adjusting ? pendingOf(T.id) : null;
+  if (!list.length && !undo && !pend) return '';
+  const pendHTML = pend ? `<div class="tj-pending"><p><b>Un ajuste que pediste no llegó a aplicarse</b> <small class="mut">(${esc(new Date(pend.at).toLocaleString('es'))}${pend.way ? ` · ${esc(ai.WAYS[pend.way]?.name ?? pend.way)}` : ''})</small>. Si tu IA lo terminó, recógelo: se aplica sin volver a pedírselo.</p><p>${COLLECT} <button type="button" class="ask" data-tj="adj-pend-forget">Olvidarlo</button></p></div>` : '';
+  return `<div class="tj-traybar">${pend && !list.length ? '<button type="button" class="act" data-tj="tray-open">✎ Recoger un ajuste</button>' : ''}${list.length ? `<button type="button" class="act" data-tj="tray-open">✎ ${list.length} ${list.length === 1 ? 'cambio' : 'cambios'} por aplicar</button>` : ''}
       ${undo ? `<button type="button" class="ask" data-tj="adj-undo">Deshacer el último ajuste</button>` : ''}</div>
-    <div class="tj-traypanel" hidden><h4>Cambios por aplicar</h4><ol>${list.map((c, i) => `<li><b>${esc(c.label)}</b>${c.quote ? `<q class="no-i18n">${esc(c.quote.slice(0, 160))}${c.quote.length > 160 ? '…' : ''}</q>` : ''}<span class="mut small">${esc([...(c.kinds ?? []).map((k) => ADJ_KINDS()[k] ?? k), c.note].filter(Boolean).join(' · '))}</span><button type="button" class="ask" data-tj="adj-drop" data-i="${i}" aria-label="Quitar este cambio">quitar</button></li>`).join('')}</ol>
+    <div class="tj-traypanel" hidden>${pendHTML}<h4>Cambios por aplicar</h4><ol>${list.map((c, i) => `<li><b>${esc(c.label)}</b>${c.quote ? `<q class="no-i18n">${esc(c.quote.slice(0, 160))}${c.quote.length > 160 ? '…' : ''}</q>` : ''}<span class="mut small">${esc([...(c.kinds ?? []).map((k) => ADJ_KINDS()[k] ?? k), c.note].filter(Boolean).join(' · '))}</span><button type="button" class="ask" data-tj="adj-drop" data-i="${i}" aria-label="Quitar este cambio">quitar</button></li>`).join('')}</ol>
       <div data-howrun>${howRunHTML()}</div>
       <p class="tj-adjbtns"><button type="button" class="act" data-tj="adj-apply">Aplicar con tu IA</button><button type="button" class="ask" data-tj="adj-clear">Descartar todos</button><button type="button" class="ask" data-tj="tray-close">Cerrar</button></p>
       <div data-adj-live></div></div>`;
@@ -421,8 +423,12 @@ function paintTray() {
   let tray = app.querySelector('.tj-tray');
   if (!tray) { tray = document.createElement('div'); tray.className = 'tj-tray'; app.append(tray); }
   const open = !tray.querySelector('.tj-traypanel')?.hidden;
+  // What is shown live or the error of the last request stays: redrawing the list wiped the error right after it was shown.
+  const live = [...(tray.querySelector('[data-adj-live]')?.childNodes ?? [])];
   tray.innerHTML = trayHTML();
-  if (open && tray.querySelector('.tj-traypanel')) tray.querySelector('.tj-traypanel').hidden = false;
+  const panel = tray.querySelector('.tj-traypanel');
+  if (panel && open) panel.hidden = false;
+  if (live.length) { const to = panel?.querySelector('[data-adj-live]'); if (to) to.append(...live); else { const box = document.createElement('div'); box.className = 'tj-adjlive'; box.append(...live); gRoot().querySelector('.tjg-app')?.append(box); } }
 }
 async function applyAdjust(list, box) {
   const hids = list.some((c) => c.kind === 'todo') ? Object.keys(T.hitos) : [...new Set(list.filter((c) => c.kind !== 'esquema').map((c) => c.hito))].filter((h) => T.hitos[h]);
@@ -431,10 +437,26 @@ async function applyAdjust(list, box) {
   const system = adjustPrompt({ outline: T.outline, chapters, changes: list, prefs: promptPrefs(), files });
   startWork();
   box.innerHTML = liveHTML('Tu IA ajusta la guía');
-  const r = await askAI('solution', system, 'Aplica los cambios pedidos a la guía.', [], `Ajustes a «${T.title}»`, liveFeed(box));
+  // Kept before asking: if the answer is lost or cannot be applied, «Recoger lo que escribió tu IA» finds it again.
+  const runId = ai.newRunId();
+  const tid = T.id;
+  keepPending(tid, { runId, list, at: Date.now(), way: ai.choice('solution').provider, title: T.title });
+  adjusting = true;
+  let r;
+  try { r = await askAI('solution', system, 'Aplica los cambios pedidos a la guía.', [], `Ajustes a «${T.title}»`, liveFeed(box), runId); } catch (e) {
+    // Nothing to collect when it never ran, was stopped, or went to an AI that keeps nothing (only the bridge keeps results).
+    if (['folder', 'cancel', 'account', 'model'].includes(e?.kind) || !String(ai.choice('solution').provider).startsWith('bridge:')) forgetPending(tid);
+    throw e;
+  } finally { adjusting = false; }
+  await keepRaw(tid, r);
+  return adoptAdjust(r, `${system.split('La guía tal como está ahora:')[0]}[la guía como estaba]`);
+}
+// What the AI wrote, applied to the guide: the same every time for the same answer (no AI involved).
+async function adoptAdjust(r, prompt = '') {
+  const files = Object.keys(r.outputs ?? {}).length > 0;
   let esquema = null;
   let chaptersBack = [];
-  if (files && Object.keys(r.outputs ?? {}).length) {
+  if (files) {
     esquema = r.outputs['esquema.json'] ? parseJSON(r.outputs['esquema.json']) : null;
     chaptersBack = Object.entries(r.outputs).filter(([n]) => /^H\w{0,4}\.json$/.test(n)).map(([, t]) => parseJSON(t));
   } else {
@@ -467,8 +489,38 @@ async function applyAdjust(list, box) {
   }
   if (!changed.length) throw new Error('Tu IA no devolvió ninguna parte cambiada. Prueba a decir el cambio con otras palabras.');
   undo = { ...before, changed };
-  await logAI({ task: 'solution', step: 'ajuste', model: r.model, provider: r.way, prompt: `${system.split('La guía tal como está ahora:')[0]}[la guía como estaba]` });
+  forgetPending(T.id);
+  await logAI({ task: 'solution', step: 'ajuste', model: r.model, provider: r.way, prompt: prompt || '[recogido de un resultado guardado]' }).catch(() => {});
   return { changed, notes };
+}
+// An adjustment sent and not applied yet: its request id (to ask the bridge again), the changes asked and when. The
+// AI's answer itself is kept in this browser (IndexedDB) as soon as it arrives.
+const PENDING = 'studium-tj-pending';
+let adjusting = false;
+const pendingOf = (tid) => { try { return JSON.parse(localStorage.getItem(PENDING) ?? '{}')[tid] ?? null; } catch { return null; } };
+function keepPending(tid, p) { try { const m = JSON.parse(localStorage.getItem(PENDING) ?? '{}'); m[tid] = p; localStorage.setItem(PENDING, JSON.stringify(m)); } catch { /* this device only */ } }
+function forgetPending(tid) {
+  try { const m = JSON.parse(localStorage.getItem(PENDING) ?? '{}'); delete m[tid]; localStorage.setItem(PENDING, JSON.stringify(m)); } catch { /* this device only */ }
+  draftStore('readwrite', (st) => st.delete(`res:${tid}`)).catch(() => {});
+}
+const keepRaw = (tid, r) => draftStore('readwrite', (st) => st.put({ kind: 'result', owner: uid(), saved: Date.now(), r: { text: r.text ?? '', outputs: r.outputs ?? {}, model: r.model ?? '', way: r.way ?? '', provider: r.provider ?? '' } }, `res:${tid}`)).catch((e) => console.warn('result', e));
+const rawOf = (tid) => draftStore('readonly', (st) => st.get(`res:${tid}`)).then((x) => x?.r ?? null).catch(() => null);
+const COLLECT = '<button type="button" class="act" data-tj="adj-collect">Recoger lo que escribió tu IA</button>';
+// «Recoger lo que escribió tu IA»: the answer kept in this browser, or else the one the bridge kept for that request;
+// applied without asking the AI again.
+async function collectAdjust() {
+  const p = pendingOf(T.id);
+  let r = await rawOf(T.id);
+  let from = 'este navegador';
+  if (!r && p?.runId && p.way?.startsWith('bridge:')) {
+    if (ai.bridgeOld()) throw new Error('Tu puente es anterior a la versión 1.10.0 y no guarda los resultados: actualízalo para poder recogerlos la próxima vez.');
+    r = await ai.bridgeResult(p.runId).catch(() => null);
+    from = 'el puente';
+  }
+  if (!r) throw new Error(`No encontré lo que escribió tu IA para este ajuste${p ? ` (${new Date(p.at).toLocaleString('es')})` : ''}: ni en este navegador ni en el puente. Si todavía está trabajando, espera a que termine.`);
+  const { changed, notes } = await adoptAdjust(r);
+  if (p?.list) adjKeep(adjList().filter((c) => !p.list.some((x) => x.at === c.at)));
+  return { changed, notes, from, partial: r.error ? `Tu IA no terminó (${r.error}); recogí lo que alcanzó a escribir.` : '' };
 }
 async function undoAdjust() {
   if (!undo) return;
@@ -498,7 +550,7 @@ async function runAdjust(list, button) {
     lit(changed);
     ctx.toast(`Ajustado: ${changed.map((x) => (x === 'esquema' ? 'la sección 0' : `el capítulo ${T.outline.hitos.findIndex((h) => h.id === x) + 1}`)).join(', ')}.${notes.length ? ` ${notes.join(' ')}` : ''}`);
   } catch (e) {
-    box.innerHTML = errorBox(errInfo(e, 'Ajustar la guía'), '');
+    box.innerHTML = errorBox(errInfo(e, 'Ajustar la guía'), '', pendingOf(T.id) && e?.kind !== 'cancel' ? COLLECT : '');
     if (!button) adjKeep([...adjList(), ...list.filter((c) => !adjList().some((x) => x.at === c.at))]);
   }
 }
@@ -532,7 +584,7 @@ function knownError(msg, way = '', kind = '') {
 }
 // One error box for everything: it closes, shows the exact error first, says what to do only when it knows, and offers
 // retry, an explanation from the person's AI, and a report to Studium.
-function errorCard({ what, message, way = '', kind = '', at = Date.now(), retry = '', account = '', ctx: context = '' }) {
+function errorCard({ what, message, way = '', kind = '', at = Date.now(), retry = '', account = '', more = '', ctx: context = '' }) {
   const k = knownError(message, way, kind);
   const who = way ? (ai.WAYS[way]?.name ?? way) : '';
   const inGuide = !!T && !draft;
@@ -543,17 +595,17 @@ function errorCard({ what, message, way = '', kind = '', at = Date.now(), retry 
       <p class="mut small">${who ? `IA: ${esc(who)} · ` : ''}${account ? `cuenta ${esc(account)} · ` : ''}${esc(new Date(at).toLocaleString('es'))}</p>
       ${k ? `<p><b>${esc(k.what)}</b></p><ul class="tj-error-todo">${k.todo.map((t) => `<li>${t}</li>`).join('')}</ul>` : ''}
       <div class="tj-err-ai" data-err-ai></div>
-      <p class="tj-error-act">${retry ? `<button type="button" class="act" data-tj="${esc(retry)}">Intentarlo otra vez</button> ` : ''}${k?.act ?? ''} <button type="button" class="${btn}" data-tj="err-explain">Pedir a tu IA que lo explique</button> <button type="button" class="${btn}" data-feedback="error" data-feedback-text="${esc(`${what}${who ? ` (${who})` : ''}: ${message}`.slice(0, 1800))}">Enviar reporte a Studium</button></p>
+      <p class="tj-error-act">${more}${retry ? `<button type="button" class="act" data-tj="${esc(retry)}">Intentarlo otra vez</button> ` : ''}${k?.act ?? ''} <button type="button" class="${btn}" data-tj="err-explain">Pedir a tu IA que lo explique</button> <button type="button" class="${btn}" data-feedback="error" data-feedback-text="${esc(`${what}${who ? ` (${who})` : ''}: ${message}`.slice(0, 1800))}">Enviar reporte a Studium</button></p>
     </div>`;
 }
-function errorBox(info, retry = '') {
+function errorBox(info, retry = '', more = '') {
   if (!info) return '';
   if (info.kind === 'folder') {
     return `<div class="tj-error tj-gone" role="alert"><div class="tj-error-head"><h4>Tu carpeta no está disponible</h4><button type="button" class="tj-error-x" data-tj="err-close" aria-label="Cerrar este aviso">✕</button></div><p>${esc(info.message)}</p>
       ${hereHTML()}<p><button type="button" class="act" data-tj="folder-pick">Elegir la carpeta…</button> <button type="button" class="ask" data-tj="folder-forget">Seguir sin ella, solo con lo que trajiste</button></p><p class="fine" id="tj-folder-status" role="status"></p></div>`;
   }
   if (info.kind === 'cancel') return `<p class="tj-ok">Lo detuviste tú. Puedes volver a escribirla cuando quieras.</p>`;
-  return errorCard({ what: info.what, message: info.message, way: info.way, kind: info.kind, at: info.at, account: info.account, retry });
+  return errorCard({ what: info.what, message: info.message, way: info.way, kind: info.kind, at: info.at, account: info.account, retry, more });
 }
 // A problem that is not the AI's (reading files, saving, the network…): the same card.
 function problemBox(err, what) {
@@ -2086,7 +2138,7 @@ const say = (sel, text) => { const el = document.querySelector(sel); if (el) el.
 async function busy(button, work) {
   const was = button?.disabled;
   if (button) button.disabled = true;
-  try { await work(); } catch (e) { console.error(e); ctx?.toast?.(e?.code && ctx.explain ? ctx.explain(e) : e?.message || 'No se pudo: vuelve a intentarlo.'); throw e; } finally { if (button && button.isConnected) button.disabled = was; }
+  try { return await work(); } catch (e) { console.error(e); ctx?.toast?.(e?.code && ctx.explain ? ctx.explain(e) : e?.message || 'No se pudo: vuelve a intentarlo.'); throw e; } finally { if (button && button.isConnected) button.disabled = was; }
 }
 // Repaint, keeping the place on the page.
 function repaint() { const sc = scroller(); const y = sc?.scrollTop ?? 0; paint(); if (sc) sc.scrollTop = y; }
@@ -2493,6 +2545,18 @@ function wire(root) {
     }
     if (kind === 'err-explain') { await busy(b, () => explainError(b.closest('.tj-error'))).catch(() => {}); return; }
     if (kind === 'adj') { adjOpen(b.dataset.key); return; }
+    if (kind === 'adj-collect') {
+      await busy(b, async () => {
+        const { changed, notes, from, partial } = await collectAdjust();
+        b.closest('.tj-error')?.remove();
+        paintTray();
+        repaint();
+        lit(changed);
+        ctx.toast(`Recogido de ${from} y aplicado: ${changed.map((x) => (x === 'esquema' ? 'la sección 0' : `el capítulo ${T.outline.hitos.findIndex((h) => h.id === x) + 1}`)).join(', ')}.${partial ? ` ${partial}` : ''}${notes.length ? ` ${notes.join(' ')}` : ''}`);
+      }).catch(() => {});
+      return;
+    }
+    if (kind === 'adj-pend-forget') { forgetPending(T.id); paintTray(); return; }
     if (kind === 'adj-close') { b.closest('.tj-adjpop')?.remove(); return; }
     if (kind === 'tray-open' || kind === 'tray-close') { const pnl = gRoot().querySelector('.tj-traypanel'); if (pnl) pnl.hidden = kind === 'tray-close'; return; }
     if (kind === 'adj-drop') { const l = adjList(); l.splice(Number(b.dataset.i), 1); adjKeep(l); const pnl = gRoot().querySelector('.tj-traypanel'); if (pnl && l.length) pnl.hidden = false; return; }

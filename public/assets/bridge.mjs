@@ -14,7 +14,7 @@ import { homedir, platform, tmpdir } from 'node:os';
 import path from 'node:path';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
-const VERSION = '1.9.0';
+const VERSION = '1.10.0';
 const NAME = 'studium-bridge';
 const DEFAULT_PORT = 41730;
 const MAX_BODY = 64 * 1024 * 1024;
@@ -279,6 +279,29 @@ async function createRepo(body) {
 
 /* ---------- folders of one run ---------- */
 // Folders left by a crash of an earlier run are removed on start.
+// Every result the bridge returned (and what the AI left in «salida» when the request failed), kept on this computer
+// for 7 days, the last 20 (his words, 2026-11-23: a button that collects what the AI did, deterministically). If the
+// page lost the answer (reloaded, closed, cut by time, or failed while applying it), Studium asks for it again by the
+// request's id instead of asking the AI again. Only this computer's Studium, with the pairing code, can read them.
+const RESULTS = path.join(homedir(), '.studium-bridge-results');
+function keepResult(body, out) {
+  if (!body.runId) return;
+  try {
+    mkdirSync(RESULTS, { recursive: true });
+    writeFileSync(path.join(RESULTS, `${body.runId}.json`), JSON.stringify({ id: body.runId, at: new Date().toISOString(), label: String(body.label ?? '').slice(0, 200), ...out }));
+    const all = readdirSync(RESULTS).filter((n) => n.endsWith('.json')).map((n) => ({ n, t: statSync(path.join(RESULTS, n)).mtimeMs })).sort((a, b) => b.t - a.t);
+    for (const [i, x] of all.entries()) if (i >= 20 || Date.now() - x.t > 7 * 86400_000) rmSync(path.join(RESULTS, x.n), { force: true });
+  } catch (e) { console.log(`  No pude guardar una copia del resultado: ${e.message}`); }
+}
+function readResult(id) {
+  if (!/^[\w-]{6,40}$/.test(id)) return null;
+  try { return JSON.parse(readFileSync(path.join(RESULTS, `${id}.json`), 'utf8')); } catch { return null; }
+}
+function listResults() {
+  try {
+    return readdirSync(RESULTS).filter((n) => n.endsWith('.json')).map((n) => { try { const r = JSON.parse(readFileSync(path.join(RESULTS, n), 'utf8')); return { id: r.id, at: r.at, label: r.label, files: Object.keys(r.outputs ?? {}), chars: String(r.text ?? '').length, error: r.error ?? '' }; } catch { return null; } }).filter(Boolean).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  } catch { return []; }
+}
 function cleanOldFolders() {
   try {
     for (const name of readdirSync(tmpdir())) {
@@ -972,7 +995,15 @@ async function handleRun(body) {
     const got = await engine.run(await bin(body.engine === 'antigravity' ? 'agy' : body.engine), dir, run, names, timeoutMs);
     const text = typeof got === 'string' ? got : got.text;
     if (run.keepFolder) body.keepFolder = true;
-    return { text, outputs: readOutputs(path.join(dir, 'salida')), session: got?.session ?? '', resume: got?.resume ?? '', continued: !!got?.continued, note: got?.note ?? '', engine: body.engine, model: String(body.model ?? ''), effort: String(body.effort ?? ''), ms: Date.now() - started, folder: place ? place.path : '' };
+    const out = { text, outputs: readOutputs(path.join(dir, 'salida')), session: got?.session ?? '', resume: got?.resume ?? '', continued: !!got?.continued, note: got?.note ?? '', engine: body.engine, model: String(body.model ?? ''), effort: String(body.effort ?? ''), ms: Date.now() - started, folder: place ? place.path : '' };
+    keepResult(body, out);
+    return out;
+  } catch (e) {
+    // It failed, but what the AI already wrote in «salida» is kept, to be collected.
+    let left = {};
+    try { left = readOutputs(path.join(dir, 'salida')); } catch { /* nothing */ }
+    if (Object.keys(left).length) keepResult(body, { text: '', outputs: left, error: String(e?.message ?? e), engine: body.engine, model: String(body.model ?? ''), effort: String(body.effort ?? ''), ms: Date.now() - started, folder: place ? place.path : '' });
+    throw e;
   } finally {
     if (!body.keepFolder) removeFolder(dir);
     if (place && !body.keepFolder) { try { rmSync(path.join(place.path, '.studium'), { recursive: false }); } catch { /* not empty, or gone */ } try { const left = readdirSync(path.join(place.path, '.studium')); if (!left.length) rmSync(path.join(place.path, '.studium'), { recursive: true, force: true }); } catch { /* gone */ } }
@@ -1008,6 +1039,11 @@ const server = createServer(async (req, res) => {
       const since = Number(new URL(req.url, 'http://127.0.0.1').searchParams.get('since') ?? 0) || 0;
       return send(res, 200, p ? { started: p.started, ms: Date.now() - p.started, done: p.done, chars: p.chars, total: p.events.length, events: p.events.slice(since) } : { unknown: true }, ok);
     }
+    if (req.method === 'GET' && pathname === '/v1/result') {
+      const r = readResult(new URL(req.url, 'http://127.0.0.1').searchParams.get('id') ?? '');
+      return send(res, 200, r ?? { unknown: true }, ok);
+    }
+    if (req.method === 'GET' && pathname === '/v1/results') return send(res, 200, { results: listResults() }, ok);
     if (req.method === 'GET' && pathname === '/v1/folders') return send(res, 200, { folders: folders().map(folderView), modes: Object.fromEntries(Object.entries(MODES).map(([k, m]) => [k, m.label])) }, ok);
     if (req.method === 'POST' && pathname === '/v1/repo') {
       let body;
