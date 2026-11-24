@@ -137,9 +137,9 @@ async function loadTrabajo(tid) {
 // publicas/{tid} (firestore.rules), the outline and the chapters, plus the statement of a trabajo. Never the members,
 // the progress, the AI log or a student's own notes. The owner's copy follows the guide after every write of the AI.
 const VIS = {
-  private: { icon: '🔒', name: 'Privada' },
-  link: { icon: '🔗', name: 'Con enlace' },
-  public: { icon: '🌍', name: 'Pública' },
+  private: { icon: '', name: 'Privada' },
+  link: { icon: '', name: 'Con enlace' },
+  public: { icon: '', name: 'Pública' },
 };
 const visOf = (t = T) => (VIS[t?.prefs?.visibility] ? t.prefs.visibility : 'private');
 const pRef = (tid, ...rest) => doc(db, 'publicas', tid, ...rest);
@@ -167,6 +167,33 @@ async function publishCopy(vis) {
   for (const [hid, h] of Object.entries(T.hitos)) { const { by: _b, ai: _a, ...data } = h; batch.set(pRef(T.id, 'hitos', hid), { data: await pack(data), encoding: 'gzip', updated: serverTimestamp() }); }
   await batch.commit();
 }
+// «Hacer mi copia» (his words, 2026-11-24: guides, even public, are rewritten only by their owners; a student who wants
+// to adapt a public guide forks it). A new guide owned by the reader, private, with the outline and every chapter as
+// they are now, and where it came from; the original never changes. Two writes, as the rules ask: the guide with its
+// first member, then its chapters (a chapter is written only by a member, checked before the write).
+async function forkGuide() {
+  if (!T?.readonly || !T.outline) throw new Error('Esta guía no se puede copiar.');
+  const s = T.prefs?.kind === 'estudio';
+  const ref = doc(collection(db, 'trabajos'));
+  const code = newCode();
+  const letters = new Set(T.outline.hitos.flatMap((h) => (h.pasos ?? []).map((x) => x.parte)).filter(Boolean));
+  const parts = s ? 1 : Math.max(1, Math.min(8, letters.size || 1));
+  const from = `(Copia de la guía «${T.title}»${T.ownerName ? `, de ${T.ownerName}` : ''}, hecha en Studium el ${new Date().toLocaleDateString('es')}.)`;
+  const batch = writeBatch(db);
+  batch.set(ref, {
+    title: String(T.title).slice(0, 160), course: String(T.course ?? '').slice(0, 120), group: '', deadline: String(T.deadline ?? '').slice(0, 40),
+    prefs: { ...(s ? STUDY_DEFAULT : PREF_DEFAULT), template: T.prefs?.template || templateOf(), visibility: 'private', forkOf: T.id },
+    parts, owner: uid(), code, statement: await fitStatement(`${T.statement ? `${T.statement}\n\n` : ''}${from}`), outline: await pack(T.outline),
+    encoding: 'gzip', created: serverTimestamp(), updated: serverTimestamp(),
+  });
+  batch.set(doc(db, 'trabajos', ref.id, 'miembros', uid()), { name: await myName(), code, joined: serverTimestamp() });
+  await batch.commit();
+  const chapters = writeBatch(db);
+  for (const [hid, h] of Object.entries(T.hitos ?? {})) chapters.set(doc(db, 'trabajos', ref.id, 'hitos', hid), { data: await pack(h), encoding: 'gzip', by: uid(), updated: serverTimestamp() });
+  await chapters.commit();
+  await keepIds([...(await myIds()), ref.id]);
+  return { id: ref.id, study: s };
+}
 async function unpublish() {
   const batch = writeBatch(db);
   for (const h of (await getDocs(collection(db, 'publicas', T.id, 'hitos')).catch(() => null))?.docs ?? []) batch.delete(h.ref);
@@ -189,7 +216,7 @@ const shareLink = () => `${location.origin}${location.pathname}#/${study() ? 'es
 function sharePanel() {
   const now = visOf();
   const s = study();
-  const opt = (v, why) => `<label class="tj-pick ${now === v ? 'on' : ''}"><input type="radio" name="vis" value="${v}" ${now === v ? 'checked' : ''}> <span><b>${VIS[v].icon} ${VIS[v].name}</b><br><small>${why}</small></span></label>`;
+  const opt = (v, why) => `<label class="tj-pick ${now === v ? 'on' : ''}"><input type="radio" name="vis" value="${v}" ${now === v ? 'checked' : ''}> <span><b>${VIS[v].name}</b><br><small>${why}</small></span></label>`;
   return `<form class="tj-sharecard" data-share-form><div class="tj-fighead"><b>¿Quién ve esta guía?</b><button type="button" class="ask" data-tj="share-close">Cerrar</button></div>
       ${opt('private', s ? 'Solo tú.' : 'Solo los miembros del grupo, los que invitas.')}
       ${opt('link', 'Cualquiera con una cuenta de Studium que tenga el enlace puede leerla. No aparece en ninguna lista.')}
@@ -197,7 +224,10 @@ function sharePanel() {
       ${s ? '' : `<p class="tj-warn small" data-share-warn ${now === 'private' ? 'hidden' : ''}>Antes de compartirla: si el trabajo todavía no se entrega, otros grupos podrían copiarlo; y si el enunciado pide que no se publique (por ejemplo, un repositorio privado), déjala privada.</p>`}
       <p class="mut small">Se comparte ${s ? 'la guía, sin tu material ni lo que marcaste' : 'la guía y el enunciado; nunca los miembros, el avance ni el registro de uso de IA'}. Quien la abre la lee sin poder cambiar nada. Cuando tu IA la ajusta, la copia compartida se actualiza sola.</p>
       <p class="tj-sharelink" ${now === 'private' ? 'hidden' : ''}><input readonly value="${esc(shareLink())}" aria-label="Enlace de la guía"> <button type="button" class="act" data-tj="share-copy">Copiar el enlace</button></p>
-      <p><button type="submit" class="act">Guardar</button> <span class="mut small" data-share-status role="status"></span></p></form>`;
+      <p><button type="submit" class="act">Guardar</button> <span class="mut small" data-share-status role="status"></span></p>
+      <div class="tj-sharewrite"><b>¿Quién puede cambiarla?</b>
+        <p class="mut small">${(T.members ?? []).length > 1 ? `Tú y ${(T.members ?? []).length - 1} ${(T.members ?? []).length === 2 ? 'persona que invitaste' : 'personas que invitaste'}: pueden escribir sus capítulos y pedirle cambios a su IA; el esquema y quién la ve, solo tú.` : 'Solo tú. Quien la lee por el enlace o en Guías no puede cambiar nada; si quiere adaptarla a su manera, hace su propia copia («Hacer mi copia»), y la tuya no cambia.'}</p>
+        <p><button type="button" class="ask" data-tj="invite">Invitar a alguien a cambiarla</button></p></div></form>`;
 }
 async function saveAvance() {
   await setDoc(tRef(T.id, 'avance', uid()), { steps: T.avance[uid()] ?? {}, updated: serverTimestamp() });
@@ -316,7 +346,7 @@ async function connectWay(vendor, bridge) {
 function pickingNotice() {
   const el = document.createElement('div');
   el.className = 'tj-picking'; el.setAttribute('role', 'alertdialog'); el.setAttribute('aria-live', 'assertive');
-  el.innerHTML = `<div class="tj-picking-card glass"><div class="tj-picking-icon" aria-hidden="true">📁</div>
+  el.innerHTML = `<div class="tj-picking-card glass">
     <h2>Elige la carpeta en la ventana de tu computadora</h2>
     <p>Se abrió encima de esta página una ventana de Windows: <b>«Studium: elige la carpeta donde trabajará tu IA»</b>. Busca la carpeta del trabajo y pulsa <b>«Elegir esta carpeta»</b>.</p>
     <p class="fine">¿No la ves? Está en la barra de tareas, con ese mismo nombre. Para no elegir ninguna, ciérrala.</p></div>`;
@@ -352,7 +382,7 @@ function targetOf(key) {
   if (key === 'todo') return { key, kind: 'todo', label: 'toda la guía' };
   return { key: 'esquema', kind: 'esquema', label: study() ? 'la sección 0 (qué entra, cómo es la evaluación, ojo con)' : 'la sección 0 (de qué se trata, las reglas, el reparto)' };
 }
-const adjButton = (key) => `<button type="button" class="adj" data-tj="adj" data-key="${esc(key)}" title="Pedir un cambio a tu IA">✎ <span>Ajustar</span></button>`;
+const adjButton = (key) => `<button type="button" class="adj" data-tj="adj" data-key="${esc(key)}" title="Pedir un cambio a tu IA"><span>Ajustar</span></button>`;
 // Which part of the guide a node belongs to.
 function keyOfNode(node) {
   const el = node?.nodeType === 1 ? node : node?.parentElement;
@@ -379,6 +409,7 @@ function adjOpen(key, quote = '') {
       <div data-howrun>${howRunHTML()}</div>
       <p class="tj-adjbtns"><button type="submit" class="act" data-now="1">Ajustar ahora</button><button type="submit" class="ask">Agregar a la lista</button><button type="button" class="ask" data-tj="adj-close">Cancelar</button></p>
       <p class="mut small">${t.kind === 'todo' ? 'La IA que escribió esta guía hace el cambio en toda la guía y conserva lo demás. Ves el resultado al terminar, y puedes deshacerlo.' : 'Tu IA cambia solo esto; el resto de la guía queda igual. Puedes juntar varios cambios y aplicarlos de una vez.'}</p>
+      ${t.kind === 'todo' ? collectFold() : ''}
     </form>`;
   gRoot().querySelector('.tjg-app')?.append(box);
   box.querySelector('textarea')?.focus();
@@ -397,7 +428,7 @@ function showSelButton() {
   selButton = document.createElement('button');
   selButton.type = 'button';
   selButton.className = 'tj-selbtn';
-  selButton.textContent = '✎ Ajustar esto';
+  selButton.textContent = 'Ajustar esto';
   selButton.style.left = `${Math.max(8, Math.min(innerWidth - 150, r.left + r.width / 2 - 60))}px`;
   selButton.style.top = `${Math.max(60, r.top - 44)}px`;
   selButton.addEventListener('mousedown', (e) => e.preventDefault());
@@ -410,7 +441,7 @@ function trayHTML() {
   const pend = T && !adjusting ? pendingOf(T.id) : null;
   if (!list.length && !undo && !pend) return '';
   const pendHTML = pend ? `<div class="tj-pending"><p><b>Un ajuste que pediste no llegó a aplicarse</b> <small class="mut">(${esc(new Date(pend.at).toLocaleString('es'))}${pend.way ? ` · ${esc(ai.WAYS[pend.way]?.name ?? pend.way)}` : ''})</small>. Si tu IA lo terminó, recógelo: se aplica sin volver a pedírselo.</p>${String(pend.way).startsWith('bridge:') ? COLLECT_BRIDGE() : ''}<p>${COLLECT} <button type="button" class="ask" data-tj="adj-pend-forget">Olvidarlo</button></p></div>` : '';
-  return `<div class="tj-traybar">${pend && !list.length ? '<button type="button" class="act" data-tj="tray-open">✎ Recoger un ajuste</button>' : ''}${list.length ? `<button type="button" class="act" data-tj="tray-open">✎ ${list.length} ${list.length === 1 ? 'cambio' : 'cambios'} por aplicar</button>` : ''}
+  return `<div class="tj-traybar">${list.length ? `<button type="button" class="act" data-tj="tray-open">${list.length} ${list.length === 1 ? 'cambio' : 'cambios'} por aplicar</button>` : ''}
       ${undo ? `<button type="button" class="ask" data-tj="adj-undo">Deshacer el último ajuste</button>` : ''}</div>
     <div class="tj-traypanel" hidden>${pendHTML}<h4>Cambios por aplicar</h4><ol>${list.map((c, i) => `<li><b>${esc(c.label)}</b>${c.quote ? `<q class="no-i18n">${esc(c.quote.slice(0, 160))}${c.quote.length > 160 ? '…' : ''}</q>` : ''}<span class="mut small">${esc([...(c.kinds ?? []).map((k) => ADJ_KINDS()[k] ?? k), c.note].filter(Boolean).join(' · '))}</span><button type="button" class="ask" data-tj="adj-drop" data-i="${i}" aria-label="Quitar este cambio">quitar</button></li>`).join('')}</ol>
       <div data-howrun>${howRunHTML()}</div>
@@ -455,6 +486,8 @@ async function applyAdjust(list, box) {
 // What the AI wrote, applied to the guide: the same every time for the same answer (no AI involved).
 async function adoptAdjust(r, prompt = '') {
   const files = Object.keys(r.outputs ?? {}).length > 0;
+  if (!T.outline && !(files && r.outputs['esquema.json'])) throw new Error('La guía todavía no tiene esquema, y lo que encontré no lo trae (esquema.json): sin él no se puede armar. Escríbela otra vez.');
+  if (!T.outline && T.owner !== uid()) throw new Error('El esquema de la guía solo lo guarda quien la creó.');
   let esquema = null;
   let chaptersBack = [];
   if (files) {
@@ -489,7 +522,7 @@ async function adoptAdjust(r, prompt = '') {
     changed.push('esquema');
   }
   if (!changed.length) throw new Error('Tu IA no devolvió ninguna parte cambiada. Prueba a decir el cambio con otras palabras.');
-  undo = { ...before, changed };
+  undo = before.outline ? { ...before, changed } : null;
   forgetPending(T.id);
   await logAI({ task: 'solution', step: 'ajuste', model: r.model, provider: r.way, prompt: prompt || '[recogido de un resultado guardado]' }).catch(() => {});
   return { changed, notes };
@@ -507,6 +540,9 @@ function forgetPending(tid) {
 const keepRaw = (tid, r) => draftStore('readwrite', (st) => st.put({ kind: 'result', owner: uid(), saved: Date.now(), r: { text: r.text ?? '', outputs: r.outputs ?? {}, model: r.model ?? '', way: r.way ?? '', provider: r.provider ?? '' } }, `res:${tid}`)).catch((e) => console.warn('result', e));
 const rawOf = (tid) => draftStore('readonly', (st) => st.get(`res:${tid}`)).then((x) => x?.r ?? null).catch(() => null);
 const COLLECT = '<button type="button" class="act" data-tj="adj-collect">Recoger lo que escribió tu IA</button>';
+// A rare case (his words: «un caso muy nicho»), so it sits folded at the end of «Pedir un cambio a tu IA» and of the card
+// that writes the guide, never on the main screen. Only with the bridge paired: other AIs keep no record to collect.
+const collectFold = () => (ai.bridgeOf()?.token ? `<details class="tj-more"><summary>Más opciones</summary><p class="fine">¿Tu IA ya trabajó en esta guía y lo que hizo no llegó a ella (se cortó, se cerró la página, o falló al guardarlo)? Studium lo busca en el registro que Claude Code guarda en tu computadora y lo aplica tal cual, sin volver a pedírselo.</p><p><button type="button" class="ask" data-tj="collect-open">Recoger lo que hizo tu IA</button></p></details>` : '');
 // Beside «Recoger»: the bridge's state, with how to reconnect it (the answer may be kept only there).
 const COLLECT_BRIDGE = () => `<div data-bridge-state>${bridgeStateHTML()}</div>`;
 // «Recoger lo que escribió tu IA»: the answer kept in this browser, or else the one the bridge kept for that request;
@@ -537,12 +573,12 @@ function collectOpen() {
   box.className = 'tj-adjpop tj-collectpop';
   box.innerHTML = `<div class="tj-adjcard" role="dialog" aria-label="Recoger lo que hizo tu IA">
       <h4>Recoger lo que hizo tu IA</h4>
-      <p class="fine">Lo que Claude Code escribió para tus guías, aunque no haya llegado a la guía (se cortó, se cerró la página o falló al mostrarlo). Studium lo lee del registro que Claude Code guarda en tu computadora y de las copias del puente, y lo aplica tal cual, sin volver a pedírselo a tu IA. Después puedes deshacerlo.</p>
+      <p class="fine">Lo que Claude Code escribió para tus guías, aunque no haya llegado a la guía (se cortó, se cerró la página o falló al guardarlo). Studium lo lee del registro que Claude Code guarda en tu computadora y de las copias del puente, y lo aplica tal cual, sin volver a pedírselo a tu IA.${T?.outline ? ' Después puedes deshacerlo.' : ' Si la guía todavía no tiene esquema, lo que recojas debe traerlo (esquema.json).'}</p>
       <div data-bridge-state>${bridgeStateHTML()}</div>
       <div class="tj-collectlist" data-collect-list>${bridgeLive.state === 'ok' ? '<p class="mut">Buscando lo que escribió tu IA…</p>' : '<p class="mut">Cuando el puente responda, aquí aparece lo que encontró.</p>'}</div>
       <p class="tj-adjbtns"><button type="button" class="ask" data-tj="collect-close">Cerrar</button></p>
     </div>`;
-  gRoot().querySelector('.tjg-app')?.append(box);
+  (gRoot().querySelector('.tjg-app') ?? document.body).append(box);
   kickBridge();
   if (bridgeLive.state === 'ok') loadCollect();
 }
@@ -558,7 +594,7 @@ async function loadCollect() {
   try { [sessions, results] = await Promise.all([ai.bridgeRecoverable(mine ? [mine] : []), ai.bridgeResults().catch(() => [])]); } catch (e) { el.innerHTML = `<p class="tj-warn">No pude preguntarle al puente: ${esc(e.message)}</p>`; return; }
   const row = (key, value, when, where, files, ours, extra = '') => {
     const names = Object.keys(files);
-    const fits = names.filter((n) => ids.has(n) || n === 'esquema.json');
+    const fits = names.filter((n) => n === 'esquema.json' || (T.outline ? ids.has(n) : /^H\w{0,4}\.json$/.test(n) && names.includes('esquema.json')));
     const label = names.map((n) => n.replace(/\.json$/, '')).join(', ');
     return `<li class="${ours ? 'ours' : ''}"><p><b>${esc(when)}</b>${ours ? ' <span class="tag rec">de esta guía</span>' : ''}${extra}<br><small class="mut">${where ? `en ${esc(where)} · ` : ''}escribió ${esc(label)} (${names.length} ${names.length === 1 ? 'archivo' : 'archivos'})</small></p>
         ${fits.length ? `<button type="button" class="act" data-tj="collect-apply" data-${key}="${esc(value)}">Aplicar a esta guía (${fits.length} ${fits.length === 1 ? 'parte' : 'partes'})</button>` : '<small class="mut">Sus partes no corresponden a esta guía.</small>'}</li>`;
@@ -819,7 +855,7 @@ async function renderList() {
           <a href="#/trabajos/${esc(r.id)}">Abrir la guía</a>
           <button type="button" data-tj="share" data-id="${esc(r.id)}" data-code="${esc(r.code)}">Invitar a mi grupo</button>
           ${r.owner === uid() ? `<button type="button" data-tj="edit-open" data-id="${esc(r.id)}">Editar los datos</button>` : ''}
-          <span class="tj-menu-note">${visOf(r) === 'private' ? 'Lo ven <b>solo los miembros</b> del grupo: quienes invitas.' : visOf(r) === 'link' ? '🔗 Lo lee <b>quien tenga el enlace</b>; el avance sigue siendo del grupo.' : '🌍 <b>Pública</b> en Guías; el avance sigue siendo del grupo.'} Cámbialo en la guía, arriba.</span>
+          <span class="tj-menu-note">${visOf(r) === 'private' ? 'Lo ven <b>solo los miembros</b> del grupo: quienes invitas.' : visOf(r) === 'link' ? 'Lo lee <b>quien tenga el enlace</b>; el avance sigue siendo del grupo.' : '<b>Pública</b> en Guías; el avance sigue siendo del grupo.'} Cámbialo en la guía, arriba.</span>
           ${r.owner === uid() ? `<button type="button" class="danger" data-tj="delete-ask" data-id="${esc(r.id)}">Eliminar…</button>` : `<button type="button" class="danger" data-tj="leave-ask" data-id="${esc(r.id)}">Salir del trabajo…</button>`}
         </div></details>
         <div class="tj-card-extra" data-extra></div></div>`).join('')}</div>` : '<p class="fine">Todavía no tienes trabajos.</p>'}`;
@@ -1018,7 +1054,7 @@ function hereHTML() {
   const n = hereName();
   if (!n) return '';
   const same = draft?.broughtFolder && draft.broughtFolder === n;
-  return `<p><button type="button" class="button primary small" data-tj="folder-here" title="${esc(ai.bridgeOf().cwd)}">📁 Trabajar en «${esc(n)}»</button> <span class="fine">${same ? 'la carpeta que trajiste, ' : ''}donde abriste el puente. No te vuelve a preguntar.</span></p>`;
+  return `<p><button type="button" class="button primary small" data-tj="folder-here" title="${esc(ai.bridgeOf().cwd)}">Trabajar en «${esc(n)}»</button> <span class="fine">${same ? 'la carpeta que trajiste, ' : ''}donde abriste el puente. No te vuelve a preguntar.</span></p>`;
 }
 // Where it works: one list, one choice marked, each saying what it means (his words: «Solo lo que trajiste» and the
 // folder button were painted alike and both looked chosen). Choosing the folder where the bridge was opened lends it at
@@ -1034,8 +1070,8 @@ function placeHTML(now) {
   const row = (value, on, title, note, extra = '') => `<label class="tj-pick ${on ? 'on' : ''}"><input type="radio" name="workspace" value="${esc(value)}" data-tj-ws ${on ? 'checked' : ''}> <span><b>${title}</b><br><small>${note}</small>${extra}</span></label>`;
   return `<div class="tj-places" role="radiogroup" aria-label="Dónde trabaja">
       ${row('temp', !f, 'Sin carpeta tuya: solo lo que trajiste', 'Studium copia lo que subiste a una carpeta temporal y la borra al terminar.')}
-      ${f ? row(f.id, true, `📁 ${esc(f.name)}`, `${esc(f.path ?? '')}${hereIsF ? ' · donde abriste el puente' : ''}`, `<span class="tj-folder-now">${modeSel(f)} <small>${esc(MODE_WHY[f.mode] ?? '')}</small></span>`) : ''}
-      ${here && !hereIsF ? row('here', false, `📁 ${esc(here)}`, `${esc(cwd)} · donde abriste el puente; se presta sin preguntarte otra vez`) : ''}
+      ${f ? row(f.id, true, `${esc(f.name)}`, `${esc(f.path ?? '')}${hereIsF ? ' · donde abriste el puente' : ''}`, `<span class="tj-folder-now">${modeSel(f)} <small>${esc(MODE_WHY[f.mode] ?? '')}</small></span>`) : ''}
+      ${here && !hereIsF ? row('here', false, `${esc(here)}`, `${esc(cwd)} · donde abriste el puente; se presta sin preguntarte otra vez`) : ''}
       ${row('pick', false, 'Otra carpeta…', draft?.broughtFolder && !here ? `Busca «${esc(draft.broughtFolder)}» en tu computadora.` : 'Se abre la ventana de tu computadora para elegirla.')}
     </div><p class="fine" id="tj-folder-status" role="status">${f ? 'Prestada mientras escribe; después el puente la olvida.' : 'Una carpeta se presta solo mientras escribe.'}</p>`;
 }
@@ -1236,7 +1272,7 @@ function renderDraft(error = '') {
     control = `<p class="tj-sentence">${sentence}</p>
       ${ai.ready() ? ai.pickerHTML('solution') : '<p class="tj-warn">Para escribirla necesitas una IA conectada. <button type="button" class="link" data-tj="connect" data-vendor="gemini">Conectar Gemini, gratis</button>, o créala ahora y escríbela después.</p>'}
       ${ai.promptHTML((ai.choice('solution').provider === 'bridge:claude' && draft.prefs.writeAll !== 'outline' && !ai.bridgeOld() ? wholePrompt : outlinePrompt)({ parts: draft.parts, course: draft.course, deadline: deadlineText(draftDeadline()), prefs: s ? studyPrefs(draft) : draft.prefs }), '', s ? 'tu material' : 'el enunciado y lo que trajiste')}
-      <p class="tj-vis">${s ? '🔒 Solo la ves tú.' : '🔒 Lo ven solo tú y quienes invites después: tus amigos de Studium, o quien tenga su enlace.'}</p>`;
+      <p class="tj-vis">${s ? 'Solo la ves tú.' : 'Lo ven solo tú y quienes invites después: tus amigos de Studium, o quien tenga su enlace.'}</p>`;
   }
   root.innerHTML = `<form class="tj-wizard panel glass" id="tj-wizard" data-d="${esc(draft.id)}" data-at="${draft.at}">
       <div class="tj-dots" aria-hidden="true">${dots}</div>
@@ -1603,12 +1639,12 @@ function topbar() {
       <span class="brand">${esc(short((T.course || T.title).toUpperCase(), 26))} · ${s ? 'GUÍA DE ESTUDIO' : 'GUÍA DE SOLUCIÓN'}</span>
       ${caps.map(([id, label]) => `<a href="#cap-${esc(id)}" data-tj="jump" data-cap="${esc(id)}">${esc(label)}</a>`).join('')}
       <span class="sp"></span>
-      ${T.outline?.escena || T.outline?.diagrama ? '<button type="button" data-tj="figure" title="Ver la gráfica general, sin perder tu lugar">🗺 Gráfica general</button>' : ''}
-      ${T.readonly ? '<span class="ro-tag">Solo lectura</span>' : T.owner === uid() ? `<button type="button" data-tj="share-open" title="Quién ve esta guía">${VIS[visOf()].icon} ${VIS[visOf()].name}</button>` : `<span class="ro-tag" title="Quién ve esta guía">${VIS[visOf()].icon} ${VIS[visOf()].name}</span>`}
+      ${T.outline?.escena || T.outline?.diagrama ? '<button type="button" data-tj="figure" title="Ver la gráfica general, sin perder tu lugar">Gráfica general</button>' : ''}
+      ${T.readonly ? `<span class="ro-tag">Solo lectura</span>${T.owner !== uid() ? '<button type="button" data-tj="fork" title="Una copia tuya y privada, que puedes cambiar y pedirle a tu IA que adapte; la guía original no cambia">Hacer mi copia</button>' : ''}` : T.owner === uid() ? `<button type="button" data-tj="share-open" title="Quién ve esta guía">${VIS[visOf()].name}</button>` : `<span class="ro-tag" title="Quién ve esta guía">${VIS[visOf()].name}</span>`}
       ${myPart() ? `<label class="mine"><input type="checkbox" data-tj="mine" ${onlyMine ? 'checked' : ''}> Solo mi parte</label>` : ''}
       <span class="pct" title="${s ? 'Conceptos que ya entiendes' : 'Pasos hechos por el grupo'}">${s ? pct(all.filter((x) => mark(x.id).u).length, all.length) : total}%</span>
       <select data-tj-template aria-label="Plantilla de la guía">${Object.entries(TEMPLATES).map(([k, v]) => `<option value="${k}" ${templateOf() === k ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>
-      <button type="button" data-tj="theme" title="Cambiar entre claro y oscuro">${themeNow() === 'dark' ? '☀ Claro' : '☾ Oscuro'}</button>
+      <button type="button" data-tj="theme" title="Cambiar entre claro y oscuro">${themeNow() === 'dark' ? 'Claro' : 'Oscuro'}</button>
     </div><div class="prog" style="width:${s ? pct(all.filter((x) => mark(x.id).u).length, all.length) : total}%"></div></nav>`;
 }
 
@@ -1629,7 +1665,7 @@ function hero() {
       <div><h1 class="no-i18n">${esc(T.title)}</h1>
       ${T.readonly ? `<p class="ro-note">Guía compartida por <b class="no-i18n">${esc(T.ownerName || 'alguien de Studium')}</b>. La lees tal como la escribió; no se puede cambiar desde aquí.</p>` : ''}
       <p>Guía de estudio${T.course ? ` · <span class="no-i18n">${esc(T.course)}</span>` : ''}${day ? ` · ${esc(deadlineText(day))}${left}` : ''} · pasa el cursor sobre lo subrayado con puntos para ver su definición</p>
-      ${T.readonly ? '' : ev ? `<p class="small mut">📅 En tu calendario. <a href="#/horario">Cámbiala ahí</a> y la guía la sigue.</p>` : day ? '<p><button type="button" class="ask" data-tj="cal-add">📅 Agregar a mi calendario</button></p>' : '<p class="small mut">Sin fecha: agrégala en <a href="#/horario">tu calendario</a> como examen de esta materia.</p>'}</div>
+      ${T.readonly ? '' : ev ? `<p class="small mut">En tu calendario. <a href="#/horario">Cámbiala ahí</a> y la guía la sigue.</p>` : day ? '<p><button type="button" class="ask" data-tj="cal-add">Agregar a mi calendario</button></p>' : '<p class="small mut">Sin fecha: agrégala en <a href="#/horario">tu calendario</a> como examen de esta materia.</p>'}</div>
     </header>`;
   }
   if (T.readonly) {
@@ -1943,7 +1979,7 @@ function walkGo(fig, how) {
   if (how === 'play') {
     const button = fig.querySelector('[data-go="play"]');
     if (st.timer) { clearInterval(st.timer); st.timer = null; button.textContent = '▶ Reproducir'; walks.set(fig.dataset.walk, st); return; }
-    button.textContent = '❚❚ Pausa';
+    button.textContent = 'Pausa';
     walkShow(fig, 0);
     let i = 0;
     st.timer = setInterval(() => {
@@ -1962,7 +1998,7 @@ function stepHTML(s, step) {
     const lines = c.codigo.replace(/\n$/, '').split('\n');
     const expl = new Map(c.lineas.map((l) => [l.n, l.explicacion]));
     const term = /^(terminal|consola|shell)$/i.test(c.archivo ?? '');
-    const where = term ? '⌨ En la terminal' : c.archivo ? `📄 ${esc(c.archivo)}` : '';
+    const where = term ? 'En la terminal' : c.archivo ? `Archivo: ${esc(c.archivo)}` : '';
     return `<div class="fig code"><div class="fh">${where ? `<span class="file no-i18n" title="${term ? 'Comandos para escribir en la terminal' : 'El archivo y su ruta en la carpeta'}">${where}</span>` : ''}<span class="lang">${esc(langName(c.lenguaje, c.archivo))}</span><span class="sp"></span><button type="button" class="ask" data-tj="copy" data-text="${esc(c.codigo)}">copiar</button></div>
       ${c.proposito ? `<p class="fpurpose no-i18n">${inline(c.proposito)}</p>` : ''}
       <table><thead><tr><th class="ln">#</th><th>${term ? 'Comando' : 'Línea'}</th><th>Qué hace</th></tr></thead>${lines.map((line, i) => `<tr><td class="ln">${i + 1}</td><td class="cd">${esc(line) || ' '}</td><td class="ex">${expl.has(i + 1) ? inline(expl.get(i + 1)) : ''}</td></tr>`).join('')}</table></div>`;
@@ -1976,8 +2012,8 @@ function stepHTML(s, step) {
         <div>${step.esperado ? `<div class="def"><h4>Al correrlo verás</h4>${md(step.esperado)}</div>` : ''}
           ${step.comprueba.map((q) => `<details class="q"><summary class="qh">${inline(q.pregunta)}</summary><div class="ans">${md(q.respuesta)}</div></details>`).join('')}
           ${step.commit ? `<p class="small mut">Al guardarlo en GitHub: <code>${esc(step.commit)}</code> <button type="button" class="ask" data-tj="copy" data-text="${esc(step.commit)}">copiar</button></p>` : ''}</div></div>
-        ${sceneHTML(`e-${s.id}`, step.escena)}${walkHTML(`w-${s.id}`, step.recorrido)}${code}${(step.tu_turno ?? []).length ? `<div class="turn no-i18n"><h4>✋ Tu turno</h4><ul>${step.tu_turno.map((x) => `<li>${inline(x)}</li>`).join('')}</ul></div>` : ''}${stepChecks(s.id, `el paso «${s.titulo}»${step.objetivo ? `: ${step.objetivo}` : ''}`)}` : ''}
-      ${s.id === MEET.at ? MEET.html : MEET.others.has(s.id) ? `<p class="rn-also">👥 <b>Este paso se hace juntos:</b> ${esc(step.reunion)} <a href="#cap-reunion" data-tj="jump">Ver cuándo se reúnen</a></p>` : ''}
+        ${sceneHTML(`e-${s.id}`, step.escena)}${walkHTML(`w-${s.id}`, step.recorrido)}${code}${(step.tu_turno ?? []).length ? `<div class="turn no-i18n"><h4>Tu turno</h4><ul>${step.tu_turno.map((x) => `<li>${inline(x)}</li>`).join('')}</ul></div>` : ''}${stepChecks(s.id, `el paso «${s.titulo}»${step.objetivo ? `: ${step.objetivo}` : ''}`)}` : ''}
+      ${s.id === MEET.at ? MEET.html : MEET.others.has(s.id) ? `<p class="rn-also"><b>Este paso se hace juntos:</b> ${esc(step.reunion)} <a href="#cap-reunion" data-tj="jump">Ver cuándo se reúnen</a></p>` : ''}
     </article>`;
 }
 
@@ -1990,7 +2026,7 @@ function studyStep(s, step, code) {
         <div>${step.comprueba.length ? `<div class="def"><h4>¿Lo entendiste?</h4>${step.comprueba.map(qa).join('')}</div>` : ''}
           ${step.esperado ? `<div class="def"><h4>Al correrlo verás</h4>${md(step.esperado)}</div>` : ''}</div></div>
         ${(step.ejemplos ?? []).map((x, k) => `<div class="worked no-i18n"><h4>Ejemplo resuelto${step.ejemplos.length > 1 ? ` ${k + 1}` : ''}</h4>${md(x.enunciado)}<details class="q"><summary class="qh">Intenta resolverlo y luego mira la solución</summary><div class="ans">${md(x.solucion)}</div></details></div>`).join('')}
-        ${sceneHTML(`e-${s.id}`, step.escena)}${walkHTML(`w-${s.id}`, step.recorrido)}${code}${(step.tu_turno ?? []).length ? `<div class="turn no-i18n"><h4>✋ Ahora tú, a mano</h4><ul>${step.tu_turno.map((x) => `<li>${inline(x)}</li>`).join('')}</ul></div>` : ''}
+        ${sceneHTML(`e-${s.id}`, step.escena)}${walkHTML(`w-${s.id}`, step.recorrido)}${code}${(step.tu_turno ?? []).length ? `<div class="turn no-i18n"><h4>Ahora tú, a mano</h4><ul>${step.tu_turno.map((x) => `<li>${inline(x)}</li>`).join('')}</ul></div>` : ''}
         ${step.defensa.length ? `<div class="exam no-i18n"><h4>Así te lo pueden preguntar</h4>${step.defensa.map(qa).join('')}</div>` : ''}
         ${stepChecks(s.id, `el concepto «${s.titulo}»${step.objetivo ? `: ${step.objetivo}` : ''}`)}` : ''}
     </article>`;
@@ -2108,10 +2144,10 @@ function closing() {
 function noOutline() {
   const gone = usesFolder() && folderState(folderOf(T.id)) === 'gone';
   return `<section class="sec" id="cap-inicio" style="--c:var(--blue);--cs:var(--blue-s)"><h2><span class="n">0</span>La guía todavía no está escrita</h2><div class="card soft">${T.owner === uid() || T.escritor === uid()
-    ? `${T.escritor === uid() ? `<p class="tj-asked">🤝 <b>${esc(nameOf(T.owner))}</b> te pidió que escribas esta guía con tu IA. Se usa tu cuota, y la guía queda registrada como escrita por ti.</p>` : ''}${T.owner === uid() && T.escritor ? `<p class="tj-asked">🤝 Le pediste a <b>${esc(T.escritorName || nameOf(T.escritor))}</b> que escriba esta guía. Cuando la escriba, aparece aquí. <button type="button" class="ask" data-tj="ask-cancel">Cancelar el pedido</button></p>` : ''}${gone ? `<div class="tj-gone"><p><b>Tu carpeta se desconectó del puente.</b> Se cerró o reinició el puente, o pasó el tiempo que la prestaste. Sin ella, tu IA no puede trabajar ahí.</p>
+    ? `${T.escritor === uid() ? `<p class="tj-asked"><b>${esc(nameOf(T.owner))}</b> te pidió que escribas esta guía con tu IA. Se usa tu cuota, y la guía queda registrada como escrita por ti.</p>` : ''}${T.owner === uid() && T.escritor ? `<p class="tj-asked">Le pediste a <b>${esc(T.escritorName || nameOf(T.escritor))}</b> que escriba esta guía. Cuando la escriba, aparece aquí. <button type="button" class="ask" data-tj="ask-cancel">Cancelar el pedido</button></p>` : ''}${gone ? `<div class="tj-gone"><p><b>Tu carpeta se desconectó del puente.</b> Se cerró o reinició el puente, o pasó el tiempo que la prestaste. Sin ella, tu IA no puede trabajar ahí.</p>
         <p><button type="button" class="act" data-tj="folder-pick">Elegir la carpeta otra vez</button> <button type="button" class="ask" data-tj="folder-forget">Seguir sin ella</button> <button type="button" class="ask" data-tj="edit-questions" data-at="ai">Volver a las preguntas</button></p><p class="fine" id="tj-folder-status" role="status"></p></div>` : ''}
       ${errorBox(T.lastError ?? failed.get(T.id))}<p>${study() ? 'Tu IA lee tu material y arma los temas: qué entra, cada concepto explicado, con ejemplos resueltos y preguntas como las del examen.' : 'Tu IA lee el enunciado y arma los capítulos: qué pide el trabajo, cómo se reparten y cada paso explicado.'}</p>${aiBlock('solution')}
-      ${usesFolder() ? `<div class="tj-where"><h3>Dónde trabaja y qué puede hacer</h3>${placeHTML(folderOf(T.id) || 'temp')}<p class="fine">El modelo y cuánto piensa se cambian arriba, en «Con Claude Code…».</p></div>` : ''}${ai.ready() ? `${ai.choice('solution').provider === 'bridge:claude' ? accountPick() : ''}<p><button type="button" class="act" data-tj="outline">${(T.lastError ?? failed.get(T.id)) ? 'Intentarlo otra vez' : 'Escribir la guía'}</button> <span class="mut" id="tj-gen-status" role="status"></span></p>` : ''}
+      ${usesFolder() ? `<div class="tj-where"><h3>Dónde trabaja y qué puede hacer</h3>${placeHTML(folderOf(T.id) || 'temp')}<p class="fine">El modelo y cuánto piensa se cambian arriba, en «Con Claude Code…».</p></div>` : ''}${ai.ready() ? `${ai.choice('solution').provider === 'bridge:claude' ? accountPick() : ''}<p><button type="button" class="act" data-tj="outline">${(T.lastError ?? failed.get(T.id)) ? 'Intentarlo otra vez' : 'Escribir la guía'}</button> <span class="mut" id="tj-gen-status" role="status"></span></p>` : ''}${collectFold()}
       ${T.owner === uid() ? `<p class="small"><button type="button" class="ask" data-tj="edit-questions">← Volver a las preguntas</button> <span class="mut">cambia lo que elegiste (la IA, la carpeta, cómo quieres la guía…) antes de escribirla</span></p>
       ${T.escritor ? '' : '<details class="q tj-askfriend" data-askfriend-box><summary class="qh">¿Se te acabó la cuota de tu IA? Pide a un amigo que la escriba</summary><div class="ans" data-askfriend>Cargando tus amigos…</div></details>'}` : ''}`
     : '<p>Quien creó el trabajo todavía no escribió la guía.</p>'}</div></section>`;
@@ -2137,10 +2173,7 @@ function paint() {
   drawMath();
   for (const fig of gRoot().querySelectorAll('figure.escena')) { const e = scenes.get(fig.dataset.escena); try { if (e) escenaShow(fig, e, sceneAt.get(fig.dataset.escena) ?? -1); } catch (err) { console.warn('escena', err); } }
   // «Pedir un cambio a tu IA»: the whole guide, in place of the tutorial (his words, 2026-11-23).
-  if (T.outline && !T.readonly) gRoot().querySelector('.tjg-app')?.insertAdjacentHTML('beforeend', '<button type="button" class="tj-askai" data-tj="adj" data-key="todo" title="Pide a la IA que escribió esta guía cualquier cambio en toda la guía">✎ Pedir un cambio a tu IA</button>');
-  // «Recoger lo que hizo tu IA», always at hand (his words: the AI advanced and, for one reason or another, it never
-  // reached the guide): what Claude Code wrote, from its own record on this computer, applied with no AI involved.
-  if (T.outline && !T.readonly && (ai.bridgeOf()?.token || sessionOf(T.id) || pendingOf(T.id))) gRoot().querySelector('.tjg-app')?.insertAdjacentHTML('beforeend', `<button type="button" class="tj-collectfab ${pendingOf(T.id) ? 'hot' : ''}" data-tj="collect-open" title="Lo que tu IA escribió y no llegó a la guía: se aplica tal cual, sin volver a pedírselo">⤓ Recoger lo que hizo tu IA</button>`);
+  if (T.outline && !T.readonly) gRoot().querySelector('.tjg-app')?.insertAdjacentHTML('beforeend', '<button type="button" class="tj-askai" data-tj="adj" data-key="todo" title="Pide a la IA que escribió esta guía cualquier cambio en toda la guía">Pedir un cambio a tu IA</button>');
   paintTray();
 }
 // Formulas written in LaTeX between $ (study guides ask for them), drawn by KaTeX (jsDelivr, pinned) only when the
@@ -2682,6 +2715,15 @@ function wire(root) {
       return;
     }
     if (kind === 'collect-open') { collectOpen(); return; }
+    if (kind === 'fork') {
+      await busy(b, async () => {
+        const { id, study: st } = await forkGuide();
+        ctx.toast('Hiciste tu copia: es privada y es tuya. Cámbiala o pídele a tu IA que la adapte; la original no cambia.');
+        T = null;
+        location.hash = st ? `#/estudio/${id}` : `#/trabajos/${id}`;
+      }).catch(() => {});
+      return;
+    }
     if (kind === 'collect-close') { b.closest('.tj-adjpop')?.remove(); return; }
     if (kind === 'collect-apply') {
       await busy(b, async () => {
@@ -2695,7 +2737,7 @@ function wire(root) {
         paintTray();
         repaint();
         lit(changed);
-        ctx.toast(`Recogido y aplicado: ${changed.map((x) => (x === 'esquema' ? 'la sección 0' : `el capítulo ${T.outline.hitos.findIndex((h) => h.id === x) + 1}`)).join(', ')}. Si no era esto, «Deshacer el último ajuste».${notes.length ? ` ${notes.join(' ')}` : ''}`);
+        ctx.toast(`Recogido y aplicado: ${changed.map((x) => (x === 'esquema' ? 'la sección 0' : `el capítulo ${T.outline.hitos.findIndex((h) => h.id === x) + 1}`)).join(', ')}.${undo ? ' Si no era esto, «Deshacer el último ajuste».' : ''}${notes.length ? ` ${notes.join(' ')}` : ''}`);
       }).catch(() => {});
       return;
     }
@@ -2742,7 +2784,7 @@ function wire(root) {
       const key = fig.dataset.escena;
       if (b.dataset.go === 'play') {
         if (fig.dataset.playing) { clearInterval(Number(fig.dataset.playing)); delete fig.dataset.playing; b.textContent = '▶ Reproducir'; return; }
-        let i = -1; b.textContent = '❚❚ Pausa';
+        let i = -1; b.textContent = 'Pausa';
         const t = setInterval(() => { i += 1; if (i >= e.pasos.length || !fig.isConnected) { clearInterval(t); delete fig.dataset.playing; b.textContent = '▶ Reproducir'; return; } sceneAt.set(key, i); escenaShow(fig, e, i); }, 2600);
         fig.dataset.playing = String(t);
         return;
@@ -2767,12 +2809,14 @@ function wire(root) {
       const app = gRoot().querySelector('.tjg-app');
       app.dataset.theme = app.dataset.theme === 'dark' ? 'light' : 'dark';
       try { localStorage.setItem(THEME, app.dataset.theme); } catch { /* this time only */ }
-      b.textContent = app.dataset.theme === 'dark' ? '☀ Claro' : '☾ Oscuro';
+      b.textContent = app.dataset.theme === 'dark' ? 'Claro' : 'Oscuro';
       return;
     }
     if (kind === 'ask') { await ask(b.dataset.key, b.dataset.label); return; }
     if (kind === 'copy') { await navigator.clipboard.writeText(b.dataset.text).then(() => ctx.toast('Copiado.'), () => ctx.toast('No se pudo copiar.')); return; }
     if (kind === 'invite') {
+      // From the sharing panel: it closes, and the invitation opens under the guide's header.
+      if (b.closest('.tj-sharepop')) b.closest('.tj-sharepop').remove();
       const head = b.closest('header') ?? gRoot().querySelector('header');
       const open = gRoot().querySelector('.tj-invite');
       if (open) { open.remove(); return; }
@@ -2862,7 +2906,7 @@ async function renderStudyList() {
         <a class="tj-card-main" href="#/estudio/${esc(r.id)}"><b class="no-i18n">${esc(r.title)}</b><span class="fine"><span class="no-i18n">${esc(r.course ?? '')}</span>${r.deadline ? `<br>evaluación: ${esc(date(r.deadline))}` : ''}${r.outline ? '' : '<br><b>todavía sin escribir</b>'}</span></a>
         <details class="tj-menu"><summary aria-label="Más opciones de ${esc(r.title)}">⋯</summary><div class="tj-menu-list glass">
           <a href="#/estudio/${esc(r.id)}">Abrir la guía</a>
-          <span class="tj-menu-note">${visOf(r) === 'private' ? 'Solo la ves <b>tú</b>.' : visOf(r) === 'link' ? '🔗 La lee <b>quien tenga el enlace</b>.' : '🌍 <b>Pública</b> en Studium.'} Cámbialo en la guía, arriba.</span>
+          <span class="tj-menu-note">${visOf(r) === 'private' ? 'Solo la ves <b>tú</b>.' : visOf(r) === 'link' ? 'La lee <b>quien tenga el enlace</b>.' : '<b>Pública</b> en Studium.'} Cámbialo en la guía, arriba.</span>
           <button type="button" class="danger" data-tj="delete-ask" data-id="${esc(r.id)}">Eliminar…</button>
         </div></details>
         <div class="tj-card-extra" data-extra></div></div>`).join('')}</div>` : drafts.length ? '' : '<p class="fine">Todavía no tienes guías de estudio.</p>'}
@@ -2907,7 +2951,7 @@ export async function studyShelf(el) {
         <a class="tj-card-main" href="#/estudio/${esc(r.id)}"><b class="no-i18n">${esc(r.title)}</b><span class="fine"><span class="no-i18n">${esc(r.course ?? '')}</span>${r.deadline ? ` · ${esc(date(r.deadline))}` : ''}${r.outline ? '' : ' · <b>sin escribir</b>'}</span></a>
         <details class="tj-menu"><summary aria-label="Más opciones de ${esc(r.title)}">⋯</summary><div class="tj-menu-list glass">
           <a href="#/estudio/${esc(r.id)}">Abrir la guía</a>
-          <span class="tj-menu-note">${visOf(r) === 'private' ? 'Solo la ves <b>tú</b>.' : visOf(r) === 'link' ? '🔗 La lee <b>quien tenga el enlace</b>.' : '🌍 <b>Pública</b> en Guías.'} Cámbialo en la guía, arriba.</span>
+          <span class="tj-menu-note">${visOf(r) === 'private' ? 'Solo la ves <b>tú</b>.' : visOf(r) === 'link' ? 'La lee <b>quien tenga el enlace</b>.' : '<b>Pública</b> en Guías.'} Cámbialo en la guía, arriba.</span>
           <button type="button" class="danger" data-eg="delete-ask" data-id="${esc(r.id)}" data-title="${esc(r.title)}">Eliminar…</button>
         </div></details><div class="tj-card-extra" data-extra></div></div>`).join('')}
     ${drafts.map((d) => `<div class="tj-card tj-draft glass" data-id="${esc(d.id)}">

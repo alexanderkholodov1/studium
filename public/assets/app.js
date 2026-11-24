@@ -34,6 +34,7 @@ import { mountEggs } from './eggs.js';
 import { mountTour, offerTour } from './tour.js';
 import { renderNews, newsOnce } from './news.js';
 import { VERSION } from './config.js';
+import { watchUpdates } from './update.js';
 import { markWip, markBeta, BETA } from './wip.js';
 import { mountAdmin, renderAdmin } from './admin.js';
 import { mountFeedback } from './feedback.js';
@@ -333,6 +334,7 @@ const context = { state, get user() { return { uid: auth.currentUser?.uid, email
 mountMap(context);
 mountSpace(context);
 mountTour();
+watchUpdates();
 $('#foot-version').textContent = `${BETA ? 'Studium beta · ' : ''}v${VERSION} · Novedades`;
 markBeta();
 mountEggs({ toast, onFound: (id, fresh) => { unlocked(fresh); if (current === 'home') { if (fresh) renderHome(); else refreshTile('shelf'); } } });

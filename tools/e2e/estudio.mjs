@@ -104,6 +104,36 @@ try {
       pasos: [{ texto: 'La tabla dice dónde está b.', resaltar: ['t.1.1'] }, { texto: 'Llega c y se guarda en el lugar 2.', mostrar: ['nuevo'], cambiar: [{ id: 'm.2', texto: '9', color: 'verde' }] }] },
     recorrido: { diagrama: 'flowchart LR\n  P["Punto"] --> G["Gradiente"] --> D["Dirección"]', pasos: [{ nodos: ['P'], texto: 'Partes de un punto.', comando: '' }, { nodos: ['P', 'G'], texto: 'Calculas el gradiente ahí.', comando: 'grad = (fx, fy)' }, { nodos: ['G', 'D'], texto: 'Apunta hacia donde sube más.', comando: '' }] }, librerias: [], esperado: '', comprueba: [{ pregunta: '¿Hacia dónde apunta el gradiente?', respuesta: 'Hacia donde la función **crece más rápido**.' }], defensa: [{ pregunta: 'Halla la derivada direccional de $f = xy$ en $(1,2)$ hacia $(3,4)/5$.', respuesta: '$\\nabla f = (2, 1)$; el producto con $(3,4)/5$ da **$2$**.' }], commit: '', reunion: '' }] };
   const id = (await B.js('return location.hash')).split('/')[2];
+  // His case: generation broke before the guide was saved. A simulated bridge (paired; its answers faked in the page)
+  // has a Claude Code session that wrote esquema.json and H1.json; «Recoger lo que hizo tu IA», folded under «Escribir la
+  // guía», builds the guide from them with no AI request.
+  await B.js(`const v = await import('/studium/assets/vault.js'); const ai = await import('/studium/assets/ai.js'); await v.set({ ...v.get(), bridge: 'prueba' });
+    const raw = JSON.parse(localStorage.getItem('studium-ai') ?? '{}');
+    const engines = [{ id: 'claude', name: 'Claude Code', ready: true, models: [{ id: 'claude-sonnet-5-5' }], accounts: [{ id: 'claude-a', email: 'a@prueba.ec', plan: 'pro', ready: true }] }];
+    raw.bridge = { at: Date.now(), port: 41799, version: ai.BRIDGE_VERSION, cwd: '', account: 'claude-a', folders: [], engines }; localStorage.setItem('studium-ai', JSON.stringify(raw));
+    window.__g = []; window.__f0 = window.fetch; const J = (o, st = 200) => Promise.resolve(new Response(JSON.stringify(o), { status: st, headers: { 'content-type': 'application/json' } }));
+    const outputs = { 'esquema.json': ${JSON.stringify(JSON.stringify(outline))}, 'H1.json': ${JSON.stringify(JSON.stringify(h1))} };
+    window.fetch = (u, o) => { const url = String(u); if (!/127\.0\.0\.1:41799/.test(url)) return window.__f0(u, o); const path = new URL(url).pathname; window.__g.push(path);
+      if (path === '/v1/hello') return J({ name: 'studium-bridge', version: ai.BRIDGE_VERSION });
+      if (path === '/v1/status') return J({ version: ai.BRIDGE_VERSION, cwd: '', engines });
+      if (path === '/v1/recoverable') return J({ sessions: [{ session: 'abcd1234-0000-0000-0000-000000000000', at: '2026-11-24T04:47:07.591Z', cwd: 'C:\\\\Quiz 2', files: { 'esquema.json': 2000, 'H1.json': 3000 } }] });
+      if (path === '/v1/recover') return J({ session: 'abcd1234-0000-0000-0000-000000000000', at: '2026-11-24T04:47:07.591Z', cwd: 'C:\\\\Quiz 2', outputs });
+      if (path === '/v1/results') return J({ results: [] }); if (path === '/v1/folders') return J({ folders: [], modes: {} }); return J({}); };
+    location.hash = '#/estudiar'; return 1;`);
+  await W(800); await B.js(`history.back(); return 1;`);
+  await B.wait(`document.querySelector('#tjg-body .tj-more [data-tj="collect-open"]')`, 15000).catch(() => {});
+  const pre = await B.js(`const m = document.querySelector('#tjg-body .tj-more'); return { fold: !!m, closed: m ? !m.open : null, fab: !!document.querySelector('.tj-collectfab') }`);
+  ok('before the guide exists, «Recoger lo que hizo tu IA» is folded under «Más opciones» of the write card (no button on the main screen)', pre.fold && pre.closed && !pre.fab, JSON.stringify(pre));
+  await B.js(`const m = document.querySelector('#tjg-body .tj-more'); m.open = true; m.querySelector('[data-tj="collect-open"]').click(); return 1;`);
+  await B.wait(`document.querySelector('.tj-collectpop [data-tj="collect-apply"]')`, 15000).catch(() => {});
+  const preList = await B.js(`return document.querySelector('.tj-collectpop')?.innerText ?? ''`);
+  ok('…its panel finds the session that wrote the outline and a chapter', /esquema, H1/.test(preList) && /Aplicar a esta guía \(2 partes\)/.test(preList), preList.slice(0, 300));
+  await B.js(`document.querySelector('.tj-collectpop [data-tj="collect-apply"]').click(); return 1;`);
+  await B.wait(`document.querySelector('#tjg-body #cap-H1')`, 20000).catch(() => {});
+  const built = await B.js(`return { chapter: !!document.querySelector('#tjg-body #cap-H1'), gradient: /Gradiente|gradiente/.test(document.querySelector('#tjg-body')?.innerText ?? ''), runs: window.__g.filter((x) => x === '/v1/run').length }`);
+  ok('…and «Aplicar» builds the guide from them, with no AI request', built.chapter && built.gradient && built.runs === 0, JSON.stringify(built));
+  await B.shot('09b-recogida-antes');
+  await B.js(`window.fetch = window.__f0; const v = await import('/studium/assets/vault.js'); await v.set({ ...v.get(), bridge: '' }); const raw = JSON.parse(localStorage.getItem('studium-ai') ?? '{}'); raw.bridge = null; localStorage.setItem('studium-ai', JSON.stringify(raw)); return 1;`);
   await B.js(`const F = await import('https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-lite.js'); const { db, gzip, auth } = await import('/studium/assets/data.js');
     const pack = async (v) => F.Bytes.fromUint8Array(await gzip(JSON.stringify(v)));
     await F.setDoc(F.doc(db, 'trabajos', ${JSON.stringify(id)}), { outline: await pack(${JSON.stringify(outline)}), updated: F.serverTimestamp() }, { merge: true });
@@ -266,9 +296,12 @@ try {
   ok('an adjustment that goes well is applied, with no error', okRun.applied && !okRun.err, JSON.stringify(okRun));
   // «Recoger lo que hizo tu IA» is always in the guide, and lists what Claude Code wrote (rebuilt by the bridge from its
   // record) with when, where and which parts fit this guide; applying it needs no AI request
-  const cfab = await B.js(`const f = document.querySelector('.tj-collectfab'); return f ? { text: f.textContent, shown: f.getBoundingClientRect().width > 0 && getComputedStyle(f).display !== 'none' } : null`);
-  ok('the guide always shows «Recoger lo que hizo tu IA»', !!cfab?.shown && /Recoger lo que hizo tu IA/.test(cfab.text), JSON.stringify(cfab));
-  await B.js(`window.__b = []; document.querySelector('.tj-collectfab').click(); return 1;`);
+  const main = await B.js(`return { fab: !!document.querySelector('.tj-collectfab'), floating: [...document.querySelectorAll('.tjg-app > button')].map((x) => x.textContent.trim()) }`);
+  ok('no «Recoger» button on the guide\'s main screen: one floating button, «Pedir un cambio a tu IA»', !main.fab && main.floating.length === 1 && /Pedir un cambio/.test(main.floating[0]), JSON.stringify(main));
+  await B.js(`document.querySelector('.tj-askai').click(); return 1;`); await W(500);
+  const fold = await B.js(`const p = document.querySelector('.tj-adjpop'); const m = p?.querySelector('.tj-more'); const last = p?.querySelector('.tj-adjcard')?.lastElementChild; return { fold: !!m, closed: m ? !m.open : null, atEnd: last === m, btn: !!m?.querySelector('[data-tj="collect-open"]') }`);
+  ok('…it is folded at the end of «Pedir un cambio a tu IA», under «Más opciones»', fold.fold && fold.closed && fold.atEnd && fold.btn, JSON.stringify(fold));
+  await B.js(`window.__b = []; const m = document.querySelector('.tj-adjpop .tj-more'); m.open = true; m.querySelector('[data-tj="collect-open"]').click(); return 1;`);
   await B.wait(`document.querySelector('.tj-collectpop [data-tj="collect-apply"]')`, 12000).catch(() => {});
   const list = await B.js(`const p = document.querySelector('.tj-collectpop'); return { state: p?.querySelector('[data-bridge-state]')?.innerText ?? '', row: p?.querySelector('.tj-collectitems li')?.innerText ?? '', btn: p?.querySelector('[data-tj="collect-apply"]')?.innerText ?? '' }`);
   ok('…its panel shows the bridge first, then each session: when, in which folder, what it wrote, and «Aplicar a esta guía»', /responde/.test(list.state) && /Quiz 2/.test(list.row) && /H1, H9/.test(list.row) && /Aplicar a esta guía \(1 parte\)/.test(list.btn), JSON.stringify(list));
@@ -280,9 +313,21 @@ try {
   await B.js(`window.fetch = window.__f2; return 1;`);
   await B.js(`document.querySelector('.tj-adjpop [data-tj="adj-close"]')?.click(); const v = await import('/studium/assets/vault.js'); await v.set({ ...v.get(), bridge: '' }); const raw = JSON.parse(localStorage.getItem('studium-ai') ?? '{}'); raw.bridge = null; localStorage.setItem('studium-ai', JSON.stringify(raw)); const ai = await import('/studium/assets/ai.js'); ai.setChoice('solution', { provider: 'gemini', model: '', effort: '' }); return 1;`);
 
+  // No emoji as icons (CASPIAN): the top bar's buttons are words
+  const pict = await B.js(`return [...(document.querySelector('nav.top')?.innerText ?? '')].filter((c) => /\\p{Extended_Pictographic}/u.test(c) && !'✓✕'.includes(c)).join('')`);
+  ok('the guide\'s top bar has no emoji', pict === '', pict);
+  // «Studium recibió una nueva actualización»: a page left open is told when version.json changes
+  await B.js(`window.__f9 = window.fetch; window.fetch = (u, o) => String(u).includes('/studium/version.json') ? Promise.resolve(new Response(JSON.stringify({ name: 'studium', version: '9.9.9-prueba' }), { status: 200, headers: { 'content-type': 'application/json' } })) : window.__f9(u, o); document.dispatchEvent(new Event('visibilitychange')); return 1;`);
+  for (let i = 0; i < 12 && !(await B.js(`return !!document.querySelector('.update-bar')`)); i += 1) { await B.js(`document.dispatchEvent(new Event('visibilitychange')); return 1;`); await W(2000); }
+  const upd = await B.js(`const b = document.querySelector('.update-bar'); return b ? { text: b.innerText, reload: !!b.querySelector('[data-update-reload]') } : null`);
+  ok('a page left open says «Studium recibió una nueva actualización», with «Recargar ahora» and Ctrl+Shift+R', !!upd && /nueva actualización/.test(upd.text) && /Ctrl\+Shift\+R/.test(upd.text) && upd.reload, JSON.stringify(upd));
+  await B.shot('26-actualizacion');
+  await B.js(`window.fetch = window.__f9; document.querySelector('.update-bar [data-update-later]')?.click(); return 1;`);
+
   // Sharing: by link, read by another account; private again
   await B.js(`document.querySelector('nav.top [data-tj="share-open"]').click();`); await W(400);
   ok('the owner finds «¿Quién ve esta guía?» in the guide', /Quién ve esta guía/.test(await B.js(`return document.querySelector('.tj-sharepop')?.innerText ?? ''`)));
+  ok('…and «¿Quién puede cambiarla?»: only the owner, unless they invite; readers make their own copy', await B.js(`const t = document.querySelector('.tj-sharepop')?.innerText ?? ''; return /Quién puede cambiarla/.test(t) && /Solo tú/.test(t) && /Hacer mi copia/.test(t) && !!document.querySelector('.tj-sharepop [data-tj="invite"]')`));
   await B.js(`document.querySelector('.tj-sharepop input[value="link"]').click(); document.querySelector('.tj-sharepop [type=submit]').click();`);
   await B.wait(`/Con enlace/.test(document.querySelector('nav.top [data-tj="share-open"]')?.textContent)`, 15000);
   ok('shared by link: the top bar says so', true);
@@ -300,6 +345,13 @@ try {
     ok('another account reads the shared guide', /Gradiente/.test(rt) && /(Solo|Only) lectura/i.test(rt) && /compartida por/.test(rt), rt.slice(0, 160));
     ok('…without the owner\'s marks, buttons or material', !/Lo practiqué|Tu material, tal cual|Ajustar/.test(rt));
     await C.shot('18-lector');
+    // «Hacer mi copia»: the reader forks it; the copy is theirs and private, the original stays the owner's
+    ok('the reader is offered «Hacer mi copia»', await C.js(`return !!document.querySelector('nav.top [data-tj="fork"]')`));
+    await C.js(`document.querySelector('nav.top [data-tj="fork"]').click(); return 1;`);
+    await C.wait(`/^#\/estudio\/[\w-]{10,}/.test(location.hash) && !location.hash.includes(${JSON.stringify(id)}) && document.querySelector('#tjg-body #cap-H1')`, 20000).catch(() => {});
+    const fk = await C.js(`return { hash: location.hash, own: !!document.querySelector('nav.top [data-tj="share-open"]'), ro: /Solo lectura/.test(document.querySelector('nav.top')?.innerText ?? ''), text: /Gradiente|gradiente/.test(document.querySelector('#tjg-body')?.innerText ?? ''), ask: !!document.querySelector('.tj-askai') }`);
+    ok('…which makes a private guide of their own, with the same chapters, that they can change', !fk.hash.includes(id) && fk.own && !fk.ro && fk.text && fk.ask, JSON.stringify(fk));
+    await C.shot('18b-mi-copia');
     await B.js(`document.querySelector('nav.top [data-tj="share-open"]').click();`); await W(400);
     await B.js(`document.querySelector('.tj-sharepop input[value="private"]').click(); document.querySelector('.tj-sharepop [type=submit]').click();`);
     await B.wait(`/Privada/.test(document.querySelector('nav.top [data-tj="share-open"]')?.textContent)`, 15000);

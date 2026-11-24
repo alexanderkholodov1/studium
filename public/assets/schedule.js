@@ -535,7 +535,8 @@ async function transcribeFinals(file, box) {
 // official calendar (calendario.js). «Descargar .ics» takes them to Google Calendar or Outlook (import once);
 // a live sync needs an app registered with Google or Microsoft (his decision, later).
 let monthAt = null; // the first day of the month shown
-const KIND_ICON = { examen: '📝', entrega: '📦', presentacion: '🎤', reunion: '👥', otro: '•' };
+// No emoji as icons (CASPIAN): an event's kind is its color (k-<kind>) and its name.
+const KIND_ICON = { examen: '', entrega: '', presentacion: '', reunion: '', otro: '' };
 function monthEvents(from, to) {
   const p = prefs.get();
   const out = [];
@@ -573,13 +574,13 @@ function monthHTML() {
       <button class="button ghost small" data-ics title="Para importarlo en Google Calendar u Outlook">Descargar para Google u Outlook (.ics)</button></div>
     <div class="mc-grid"><div class="mc-wd">Lun</div><div class="mc-wd">Mar</div><div class="mc-wd">Mié</div><div class="mc-wd">Jue</div><div class="mc-wd">Vie</div><div class="mc-wd">Sáb</div><div class="mc-wd">Dom</div>${cells}</div>
     <form class="mc-add" data-event-add>
-      <select name="kind" aria-label="Qué es">${Object.entries(EVENT_KINDS).map(([k, v]) => `<option value="${k}">${KIND_ICON[k]} ${v}</option>`).join('')}</select>
+      <select name="kind" aria-label="Qué es">${Object.entries(EVENT_KINDS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
       <input name="text" maxlength="100" required placeholder="Examen final de Cálculo, presentación del proyecto…" aria-label="Qué" autocomplete="off">
       <input name="date" type="date" required aria-label="Día"><input name="time" type="time" aria-label="Hora (opcional)">
       <input name="course" maxlength="80" placeholder="Materia (opcional)" aria-label="Materia" list="mc-courses" autocomplete="off">
       <datalist id="mc-courses">${[...new Set(state.mine.classes.map((c) => c.name))].map((n) => `<option value="${esc(n)}">`).join('')}</datalist>
       <button class="button primary small">Agregar</button></form>
-    ${mine.length ? `<ul class="mc-list">${mine.map((e) => `<li><span class="k-${e.kind}">${KIND_ICON[e.kind]} ${esc(EVENT_KINDS[e.kind])}</span> <b>${esc(e.text)}</b> <span class="muted">${esc([longDay(e.day), e.time, e.course].filter(Boolean).join(' · '))}</span> <button class="icon x" data-event-remove="${esc(e.id)}" aria-label="Quitar"><svg><use href="#i-x"/></svg></button></li>`).join('')}</ul>` : ''}
+    ${mine.length ? `<ul class="mc-list">${mine.map((e) => `<li><span class="k-${e.kind}">${esc(EVENT_KINDS[e.kind])}</span> <b>${esc(e.text)}</b> <span class="muted">${esc([longDay(e.day), e.time, e.course].filter(Boolean).join(' · '))}</span> <button class="icon x" data-event-remove="${esc(e.id)}" aria-label="Quitar"><svg><use href="#i-x"/></svg></button></li>`).join('')}</ul>` : ''}
     <p class="fine">Los días sin clases y las fechas del semestre vienen del <a href="${esc(TERMS[0].source)}" target="_blank" rel="noopener noreferrer">calendario académico oficial</a>. Lo que agregues aquí también aparece en Inicio.</p>
   </section>`;
 }

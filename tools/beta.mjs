@@ -44,6 +44,8 @@ const version = name.replace(/^v/, '');
 const after = before.replace(/export const VERSION = '[^']*';/, `export const VERSION = '${version}';`);
 if (after === before && !before.includes(`'${version}'`)) { console.error('config.js has no VERSION to write the build name into.'); process.exit(1); }
 writeFileSync(config, after);
+// What a page left open compares with its own version, to say «Studium recibió una nueva actualización» (update.js).
+writeFileSync(path.join(site, 'studium', 'version.json'), `${JSON.stringify({ name: 'studium', version, builtAt: new Date().toISOString() })}\n`);
 writeFileSync(path.join(site, 'index.html'), '<!doctype html><meta charset="utf-8"><title>Studium beta</title><meta http-equiv="refresh" content="0; url=/studium/"><a href="/studium/">Studium beta</a>\n');
 writeFileSync(path.join(out, 'firestore.beta.rules'), rules);
 writeFileSync(path.join(out, 'firebase.json'), JSON.stringify({
