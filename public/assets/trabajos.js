@@ -509,7 +509,7 @@ const lit = (ids) => { for (const id of ids) gRoot().querySelector(id === 'esque
 // was, what it means in plain words, what to try for that AI, the exact text folded, and sends a report (with the
 // AI's log of that request) to Studium's feedback, where the admins see it.
 const failed = new Map();
-const errInfo = (e, what) => ({ what, message: String(e?.message || e || 'sin detalle'), kind: e?.kind ?? '', way: e?.way || ai.choice('solution').provider, at: Date.now() });
+const errInfo = (e, what) => { const way = e?.way || ai.choice('solution').provider; return { what, message: String(e?.message || e || 'sin detalle'), kind: e?.kind ?? '', way, account: way === 'bridge:claude' ? accountName(ai.bridgeOf()?.account) : '', at: Date.now() }; };
 // What an error means and what to do about it, only for errors Studium recognizes (his words: the generic text of every
 // error box was useless; only the exact error helped). Each answer names the concrete action; an unknown error gets
 // none rather than invented steps.
@@ -518,7 +518,7 @@ function knownError(msg, way = '', kind = '') {
   const who = ai.WAYS[way]?.name ?? 'tu IA';
   if (/puente no (responde|respondió|está abierto)|ECONNREFUSED|127\.0\.0\.1/i.test(m)) return { what: 'El puente no responde en esta computadora.', todo: [`Ábrelo otra vez en la terminal: <code>${esc(ai.bridgeCommand())}</code>`, 'Luego pulsa «Comprobar el puente» e inténtalo de nuevo.'], act: '<button type="button" class="ask" data-tj="bridge-recheck">Comprobar el puente</button>' };
   if (/sin sesi[oó]n iniciada|not-signed-in|no tiene una sesión iniciada|no está listo/i.test(m)) return { what: `${who} no tiene una sesión iniciada en esta computadora.`, todo: [`Abre una terminal, escribe <code>${way === 'bridge:codex' ? 'codex' : 'claude'}</code> e inicia sesión; después vuelve a intentarlo.`] };
-  if (kind === 'daily' || kind === 'rate' || /usage limit|l[ií]mite de uso|hit your .{0,30}limit|429|quota/i.test(m)) return { what: `${who} llegó a su límite de uso por ahora.`, todo: ['Espera a que se renueve (el error exacto suele decir cuándo), o elige otra IA o modelo en «Cómo lo hace».'] };
+  if (kind === 'daily' || kind === 'rate' || /usage limit|l[ií]mite de uso|hit your .{0,30}limit|429|quota/i.test(m)) return { what: `${who} llegó a su límite de uso por ahora.`, todo: [way === 'bridge:claude' && claudeAccounts().filter((a) => a.ready).length > 1 ? 'Elige otra cuenta de Claude en «Cómo lo hace → Con qué cuenta de Claude» (cada una tiene su cuota) y vuelve a intentarlo.' : 'Espera a que se renueve (el error exacto suele decir cuándo), o elige otra IA o modelo en «Cómo lo hace».'] };
   if (kind === 'model' || /model.{0,40}(not found|not supported|does not exist|no existe)/i.test(m)) return { what: `El modelo elegido no sirve con esa cuenta de ${who}.`, todo: ['Elige otro modelo en «Cómo lo hace».'] };
   if (kind === 'account') return { what: `Studium no pudo usar ${who}: falta conectarla, su sesión venció o su clave ya no sirve.`, todo: [way.startsWith('bridge:') ? `Abre una terminal, escribe <code>${way === 'bridge:codex' ? 'codex' : 'claude'}</code> e inicia sesión.` : 'Revísala en Ajustes → Tu IA con «Probar».'] };
   if (/no respondió en|timed? ?out|504|ETIMEDOUT/i.test(m)) return { what: 'Tardó más de lo que Studium espera.', todo: ['Pide un cambio más pequeño (un capítulo o una parte a la vez), o vuelve a intentarlo.'] };
@@ -532,7 +532,7 @@ function knownError(msg, way = '', kind = '') {
 }
 // One error box for everything: it closes, shows the exact error first, says what to do only when it knows, and offers
 // retry, an explanation from the person's AI, and a report to Studium.
-function errorCard({ what, message, way = '', kind = '', at = Date.now(), retry = '', ctx: context = '' }) {
+function errorCard({ what, message, way = '', kind = '', at = Date.now(), retry = '', account = '', ctx: context = '' }) {
   const k = knownError(message, way, kind);
   const who = way ? (ai.WAYS[way]?.name ?? way) : '';
   const inGuide = !!T && !draft;
@@ -540,7 +540,7 @@ function errorCard({ what, message, way = '', kind = '', at = Date.now(), retry 
   return `<div class="tj-error" role="alert" data-ctx="${esc(context || `${what} en Studium${who ? `, con ${who} (${way})` : ''}. Error: ${message}`)}">
       <div class="tj-error-head"><h4>${esc(what)}: no se pudo</h4><button type="button" class="tj-error-x" data-tj="err-close" aria-label="Cerrar este aviso" title="Cerrar">✕</button></div>
       <pre class="src tj-error-msg">${esc(message)}</pre>
-      <p class="mut small">${who ? `IA: ${esc(who)} · ` : ''}${esc(new Date(at).toLocaleString('es'))}</p>
+      <p class="mut small">${who ? `IA: ${esc(who)} · ` : ''}${account ? `cuenta ${esc(account)} · ` : ''}${esc(new Date(at).toLocaleString('es'))}</p>
       ${k ? `<p><b>${esc(k.what)}</b></p><ul class="tj-error-todo">${k.todo.map((t) => `<li>${t}</li>`).join('')}</ul>` : ''}
       <div class="tj-err-ai" data-err-ai></div>
       <p class="tj-error-act">${retry ? `<button type="button" class="act" data-tj="${esc(retry)}">Intentarlo otra vez</button> ` : ''}${k?.act ?? ''} <button type="button" class="${btn}" data-tj="err-explain">Pedir a tu IA que lo explique</button> <button type="button" class="${btn}" data-feedback="error" data-feedback-text="${esc(`${what}${who ? ` (${who})` : ''}: ${message}`.slice(0, 1800))}">Enviar reporte a Studium</button></p>
@@ -553,7 +553,7 @@ function errorBox(info, retry = '') {
       ${hereHTML()}<p><button type="button" class="act" data-tj="folder-pick">Elegir la carpeta…</button> <button type="button" class="ask" data-tj="folder-forget">Seguir sin ella, solo con lo que trajiste</button></p><p class="fine" id="tj-folder-status" role="status"></p></div>`;
   }
   if (info.kind === 'cancel') return `<p class="tj-ok">Lo detuviste tú. Puedes volver a escribirla cuando quieras.</p>`;
-  return errorCard({ what: info.what, message: info.message, way: info.way, kind: info.kind, at: info.at, retry });
+  return errorCard({ what: info.what, message: info.message, way: info.way, kind: info.kind, at: info.at, account: info.account, retry });
 }
 // A problem that is not the AI's (reading files, saving, the network…): the same card.
 function problemBox(err, what) {
@@ -849,12 +849,16 @@ const STUDY_QUESTIONS = [
 ];
 export const STUDY_DEFAULT = { kind: 'estudio', goal: 'review', goalNote: '', scope: '', style: '', template: 'cuaderno', writeAll: 'all', tone: 'balanced', level: 'basic', length: 'normal', text: 'some', cards: true, examq: true, practice: false, visuals: true, note: '' };
 const questionsOf = (d) => (isStudy(d) ? STUDY_QUESTIONS : TJ_QUESTIONS);
-// Which Claude account writes (several may be signed in on this computer).
+// Which Claude account (subscription) writes. Several may be signed in on this computer, each with its own quota (his
+// words: everywhere else he could choose the exact subscription and here he could not, so it used one with no quota
+// left). Every account is listed, the one in use marked; one without a session is shown but cannot be chosen.
+const claudeAccounts = () => (ai.bridgeOf()?.engines ?? []).find((e) => e.id === 'claude')?.accounts ?? [];
+const accountName = (id) => { const a = claudeAccounts().find((x) => x.id === id); return a ? `${a.email || a.id}${a.plan ? ` (plan ${a.plan})` : ''}` : ''; };
 function accountPick() {
   const b = ai.bridgeOf();
-  const accounts = (b?.engines ?? []).find((e) => e.id === 'claude')?.accounts?.filter((a) => a.ready) ?? [];
-  if (accounts.length < 2) return '';
-  return `<div class="tj-accounts"><p class="fine">Con qué cuenta de Claude:</p>${accounts.map((a) => `<label class="tj-pick ${a.id === b.account ? 'on' : ''}"><input type="radio" name="claude-account" value="${esc(a.id)}" data-tj-account ${a.id === b.account ? 'checked' : ''}> <span class="tj-wrap">${esc(a.email || a.id)}</span> <small>${a.plan ? `plan ${esc(a.plan)} · ` : ''}carpeta ${esc(a.id)}</small></label>`).join('')}</div>`;
+  const accounts = claudeAccounts();
+  if (!accounts.length) return '';
+  return `<div class="tj-accounts" role="radiogroup" aria-label="Cuenta de Claude"><h5>Con qué cuenta de Claude</h5>${accounts.map((a) => `<label class="tj-pick ${a.id === b.account ? 'on' : ''} ${a.ready ? '' : 'off'}"><input type="radio" name="claude-account" value="${esc(a.id)}" data-tj-account ${a.id === b.account ? 'checked' : ''} ${a.ready ? '' : 'disabled'}> <span class="tj-wrap">${esc(a.email || a.id)}</span> <small>${a.plan ? `plan ${esc(a.plan)} · ` : ''}${a.ready ? `carpeta ${esc(a.id)}` : 'sin sesión iniciada en esta computadora'}</small></label>`).join('')}${accounts.length > 1 ? '<p class="fine">Cada cuenta tiene su propia cuota: si una llegó a su límite, elige otra.</p>' : ''}</div>`;
 }
 const FOLDERS = 'studium-tj-folders';
 const RESUME = 'studium-tj-resume';
@@ -915,17 +919,24 @@ function hereHTML() {
   const same = draft?.broughtFolder && draft.broughtFolder === n;
   return `<p><button type="button" class="button primary small" data-tj="folder-here" title="${esc(ai.bridgeOf().cwd)}">📁 Trabajar en «${esc(n)}»</button> <span class="fine">${same ? 'la carpeta que trajiste, ' : ''}donde abriste el puente. No te vuelve a preguntar.</span></p>`;
 }
+// Where it works: one list, one choice marked, each saying what it means (his words: «Solo lo que trajiste» and the
+// folder button were painted alike and both looked chosen). Choosing the folder where the bridge was opened lends it at
+// once; «Otra carpeta…» opens the computer's dialog.
 function placeHTML(now) {
-  // One folder for this trabajo, lent only while the guide is written (the bridge forgets it after).
   const f = (ai.bridgeOf()?.folders ?? []).find((x) => x.id === now && !x.expired && x.exists !== false);
   const modeSel = (x) => `<select data-tj-mode="${esc(x.id)}" aria-label="Permiso en ${esc(x.name)}">${Object.entries(MODE_TEXT).map(([k, v]) => `<option value="${k}" ${x.mode === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
   if (ai.bridgeOld()) return `<p class="tj-warn">Para usar tus carpetas, actualiza el puente: <a href="${esc(ai.BRIDGE_URL)}" download="studium-bridge.mjs">descárgalo</a>, ciérralo (Ctrl+C) y ábrelo con <code>${esc(ai.bridgeCommand())}</code>. <button type="button" class="link" data-tj="bridge-recheck">Ya lo abrí</button></p>`;
-  return `<div class="tj-seg" role="radiogroup">
-      <label class="${f || now === 'gone' ? '' : 'on'}"><input type="radio" name="workspace" value="temp" data-tj-ws ${f || now === 'gone' ? '' : 'checked'}>Solo lo que trajiste</label>
-      ${f ? `<label class="on"><input type="radio" name="workspace" value="${esc(f.id)}" data-tj-ws checked>📁 ${esc(f.name)}</label>` : ''}
-    </div>
-    ${f ? `<p class="tj-folder-now">${modeSel(f)} <small>${esc(MODE_WHY[f.mode] ?? '')}</small> <button type="button" class="link" data-tj="folder-pick">otra carpeta</button></p>`
-    : hereHTML() + `<p><button type="button" class="${hereName() ? 'link' : 'button ghost small'}" data-tj="folder-pick">${hereName() ? 'Otra carpeta…' : draft?.broughtFolder ? `Elegir la carpeta «${esc(draft.broughtFolder)}» en mi computadora…` : 'Trabajar en una carpeta de mi computadora…'}</button> <span class="fine" id="tj-folder-status" role="status">Solo mientras escribe la guía.</span></p>`}`;
+  const cwd = String(ai.bridgeOf()?.cwd ?? '');
+  const here = hereName();
+  const norm = (x) => String(x ?? '').toLowerCase().replace(/[\\/]+$/, '');
+  const hereIsF = !!(f && cwd && norm(f.path) === norm(cwd));
+  const row = (value, on, title, note, extra = '') => `<label class="tj-pick ${on ? 'on' : ''}"><input type="radio" name="workspace" value="${esc(value)}" data-tj-ws ${on ? 'checked' : ''}> <span><b>${title}</b><br><small>${note}</small>${extra}</span></label>`;
+  return `<div class="tj-places" role="radiogroup" aria-label="Dónde trabaja">
+      ${row('temp', !f, 'Sin carpeta tuya: solo lo que trajiste', 'Studium copia lo que subiste a una carpeta temporal y la borra al terminar.')}
+      ${f ? row(f.id, true, `📁 ${esc(f.name)}`, `${esc(f.path ?? '')}${hereIsF ? ' · donde abriste el puente' : ''}`, `<span class="tj-folder-now">${modeSel(f)} <small>${esc(MODE_WHY[f.mode] ?? '')}</small></span>`) : ''}
+      ${here && !hereIsF ? row('here', false, `📁 ${esc(here)}`, `${esc(cwd)} · donde abriste el puente; se presta sin preguntarte otra vez`) : ''}
+      ${row('pick', false, 'Otra carpeta…', draft?.broughtFolder && !here ? `Busca «${esc(draft.broughtFolder)}» en tu computadora.` : 'Se abre la ventana de tu computadora para elegirla.')}
+    </div><p class="fine" id="tj-folder-status" role="status">${f ? 'Prestada mientras escribe; después el puente la olvida.' : 'Una carpeta se presta solo mientras escribe.'}</p>`;
 }
 async function myName() {
   const p = await loadProfile(uid()).catch(() => null);
@@ -1574,6 +1585,20 @@ function setCont(tid, on) { try { const m = JSON.parse(localStorage.getItem(CONT
 const contBox = () => `<label class="tj-pick ${contOn(T.id) ? 'on' : ''}"><input type="checkbox" data-tj-cont ${contOn(T.id) ? 'checked' : ''}> <span><b>Seguir la sesión de Claude Code que escribió esta guía</b><br><small>Recuerda todo lo que leyó e hizo. Si la apagas, empieza una sesión nueva. Solo puede seguirla en la misma carpeta donde trabajó.</small></span></label>`;
 // «Cómo lo hace»: who does it and, through the bridge, where and how — the same choices for every request on a guide.
 // A choice made inside an open card (adjusting, the tray) redraws only the choices, so the card stays open.
+// Lending a folder: where the bridge was opened (no dialog), or another one through the computer's dialog. Lent for 8
+// hours (the questions may take a while) and released once the guide is written.
+async function lendFolder(el, here) {
+  say('#tj-folder-status', here ? 'Prestando la carpeta…' : 'Elige la carpeta en la ventana de tu computadora…');
+  const close = here ? () => {} : pickingNotice();
+  try {
+    const f = await ai.pickBridgeFolder('read', { hours: 8, here }).finally(close);
+    if (draft) { keepAnswer(); draft.workspace = f.id; keepWanted(draft.id, f.id); renderDraft(); } else if (T) { keepFolder(T.id, f.id); afterRunChoice(el); }
+    ctx.toast(`Tu IA trabajará en ${f.name} (${MODE_TEXT[f.mode]}).`);
+  } catch (e) {
+    if (draft) renderDraft(); else if (T) afterRunChoice(el);
+    say('#tj-folder-status', e.message);
+  }
+}
 function afterRunChoice(el) {
   if (el?.closest?.('.tj-adjpop, .tj-tray')) { for (const box of document.querySelectorAll('#tjg-body [data-howrun]')) box.innerHTML = howRunHTML(); } else repaint();
 }
@@ -1587,6 +1612,7 @@ function howRunHTML() {
   const bridge = hasBridge ? '' : `<div class="tj-howbridge"><p><b>Claude Code, por el puente</b> <small class="mut">no está conectado en esta dirección (${esc(location.host)}). Cada dirección se conecta una vez.</small></p>
       <p><button type="button" class="ask" data-tj="pair-guide">Conectar el puente aquí</button></p><div class="tj-bridge ai-bridge" data-pair-box hidden></div></div>`;
   const opts = `<fieldset class="tj-bridgeopts ${claude ? '' : 'off'}" ${claude ? '' : 'disabled'}><legend>Con Claude Code por el puente${claude ? '' : ' <small>(elígelo arriba en «Con qué IA» para usar estas opciones)</small>'}</legend>
+      ${claude ? accountPick() : ''}
       ${watchBox()}
       ${T && sessionOf(T.id) ? contBox() : '<p class="fine">Esta guía no tiene una sesión de Claude Code guardada en este dispositivo: el próximo pedido empieza una nueva.</p>'}
       <h5>Dónde trabaja</h5>${claude ? placeHTML(folderOf(T.id) || 'temp') : '<p class="fine">En la carpeta que elijas, con Claude Code.</p>'}</fieldset>`;
@@ -2262,7 +2288,8 @@ function wire(root) {
     else if (el.dataset?.tjCont !== undefined && T) { setCont(T.id, el.checked); el.closest('.tj-pick')?.classList.toggle('on', el.checked); }
     else if (el.dataset?.tjWatch !== undefined) { ai.setWatchTerminal(el.checked); el.closest(".tj-pick")?.classList.toggle("on", el.checked); }
     else if (el.dataset?.tjTemplate !== undefined) { keepTemplate(el.value); gRoot().querySelector('.tjg-app')?.setAttribute('data-template', el.value); }
-    else if (el.dataset?.tjAccount !== undefined) { ai.setBridgeAccount(el.value); if (draft) { keepAnswer(); renderDraft(); } else repaint(); }
+    else if (el.dataset?.tjAccount !== undefined) { ai.setBridgeAccount(el.value); ctx.toast(`Claude Code usará ${accountName(el.value)}.`); if (draft) { keepAnswer(); renderDraft(); } else afterRunChoice(el); }
+    else if (el.dataset?.tjWs !== undefined && (el.value === 'here' || el.value === 'pick')) { await lendFolder(el, el.value === 'here'); }
     else if (el.dataset?.tjWs !== undefined) { if (draft) { draft.workspace = el.value; renderDraft(); } else if (T) { keepFolder(T.id, el.value); afterRunChoice(el); } }
     else if (el.dataset?.tjMode) {
       try { await ai.changeBridgeFolder(el.dataset.tjMode, { mode: el.value }); ctx.toast(`Permiso cambiado: ${MODE_TEXT[el.value]}.`); } catch (e) { ctx.toast(e.message); }
@@ -2429,27 +2456,7 @@ function wire(root) {
       await busy(b, async () => { await ai.bridgeStatus(); if (draft) { keepAnswer(); renderDraft(); } else repaint(); ctx.toast(ai.bridgeOld() ? 'Sigue abierta la versión anterior del puente.' : `Puente ${ai.bridgeOf()?.version} listo.`); }).catch(() => {});
       return;
     }
-    if (kind === 'folder-here') {
-      say('#tj-folder-status', '');
-      await busy(b, async () => {
-        const f = await ai.pickBridgeFolder('read', { hours: 8, here: true });
-        if (draft) { keepAnswer(); draft.workspace = f.id; keepWanted(draft.id, f.id); renderDraft(); } else if (T) { keepFolder(T.id, f.id); afterRunChoice(b); }
-        ctx.toast(`Tu IA trabajará en ${f.name} (${MODE_TEXT[f.mode]}).`);
-      }).catch((e) => say('#tj-folder-status', e.message));
-      return;
-    }
-    if (kind === 'folder-pick') {
-      const mode = 'read';
-      const hours = 8; // lent for writing the guide (the questions may take a while); released once it is written
-      say('#tj-folder-status', '');
-      const close = pickingNotice();
-      await busy(b, async () => {
-        const f = await ai.pickBridgeFolder(mode, { hours }).finally(close);
-        if (draft) { keepAnswer(); draft.workspace = f.id; keepWanted(draft.id, f.id); renderDraft(); } else if (T) { keepFolder(T.id, f.id); afterRunChoice(b); }
-        ctx.toast(`Carpeta lista: ${f.name} (${MODE_TEXT[f.mode]}).`);
-      }).catch((e) => say('#tj-folder-status', e.message));
-      return;
-    }
+    if (kind === 'folder-here' || kind === 'folder-pick') { await lendFolder(b, kind === 'folder-here'); return; }
     if (kind === 'ask-cancel') { await busy(b, async () => { const f = T.escritor; await setDoc(tRef(T.id), { escritor: '', updated: serverTimestamp() }, { merge: true }); await amigos.dropRequest(T.id, f).catch(() => {}); T.escritor = ''; repaint(); ctx.toast('Pedido cancelado.'); }).catch(() => {}); return; }
     if (kind === 'ask-accept') {
       await busy(b, async () => {

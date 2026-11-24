@@ -211,6 +211,22 @@ try {
   await B.js(`document.querySelector('.tj-error [data-tj="err-close"]').click();`); await W(300);
   ok('…and ✕ closes it', await B.js(`return !document.querySelector('.tj-error')`));
   await B.js(`window.fetch = window.__f; document.querySelector('.tj-adjpop [data-tj="adj-close"]')?.click(); return 1;`);
+  // His case: Claude Code by the bridge with several subscriptions. The card lists every account (one without a session
+  // cannot be chosen) and «Dónde trabaja» is one list with one choice marked (a simulated bridge: nothing is sent to it)
+  await B.js(`const v = await import('/studium/assets/vault.js'); const ai = await import('/studium/assets/ai.js'); await v.set({ ...v.get(), bridge: 'prueba' });
+    const raw = JSON.parse(localStorage.getItem('studium-ai') ?? '{}');
+    raw.bridge = { at: Date.now(), version: ai.BRIDGE_VERSION, cwd: 'C:\\\\Users\\\\Prueba\\\\OneDrive\\\\Quiz 2', account: 'claude-a', folders: [], engines: [{ id: 'claude', name: 'Claude Code', ready: true, models: [{ id: 'claude-sonnet-5-5' }], accounts: [{ id: 'claude-a', email: 'a@prueba.ec', plan: 'pro', ready: true }, { id: 'claude-b', email: 'b@prueba.ec', plan: 'max', ready: true }, { id: 'claude-c', email: 'c@prueba.ec', ready: false }] }] };
+    raw.models = { ...(raw.models ?? {}), 'bridge:claude': ['claude-sonnet-5-5'] }; localStorage.setItem('studium-ai', JSON.stringify(raw));
+    ai.setChoice('solution', { provider: 'bridge:claude', model: '', effort: '' }); return 1;`);
+  await B.js(`document.querySelector('.tj-askai').click();`); await W(500);
+  const acc = await B.js(`const p = document.querySelector('.tj-adjpop'); const rows = [...p.querySelectorAll('.tj-accounts .tj-pick')]; const places = [...p.querySelectorAll('.tj-places .tj-pick')]; return { accounts: rows.length, disabled: rows.filter((r) => r.querySelector('input').disabled).length, on: rows.findIndex((r) => r.classList.contains('on')), places: places.map((r) => r.querySelector('input').value), placesOn: places.filter((r) => r.classList.contains('on')).length, checked: places.filter((r) => r.querySelector('input').checked).length, primaryButtons: p.querySelectorAll('.tj-places ~ p .primary, .tj-bridgeopts .button.primary').length }`);
+  ok('with Claude Code: every Claude account is listed, the one in use marked, one without a session not choosable', acc.accounts === 3 && acc.disabled === 1 && acc.on === 0, JSON.stringify(acc));
+  ok('«Dónde trabaja» is one list with exactly one choice marked: no folder, the bridge\'s folder, another folder', acc.places.join() === 'temp,here,pick' && acc.placesOn === 1 && acc.checked === 1 && acc.primaryButtons === 0, JSON.stringify(acc));
+  await B.js(`const r = document.querySelector('.tj-adjpop input[data-tj-account][value="claude-b"]'); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); return 1;`); await W(500);
+  const acc2 = await B.js(`const p = document.querySelector('.tj-adjpop'); const ai = await import('/studium/assets/ai.js'); return { open: !!p, chosen: ai.bridgeOf()?.account, on: p ? [...p.querySelectorAll('.tj-accounts .tj-pick')].findIndex((r) => r.classList.contains('on')) : -1 }`);
+  ok('…choosing another subscription keeps the card open and is the one used', acc2.open && acc2.chosen === 'claude-b' && acc2.on === 1, JSON.stringify(acc2));
+  await B.js(`document.querySelector('.tj-adjpop .tj-places').scrollIntoView({ block: 'center' });`); await W(300); await B.shot('23-cuenta-carpeta');
+  await B.js(`document.querySelector('.tj-adjpop [data-tj="adj-close"]')?.click(); const v = await import('/studium/assets/vault.js'); await v.set({ ...v.get(), bridge: '' }); const raw = JSON.parse(localStorage.getItem('studium-ai') ?? '{}'); raw.bridge = null; localStorage.setItem('studium-ai', JSON.stringify(raw)); const ai = await import('/studium/assets/ai.js'); ai.setChoice('solution', { provider: 'gemini', model: '', effort: '' }); return 1;`);
 
   // Sharing: by link, read by another account; private again
   await B.js(`document.querySelector('nav.top [data-tj="share-open"]').click();`); await W(400);

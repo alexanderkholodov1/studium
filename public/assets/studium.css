@@ -3652,3 +3652,11 @@ canvas.prop { display: block; }
 .tj-error-x:hover { background: color-mix(in oklab, var(--ink) 15%, transparent); }
 .tj-error-msg { margin: 4px 0 6px; max-height: 220px; overflow: auto; }
 .tj-error-todo { margin: 4px 0 10px; padding-left: 20px; }
+/* Where it works and which Claude account: one list each, one choice marked (radio visible) */
+.tj-places, .tj-accounts { display: grid; gap: 6px; margin: 4px 0 8px; }
+.tj-places .tj-pick, .tj-accounts .tj-pick { margin: 0; align-items: flex-start; font-weight: 500; }
+.tj-places .tj-pick input, .tj-accounts .tj-pick input { margin-top: 3px; }
+.tj-places .tj-pick b { font-weight: 700; }
+.tj-places .tj-pick small { overflow-wrap: anywhere; }
+.tj-places .tj-folder-now { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
+.tj-accounts h5 { margin: 4px 0 2px; }
