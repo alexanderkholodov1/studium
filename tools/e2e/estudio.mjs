@@ -218,7 +218,26 @@ try {
     raw.bridge = { at: Date.now(), port: 41799, version: ai.BRIDGE_VERSION, cwd: 'C:\\\\Users\\\\Prueba\\\\OneDrive\\\\Quiz 2', account: 'claude-a', folders: [], engines: [{ id: 'claude', name: 'Claude Code', ready: true, models: [{ id: 'claude-sonnet-5-5' }], accounts: [{ id: 'claude-a', email: 'a@prueba.ec', plan: 'pro', ready: true }, { id: 'claude-b', email: 'b@prueba.ec', plan: 'max', ready: true }, { id: 'claude-c', email: 'c@prueba.ec', ready: false }] }] };
     raw.models = { ...(raw.models ?? {}), 'bridge:claude': ['claude-sonnet-5-5'] }; localStorage.setItem('studium-ai', JSON.stringify(raw));
     ai.setChoice('solution', { provider: 'bridge:claude', model: '', effort: '' }); return 1;`);
-  await B.js(`document.querySelector('.tj-askai').click();`); await W(500);
+  await B.js(`window.__b = []; window.__open = false; window.__f2 = window.fetch; const ai = await import('/studium/assets/ai.js');
+    const J = (o, st = 200) => Promise.resolve(new Response(JSON.stringify(o), { status: st, headers: { 'content-type': 'application/json' } }));
+    const engines = JSON.parse(localStorage.getItem('studium-ai')).bridge.engines;
+    const ch = (t) => JSON.stringify({ id: 'H1', pasos: [{ id: 'H1.1', objetivo: 'Calcular el gradiente', teoria: t, tu_turno: ['Hazlo'] }] });
+    window.fetch = (u, o) => { const url = String(u); if (!/127\.0\.0\.1:41799/.test(url)) return window.__f2(u, o); if (!window.__open) return Promise.reject(new TypeError('Failed to fetch'));
+      const path = new URL(url).pathname; window.__b.push(path + new URL(url).search);
+      if (path === '/v1/hello') return J({ name: 'studium-bridge', version: ai.BRIDGE_VERSION });
+      if (path === '/v1/status') return J({ version: ai.BRIDGE_VERSION, cwd: 'C:\\\\Users\\\\Prueba\\\\OneDrive\\\\Quiz 2', engines });
+      if (path === '/v1/run') return window.__runOk ? J({ text: 'listo', outputs: { 'H1.json': ch('AJUSTADO-DOS') }, engine: 'claude', model: 'claude-sonnet-5-5' }) : J({ error: { code: 'failed', message: 'El puente tuvo un problema inesperado.' } }, 502);
+      if (path === '/v1/result') return J({ id: new URL(url).searchParams.get('id'), text: 'listo', outputs: { 'H1.json': ch('RECOGIDO-UNO') }, engine: 'claude', model: 'claude-sonnet-5-5' });
+      if (path === '/v1/progress') return J({ unknown: true }); if (path === '/v1/folders') return J({ folders: [], modes: {} }); return J({}); }; return 1;`);
+  // His report: the bridge closed, and the card offered its models and no way to reconnect. Now its state comes first.
+  await B.js(`document.querySelector('.tj-askai').click();`); await B.wait(`/no responde/.test(document.querySelector('.tj-adjpop [data-bridge-state]')?.innerText ?? '')`, 10000).catch(() => {});
+  const closed = await B.js(`const p = document.querySelector('.tj-adjpop'); const st = p.querySelector('[data-bridge-state]'); return { state: st?.innerText ?? '', cmd: !!st?.querySelector('code'), recheck: !!st?.querySelector('[data-tj="bridge-recheck"]'), models: !!p.querySelector('.ai-pick .ai-opts'), accounts: !!p.querySelector('.tj-accounts'), arriba: /elígelo arriba/.test(p.innerText), first: st ? st.compareDocumentPosition(p.querySelector('.tj-bridgeopts')) & 4 : 0 }`);
+  ok('with the bridge closed, «Cómo lo hace» says so first, with the command to open it and «Comprobar», and offers no Claude models', /no responde/.test(closed.state) && closed.cmd && closed.recheck && !closed.models && !closed.accounts && !closed.arriba && closed.first, JSON.stringify(closed));
+  await B.shot('24-puente-cerrado');
+  await B.js(`window.__open = true; return 1;`);
+  await B.wait(`document.querySelector('.tj-adjpop .tj-accounts')`, 12000).catch(() => {});
+  const opened = await B.js(`const p = document.querySelector('.tj-adjpop'); return { state: p.querySelector('[data-bridge-state]')?.innerText ?? '', accounts: !!p.querySelector('.tj-accounts'), models: !!p.querySelector('.ai-pick') }`);
+  ok('…and when the bridge is opened, the card sees it by itself and shows its models and options', /responde/.test(opened.state) && /✓/.test(opened.state) && opened.accounts && opened.models, JSON.stringify(opened));
   const acc = await B.js(`const p = document.querySelector('.tj-adjpop'); const rows = [...p.querySelectorAll('.tj-accounts .tj-pick')]; const places = [...p.querySelectorAll('.tj-places .tj-pick')]; return { accounts: rows.length, disabled: rows.filter((r) => r.querySelector('input').disabled).length, on: rows.findIndex((r) => r.classList.contains('on')), places: places.map((r) => r.querySelector('input').value), placesOn: places.filter((r) => r.classList.contains('on')).length, checked: places.filter((r) => r.querySelector('input').checked).length, primaryButtons: p.querySelectorAll('.tj-places ~ p .primary, .tj-bridgeopts .button.primary').length }`);
   ok('with Claude Code: every Claude account is listed, the one in use marked, one without a session not choosable', acc.accounts === 3 && acc.disabled === 1 && acc.on === 0, JSON.stringify(acc));
   ok('«Dónde trabaja» is one list with exactly one choice marked: no folder, the bridge\'s folder, another folder', acc.places.join() === 'temp,here,pick' && acc.placesOn === 1 && acc.checked === 1 && acc.primaryButtons === 0, JSON.stringify(acc));
@@ -228,12 +247,7 @@ try {
   await B.js(`document.querySelector('.tj-adjpop .tj-places').scrollIntoView({ block: 'center' });`); await W(300); await B.shot('23-cuenta-carpeta');
   // His case: the AI finished, but the page could not apply it. The bridge (simulated: its answers are faked in the
   // page) failed the request; it kept what the AI wrote, and «Recoger lo que escribió tu IA» applies it without the AI.
-  await B.js(`window.__b = []; window.__f2 = window.fetch; const J = (o, st = 200) => Promise.resolve(new Response(JSON.stringify(o), { status: st, headers: { 'content-type': 'application/json' } }));
-    const ch = (t) => JSON.stringify({ id: 'H1', pasos: [{ id: 'H1.1', objetivo: 'Calcular el gradiente', teoria: t, tu_turno: ['Hazlo'] }] });
-    window.fetch = (u, o) => { const url = String(u); if (!/127\.0\.0\.1:41799/.test(url)) return window.__f2(u, o); const path = new URL(url).pathname; window.__b.push(path + new URL(url).search);
-      if (path === '/v1/run') return window.__runOk ? J({ text: 'listo', outputs: { 'H1.json': ch('AJUSTADO-DOS') }, engine: 'claude', model: 'claude-sonnet-5-5' }) : J({ error: { code: 'failed', message: 'El puente tuvo un problema inesperado.' } }, 502);
-      if (path === '/v1/result') return J({ id: new URL(url).searchParams.get('id'), text: 'listo', outputs: { 'H1.json': ch('RECOGIDO-UNO') }, engine: 'claude', model: 'claude-sonnet-5-5' });
-      if (path === '/v1/progress') return J({ unknown: true }); if (path === '/v1/folders') return J({ folders: [], modes: {} }); return J({}); }; return 1;`);
+  await B.js(`window.__b = []; window.__runOk = false; return 1;`);
   await B.js(`const p = document.querySelector('.tj-adjpop'); const t = p.querySelector('textarea'); t.value = 'Explica mejor el gradiente.'; p.querySelector('[type=submit][data-now]').click(); return 1;`);
   await B.wait(`document.querySelector('.tj-error [data-tj="adj-collect"]')`, 20000).catch(() => {});
   ok('a failed adjustment by the bridge offers «Recoger lo que escribió tu IA»', await B.js(`return !!document.querySelector('.tj-error [data-tj="adj-collect"]')`), await B.js(`return JSON.stringify({ calls: window.__b, live: document.querySelector('.tj-adjlive, [data-adj-live]')?.innerText?.slice(0, 300) ?? '', pop: !!document.querySelector('.tj-adjpop'), toast: document.querySelector('.toast, [role=status]')?.innerText ?? '' })`));

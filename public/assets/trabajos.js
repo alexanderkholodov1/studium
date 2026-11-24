@@ -409,7 +409,7 @@ function trayHTML() {
   const list = adjList();
   const pend = T && !adjusting ? pendingOf(T.id) : null;
   if (!list.length && !undo && !pend) return '';
-  const pendHTML = pend ? `<div class="tj-pending"><p><b>Un ajuste que pediste no llegó a aplicarse</b> <small class="mut">(${esc(new Date(pend.at).toLocaleString('es'))}${pend.way ? ` · ${esc(ai.WAYS[pend.way]?.name ?? pend.way)}` : ''})</small>. Si tu IA lo terminó, recógelo: se aplica sin volver a pedírselo.</p><p>${COLLECT} <button type="button" class="ask" data-tj="adj-pend-forget">Olvidarlo</button></p></div>` : '';
+  const pendHTML = pend ? `<div class="tj-pending"><p><b>Un ajuste que pediste no llegó a aplicarse</b> <small class="mut">(${esc(new Date(pend.at).toLocaleString('es'))}${pend.way ? ` · ${esc(ai.WAYS[pend.way]?.name ?? pend.way)}` : ''})</small>. Si tu IA lo terminó, recógelo: se aplica sin volver a pedírselo.</p>${String(pend.way).startsWith('bridge:') ? COLLECT_BRIDGE() : ''}<p>${COLLECT} <button type="button" class="ask" data-tj="adj-pend-forget">Olvidarlo</button></p></div>` : '';
   return `<div class="tj-traybar">${pend && !list.length ? '<button type="button" class="act" data-tj="tray-open">✎ Recoger un ajuste</button>' : ''}${list.length ? `<button type="button" class="act" data-tj="tray-open">✎ ${list.length} ${list.length === 1 ? 'cambio' : 'cambios'} por aplicar</button>` : ''}
       ${undo ? `<button type="button" class="ask" data-tj="adj-undo">Deshacer el último ajuste</button>` : ''}</div>
     <div class="tj-traypanel" hidden>${pendHTML}<h4>Cambios por aplicar</h4><ol>${list.map((c, i) => `<li><b>${esc(c.label)}</b>${c.quote ? `<q class="no-i18n">${esc(c.quote.slice(0, 160))}${c.quote.length > 160 ? '…' : ''}</q>` : ''}<span class="mut small">${esc([...(c.kinds ?? []).map((k) => ADJ_KINDS()[k] ?? k), c.note].filter(Boolean).join(' · '))}</span><button type="button" class="ask" data-tj="adj-drop" data-i="${i}" aria-label="Quitar este cambio">quitar</button></li>`).join('')}</ol>
@@ -428,6 +428,7 @@ function paintTray() {
   tray.innerHTML = trayHTML();
   const panel = tray.querySelector('.tj-traypanel');
   if (panel && open) panel.hidden = false;
+  if (tray.querySelector('[data-bridge-state]')) kickBridge();
   if (live.length) { const to = panel?.querySelector('[data-adj-live]'); if (to) to.append(...live); else { const box = document.createElement('div'); box.className = 'tj-adjlive'; box.append(...live); gRoot().querySelector('.tjg-app')?.append(box); } }
 }
 async function applyAdjust(list, box) {
@@ -506,6 +507,8 @@ function forgetPending(tid) {
 const keepRaw = (tid, r) => draftStore('readwrite', (st) => st.put({ kind: 'result', owner: uid(), saved: Date.now(), r: { text: r.text ?? '', outputs: r.outputs ?? {}, model: r.model ?? '', way: r.way ?? '', provider: r.provider ?? '' } }, `res:${tid}`)).catch((e) => console.warn('result', e));
 const rawOf = (tid) => draftStore('readonly', (st) => st.get(`res:${tid}`)).then((x) => x?.r ?? null).catch(() => null);
 const COLLECT = '<button type="button" class="act" data-tj="adj-collect">Recoger lo que escribió tu IA</button>';
+// Beside «Recoger»: the bridge's state, with how to reconnect it (the answer may be kept only there).
+const COLLECT_BRIDGE = () => `<div data-bridge-state>${bridgeStateHTML()}</div>`;
 // «Recoger lo que escribió tu IA»: the answer kept in this browser, or else the one the bridge kept for that request;
 // applied without asking the AI again.
 async function collectAdjust() {
@@ -513,7 +516,10 @@ async function collectAdjust() {
   let r = await rawOf(T.id);
   let from = 'este navegador';
   if (!r && p?.runId && p.way?.startsWith('bridge:')) {
-    if (ai.bridgeOld()) throw new Error('Tu puente es anterior a la versión 1.10.0 y no guarda los resultados: actualízalo para poder recogerlos la próxima vez.');
+    bridgeLive = { ...(await checkBridgeLive()), at: Date.now() };
+    for (const el of document.querySelectorAll('[data-bridge-state]')) el.innerHTML = bridgeStateHTML();
+    if (bridgeLive.state === 'closed' || bridgeLive.state === 'origin' || bridgeLive.state === 'unpaired' || bridgeLive.state === 'code') throw new Error('El puente no responde, y lo que escribió tu IA está guardado en él. Reconéctalo aquí (dice cómo) y vuelve a pulsar «Recoger lo que escribió tu IA».');
+    if (bridgeLive.state === 'old') throw new Error('Tu puente es anterior a la versión 1.10.0 y no guarda los resultados: actualízalo para poder recogerlos la próxima vez.');
     r = await ai.bridgeResult(p.runId).catch(() => null);
     from = 'el puente';
   }
@@ -550,7 +556,9 @@ async function runAdjust(list, button) {
     lit(changed);
     ctx.toast(`Ajustado: ${changed.map((x) => (x === 'esquema' ? 'la sección 0' : `el capítulo ${T.outline.hitos.findIndex((h) => h.id === x) + 1}`)).join(', ')}.${notes.length ? ` ${notes.join(' ')}` : ''}`);
   } catch (e) {
-    box.innerHTML = errorBox(errInfo(e, 'Ajustar la guía'), '', pendingOf(T.id) && e?.kind !== 'cancel' ? COLLECT : '');
+    const pend = pendingOf(T.id);
+    box.innerHTML = errorBox(errInfo(e, 'Ajustar la guía'), '', pend && e?.kind !== 'cancel' ? COLLECT : '');
+    if (pend && String(pend.way).startsWith('bridge:')) { box.querySelector('.tj-error-act')?.insertAdjacentHTML('beforebegin', COLLECT_BRIDGE()); kickBridge(); }
     if (!button) adjKeep([...adjList(), ...list.filter((c) => !adjList().some((x) => x.at === c.at))]);
   }
 }
@@ -1651,24 +1659,85 @@ async function lendFolder(el, here) {
     say('#tj-folder-status', e.message);
   }
 }
+// The bridge as it is now, checked live (his words: «siempre primero se debe comprobar la conexión, y luego ya pedir
+// seleccionar el modelo»). Studium kept the bridge's last status and offered its models with the bridge closed, and
+// offered to reconnect only when it was never paired. States: checking, unpaired (no code at this address), closed
+// (paired, not answering), origin (open, but for another address), old (an older version is open), code (it answers
+// with another pairing code), noclaude (Claude Code missing or not signed in), ok.
+let bridgeLive = { state: 'checking', at: 0 };
+let bridgeTimer = null;
+async function checkBridgeLive() {
+  const b = ai.bridgeOf();
+  if (!b?.token) return { state: 'unpaired' };
+  let hello;
+  try {
+    const r = await fetch(`http://127.0.0.1:${b.port || ai.BRIDGE_PORT}/v1/hello`, { signal: AbortSignal.timeout(2500) });
+    if (r.status === 403) return { state: 'origin' };
+    hello = r.ok ? await r.json() : null;
+  } catch { hello = null; }
+  if (!hello) return { state: 'closed' };
+  if (ai.bridgeOld(hello.version)) return { state: 'old', version: hello.version };
+  try { await ai.bridgeStatus(); } catch (e) { return /código de enlace|token|401/i.test(String(e?.message)) ? { state: 'code' } : { state: 'closed', detail: String(e?.message ?? '') }; }
+  const claude = (ai.bridgeOf()?.engines ?? []).find((e) => e.id === 'claude');
+  if (!claude?.ready) return { state: 'noclaude', version: hello.version, detail: claude?.detail ?? '' };
+  return { state: 'ok', version: hello.version };
+}
+// Checks now and, while a card shows the bridge and it is not ready, every 4 seconds: when it starts answering, the
+// card redraws by itself with its models.
+async function watchBridge(force = false) {
+  clearTimeout(bridgeTimer);
+  if (!document.querySelector('[data-bridge-state]')) return;
+  if (!force && bridgeLive.state !== 'checking' && Date.now() - bridgeLive.at < 3000) { bridgeTimer = setTimeout(watchBridge, 4000); return; }
+  const was = bridgeLive.state;
+  bridgeLive = { ...(await checkBridgeLive()), at: Date.now() };
+  if (bridgeLive.state !== was) {
+    for (const box of document.querySelectorAll('#tjg-body [data-howrun]')) box.innerHTML = howRunHTML();
+    for (const el of document.querySelectorAll('[data-bridge-state]')) if (!el.closest('[data-howrun]')) el.innerHTML = bridgeStateHTML();
+    if (was !== 'checking' && bridgeLive.state === 'ok') ctx.toast(`El puente responde (versión ${bridgeLive.version}).`);
+  }
+  if (bridgeLive.state !== 'ok' && document.querySelector('[data-bridge-state]')) bridgeTimer = setTimeout(watchBridge, 4000);
+}
+const kickBridge = () => setTimeout(() => watchBridge(false), 0);
+function bridgeStateHTML() {
+  const st = bridgeLive.state;
+  const cmd = `<code class="no-i18n">${esc(ai.bridgeCommand())}</code> <button type="button" class="link" data-tj="copy-cmd">copiar</button>`;
+  const check = '<button type="button" class="ask" data-tj="bridge-recheck">Comprobar ahora</button>';
+  const pair = `<button type="button" class="ask" data-tj="pair-guide">Enlazar con el código del puente</button><div class="tj-bridge ai-bridge" data-pair-box hidden></div>`;
+  const auto = '<small class="mut">Studium lo vuelve a comprobar solo cada pocos segundos.</small>';
+  const box = (cls, head, body) => `<div class="tj-howbridge tj-bstate ${cls}" role="status"><p><b>${head}</b></p>${body}</div>`;
+  if (st === 'checking') return box('wait', 'Comprobando el puente…', '');
+  if (st === 'ok') return box('ok', `✓ El puente responde · versión ${esc(bridgeLive.version ?? '')} · Claude Code listo`, '');
+  if (st === 'unpaired') return box('bad', `El puente no está enlazado en esta dirección (${esc(location.host)})`, `<p class="fine">Cada dirección se enlaza una vez: abre el puente en tu computadora y pega aquí el código que muestra.</p><ol class="fine"><li>En la carpeta donde guardaste el puente (<a href="${esc(ai.BRIDGE_URL)}" download="studium-bridge.mjs">descárgalo</a> si no lo tienes): ${cmd}</li><li>Copia el código que empieza con <code>41730.</code></li></ol><p>${pair}</p>`);
+  if (st === 'closed') return box('bad', 'El puente no responde: está cerrado en esta computadora', `<p class="fine">Ábrelo otra vez en una terminal, en la carpeta donde lo guardaste: ${cmd}</p><p>${check} ${auto}</p>`);
+  if (st === 'origin') return box('bad', `El puente está abierto, pero para otra dirección (no ${esc(location.host)})`, `<p class="fine">Ciérralo (Ctrl+C en su terminal) y ábrelo con este comando, que incluye esta dirección: ${cmd}</p><p>${check} ${auto}</p>`);
+  if (st === 'old') return box('bad', `Está abierta una versión anterior del puente (${esc(bridgeLive.version ?? '?')}); esta página necesita la ${esc(ai.BRIDGE_VERSION)}`, `<ol class="fine"><li><a href="${esc(ai.BRIDGE_URL)}" download="studium-bridge.mjs">Descarga el puente nuevo</a> y reemplaza el anterior.</li><li>Ciérralo (Ctrl+C en su terminal) y ábrelo otra vez: ${cmd}</li></ol><p>${check} ${auto}</p>`);
+  if (st === 'code') return box('bad', 'El puente responde, pero con otro código de enlace', `<p class="fine">Copia el código que muestra su terminal ahora y pégalo aquí.</p><p>${pair}</p>`);
+  return box('bad', 'El puente responde, pero Claude Code no está listo en esta computadora', `<p class="fine">${esc(bridgeLive.detail || 'No lo encontró o no tiene una sesión iniciada.')} Si no lo tienes, instálalo (<a href="https://docs.anthropic.com/en/docs/claude-code/setup" target="_blank" rel="noopener noreferrer">cómo</a>); después abre una terminal, escribe <code>claude</code> e inicia sesión.</p><p>${check} ${auto}</p>`);
+}
 function afterRunChoice(el) {
   if (el?.closest?.('.tj-adjpop, .tj-tray')) { for (const box of document.querySelectorAll('#tjg-body [data-howrun]')) box.innerHTML = howRunHTML(); } else repaint();
 }
 function howRunHTML() {
   const ways = ai.connected();
-  const hasBridge = ways.some((w) => w.startsWith('bridge:'));
-  const claude = ai.choice('solution').provider === 'bridge:claude' && !ai.bridgeOld();
-  const pick = ai.ready() ? `<div class="pick">${ai.pickerHTML('solution', { open: true })}</div>` : '<p>Todavía no conectaste una IA en esta dirección. <button type="button" class="ask" data-tj="connect" data-vendor="gemini">Conectar Gemini, gratis</button></p>';
-  // The bridge is always offered: it is connected once per address (localhost, the beta link…), and a page where it is
-  // not connected said nothing of it (his report: only Gemini to choose, no bridge, no session, no model, no effort).
-  const bridge = hasBridge ? '' : `<div class="tj-howbridge"><p><b>Claude Code, por el puente</b> <small class="mut">no está conectado en esta dirección (${esc(location.host)}). Cada dirección se conecta una vez.</small></p>
-      <p><button type="button" class="ask" data-tj="pair-guide">Conectar el puente aquí</button></p><div class="tj-bridge ai-bridge" data-pair-box hidden></div></div>`;
-  const opts = `<fieldset class="tj-bridgeopts ${claude ? '' : 'off'}" ${claude ? '' : 'disabled'}><legend>Con Claude Code por el puente${claude ? '' : ' <small>(elígelo arriba en «Con qué IA» para usar estas opciones)</small>'}</legend>
+  const provider = ai.choice('solution').provider;
+  const wantsBridge = String(provider).startsWith('bridge:');
+  const ready = bridgeLive.state === 'ok';
+  const claude = provider === 'bridge:claude' && ready;
+  if (Date.now() - bridgeLive.at > 3000) kickBridge();
+  const others = ways.filter((w) => !w.startsWith('bridge:'));
+  const otherBtns = others.map((w) => `<button type="button" class="ask" data-tj="use-way" data-way="${esc(w)}">Usar ${esc(ai.WAYS[w]?.name ?? w)}</button>`).join(' ');
+  let pick;
+  if (wantsBridge && !ready) pick = `<p class="fine">Elegiste <b>${esc(ai.WAYS[provider]?.name ?? provider)}</b>, por el puente: sus modelos aparecen cuando el puente responda (arriba).${others.length ? ' O usa otra IA ahora:' : ''}</p>${otherBtns ? `<p>${otherBtns}</p>` : ''}`;
+  else if (ai.ready() && ways.length) pick = `<div class="pick">${ai.pickerHTML('solution', { open: true })}</div>`;
+  else pick = '<p>Todavía no conectaste una IA en esta dirección. <button type="button" class="ask" data-tj="connect" data-vendor="gemini">Conectar Gemini, gratis</button></p>';
+  const useClaude = !wantsBridge || provider !== 'bridge:claude';
+  const legend = claude ? '' : ready && useClaude ? ' <button type="button" class="ask" data-tj="use-way" data-way="bridge:claude">Usar Claude Code</button>' : ' <small>(cuando el puente responda: arriba dice qué falta)</small>';
+  const opts = `<fieldset class="tj-bridgeopts ${claude ? '' : 'off'}"><legend>Con Claude Code por el puente${legend}</legend><div ${claude ? '' : 'inert class="tj-inert"'}>
       ${claude ? accountPick() : ''}
       ${watchBox()}
       ${T && sessionOf(T.id) ? contBox() : '<p class="fine">Esta guía no tiene una sesión de Claude Code guardada en este dispositivo: el próximo pedido empieza una nueva.</p>'}
-      <h5>Dónde trabaja</h5>${claude ? placeHTML(folderOf(T.id) || 'temp') : '<p class="fine">En la carpeta que elijas, con Claude Code.</p>'}</fieldset>`;
-  return `<details class="tj-howrun" open><summary>Cómo lo hace</summary>${pick}${bridge}${opts}</details>`;
+      <h5>Dónde trabaja</h5>${claude ? placeHTML(folderOf(T.id) || 'temp') : '<p class="fine">En la carpeta que elijas, con Claude Code.</p>'}</div></fieldset>`;
+  return `<details class="tj-howrun" open><summary>Cómo lo hace</summary><div data-bridge-state>${bridgeStateHTML()}</div>${pick}${opts}</details>`;
 }
 
 // Section 0 of a study guide: what enters, how the evaluation is, what to watch out for, the material as it came.
@@ -2416,7 +2485,7 @@ function wire(root) {
     }
     if (kind === 'pair-code') {
       const code = b.closest('.tj-bridge')?.querySelector('[data-ai-pair-code]')?.value;
-      await busy(b, async () => { if (await pairBridge(code)) { if (draft) { draft.pairing = false; renderDraft(); } else afterRunChoice(b); } }).catch(() => {});
+      await busy(b, async () => { if (await pairBridge(code)) { if (draft) { draft.pairing = false; renderDraft(); } else { bridgeLive = { state: 'checking', at: 0 }; afterRunChoice(b); await watchBridge(true); } } }).catch(() => {});
       return;
     }
     if (kind === 'answer' || kind === 'answer-skip') {
@@ -2505,9 +2574,16 @@ function wire(root) {
       return;
     }
     if (kind === 'bridge-recheck') {
+      // In a guide: the live check redraws what depends on it; in the wizard, as before.
+      if (T && !draft && document.querySelector('[data-bridge-state]')) {
+        await busy(b, async () => { bridgeLive = { state: bridgeLive.state, at: 0 }; await watchBridge(true); for (const el of document.querySelectorAll('[data-bridge-state]')) el.innerHTML = bridgeStateHTML(); if (bridgeLive.state !== 'ok') ctx.toast('El puente todavía no está listo: arriba dice qué falta.'); }).catch(() => {});
+        return;
+      }
       await busy(b, async () => { await ai.bridgeStatus(); if (draft) { keepAnswer(); renderDraft(); } else repaint(); ctx.toast(ai.bridgeOld() ? 'Sigue abierta la versión anterior del puente.' : `Puente ${ai.bridgeOf()?.version} listo.`); }).catch(() => {});
       return;
     }
+    if (kind === 'copy-cmd') { navigator.clipboard?.writeText(ai.bridgeCommand()).then(() => ctx.toast('Comando copiado: pégalo en una terminal, en la carpeta del puente.'), () => ctx.toast(ai.bridgeCommand())); return; }
+    if (kind === 'use-way') { ai.setChoice('solution', { provider: b.dataset.way, model: '', effort: '' }); ctx.toast(`Ahora lo hace ${ai.WAYS[b.dataset.way]?.name ?? b.dataset.way}.`); afterRunChoice(b); return; }
     if (kind === 'folder-here' || kind === 'folder-pick') { await lendFolder(b, kind === 'folder-here'); return; }
     if (kind === 'ask-cancel') { await busy(b, async () => { const f = T.escritor; await setDoc(tRef(T.id), { escritor: '', updated: serverTimestamp() }, { merge: true }); await amigos.dropRequest(T.id, f).catch(() => {}); T.escritor = ''; repaint(); ctx.toast('Pedido cancelado.'); }).catch(() => {}); return; }
     if (kind === 'ask-accept') {
