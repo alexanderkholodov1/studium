@@ -184,8 +184,10 @@ const MODES = {
 };
 const NEVER = ['WebFetch', 'WebSearch', 'Task', 'Agent'];
 // The links the person brought as a guide's source (his decision 2026-11-25): Claude Code may open those sites, and
-// nothing else on the internet (one «WebFetch(domain:…)» rule per site; searching stays denied). Only http(s), at most
-// 10; a GitHub link also opens its raw files.
+// nothing else on the internet (one «WebFetch(domain:…)» rule per site, exact host; searching stays denied; in -p mode
+// a fetch with no matching rule is denied, per code.claude.com/docs/en/headless). Claude Code's own preapproved
+// documentation domains stay open while WebFetch is not denied: said in «Cómo funciona». Only http(s), at most 10; a
+// GitHub link also opens its raw files.
 function linkHosts(links) {
   const hosts = new Set();
   for (const u of Array.isArray(links) ? links.slice(0, 10) : []) {
