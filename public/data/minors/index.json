@@ -1,0 +1,2493 @@
+{
+ "read": "2026-11-25",
+ "source": "https://www.usfq.edu.ec/es/oferta-academica/minors",
+ "minors": [
+  {
+   "id": "analisis-de-datos",
+   "name": "Minor en Análisis de Datos",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-analisis-de-datos",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-10/usfq-minor-analisis-de-datos-2026-10.pdf",
+   "classes": [
+    {
+     "code": "ADM 3080",
+     "name": "Analítica con Python"
+    },
+    {
+     "code": "ADM 3081",
+     "name": "Inteligencia de Negocios"
+    },
+    {
+     "code": "ADM 3082",
+     "name": "Minería de Datos"
+    },
+    {
+     "code": "ADM 3083",
+     "name": "Herramientas y Visualización"
+    },
+    {
+     "code": "ADM 3084",
+     "name": "Machine Learning"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": []
+  },
+  {
+   "id": "animacion-digital",
+   "name": "Minor en Animación Digital",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-animacion-digital",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-10/usfq-minor-animacion-digital-2026-10.pdf",
+   "classes": [
+    {
+     "code": "DIC 1101",
+     "name": "Herramientas Digitales"
+    },
+    {
+     "code": "ART 1004",
+     "name": "Fundamentos de Dibujo"
+    },
+    {
+     "code": "AND 1003",
+     "name": "Dibujo para Animación"
+    },
+    {
+     "code": "AND 2001",
+     "name": "Diseño de Personajes"
+    },
+    {
+     "code": "AND 2301",
+     "name": "Animación Clásica"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ, con excepción de quienes cursan la carrera de Animación Digital dentro del COCOA.",
+   "rules": []
+  },
+  {
+   "id": "antropologia",
+   "name": "Minor en Antropología",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-antropologia",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-antropologia-2026.pdf",
+   "classes": [
+    {
+     "code": "ANT 2101",
+     "name": "Antropología Cultural"
+    },
+    {
+     "code": "ANT 2201",
+     "name": "Introducción a la Arqueología"
+    },
+    {
+     "code": "ANT 3109",
+     "name": "Etnografía"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ, con excepción de quienes cursan la carrera de Antropología dentro del COCISOH.",
+   "rules": [
+    "Escoger 2 cursos adicionales con"
+   ]
+  },
+  {
+   "id": "arte-textil",
+   "name": "Minor en Arte Textil",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-arte-textil",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-arte-textil-2026.pdf",
+   "classes": [
+    {
+     "code": "ART 1701",
+     "name": "Fundamentos de las Artes"
+    },
+    {
+     "code": "ART 2602",
+     "name": "Taller Tejido Macramé"
+    },
+    {
+     "code": "ART 1601",
+     "name": "Tejido Básico"
+    },
+    {
+     "code": "ART 1204",
+     "name": "Fundamentos de Escultura"
+    },
+    {
+     "code": "DMO 2001",
+     "name": "Taller de Tecnología Textil"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": []
+  },
+  {
+   "id": "artes-visuales",
+   "name": "Minor en Artes Visuales",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-artes-visuales",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-artes-visuales-2026.pdf",
+   "classes": [
+    {
+     "code": "ART 1701",
+     "name": "Fundamentos de las Artes"
+    },
+    {
+     "code": "ART 1301",
+     "name": "Taller de Grabado Calcográ co"
+    },
+    {
+     "code": "ART 1302",
+     "name": "Taller de Serigrafía"
+    },
+    {
+     "code": "ART 1303",
+     "name": "Taller de Xilografía"
+    },
+    {
+     "code": "ART 2001",
+     "name": "Dibujo para Arte y Diseño"
+    },
+    {
+     "code": "ART 3380",
+     "name": "Taller de Libros de Artista"
+    },
+    {
+     "code": "ART 1101",
+     "name": "Dibujo"
+    },
+    {
+     "code": "ART 3104",
+     "name": "Dibujo de Figura Humana"
+    },
+    {
+     "code": "DIM 1101",
+     "name": "Programación para Diseño"
+    },
+    {
+     "code": "DIM 3002",
+     "name": "Diseño de Interfaces Físicas"
+    },
+    {
+     "code": "DIM 4082",
+     "name": "O Tecnologías Creativas"
+    },
+    {
+     "code": "DIM 4082E",
+     "name": "Creative Technologies"
+    },
+    {
+     "code": "ART 2802",
+     "name": "Nuevos Medios"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ, con excepción de quienes cursan la carrera de Artes Visuales dentro del COCOA.",
+   "rules": []
+  },
+  {
+   "id": "biologia",
+   "name": "Minor en Biología",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-biologia",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-biologia-2026.pdf",
+   "classes": [
+    {
+     "code": "BIO 1102",
+     "name": "Biología General +Lab"
+    },
+    {
+     "code": "BIO 2203",
+     "name": "Botánica +Lab"
+    },
+    {
+     "code": "BIO 2301",
+     "name": "Zoología +Lab"
+    },
+    {
+     "code": "BIO 3001",
+     "name": "Evolución"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ, con excepción de quienes cursan la carrera de Biología dentro del COCIBA. Para los estudiantes de Ingeniería en Biotecnología, si alguno de los cursos incluidos en el minor forma parte de su malla curricular, deberá ser reemplazado por un c",
+   "rules": []
+  },
+  {
+   "id": "biomedicina",
+   "name": "Minor en Biomedicina",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-biomedicina",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-10/usfq-minor-biomedicina-2026-10.pdf",
+   "classes": [
+    {
+     "code": "MED 1006",
+     "name": "Intro a la Fisioanatomía +Lab  3 BIO 1102 Biología General +Lab O"
+    },
+    {
+     "code": "MED 1005",
+     "name": "Histología +Lab"
+    },
+    {
+     "code": "MED 2005",
+     "name": "Anatomía Clínica +Lab"
+    },
+    {
+     "code": "MED 2105",
+     "name": "Anatomía Humana 2 +Lab"
+    },
+    {
+     "code": "MED 2101",
+     "name": "Fisiología Humana 1 +Lab"
+    },
+    {
+     "code": "MED 2102",
+     "name": "Fisiología Humana 2 +Lab"
+    },
+    {
+     "code": "MED 3101",
+     "name": "Fisiopatología Humana"
+    },
+    {
+     "code": "MED 3102",
+     "name": "Fisiopatología Humana"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ, con excepción de quienes cursan la carrera de Medicina Humana dentro del COCSA.",
+   "rules": []
+  },
+  {
+   "id": "biotecnologia",
+   "name": "Minor en Biotecnología",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-biotecnologia",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-biotecnologia-2026.pdf",
+   "classes": [
+    {
+     "code": "BTC 3002",
+     "name": "Biología Molecular +Lab"
+    },
+    {
+     "code": "BTC 3001",
+     "name": "Biotecnología de Animales +Lab"
+    },
+    {
+     "code": "BTC 3004",
+     "name": "Biotecnología de Plantas +Lab"
+    },
+    {
+     "code": "BTC 4004",
+     "name": "Genética y Bioinformática +Lab"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ, con excepción de quienes cursan la carrera de Ingeniería en Biotecnología dentro del COCIBA. Para los estudiantes de Biología, si alguno de los cursos incluidos en el minor forma parte de su malla curricular, deberá ser reemplazado por un c",
+   "rules": []
+  },
+  {
+   "id": "ciencias-ambientales-y-sostenibilidad",
+   "name": "Minor en Ciencias Ambientales y Sostenibilidad",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-ciencias-ambientales-y-sostenibilidad",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-ciencias-ambientales-y-sostenibilidad-2026.pdf",
+   "classes": [
+    {
+     "code": "PID 4080",
+     "name": "Capstone Interdisciplinario"
+    },
+    {
+     "code": "ECL 1001",
+     "name": "O Ecología,Biodiversidad Ecuador o"
+    },
+    {
+     "code": "ECL 1001E",
+     "name": "Ecology & Resources of Ecuador"
+    },
+    {
+     "code": "ECL 1002E",
+     "name": "Planetary Boundaries"
+    },
+    {
+     "code": "ECL 2002",
+     "name": "Ecología de Ecosistemas"
+    },
+    {
+     "code": "ECL 2101",
+     "name": "Ecología General"
+    },
+    {
+     "code": "ECL 3069E",
+     "name": "Historical Ecology"
+    },
+    {
+     "code": "ECL 3102",
+     "name": "Ecología de Poblaciones"
+    },
+    {
+     "code": "ECL 3109E",
+     "name": "Tropical Ecology +Pr"
+    },
+    {
+     "code": "SOC 2101",
+     "name": "Sociología General"
+    },
+    {
+     "code": "SOC 3083",
+     "name": "Sociología Ambiental"
+    },
+    {
+     "code": "JUR 3070",
+     "name": "Derecho de Aguas"
+    },
+    {
+     "code": "JUR 3075",
+     "name": "Derecho de los Desastres"
+    },
+    {
+     "code": "JUR 3088",
+     "name": "Derecho Ambiental"
+    },
+    {
+     "code": "JUR 3094",
+     "name": "Derecho Minero e Hidrocarburos"
+    },
+    {
+     "code": "JUR 4092",
+     "name": "Derecho Penal Ambiental"
+    },
+    {
+     "code": "JUR 4093",
+     "name": "Derecho Internacional Ambiental"
+    },
+    {
+     "code": "ADM 3093",
+     "name": "Sostenibilidad Integral"
+    },
+    {
+     "code": "HIS 3085E",
+     "name": "Environmental History"
+    },
+    {
+     "code": "REL 3409",
+     "name": "Desarrollo y Medio Ambiente"
+    },
+    {
+     "code": "ECN 3098E",
+     "name": "Agri-Environmental Economics"
+    },
+    {
+     "code": "ECN 4001E",
+     "name": "International Economics"
+    },
+    {
+     "code": "REC 4001",
+     "name": "Economía Ambiental y de RRNN"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": []
+  },
+  {
+   "id": "ciencias-animales",
+   "name": "Minor en Ciencias Animales",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-ciencias-animales",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-10/usfq-minor-ciencias-animales-2026-10.pdf",
+   "classes": [
+    {
+     "code": "VET 1401",
+     "name": "Zootecnia General +Lab"
+    },
+    {
+     "code": "VET 2001",
+     "name": "Anatomía Animal +Lab"
+    },
+    {
+     "code": "AGR 3005",
+     "name": "Etología y Bienestar +Lab"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": []
+  },
+  {
+   "id": "ciencias-politicas",
+   "name": "Minor en Ciencias Políticas",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-ciencias-politicas",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-ciencias-politicas-2026.pdf",
+   "classes": [
+    {
+     "code": "POL 2101",
+     "name": "Introducción Ciencia Política"
+    },
+    {
+     "code": "POL 2080",
+     "name": "Intro a Política Comparada"
+    },
+    {
+     "code": "POL 4004",
+     "name": "Políticas Públicas"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ, con excepción de quienes cursan la carrera de Ciencias Políticas dentro del COCISOH.",
+   "rules": [
+    "Escoger 2 cursos adicionales con"
+   ]
+  },
+  {
+   "id": "cine",
+   "name": "Minor en Cine",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-cine",
+   "pdf": "",
+   "classes": [],
+   "credits": 0,
+   "audience": "",
+   "rules": []
+  },
+  {
+   "id": "comunicacion-organizacional",
+   "name": "Minor en Comunicación Organizacional",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-comunicacion-organizacional",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-comunicacion-organizacional-2026.pdf",
+   "classes": [
+    {
+     "code": "COM 1001",
+     "name": "Hablar en Público"
+    },
+    {
+     "code": "COM 2101",
+     "name": "Relaciones Públicas"
+    },
+    {
+     "code": "COM 4102",
+     "name": "Relaciones Públicas"
+    },
+    {
+     "code": "COM 3001",
+     "name": "Comunicación Interna"
+    },
+    {
+     "code": "COM 4003",
+     "name": "Comunicación en Crisis"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ, con excepción de quienes cursan la carrera de Comunicación dentro del COCOA.",
+   "rules": []
+  },
+  {
+   "id": "conducta-criminal",
+   "name": "Minor en Conducta Criminal",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-conducta-criminal",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-10/usfq-minor-conducta-criminal-2026-10.pdf",
+   "classes": [
+    {
+     "code": "PSI 3088",
+     "name": "Per lación Criminal"
+    },
+    {
+     "code": "JUR 4081",
+     "name": "Criminología"
+    },
+    {
+     "code": "PSI 3081E",
+     "name": "Psychology of Addictions"
+    },
+    {
+     "code": "PSI 3087",
+     "name": "Entrevista Forense"
+    },
+    {
+     "code": "PSI 3702",
+     "name": "Abuso Sexual"
+    },
+    {
+     "code": "PSI 4080",
+     "name": "Psicocriminología"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": []
+  },
+  {
+   "id": "danza-artes-escenicas",
+   "name": "Minor en Danza: Artes Escénicas",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-danza-artes-escenicas",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-danza-artes-escenicas-2026.pdf",
+   "classes": [
+    {
+     "code": "DAN 2001",
+     "name": "Danza Terapia"
+    },
+    {
+     "code": "DAN 2103",
+     "name": "Danza y Nuevos Medios"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": [
+    "Escoger 3 cursos adicionales con"
+   ]
+  },
+  {
+   "id": "derecho-ambiental-sostenibilidad-y-recursos-naturales",
+   "name": "Minor en Derecho Ambiental, Sostenibilidad y Recursos Naturales",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-derecho-ambiental-sostenibilidad-y-recursos-naturales",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-10/usfq-minor-derecho-ambiental-sostenibilidad-y-recursos-naturales-2026-10.pdf",
+   "classes": [
+    {
+     "code": "JUR 3094",
+     "name": "Derecho Ambiental"
+    },
+    {
+     "code": "JUR 3085",
+     "name": "Derecho Internacional Ambiental"
+    },
+    {
+     "code": "JUR 3075",
+     "name": "Derecho de los Desastres"
+    },
+    {
+     "code": "JUR 3059",
+     "name": "Derecho Energético"
+    },
+    {
+     "code": "JUR 3098",
+     "name": "DESCA"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": []
+  },
+  {
+   "id": "derechos-humanos",
+   "name": "Minor en Derechos Humanos",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-derechos-humanos",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-derechos-humanos-2026.pdf",
+   "classes": [
+    {
+     "code": "JUR 4090",
+     "name": "Introducción a los DDHH"
+    },
+    {
+     "code": "JUR 5085",
+     "name": "Género y Derechos Humanos"
+    },
+    {
+     "code": "JUR 3098",
+     "name": "Protección Universal de DDHH  3 JUR 4090 Introducción a los DDHH"
+    },
+    {
+     "code": "JUR 3086",
+     "name": "Derecho Intl Refugiados"
+    },
+    {
+     "code": "JUR 3092",
+     "name": "Interamericano de DDHH"
+    },
+    {
+     "code": "JUR 3075",
+     "name": "Derecho de los Desastres"
+    },
+    {
+     "code": "JUR 3206",
+     "name": "Filosofía de los Derechos"
+    },
+    {
+     "code": "JUR 4093",
+     "name": "Derecho Internacional Ambiental"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": []
+  },
+  {
+   "id": "desarrollo-web-y-apps",
+   "name": "Minor en Desarrollo Web y Apps",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-desarrollo-web-y-apps",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-desarrollo-web-y-apps-2026.pdf",
+   "classes": [
+    {
+     "code": "DIM 1101",
+     "name": "Programación para Diseño 1"
+    },
+    {
+     "code": "DIM 2201",
+     "name": "Desarrollo Web"
+    },
+    {
+     "code": "DIM 2202",
+     "name": "Desarrollo Web"
+    },
+    {
+     "code": "DIM 3203",
+     "name": "Desarrollo Web"
+    },
+    {
+     "code": "DIM 4080",
+     "name": "Tecnologías Emergentes"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": []
+  },
+  {
+   "id": "diseno-ambiental",
+   "name": "Minor en Diseño Ambiental",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-diseno-ambiental",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-diseno-ambiental-2026.pdf",
+   "classes": [
+    {
+     "code": "ARQ 3068E",
+     "name": "Galapagos Design Workshop 1"
+    },
+    {
+     "code": "ARQ 3069E",
+     "name": "Galapagos Design Workshop 2"
+    },
+    {
+     "code": "ARQ 3601",
+     "name": "Teoría Urbana"
+    },
+    {
+     "code": "ARQ 4602",
+     "name": "Teoría Urbana"
+    },
+    {
+     "code": "ECL 1000",
+     "name": "Futuros Sostenibles +Lab"
+    },
+    {
+     "code": "ECL 1001",
+     "name": "Ecología Biodiversidad Ecuador"
+    },
+    {
+     "code": "ECL 3086E",
+     "name": "Geographical Info System"
+    },
+    {
+     "code": "SOC 3038",
+     "name": "Sociología Ambiental"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ y requiere tomar cursos en la sede Galápagos: San Cristóbal.",
+   "rules": []
+  },
+  {
+   "id": "diseno-comunicacional",
+   "name": "Minor en Diseño Comunicacional",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-diseno-comunicacional",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-diseno-comunicacional-2026.pdf",
+   "classes": [
+    {
+     "code": "DIC 1101",
+     "name": "Herramientas Digitales 1"
+    },
+    {
+     "code": "DIC 1004",
+     "name": "Cromática"
+    },
+    {
+     "code": "DIC 2001",
+     "name": "Tipografía"
+    },
+    {
+     "code": "DIC 3003",
+     "name": "Materiales y Procesos"
+    },
+    {
+     "code": "DIC 3320",
+     "name": "Marca e Identidad"
+    },
+    {
+     "code": "DIC 3321",
+     "name": "Diseño Editorial"
+    },
+    {
+     "code": "DIC 3303",
+     "name": "Diseño Publicitario"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ, con excepción de quienes cursan la carrera de Diseño Grá co: Diseño Comunicacional dentro del COCOA.",
+   "rules": []
+  },
+  {
+   "id": "diseno-de-modas",
+   "name": "Minor en Diseño de Modas",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-diseno-de-modas",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-10/usfq-minor-diseno-de-modas-2026-10.pdf",
+   "classes": [
+    {
+     "code": "ART 2001",
+     "name": "Dibujo para Arte y Diseño"
+    },
+    {
+     "code": "DMO 2101",
+     "name": "Ilustración y Figurín"
+    },
+    {
+     "code": "DMO 2301",
+     "name": "Taller de Moda"
+    },
+    {
+     "code": "DMO 2201",
+     "name": "Colección"
+    },
+    {
+     "code": "DMO 3102",
+     "name": "Ilustración y Figurín"
+    },
+    {
+     "code": "DMO 3302",
+     "name": "Taller de Moda"
+    },
+    {
+     "code": "DMO 3202",
+     "name": "Colección"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ, con excepción de quienes cursan la carrera de Artes Visuales: Concentración en Diseño de Modas dentro del COCOA.",
+   "rules": []
+  },
+  {
+   "id": "economia",
+   "name": "Minor en Economía",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-economia",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-10/usfq-minor-economia-2026-10.pdf",
+   "classes": [
+    {
+     "code": "ECN 1101",
+     "name": "Principios de Microeconomía  3 MAT 1201 Cálculo Diferencial +Ej O MAT 1000 Precálculo"
+    },
+    {
+     "code": "ECN 3004",
+     "name": "Pensamiento Económico"
+    },
+    {
+     "code": "ECN 3088",
+     "name": "Derecho y Economía"
+    },
+    {
+     "code": "ECN 3082",
+     "name": "Economía Latinoamericana"
+    },
+    {
+     "code": "ECN 4005",
+     "name": "Desarrollo del Ecuador"
+    },
+    {
+     "code": "ECN 3085",
+     "name": "Economía Gerencial"
+    },
+    {
+     "code": "ECN 4001",
+     "name": "Economía Internacional"
+    },
+    {
+     "code": "ECN 3202",
+     "name": "Macroeconomía Intermedia"
+    },
+    {
+     "code": "ECN 2102",
+     "name": "Microeconomía Intermedia"
+    },
+    {
+     "code": "ECN 2301",
+     "name": "Economía Matemática"
+    },
+    {
+     "code": "ECN 2302",
+     "name": "3  ECN 1101 Principios de Microeconomía Y"
+    },
+    {
+     "code": "ECN 3002",
+     "name": "Economía Matemática"
+    },
+    {
+     "code": "ECN 3087",
+     "name": "Teoría de Juegos"
+    },
+    {
+     "code": "ECN 3401",
+     "name": "Econometría 1 +Ej"
+    },
+    {
+     "code": "ECN 3402",
+     "name": "Econometría 2 +Ej"
+    },
+    {
+     "code": "ECN 4002",
+     "name": "Economía Ambiental y RRNN"
+    },
+    {
+     "code": "ECN 4004",
+     "name": "Política Monetaria y Fiscal"
+    },
+    {
+     "code": "ECN 3086",
+     "name": "Economía Pública"
+    },
+    {
+     "code": "ECN 3103",
+     "name": "Microeconomía Avanzada"
+    },
+    {
+     "code": "ECN 4203",
+     "name": "Macroeconomía Avanzada"
+    },
+    {
+     "code": "ECN 4003",
+     "name": "Economía Experimental"
+    },
+    {
+     "code": "ECN 3081",
+     "name": "Economía del Comportamiento"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": [
+    "Escoger 3 cursos adicionales con"
+   ]
+  },
+  {
+   "id": "educacion",
+   "name": "Minor en Educación",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-educacion",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-educacion-2026.pdf",
+   "classes": [
+    {
+     "code": "EDU 1002",
+     "name": "Teorías del Aprendizaje"
+    },
+    {
+     "code": "EDU 2011",
+     "name": "Plani cación y Evaluación 2"
+    },
+    {
+     "code": "EDU 2002",
+     "name": "Metodologías de Enseñanza"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ, con excepción de quienes cursan la carrera de Educación dentro del COCISOH.",
+   "rules": [
+    "Escoger 2 cursos adicionales con"
+   ]
+  },
+  {
+   "id": "educacion-inclusiva",
+   "name": "Minor en Educación Inclusiva",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-educacion-inclusiva",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-10/usfq-minor-educacion-inclusiva-2026-10.pdf",
+   "classes": [
+    {
+     "code": "EDU 4006",
+     "name": "Inclusión y Diversidad"
+    },
+    {
+     "code": "EDU 2007",
+     "name": "Instrucción Diferenciada"
+    },
+    {
+     "code": "PSI 3111",
+     "name": "Regulación Emocional"
+    },
+    {
+     "code": "PSI 3112",
+     "name": "Problemas de Aprendizaje"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de las carreras de Educación, Psicología y Psicología Clínica del Colegio de Ciencias Sociales y Humanidades.",
+   "rules": []
+  },
+  {
+   "id": "ejecucion-instrumental-o-vocal",
+   "name": "Minor en Ejecución Instrumental o Vocal",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-ejecucion-instrumental-o-vocal",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2022-03/malla-subespecializacion-com-ejecucion-instrumental-o-vocal.pdf",
+   "classes": [
+    {
+     "code": "MUS 3830",
+     "name": "Improvisación"
+    },
+    {
+     "code": "MUS 3831",
+     "name": "Improvisación"
+    },
+    {
+     "code": "MUS 4100E",
+     "name": "The Evolution of Jazz"
+    },
+    {
+     "code": "MUS 3114",
+     "name": "Armonía Modal Avanzada"
+    }
+   ],
+   "credits": 14,
+   "audience": "",
+   "rules": []
+  },
+  {
+   "id": "emprendimiento",
+   "name": "Minor en Emprendimiento",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-emprendimiento",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-emprendimiento-2026.pdf",
+   "classes": [
+    {
+     "code": "ADM 3002",
+     "name": "Emprendimiento"
+    },
+    {
+     "code": "ADM 3093",
+     "name": "Sostenibilidad Integral"
+    },
+    {
+     "code": "ADM 4011",
+     "name": "Gestión de la Innovación"
+    },
+    {
+     "code": "FIN 3084",
+     "name": "Finanzas y Emprendimiento"
+    },
+    {
+     "code": "ADM 4003",
+     "name": "Gestión del Emprendimiento"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": []
+  },
+  {
+   "id": "escritura-creativa",
+   "name": "Minor en Escritura Creativa",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-escritura-creativa",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-escritura-creativa-2026.pdf",
+   "classes": [
+    {
+     "code": "ESC 2101",
+     "name": "Intro. Escritura Creativa"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": [
+    "Escoger 4 cursos adicionales con"
+   ]
+  },
+  {
+   "id": "estudios-de-genero",
+   "name": "Minor en Estudios de Género",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-estudios-de-genero",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-estudios-de-genero-2026.pdf",
+   "classes": [],
+   "credits": 15,
+   "audience": "Número de créditos: 15",
+   "rules": []
+  },
+  {
+   "id": "estudios-europeos",
+   "name": "Minor en Estudios Europeos",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-estudios-europeos",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2024-06/cocisoh-estudios-europeos.pdf",
+   "classes": [
+    {
+     "code": "POL 2081",
+     "name": "Periodo"
+    },
+    {
+     "code": "POL 3087",
+     "name": "Economía Europea*"
+    },
+    {
+     "code": "HIS 3083",
+     "name": "Cultura y Sociedad Europeas*"
+    }
+   ],
+   "credits": 15,
+   "audience": "",
+   "rules": []
+  },
+  {
+   "id": "filosofia",
+   "name": "Minor en Filosofía",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-filosofia",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-filosofia-2026.pdf",
+   "classes": [
+    {
+     "code": "FIL 3004",
+     "name": "Intro Historia de la Filosofía"
+    },
+    {
+     "code": "FIL 3204",
+     "name": "Filosofía Contemporánea"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": [
+    "Escoger 3 cursos adicionales con"
+   ]
+  },
+  {
+   "id": "fisica",
+   "name": "Minor en Física",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-fisica",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2025-09/malla-subespecializacion-poli-fisica-agosto2025.pdf",
+   "classes": [
+    {
+     "code": "FIS 3301",
+     "name": "Física Moderna"
+    },
+    {
+     "code": "FIS 3001",
+     "name": "Instrumentación Científica (a)"
+    },
+    {
+     "code": "FIS 2001",
+     "name": "Óptica y Ondas + Lab"
+    },
+    {
+     "code": "FIS 2002",
+     "name": "Termodinámica e Int. a Fluidos (c)"
+    },
+    {
+     "code": "FIS 3002",
+     "name": "Métodos Matemáticos en Física (a)*"
+    },
+    {
+     "code": "MAT 1302",
+     "name": "Cálculo para Ciencias 2 +Ej o"
+    },
+    {
+     "code": "FIS 3401",
+     "name": "Física Experimental 1+Lab"
+    },
+    {
+     "code": "FIS 4001",
+     "name": "Mecánica Estadística*"
+    },
+    {
+     "code": "FIS 4501",
+     "name": "Mecánica Cuántica 1*"
+    },
+    {
+     "code": "FIS 4601",
+     "name": "Teoría Electromagnética 1(d) *"
+    }
+   ],
+   "credits": 18,
+   "audience": "",
+   "rules": [
+    "Escoger 5 cursos de la siguiente lista: FIS 3001 Instrumentación Científica (a) 3 FIS 2202 Física 2 para Ciencias +Lab/Ej o FIS 2702 Física para Ing"
+   ]
+  },
+  {
+   "id": "fotografia",
+   "name": "Minor en Fotografía",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-fotografia",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-fotografia-2026.pdf",
+   "classes": [
+    {
+     "code": "ART 2002",
+     "name": "Fotografía"
+    },
+    {
+     "code": "ART 3085",
+     "name": "Fotografía Post Digital e IA"
+    },
+    {
+     "code": "ART 4002",
+     "name": "Fotografía de Estudio"
+    },
+    {
+     "code": "ARH 3006",
+     "name": "Fotografía Contemporánea"
+    },
+    {
+     "code": "ART 2701",
+     "name": "Laboratorio de Creación"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": []
+  },
+  {
+   "id": "gestion-ambiental",
+   "name": "Minor en Gestión Ambiental",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-gestion-ambiental",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-gestion-ambiental-2026.pdf",
+   "classes": [
+    {
+     "code": "BIO 1101",
+     "name": "Introducción a la Biología"
+    },
+    {
+     "code": "ECL 2101",
+     "name": "Ecología General"
+    },
+    {
+     "code": "REC 3101",
+     "name": "Biología de la Conservación"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ. Para los estudiantes del COCIBA (Biología e Ingeniería en Biotecnología), si alguno de los cursos incluidos en el minor forma parte de su malla curricular, deberá ser reemplazado por un curso alternativo. El responsable del minor brindará l",
+   "rules": []
+  },
+  {
+   "id": "gestion-deportiva-y-de-entretenimiento",
+   "name": "Minor en Gestión Deportiva y de Entretenimiento",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-gestion-deportiva-y-de-entretenimiento",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-10/usfq-minor-gestion-deportiva-y-de-entretenimiento-2026-10.pdf",
+   "classes": [],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ y requiere tomar cursos en GAIAS Europa en Valencia, España.",
+   "rules": []
+  },
+  {
+   "id": "gestion-legal-de-los-negocios",
+   "name": "Minor en Gestión Legal de los Negocios",
+   "college": "Colegio de Jurisprudencia (JUR) y el Colegio de Administración de Empresas (CADE).Te permit",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-gestion-legal-de-los-negocios",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-10/usfq-minor-gestion-legal-de-los-negocios-2026-10.pdf",
+   "classes": [
+    {
+     "code": "ADM 2006",
+     "name": "Entorno Legal de los Negocios"
+    },
+    {
+     "code": "ADM 3001",
+     "name": "Gestión del Talento"
+    },
+    {
+     "code": "JUR 3082",
+     "name": "FIN 2001/3005 Principios de Finanzas) O"
+    },
+    {
+     "code": "JUR 2001",
+     "name": "Introducción al Derecho Laboral O"
+    },
+    {
+     "code": "PSI 2402",
+     "name": "Psicología Organizacional O"
+    },
+    {
+     "code": "PSI 3406",
+     "name": "Desarrollo Organizacional"
+    },
+    {
+     "code": "JUR 2104",
+     "name": "Negocio Jurídico"
+    },
+    {
+     "code": "FIN 2002",
+     "name": "Contabilidad Financiera"
+    },
+    {
+     "code": "FIN 3084",
+     "name": "Finanzas y Emprendimiento"
+    },
+    {
+     "code": "MAK 3090",
+     "name": "Marketing Digital Aplicado"
+    },
+    {
+     "code": "ADM 4081",
+     "name": "Análisis de Casos de Negocios"
+    },
+    {
+     "code": "ADM 3004",
+     "name": "Negocios Internacionales"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a los estudiantes del Colegio de Administración de Empresas (CADE) y del Colegio de Jurisprudencia (JUR) de la USFQ.",
+   "rules": []
+  },
+  {
+   "id": "historia",
+   "name": "Minor en Historia",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-historia",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-historia-2026.pdf",
+   "classes": [
+    {
+     "code": "HIS 2102",
+     "name": "Historia Global"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": [
+    "Escoger 4 cursos adicionales con"
+   ]
+  },
+  {
+   "id": "historia-del-arte",
+   "name": "Minor en Historia del Arte",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-historia-del-arte",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-historia-del-arte-2026.pdf",
+   "classes": [],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": [
+    "Escoger 3 cursos adicionales con"
+   ]
+  },
+  {
+   "id": "hospitalidad-y-hoteleria",
+   "name": "Minor en Hospitalidad y Hotelería",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-hospitalidad-y-hoteleria",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-10/usfq-minor-hospitalidad-y-hoteleria-2026-10.pdf",
+   "classes": [
+    {
+     "code": "HSP 1001",
+     "name": "Introducción a la Hospitalidad"
+    },
+    {
+     "code": "HSP 2086",
+     "name": "Gestión de Eventos Deportivos"
+    },
+    {
+     "code": "HSP 2088",
+     "name": "Introducción Entretenimiento"
+    },
+    {
+     "code": "HSP 3020E",
+     "name": "Tourism & Community"
+    },
+    {
+     "code": "HSP 3022",
+     "name": "Estrategia y Gestión Sostenible"
+    },
+    {
+     "code": "HSP 3081",
+     "name": "Organización de Bodas"
+    },
+    {
+     "code": "HSP 2092",
+     "name": "Gestión y Operación Cruceros"
+    },
+    {
+     "code": "HSP 2001",
+     "name": "Administración de A & B"
+    },
+    {
+     "code": "HSP 2002",
+     "name": "Operaciones Hoteleras"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ, con excepción de quienes cursan la carrera de Hospitalidad y Hotelería dentro del CHAT.",
+   "rules": []
+  },
+  {
+   "id": "ilustracion-y-arte-secuencial",
+   "name": "Minor en Ilustración y Arte Secuencial",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-ilustracion-y-arte-secuencial",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-ilustracion-y-arte-secuencial-2026.pdf",
+   "classes": [
+    {
+     "code": "ART 1101",
+     "name": "Dibujo"
+    },
+    {
+     "code": "ART 3104",
+     "name": "Dibujo para Arte y Diseño"
+    },
+    {
+     "code": "ART 1901",
+     "name": "Taller de Acuarela"
+    },
+    {
+     "code": "ART 1901E",
+     "name": "Watercolor Workshop"
+    },
+    {
+     "code": "ART 1902",
+     "name": "Acuarela Experimental"
+    },
+    {
+     "code": "ART 1406",
+     "name": "Comics y Arte Secuencial"
+    },
+    {
+     "code": "ART 4409",
+     "name": "Diseño Visual y Concept Art"
+    },
+    {
+     "code": "ART 1105",
+     "name": "Dibujo de Perspectiva"
+    },
+    {
+     "code": "ART 1402",
+     "name": "Ilustración Técnicas Manuales"
+    },
+    {
+     "code": "ART 1403",
+     "name": "Ilustración Técnicas Opacas"
+    },
+    {
+     "code": "ART 1401E",
+     "name": "Botanical Ilustration"
+    },
+    {
+     "code": "ART 1404E",
+     "name": "Entomological Ilustration"
+    },
+    {
+     "code": "ART 1301",
+     "name": "Taller de Grabado Calcográ co"
+    },
+    {
+     "code": "ART 1302",
+     "name": "Taller de Serigrafía"
+    },
+    {
+     "code": "ART 1303",
+     "name": "Taller de Xilografía"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": []
+  },
+  {
+   "id": "industria-musical",
+   "name": "Minor en Industria Musical",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-industria-musical",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2025-08/malla-subespecializacion-com-industria-musical-julio2025.pdf",
+   "classes": [
+    {
+     "code": "HSP 2088",
+     "name": "Introducción al Entretenimiento"
+    },
+    {
+     "code": "ADM 1001",
+     "name": "Principios de Administración"
+    },
+    {
+     "code": "MUS 1600",
+     "name": "Generalidades Industria Música"
+    },
+    {
+     "code": "MUS 3610",
+     "name": "Pro-Música"
+    },
+    {
+     "code": "MUS 3611",
+     "name": "Pro-Música"
+    },
+    {
+     "code": "MUS 4600",
+     "name": "Promoción Creativa"
+    }
+   ],
+   "credits": 14,
+   "audience": "",
+   "rules": []
+  },
+  {
+   "id": "ingenieria-electronica",
+   "name": "Minor en Ingeniería Electrónica",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-ingenieria-electronica",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2022-03/malla-subespecializacion-poli-ingenieria-electronica.pdf",
+   "classes": [
+    {
+     "code": "IEE 3002",
+     "name": "Señales y Sistemas + Ej"
+    },
+    {
+     "code": "MAT 1401",
+     "name": "Álgebra Lineal 1 +Ej"
+    },
+    {
+     "code": "FIS 2202",
+     "name": "Física 2 para Ciencias +Lab/Ej o"
+    },
+    {
+     "code": "IEE 3006",
+     "name": "Física Semiconductores +Lab"
+    },
+    {
+     "code": "MAT 2002",
+     "name": "Ecuaciones Diferenciales"
+    },
+    {
+     "code": "IEE 4004",
+     "name": "Circuitos Eléctricos + Lab/Ej"
+    }
+   ],
+   "credits": 15,
+   "audience": "",
+   "rules": [
+    "El estudiante debe aprobar cinco cursos de la Electrónica es dotar a los estudiantes de los cono- carrera de Ingeniería Electrónica, con una caliﬁ- cimientos básicos sobre tecnología electrónica y cación mínima de “C”.",
+    "el estudiante debe aprobar cinco cursos que no consten en la malla de su carrera."
+   ]
+  },
+  {
+   "id": "ingenieria-en-alimentos",
+   "name": "Minor en Ingeniería en Alimentos",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-ingenieria-en-alimentos",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2023-09/malla-subespecializacion-poli-ingenieria-en-alimentos.pdf",
+   "classes": [
+    {
+     "code": "MCR 3001",
+     "name": "Microbiología Alimentos +Lab ó"
+    },
+    {
+     "code": "BTC 3002",
+     "name": "Biología Molecular +Lab"
+    },
+    {
+     "code": "ALI 4002",
+     "name": "Biotecnología Alimentos +Lab"
+    },
+    {
+     "code": "ALI 4004",
+     "name": "Evaluación Sensorial +Lab"
+    },
+    {
+     "code": "ALI 4008",
+     "name": "Cárnicos + Lab"
+    },
+    {
+     "code": "ALI 3004",
+     "name": "Frutas y Hortalizas + Lab"
+    },
+    {
+     "code": "INQ 4009",
+     "name": "Procesos Industriales +Lab ó"
+    }
+   ],
+   "credits": 18,
+   "audience": "",
+   "rules": []
+  },
+  {
+   "id": "ingenieria-en-ciencias-de-la-computacion",
+   "name": "Minor en Ingeniería en Ciencias de la Computación",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-ingenieria-en-ciencias-de-la-computacion",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2022-03/malla-subespecializacion-poli-ingenieria-en-ciencias-de-las-computacion.pdf",
+   "classes": [],
+   "credits": 18,
+   "audience": "",
+   "rules": [
+    "No aplican las materias CMP que sean requisito para su especialización principal (ver malla de su carrera)."
+   ]
+  },
+  {
+   "id": "ingenieria-industrial",
+   "name": "Minor en Ingeniería Industrial",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-ingenieria-industrial",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-06/poli_minor_ingenieria_industrial_2026.pdf",
+   "classes": [
+    {
+     "code": "IIN 2101",
+     "name": "Modelos de Optimización +Lab"
+    },
+    {
+     "code": "IIN 3001",
+     "name": "Pronósticos e Inventarios"
+    },
+    {
+     "code": "IIN 3002",
+     "name": "Gestión por Procesos"
+    },
+    {
+     "code": "IIN 3006",
+     "name": "Ergonomía"
+    },
+    {
+     "code": "IIN 3009",
+     "name": "Control Est. de Procesos +Lab"
+    },
+    {
+     "code": "IIN 4014",
+     "name": "Gestión de la Calidad"
+    }
+   ],
+   "credits": 18,
+   "audience": "",
+   "rules": []
+  },
+  {
+   "id": "ingenieria-mecanica",
+   "name": "Minor en Ingeniería Mecánica",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-ingenieria-mecanica",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2022-03/malla-subespecializacion-poli-ingenieria-mecanica.pdf",
+   "classes": [
+    {
+     "code": "IME 3005",
+     "name": "Estática"
+    },
+    {
+     "code": "IME 3101",
+     "name": "Dinámica +Ej"
+    },
+    {
+     "code": "FIS 1201",
+     "name": "Física 1 para Ciencias +Lab/Ej"
+    },
+    {
+     "code": "IME 4083",
+     "name": "Mecánica Materiales +Lab/Ej"
+    },
+    {
+     "code": "IME 5086",
+     "name": "Ciencia e Ing. Materiales +Lab"
+    },
+    {
+     "code": "ICV 2001",
+     "name": "Diseño Mecánico"
+    }
+   ],
+   "credits": 18,
+   "audience": "",
+   "rules": []
+  },
+  {
+   "id": "ingenieria-quimica",
+   "name": "Minor en Ingeniería Química",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-ingenieria-quimica",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2022-03/malla-subespecializacion-poli-ingenieria-quimica.pdf",
+   "classes": [
+    {
+     "code": "INQ 3003",
+     "name": "Fenómenos de Transporte"
+    }
+   ],
+   "credits": 18,
+   "audience": "",
+   "rules": []
+  },
+  {
+   "id": "ingles",
+   "name": "Minor en Inglés",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-ingles",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-ingles-2026.pdf",
+   "classes": [],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": [
+    "Escoger 3 cursos adicionales con"
+   ]
+  },
+  {
+   "id": "investigacion",
+   "name": "Minor en Investigación",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-investigacion",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-10/usfq-minor-investigacion-2026-10.pdf",
+   "classes": [
+    {
+     "code": "INV 3081",
+     "name": "Práctica de Investigación 1"
+    },
+    {
+     "code": "INV 3083",
+     "name": "Práctica de Investigación 2"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ que cumplan con los procedimientos y requisitos establecidos.",
+   "rules": []
+  },
+  {
+   "id": "lengua-cultura-y-comunicacion",
+   "name": "Minor en Lengua, Cultura y Comunicación",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-lengua-cultura-y-comunicacion",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-10/usfq-minor-lengua-cultura-y-comunicacion-2026-10.pdf",
+   "classes": [
+    {
+     "code": "ANT 2401",
+     "name": "Antropología Linguística"
+    },
+    {
+     "code": "CCO 1001",
+     "name": "Fundamentos de la Comunicación"
+    },
+    {
+     "code": "ANT 3403E",
+     "name": "Language and Culture"
+    },
+    {
+     "code": "EDU 2003",
+     "name": "Enseñanza del Lenguaje"
+    },
+    {
+     "code": "EDU 3004E",
+     "name": "Bilingualism"
+    },
+    {
+     "code": "FIL 3407",
+     "name": "Filosofía del Lenguaje"
+    },
+    {
+     "code": "FIL 2403",
+     "name": "Filosofía de la Cultura"
+    },
+    {
+     "code": "FIL 3304E",
+     "name": "Multiculturalism & Philosophy"
+    },
+    {
+     "code": "SOC 3080",
+     "name": "Historia Oral en la Amazonía"
+    },
+    {
+     "code": "COM 3003",
+     "name": "Comunicación Política"
+    },
+    {
+     "code": "COM 4081",
+     "name": "Tendencias en Comunicación"
+    },
+    {
+     "code": "COM 3080",
+     "name": "Tendencias Emergentes"
+    },
+    {
+     "code": "CIN 1002",
+     "name": "Lenguaje del Cine"
+    },
+    {
+     "code": "PER 2081",
+     "name": "Locución y Voz"
+    },
+    {
+     "code": "TEA 1002",
+     "name": "Voz y Movimiento"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": []
+  },
+  {
+   "id": "literatura",
+   "name": "Minor en Literatura",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-literatura",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-literatura-2026.pdf",
+   "classes": [
+    {
+     "code": "LIT 2102",
+     "name": "Teoría y Crítica Literaria"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ, con excepción de quienes cursan la carrera de Literatura dentro del COCISOH.",
+   "rules": [
+    "Escoger 4 cursos adicionales con"
+   ]
+  },
+  {
+   "id": "marketing-digital",
+   "name": "Minor en Marketing Digital",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-marketing-digital",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-marketing-digital-2026.pdf",
+   "classes": [
+    {
+     "code": "MAK 3005",
+     "name": "Marketing Digital"
+    },
+    {
+     "code": "MAK 4084",
+     "name": "Experiencia del Cliente"
+    },
+    {
+     "code": "MAK 4081",
+     "name": "Marketing en Redes Sociales"
+    },
+    {
+     "code": "MAK 4083",
+     "name": "Analítica Digital"
+    },
+    {
+     "code": "MAK 3001",
+     "name": "Comercio Electrónico"
+    },
+    {
+     "code": "MAK 3090",
+     "name": "Marketing Digital Aplicado"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": []
+  },
+  {
+   "id": "marketing-digital-global",
+   "name": "Minor en Marketing Digital Global",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-marketing-digital-global",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-marketing-digital-global-2026.pdf",
+   "classes": [
+    {
+     "code": "MAK 3090",
+     "name": "Marketing Digital Aplicado*"
+    },
+    {
+     "code": "MAK 4084",
+     "name": "Experiencia del Cliente"
+    },
+    {
+     "code": "MAK 4081",
+     "name": "Marketing en Redes Sociales"
+    },
+    {
+     "code": "MAK 4083",
+     "name": "Analítica Digital"
+    },
+    {
+     "code": "ADM 3090",
+     "name": "Liderazgo de Equipos"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ y se oferta exclusivamente en GAIAS Europa en Valencia, España.",
+   "rules": []
+  },
+  {
+   "id": "matematicas",
+   "name": "Minor en Matemáticas",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-matematicas",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2022-03/malla-subespecializacion-poli-matematicas.pdf",
+   "classes": [
+    {
+     "code": "MAT 1301",
+     "name": "Cálculo para Ciencias 1 +Ej"
+    },
+    {
+     "code": "MAT 1302",
+     "name": "Cálculo para Ciencias 2 +Ej"
+    },
+    {
+     "code": "MAT 2002",
+     "name": "Ecuaciones Diferenciales"
+    },
+    {
+     "code": "MAT 2007",
+     "name": "Cálculo para Ciencias 2 +Ej o"
+    },
+    {
+     "code": "MAT 2010",
+     "name": "Cálculo"
+    },
+    {
+     "code": "MAT 3001",
+     "name": "Introducción a Probabilidades"
+    },
+    {
+     "code": "MAT 3002",
+     "name": "Fundamentos de Geometría"
+    },
+    {
+     "code": "MAT 3005",
+     "name": "Lógica y Teoría de Conjuntos"
+    },
+    {
+     "code": "MAT 1401",
+     "name": "Álgebra Lineal 1 +Ej y"
+    },
+    {
+     "code": "MAT 1202",
+     "name": "Cálculo Integral +Ej"
+    },
+    {
+     "code": "MAT 4005",
+     "name": "3 MAT 1301 Cálculo para Ciencias 1 +Ej o"
+    },
+    {
+     "code": "MAT 4003",
+     "name": "Análisis Real"
+    }
+   ],
+   "credits": 16,
+   "audience": "",
+   "rules": [
+    "El estudiante debe aprobar con nota “C” o superior los tres cursos obligatorios y 2 cursos optativos (ver tabla de cursos obligatorios y optativos), completando en total 5 cursos adicionales a los de la malla de su carrera."
+   ]
+  },
+  {
+   "id": "microbiologia",
+   "name": "Minor en Microbiología",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-microbiologia",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-microbiologia-2026.pdf",
+   "classes": [
+    {
+     "code": "MCR 2002",
+     "name": "Microbiología Patogénica +Lab"
+    },
+    {
+     "code": "MCR 3001",
+     "name": "Microbiología Alimentos +Lab"
+    },
+    {
+     "code": "MCR 3002",
+     "name": "Parasitología +Lab"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ. Para los estudiantes del COCIBA (Biología e Ingeniería en Biotecnología), si alguno de los cursos incluidos en el minor forma parte de su malla curricular, deberá ser reemplazado por un curso alternativo. El responsable del minor brindará l",
+   "rules": []
+  },
+  {
+   "id": "musica-contemporanea",
+   "name": "Minor en Música Contemporánea",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-musica-contemporanea",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2022-03/malla-subespecializacion-com-musica-contemporanea.pdf",
+   "classes": [
+    {
+     "code": "MUS 1500",
+     "name": "Intro. Tecnología Música"
+    },
+    {
+     "code": "MUS 1810",
+     "name": "Aplicación Musical Teoría +Lab"
+    },
+    {
+     "code": "MUS 2811",
+     "name": "Teclado básico"
+    }
+   ],
+   "credits": 15,
+   "audience": "",
+   "rules": []
+  },
+  {
+   "id": "nutricion",
+   "name": "Minor en Nutrición",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-nutricion",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-nutricion-2026.pdf",
+   "classes": [
+    {
+     "code": "BIO 1102",
+     "name": "Biología General +Lab"
+    },
+    {
+     "code": "MED 1006",
+     "name": "Intro a la Fisioanatomía +Lab"
+    },
+    {
+     "code": "MED 2003",
+     "name": "Nutrición Clínica"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ, con excepción de quienes cursan la carrera de Nutrición y Dietética dentro del COCSA.",
+   "rules": [
+    "Escoger 1 curso de la siguiente lista: Fundamentos de Nutrición +Lab 3 MED 2003 Nutrición Clínica 3 MED 2010 Bioquímica Humana +Lab",
+    "Escoger 2 cursos adicionales con"
+   ]
+  },
+  {
+   "id": "organizacion-de-eventos",
+   "name": "Minor en Organización de Eventos",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-organizacion-de-eventos",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-10/usfq-minor-organizacion-de-eventos-2026-10.pdf",
+   "classes": [
+    {
+     "code": "HSP 3081",
+     "name": "Organización de Bodas"
+    },
+    {
+     "code": "HSP 2086",
+     "name": "Gestión de Eventos Deportivos"
+    },
+    {
+     "code": "HSP 3002",
+     "name": "Administración de Eventos"
+    },
+    {
+     "code": "COM 2101",
+     "name": "Relaciones Públicas"
+    },
+    {
+     "code": "COM 3004",
+     "name": "Eventos y Protocolo"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": []
+  },
+  {
+   "id": "pasteleria",
+   "name": "Minor en Pastelería",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-pasteleria",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-10/usfq-minor-pasteleria-2026-10_1.pdf",
+   "classes": [
+    {
+     "code": "GST 1101",
+     "name": "Conceptos y Técnicas"
+    },
+    {
+     "code": "GST 3003",
+     "name": "Conceptos y Técnicas"
+    },
+    {
+     "code": "GST 3007",
+     "name": "Repostería y Chocolatería  3 GST 3003 Pastelería"
+    },
+    {
+     "code": "GST 3081",
+     "name": "Repostería Creativa"
+    },
+    {
+     "code": "GST 3084",
+     "name": "Postres de Vanguardia"
+    },
+    {
+     "code": "GST 3085",
+     "name": "Postres de Vitrina"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está dirigido a todos los estudiantes de la USFQ, con excepción de quienes cursan la carrera de Gastronomía dentro del CHAT.",
+   "rules": []
+  },
+  {
+   "id": "periodismo",
+   "name": "Minor en Periodismo",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-periodismo",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-periodismo-2026.pdf",
+   "classes": [
+    {
+     "code": "PER 1002",
+     "name": "Redacción Multimedios Básica"
+    },
+    {
+     "code": "PER 2003",
+     "name": "Redacción Audiovisual Avanzada"
+    },
+    {
+     "code": "PER 2005",
+     "name": "Investigación y Reportería"
+    },
+    {
+     "code": "PER 2101",
+     "name": "Prácticas Multimedios"
+    },
+    {
+     "code": "PER 2007",
+     "name": "Taller de Produccion Audiovisual"
+    },
+    {
+     "code": "PER 4081",
+     "name": "Creación de Contenido Móvil"
+    },
+    {
+     "code": "PER 4003",
+     "name": "Comunicación: Leyes y Ética"
+    },
+    {
+     "code": "PER 3004",
+     "name": "Reportajes y Crónicas"
+    },
+    {
+     "code": "PER 4102",
+     "name": "Prácticas Multimedios"
+    },
+    {
+     "code": "PER 4005",
+     "name": "Producción Editorial"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ, con excepción de quienes cursan la carrera de Periodismo dentro del COCOA.",
+   "rules": []
+  },
+  {
+   "id": "periodismo-deportivo",
+   "name": "Minor en Periodismo Deportivo",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-periodismo-deportivo",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-periodismo-deportivo-2026.pdf",
+   "classes": [
+    {
+     "code": "PER 2006",
+     "name": "Fútbol y Periodismo"
+    },
+    {
+     "code": "PER 4080",
+     "name": "Periodismo Deportivo"
+    },
+    {
+     "code": "PER 3009",
+     "name": "Periodismo Móvil para Deportes"
+    },
+    {
+     "code": "PER 3082",
+     "name": "Per les y Crónicas Deportivas"
+    },
+    {
+     "code": "PER 3083",
+     "name": "Coberturas Deportivas en Vivo"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": []
+  },
+  {
+   "id": "produccion-de-audio",
+   "name": "Minor en Producción de Audio",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-produccion-de-audio",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2022-03/malla-subespecializacion-com-produccion-de-audio.pdf",
+   "classes": [
+    {
+     "code": "MUS 1500",
+     "name": "Intro. Tecnología Música"
+    },
+    {
+     "code": "MUS 2510",
+     "name": "Generalidades Industria Música"
+    },
+    {
+     "code": "MUS 3410",
+     "name": "Principios del Audio 1 + Lab"
+    },
+    {
+     "code": "MUS 2501",
+     "name": "Análisis de Producción"
+    }
+   ],
+   "credits": 15,
+   "audience": "",
+   "rules": []
+  },
+  {
+   "id": "produccion-musical",
+   "name": "Minor en Producción Musical",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-produccion-musical",
+   "pdf": "",
+   "classes": [],
+   "credits": 0,
+   "audience": "",
+   "rules": []
+  },
+  {
+   "id": "psicologia",
+   "name": "Minor en Psicología",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-psicologia",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-psicologia-2026.pdf",
+   "classes": [],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ, con excepción de quienes cursan la carrera de Psicología dentro del COCISOH.",
+   "rules": [
+    "Escoger 3 cursos adicionales con"
+   ]
+  },
+  {
+   "id": "publicidad",
+   "name": "Minor en Publicidad",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-publicidad",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-publicidad-2026.pdf",
+   "classes": [
+    {
+     "code": "PUB 1001",
+     "name": "Principios de Publicidad"
+    },
+    {
+     "code": "PUB 2004",
+     "name": "Plani cación de Medios"
+    },
+    {
+     "code": "PUB 2101",
+     "name": "Creatividad Publicitaria"
+    },
+    {
+     "code": "PUB 2003",
+     "name": "Planning e Insights"
+    },
+    {
+     "code": "PUB 4003",
+     "name": "Publicidad Digital"
+    },
+    {
+     "code": "PUB 4002",
+     "name": "Estrategias Creativas"
+    },
+    {
+     "code": "PUB 4004",
+     "name": "Proyectos Publicitarios"
+    },
+    {
+     "code": "PUB 4102",
+     "name": "Redacción Publicitaria"
+    },
+    {
+     "code": "PUB 4001",
+     "name": "Campañas Publicitarias"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ, con excepción de quienes cursan la carrera de Publicidad dentro del COCOA.",
+   "rules": []
+  },
+  {
+   "id": "quimica",
+   "name": "Minor en Química",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-quimica",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2022-03/malla-subespecializacion-poli-quimica.pdf",
+   "classes": [
+    {
+     "code": "QUI 3003",
+     "name": "Química Orgánica"
+    },
+    {
+     "code": "QUI 3202",
+     "name": "Química Instrumental + Lab"
+    },
+    {
+     "code": "QUI 2003",
+     "name": "Bioquímica + lab"
+    },
+    {
+     "code": "QUI 3001",
+     "name": "Química Ambiental + Lab"
+    },
+    {
+     "code": "QUI 4080",
+     "name": "Química Computacional"
+    },
+    {
+     "code": "QUI 4081",
+     "name": "Química Cuántica"
+    },
+    {
+     "code": "INQ 4081",
+     "name": "Polímeros y Plásticos"
+    },
+    {
+     "code": "INQ 4005",
+     "name": "Catálisis Química"
+    }
+   ],
+   "credits": 15,
+   "audience": "",
+   "rules": []
+  },
+  {
+   "id": "recursos-humanos",
+   "name": "Minor en Recursos Humanos",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-recursos-humanos",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-10/usfq-minor-recursos-humanos-2026-10.pdf",
+   "classes": [
+    {
+     "code": "PSI 2402",
+     "name": "Psicología Organizacional"
+    },
+    {
+     "code": "ADM 3001E",
+     "name": "Human Resources"
+    },
+    {
+     "code": "ADM 3096",
+     "name": "Datos y Talento"
+    },
+    {
+     "code": "JUR 2001",
+     "name": "Introducción al Derecho Laboral"
+    },
+    {
+     "code": "PSI 3005",
+     "name": "Gestión del Desempeño"
+    },
+    {
+     "code": "PSI 3086",
+     "name": "Salud Mental en el Trabajo"
+    },
+    {
+     "code": "PSI 3405",
+     "name": "Selección de Personal"
+    },
+    {
+     "code": "PSI 3406",
+     "name": "Desarrollo Organizacional"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": []
+  },
+  {
+   "id": "relaciones-internacionales",
+   "name": "Minor en Relaciones Internacionales",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-relaciones-internacionales",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-relaciones-internacionales-2026.pdf",
+   "classes": [],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ, con excepción de quienes cursan la carrera de Relaciones Internacionales dentro del COCISOH.",
+   "rules": [
+    "Escoger 3 cursos adicionales con"
+   ]
+  },
+  {
+   "id": "sociologia",
+   "name": "Minor en Sociología",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-sociologia",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-sociologia-2026.pdf",
+   "classes": [
+    {
+     "code": "SOC 3102",
+     "name": "Introducción: Teoría Social"
+    },
+    {
+     "code": "ANT 3109",
+     "name": "Etnografía"
+    },
+    {
+     "code": "REL 3203",
+     "name": "Investigación Cuantitativa"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": []
+  },
+  {
+   "id": "storytelling-y-generacion-de-contenido-digital",
+   "name": "Minor en Storytelling y Generación de Contenido Digital",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-storytelling-y-generacion-de-contenido-digital",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-storytelling-y-generacion-de-contenido-digital-2026.pdf",
+   "classes": [
+    {
+     "code": "MAK 3090",
+     "name": "Marketing Digital Aplicado"
+    },
+    {
+     "code": "ADM 3090",
+     "name": "Liderazgo de Equipos"
+    },
+    {
+     "code": "CIN 2080",
+     "name": "Storytelling"
+    },
+    {
+     "code": "CIN 2081",
+     "name": "Creación de Contenido Digital"
+    },
+    {
+     "code": "COM 3080",
+     "name": "Tendencias Emergentes"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ y se oferta exclusivamente en GAIAS Europa.",
+   "rules": []
+  },
+  {
+   "id": "teatro-artes-escenicas",
+   "name": "Minor en Teatro: Artes Escénicas",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-teatro-artes-escenicas",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-teatro-artes-escenicas-2026.pdf",
+   "classes": [
+    {
+     "code": "ART 3084",
+     "name": "Actuación para la Cámara"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": [
+    "Escoger 3 cursos adicionales con"
+   ]
+  },
+  {
+   "id": "turismo-de-aventura",
+   "name": "Minor en Turismo de Aventura",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-turismo-de-aventura",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-10/usfq-minor-turismo-de-aventura-2026-10_0.pdf",
+   "classes": [
+    {
+     "code": "HSP 1003",
+     "name": "Introducción al Turismo"
+    },
+    {
+     "code": "ECL 1001",
+     "name": "Ecología Biodiversidad Ecuador"
+    },
+    {
+     "code": "ECL 2101",
+     "name": "Ecología General"
+    },
+    {
+     "code": "ECL 2002",
+     "name": "Ecología de Ecosistemas"
+    },
+    {
+     "code": "HSP 3020E",
+     "name": "Tourism & Community"
+    },
+    {
+     "code": "HSP 3022",
+     "name": "Estrategia Gestión Sostenible"
+    },
+    {
+     "code": "ADM 3093",
+     "name": "Sostenibilidad Integral"
+    },
+    {
+     "code": "REC 4003",
+     "name": "Manejo de Turismo Sustentable"
+    },
+    {
+     "code": "PSI 4408",
+     "name": "Manejo de Grupos"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ.",
+   "rules": []
+  },
+  {
+   "id": "turismo-sustentable",
+   "name": "Minor en Turismo Sustentable",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-turismo-sustentable",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-10/usfq-minor-turismo-sustentable-2026-10.pdf",
+   "classes": [
+    {
+     "code": "HSP 1003",
+     "name": "Introducción al Turismo"
+    },
+    {
+     "code": "HSP 3020E",
+     "name": "Tourism & Community"
+    },
+    {
+     "code": "ECL 1001",
+     "name": "Ecología Biodiversidad Ecuador"
+    },
+    {
+     "code": "ANT 3110",
+     "name": "Turismo y Sociedad"
+    },
+    {
+     "code": "ANT 3114E",
+     "name": "Globalization"
+    },
+    {
+     "code": "HSP 3022",
+     "name": "Estrategia Gestión Sostenible"
+    },
+    {
+     "code": "HSP 3082E",
+     "name": "Climate Change & Tourism"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está abierto a todos los estudiantes de la USFQ y requiere tomar cursos en la sede Galápagos: San Cristóbal.",
+   "rules": []
+  },
+  {
+   "id": "vivienda",
+   "name": "Minor en Vivienda",
+   "college": "",
+   "url": "https://www.usfq.edu.ec/es/oferta-academica/minors/minor-en-vivienda",
+   "pdf": "https://www.usfq.edu.ec/sites/default/files/2026-09/usfq-minor-vivienda-2026.pdf",
+   "classes": [
+    {
+     "code": "ARQ 4079",
+     "name": "El Espacio Entre Medio"
+    },
+    {
+     "code": "ARQ 4207",
+     "name": "Taller de Vivienda"
+    },
+    {
+     "code": "ARQ 2606",
+     "name": "Seminario Teoría de Vivienda"
+    },
+    {
+     "code": "ADM 3090",
+     "name": "Liderazgo de Equipos"
+    },
+    {
+     "code": "MAK 3090",
+     "name": "Marketing Digital Aplicado"
+    }
+   ],
+   "credits": 15,
+   "audience": "Este minor está dirigido exclusivamente a estudiantes de cuarto año de la carrera de Arquitectura que estén próximos a cursar ARQ 4206 Taller 8 Formación y se oferta exclusivamente en GAIAS Europa en Valencia, España.",
+   "rules": []
+  }
+ ]
+}

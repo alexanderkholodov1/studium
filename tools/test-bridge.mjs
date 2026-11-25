@@ -15,6 +15,13 @@ const SITE = 'https://alexanderkholodov.web.app';
 const results = [];
 const check = (cond, what) => { if (!cond) throw new Error(what); };
 
+// The bridge reads the course offering with its own copy of the bookmark's reader (lector.js): they must be the same.
+{
+  const fn = (file, head) => { const s = readFileSync(file, 'utf8'); const i = s.indexOf(head); return s.slice(i + head.length, s.indexOf('\n}\n', i) + 2).replace(/\s+/g, ' '); };
+  if (fn('public/assets/lector.js', 'export function catalogReader(') !== fn(BRIDGE, '\nfunction catalogReader(')) { console.error('✗ the bridge\'s catalog reader differs from lector.js: copy it again'); process.exit(1); }
+  console.log('✓ the bridge\'s catalog reader is the same as the bookmark\'s');
+}
+
 /* ---------- fake CLIs ---------- */
 const fakes = mkdtempSync(path.join(tmpdir(), 'bridge-fakes-'));
 const log = path.join(fakes, 'calls.jsonl');

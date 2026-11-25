@@ -365,6 +365,8 @@ try {
   expect('a profile with an unknown ambience is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ ambience: 'neon' }))]), 403);
   expect('a profile with other fields is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ email: s.email }))]), 403);
   expect('student saves its career and the classes it passed', await commit(s.token, [put(`profiles/${s.uid}`, profile({ malla: '1CMP', passed: ['MAT 1201', 'CMP 4004E', 'OPT 1'] }))]), 200);
+  expect('student saves its enrollment planner', await commit(s.token, [put(`profiles/${s.uid}`, profile({ planner: { cursando: ['CMP 4005'], minors: ['analisis-de-datos'], prio: { 'QUI 1003': 1 }, profs: { 'egas proano david': 1 }, comfort: { max: 16, start: 510, prefer: 'dias' } } }))]), 200);
+  expect('a planner with other fields is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ planner: { grades: { 'MAT 1201': 'A' } } }))]), 403);
   expect('a career code with other characters is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ malla: '1cmp/../x' }))]), 403);
   expect('more than 150 passed classes is refused', await commit(s.token, [put(`profiles/${s.uid}`, profile({ passed: Array.from({ length: 151 }, (_, i) => `MAT ${1000 + i}`) }))]), 403);
   expect('student saves its courses, interests and known concepts', await commit(s.token, [put(`profiles/${s.uid}`, profile({ courses: ['redes-de-computadores'], interests: ['area:redes'], known: ['subred', 'vlan'] }))]), 200);

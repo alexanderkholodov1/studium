@@ -14,7 +14,7 @@ import { homedir, platform, tmpdir } from 'node:os';
 import path from 'node:path';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
-const VERSION = '1.12.0';
+const VERSION = '1.13.0';
 const NAME = 'studium-bridge';
 const DEFAULT_PORT = 41730;
 const MAX_BODY = 64 * 1024 * 1024;
@@ -1106,6 +1106,127 @@ async function handleRun(body) {
   }
 }
 
+
+/* ---------- the course offering (1.13.0) ---------- */
+// Reads every section of the courses a person asks for from USFQ's «Oferta de cursos», instead of copying it page by
+// page. The bridge opens a Chrome (or Edge) window of its own, with its own profile in the home folder, only on the
+// catalog's address; the person signs in there with their USFQ account (the first time; the profile keeps it, as any
+// browser would). Then it runs the same reader as the bookmark in Studium (lector.js, kept identical: tools/test-bridge
+// checks it), which asks the catalog's own server one course at a time, with a pause, and only reads. The window
+// closes when it is done. The page never sends code to run: only the courses and the term.
+const CATALOG_URL = 'https://catalogodecursos.usfq.edu.ec/';
+const CATALOG_PROFILE = path.join(homedir(), '.studium-bridge-catalogo');
+const CATALOG_WAIT = 5 * 60 * 1000;
+function catalogReader(codes, term) {
+  const store = document.querySelector('#app')?.__vue_app__?.config?.globalProperties?.$store;
+  if (!store || !/catalogodecursos\.usfq\.edu\.ec$/.test(location.hostname)) throw new Error('not-catalog');
+  if (!store.state?.user?.token) throw new Error('not-signed-in');
+  const pageTerm = [...document.querySelectorAll('select')].map((s) => s.options[s.selectedIndex]?.text?.match(/\((\d{6})\)/)?.[1]).find(Boolean);
+  const periodo = /^\d{6}$/.test(term ?? '') ? term : pageTerm || store.state.periodo_actual?.periodo_id;
+  const body = { search: '', colegio: '', area: '', campus: '', sesion: '', mallas: '', cursos_ingles: false, cursos_wi: false, cursos_con_cupo: false, filtro_lunes: false, filtro_martes: false, filtro_miercoles: false, filtro_jueves: false, filtro_viernes: false, filtro_sabado: false, filtro_domingo: false, semana: [] };
+  const norm = (s) => String(s ?? '').toUpperCase().replace(/[\s_-]+/g, '');
+  const base = (s) => norm(s).replace(/^([A-Z]+\d{3,4})E$/, '$1');
+  const isCode = (s) => /^[A-Z]{3,4}[\s-]?\d{4}[A-Z]?$/i.test(String(s).trim());
+  const DAYS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+  const min = (h) => Number(String(h).slice(0, -2)) * 60 + Number(String(h).slice(-2));
+  const lines = (html) => String(html ?? '').split(/<br\s*\/?>/i).map((x) => x.replace(/<[^>]+>/g, '').trim()).filter(Boolean);
+  const block = (html, label) => { const parts = String(html ?? '').split(/<strong>/i); const p = parts.find((x) => new RegExp(`^\\s*${label}`, 'i').test(x)); return p ? lines(p.replace(/^[^<]*<\/strong>/i, '')) : []; };
+  const shape = (x) => {
+    const slots = [];
+    for (const r of x.info_reuniones?.length ? x.info_reuniones : [x.info_reunion].filter(Boolean)) {
+      if (!/^\d{4}$/.test(r.hora_inicio ?? '') || !/^\d{4}$/.test(r.hora_fin ?? '')) continue;
+      DAYS.forEach((d, i) => { if (r[d] && !slots.some((s) => s.d === i && s.s === min(r.hora_inicio))) slots.push({ d: i, s: min(r.hora_inicio), e: min(r.hora_fin) }); });
+    }
+    const r0 = x.info_reuniones?.[0] ?? x.info_reunion ?? {};
+    const letter = String(r0.edificio ?? '').match(/\(([A-Z]{1,4})\)/)?.[1] ?? '';
+    const aula = String(r0.aula ?? '').trim();
+    const p = x.profesor ?? {};
+    const one = [p.apellidos, [p.primer_nombre, p.segundo_nombre].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+    const profs = lines(x.string_profesores).length ? lines(x.string_profesores) : one ? [one] : [];
+    return {
+      code: x.code_numb, nrc: String(x.nrc), name: x.nombre_curso, kind: x.tipo_curso?.tipocurso_desc ?? '',
+      group: String(x.liga ?? '').split('|').map((s) => s.trim()).filter(Boolean).sort().join(' '), section: String(x.seq_num ?? ''),
+      slots, building: String(r0.edificio ?? '').replace(/\s*\([A-Z]{1,4}\)\s*/, '').trim(), room: aula ? (/^[A-Z]/.test(aula) || !letter ? aula : `${letter}${aula}`) : '',
+      prof: profs[0] ?? '', profs, credits: Number(x.creditos) || 0,
+      excluded: block(x.restricciones, 'CLASES EXCLUIDOS'), careersOut: block(x.restricciones, 'CARRERAS EXCLUIDOS'), careersOnly: block(x.restricciones, 'CARRERAS INCLUIDOS'),
+      seats: { max: Number(x.maximo_registrados) || 0, taken: Number(x.numero_registrados) || 0 },
+      english: /E$/.test(String(x.code_numb ?? '')), campus: x.campus?.campus_desc ?? '',
+    };
+  };
+  return (async () => {
+    const sections = []; const missing = [];
+    const wanted = [...new Set((codes ?? []).map((c) => String(c).trim()).filter(Boolean))].slice(0, 40);
+    for (const q of wanted) {
+      const found = await store.dispatch('getCursos', { aulas: '', horas: '', dias: '', periodo, semana: [], body: { ...body, search: q } });
+      const mine = (Array.isArray(found) ? found : []).filter((x) => !isCode(q) || base(x.code_numb) === base(q));
+      if (!mine.length) missing.push(q);
+      for (const x of mine) if (!sections.some((s) => s.nrc === String(x.nrc))) sections.push(shape(x));
+      await new Promise((r) => setTimeout(r, 700));
+    }
+    // Nothing asked: what the page is showing now, the person's own search.
+    if (!wanted.length) for (const x of store.state.cursos ?? []) sections.push(shape(x));
+    return { term: periodo, sections, missing };
+  })();
+}
+// (end of the catalog reader)
+function browserPath() {
+  const env = process.env;
+  const list = WIN ? [
+    path.join(env.PROGRAMFILES ?? 'C:/Program Files', 'Google/Chrome/Application/chrome.exe'),
+    path.join(env['PROGRAMFILES(X86)'] ?? 'C:/Program Files (x86)', 'Google/Chrome/Application/chrome.exe'),
+    path.join(env.LOCALAPPDATA ?? '', 'Google/Chrome/Application/chrome.exe'),
+    path.join(env['PROGRAMFILES(X86)'] ?? 'C:/Program Files (x86)', 'Microsoft/Edge/Application/msedge.exe'),
+    path.join(env.PROGRAMFILES ?? 'C:/Program Files', 'Microsoft/Edge/Application/msedge.exe'),
+  ] : platform() === 'darwin' ? ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge', '/Applications/Chromium.app/Contents/MacOS/Chromium']
+    : ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/microsoft-edge', '/snap/bin/chromium'];
+  return list.find((f) => { try { return existsSync(f); } catch { return false; } }) ?? '';
+}
+const freePort = () => new Promise((resolve, reject) => { const s = createServer(); s.listen(0, '127.0.0.1', () => { const { port: p } = s.address(); s.close(() => resolve(p)); }); s.on('error', reject); });
+async function readCatalog(body) {
+  const codes = (Array.isArray(body?.codes) ? body.codes : []).map((c) => String(c).trim()).filter((c) => c && c.length <= 60 && /^[\p{L}\p{N} .,+\-#&()/]+$/u.test(c)).slice(0, 40);
+  const term = /^\d{6}$/.test(String(body?.term ?? '')) ? String(body.term) : '';
+  if (!codes.length) throw new Failure(400, 'bad-request', 'Faltan las materias que quieres leer.');
+  if (typeof WebSocket === 'undefined') throw new Failure(501, 'node', 'Para leer la oferta, el puente necesita Node 22 o más nuevo. Instálalo desde nodejs.org y vuelve a abrir el puente.');
+  const exe = browserPath();
+  if (!exe) throw new Failure(501, 'no-browser', 'No encontré Chrome ni Edge en este computador. Usa el marcador de Studium en tu navegador.');
+  mkdirSync(CATALOG_PROFILE, { recursive: true });
+  const dport = await freePort();
+  console.log(`\nLeyendo la Oferta de cursos (${codes.length} ${codes.length === 1 ? 'materia' : 'materias'}). Si la página de la U pide tu cuenta, inicia sesión en esa ventana.`);
+  const child = spawn(exe, [`--remote-debugging-port=${dport}`, `--user-data-dir=${CATALOG_PROFILE}`, '--no-first-run', '--no-default-browser-check', '--new-window', CATALOG_URL], { stdio: 'ignore' });
+  let ws = null;
+  try {
+    let target = null;
+    for (let i = 0; i < 80 && !target; i += 1) {
+      await new Promise((r) => setTimeout(r, 250));
+      const list = await fetch(`http://127.0.0.1:${dport}/json/list`).then((r) => r.json()).catch(() => null);
+      target = list?.find((t) => t.type === 'page' && t.webSocketDebuggerUrl);
+    }
+    if (!target) throw new Failure(502, 'browser', 'El navegador no se abrió a tiempo. Vuelve a intentarlo.');
+    ws = new WebSocket(target.webSocketDebuggerUrl);
+    await new Promise((resolve, reject) => { ws.addEventListener('open', resolve, { once: true }); ws.addEventListener('error', reject, { once: true }); });
+    let id = 0; const waiting = new Map();
+    ws.addEventListener('message', (m) => { const msg = JSON.parse(m.data); const w = waiting.get(msg.id); if (w) { waiting.delete(msg.id); if (msg.error) w.reject(new Error(msg.error.message)); else w.resolve(msg.result); } });
+    const evaluate = (expression) => new Promise((resolve, reject) => { id += 1; waiting.set(id, { resolve, reject }); ws.send(JSON.stringify({ id, method: 'Runtime.evaluate', params: { expression, awaitPromise: true, returnByValue: true } })); });
+    const ready = "location.hostname === 'catalogodecursos.usfq.edu.ec' && !!document.querySelector('#app')?.__vue_app__?.config?.globalProperties?.$store?.state?.user?.token";
+    const t0 = Date.now();
+    for (;;) {
+      const r = await evaluate(ready).catch(() => null);
+      if (r?.result?.value === true) break;
+      if (Date.now() - t0 > CATALOG_WAIT) throw new Failure(408, 'login', 'No se inició sesión en la Oferta de cursos a tiempo. Vuelve a intentarlo e inicia sesión en la ventana que se abre.');
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    await new Promise((r) => setTimeout(r, 1500));
+    const out = await evaluate(`(${catalogReader.toString()})(${JSON.stringify(codes)}, ${JSON.stringify(term)})`);
+    if (out.exceptionDetails) throw new Failure(502, 'catalog', `La Oferta de cursos no respondió como se esperaba (${String(out.exceptionDetails.exception?.description ?? 'error').split('\n')[0]}).`);
+    const v = out.result?.value ?? {};
+    console.log(`  Listo: ${v.sections?.length ?? 0} secciones.`);
+    return { term: v.term ?? term, sections: Array.isArray(v.sections) ? v.sections : [], missing: Array.isArray(v.missing) ? v.missing : [], read: new Date().toISOString() };
+  } finally {
+    try { ws?.close(); } catch { /* gone */ }
+    try { child.kill(); } catch { /* gone */ }
+  }
+}
+
 /* ---------- the server ---------- */
 function readBody(req) {
   return new Promise((resolve, reject) => {
@@ -1173,6 +1294,11 @@ const server = createServer(async (req, res) => {
       let body = {};
       try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}'); } catch { /* the whole check */ }
       return send(res, 200, await inLane('claude', () => verifyAll(body)), ok);
+    }
+    if (req.method === 'POST' && pathname === '/v1/catalog') {
+      let body = {};
+      try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}'); } catch { throw new Failure(400, 'bad-request', 'El pedido no es JSON.'); }
+      return send(res, 200, await inLane('catalog', () => readCatalog(body)), ok);
     }
     if (req.method === 'POST' && pathname === '/v1/run') {
       let body;

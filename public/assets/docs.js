@@ -20,6 +20,7 @@ export const DOCS = [
       { text: 'Mientras trabaja, Studium solo le pregunta su avance para mostrártelo. La ventana de Claude Code, si la dejas activada, te muestra cada archivo que lee o cambia.' },
       { text: 'Tu IA no puede buscar en internet ni lanzar otros agentes, y solo abre páginas si trajiste enlaces (esos sitios). Fuera de su carpeta y de la que le prestaste, no toca nada; y ni ahí lee o cambia archivos de claves (.env, llaves, certificados, credenciales).' },
       { text: 'A Studium solo llega la guía escrita. Tu pedido y tus archivos van a la empresa de tu IA (Anthropic, con Claude Code), como cuando la usas tú.' },
+      { text: '«Leer con el puente» (Preparar mi inscripción): abre una ventana de Chrome o Edge propia, solo en la Oferta de cursos de la U. Ahí inicias sesión tú, con tu cuenta; la ventana guarda la sesión como cualquier navegador, en ~/.studium-bridge-catalogo. Luego pide a la Oferta, una materia a la vez y con una pausa, lo mismo que su botón «Actualizar Cursos», y cierra la ventana. Solo lee: no inscribe ni cambia nada. Studium le manda solo los códigos y el periodo, nunca código que ejecutar. Necesita Node 22 o más nuevo.', sel: '[data-ar-bridge]' },
     ],
     more: [
       'Guarda en tu computadora: ~/.studium-bridge.json (el código de enlace y las últimas 40 sesiones de Claude Code con su carpeta) y ~/.studium-bridge-results (las respuestas de los últimos 7 días, hasta 20, también lo que tu IA alcanzó a escribir si el pedido falló).',
@@ -53,7 +54,7 @@ export const DOCS = [
     id: 'instalar', group: 'Tu IA y tu computadora', title: 'Lo que necesitas instalar',
     lede: 'Para el puente: Node. Para escribir con tu suscripción: Claude Code. Para git y GitHub: Git y GitHub CLI.',
     steps: [
-      { text: 'Node 20 o más nuevo, para abrir el puente: nodejs.org.' },
+      { text: 'Node 20 o más nuevo, para abrir el puente (22 o más para leer la Oferta de cursos): nodejs.org.' },
       { text: 'Claude Code: en Windows, en PowerShell, «irm https://claude.ai/install.ps1 | iex»; en Mac o Linux, «curl -fsSL https://claude.ai/install.sh | bash». Después escribe «claude» e inicia sesión.' },
       { text: 'Git, si tu IA va a usar git en tu carpeta: git-scm.com. Después dile quién eres: «git config --global user.name» y «user.email», con el correo de tu GitHub.' },
       { text: 'GitHub CLI, si tu IA va a crear un repositorio o subir el trabajo: cli.github.com, y «gh auth login». Lo que sube sale a tu nombre.' },

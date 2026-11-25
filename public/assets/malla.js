@@ -28,13 +28,17 @@ export const myMalla = () => mallaOf(prefs.get().malla);
 export const norm = (code) => String(code ?? '').toUpperCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
 const base = (code) => norm(code).replace(/^([A-Z]+ \d{3,4})E$/, '$1');
 const passedSet = () => new Set(prefs.get().passed.map(base));
+// What the person is taking this semester (from their CAPP): it counts for next semester's prerequisites, as Banner
+// counts it (seen in his registration, 2026-11-25: Redes, in progress, did not block Aplicaciones Distribuidas).
+const doingSet = () => new Set((prefs.get().planner?.cursando ?? []).map(base));
+const has = (passed, code) => passed.has(base(code)) || doingSet().has(base(code));
 // Whether a prerequisite tree is met by what the person passed. The English exam (ESLEXO) is not something Studium
 // knows, so it never counts by itself.
 export function meets(tree, passed = passedSet()) {
   if (!tree) return true;
   if (tree.all) return tree.all.every((t) => meets(t, passed));
   if (tree.any) return tree.any.some((t) => meets(t, passed));
-  return tree.code !== 'ESLEXO' && passed.has(base(tree.code));
+  return tree.code !== 'ESLEXO' && has(passed, tree.code);
 }
 const GRADE = (g) => (/^[A-D]$/.test(g) ? ` con ${g} o más` : '');
 const one = (t) => (t.code === 'ESLEXO' ? 'tu examen de ubicación de inglés' : `${t.name || t.code} (${t.code})${GRADE(t.grade)}`);
@@ -81,6 +85,82 @@ export async function sameTermPrereqs(code, codes) {
   return out;
 }
 
+/* ---------- the CAPP: what the person passed and is taking, from the university's own record ---------- */
+// His registration (2026-11-25): he looked at his CAPP («Resultados de Evaluación CAPP», kardex-registro) three times,
+// and Studium knew only what he marked by hand. The person copies the CAPP page (Ctrl+A, Ctrl+C) and pastes it here.
+// Each row of the table: the malla's requirement («CMP 4005» or «ELECTIVA 2»), the course that fills it
+// («CMP - 4005»), its credits, the term and NRC; a row with no course («-») is still missing. A term from the current
+// one on is «cursando»; an earlier one, passed. No AI and nothing sent: the text is read here.
+const termNow = (d = new Date()) => { const y = d.getFullYear(); const m = d.getMonth() + 1; return m >= 8 ? `${y}10` : m <= 5 ? `${y - 1}20` : `${y - 1}30`; };
+export function parseCapp(text) {
+  const now = termNow();
+  const passed = new Set(); const doing = new Set(); const left = new Set();
+  for (const raw of String(text ?? '').replace(/\r/g, '').split('\n')) {
+    const line = raw.trim();
+    const req = line.match(/^([A-Z]{2,4})[ -]?(\d{4}[A-Z]?)\b/) ?? line.match(/^(ELECTIVA|OPT|HUM|ARTE|CCSS)\s*(\d?)(?=\s|$)/i);
+    if (!req) continue;
+    const code = norm(`${req[1]} ${req[2]}`.trim());
+    const used = line.match(/\b([A-Z]{2,4})\s+-\s+(\d{4}[A-Z]?)\b/);
+    const term = line.match(/\b(20\d{2}[1-3]0)\b/)?.[1];
+    if (!used || !term) { left.add(code); continue; }
+    const usedCode = norm(`${used[1]} ${used[2]}`);
+    const into = term >= now ? doing : passed;
+    into.add(code); if (usedCode !== code) into.add(usedCode);
+  }
+  return { passed: [...passed], doing: [...doing], missing: [...left].filter((c) => !passed.has(c) && !doing.has(c)) };
+}
+function cappBox() {
+  const doing = prefs.get().planner?.cursando ?? [];
+  return `<details class="mm-box mm-capp"><summary><h3>Traer mi CAPP <small>${doing.length ? `${doing.length} cursando` : ''}</small></h3></summary>
+    <p class="fine">Abre tu <a href="https://kardex-registro.usfq.edu.ec/" target="_blank" rel="noopener">evaluación CAPP ↗</a>, copia toda la página (Ctrl+A, Ctrl+C) y pégala aquí. Studium marca lo que aprobaste y lo que estás cursando, que cuenta como prerrequisito para el próximo semestre.</p>
+    <textarea data-capp rows="3" placeholder="Pega aquí tu CAPP"></textarea>
+    <div class="actions"><button class="button primary small" data-capp-read>Leer mi CAPP</button></div>
+    <p class="msg" data-capp-msg role="status"></p></details>`;
+}
+
+/* ---------- minors ---------- */
+// The minors USFQ publishes (tools/minors.mjs, from each minor's page and PDF). The person chooses up to three; their
+// classes are listed here and weigh in the planner. The PDF has the last word: the rules differ by minor.
+let minorsIndex = null;
+export const minors = () => (minorsIndex ??= fetch(new URL('data/minors/index.json', document.baseURI)).then((r) => (r.ok ? r.json() : { minors: [] })).catch(() => ({ minors: [] })));
+let minorList = [];
+export const myMinors = () => minorList.filter((m) => (prefs.get().planner?.minors ?? []).includes(m.id));
+export const inMyMinor = (code) => myMinors().find((m) => m.classes.some((c) => base(c.code) === base(code)));
+function minorBox() {
+  const mine = myMinors();
+  const chosen = new Set(mine.map((m) => m.id));
+  const short = (m) => m.name.replace(/^Minor en /, '');
+  return `<details class="mm-box mm-minors" ${mine.length ? 'open' : ''}><summary><h3>Tu minor <small>${mine.length || ''}</small></h3></summary>
+    ${mine.map((m) => `<div class="mm-minor"><p><b>${esc(short(m))}</b> <button class="link" data-minor-off="${esc(m.id)}">quitar</button></p>
+      <p class="fine">${[m.credits ? `${m.credits} créditos` : '', esc(m.audience)].filter(Boolean).join(' · ')}</p>
+      ${m.classes.length ? `<div class="mm-chips">${m.classes.map((c) => `<span class="mm-chip ${passedSet().has(base(c.code)) ? 'ok' : 'opens'}">${esc(c.name)} <small>${esc(c.code)}</small></span>`).join('')}</div>` : ''}
+      ${m.rules.length ? `<p class="fine">${m.rules.map(esc).join(' ')}</p>` : ''}
+      <p class="fine">${m.pdf ? `<a href="${esc(m.pdf)}" target="_blank" rel="noopener">Su malla en PDF ↗</a> · ` : ''}<a href="${esc(m.url)}" target="_blank" rel="noopener">Su página ↗</a>${m.classes.length ? '' : ' · Sus materias están en su página.'}</p></div>`).join('')}
+    ${mine.length < 3 && minorList.length ? `<label class="field"><span>${mine.length ? 'Otro minor' : 'Elige tu minor'}</span><select data-minor-add><option value="">…</option>${minorList.filter((m) => !chosen.has(m.id)).map((m) => `<option value="${esc(m.id)}">${esc(short(m))}</option>`).join('')}</select></label>` : ''}
+    <p class="fine">De la <a href="https://www.usfq.edu.ec/es/oferta-academica/minors" target="_blank" rel="noopener">página de minors de la U ↗</a>. Un minor pide de 15 a 18 créditos, la mitad en la USFQ.</p></details>`;
+}
+
+// For the planner: what the malla knows of each course (by code): its name, passed or in progress, whether its
+// prerequisites are met and what is missing, how many classes it opens, planned for next semester, a minor.
+export async function courseFacts(codes) {
+  const malla = await myMalla();
+  minorList = (await minors()).minors ?? [];
+  const passed = passedSet();
+  const out = new Map();
+  for (const code of codes) {
+    const c = malla && classOf(malla, code);
+    const minor = inMyMinor(code);
+    out.set(base(code), {
+      inMalla: !!c, name: c?.name ?? '', passed: passed.has(base(code)), doing: doingSet().has(base(code)),
+      met: !c?.pre || meets(c.pre), needs: c?.pre && !meets(c.pre) ? missing(c.pre, malla) : '',
+      opens: c ? opens(malla, c.code).length : 0, planned: planned().has(base(code)), minor: minor ? minor.name.replace(/^Minor en /, '') : '',
+    });
+  }
+  return out;
+}
+export const baseOf = (code) => base(code);
+export const plannedCodes = () => [...planned()];
+
 /* ---------- the page ---------- */
 // His words (2026-11-20): the career comes from the profile; mark what you took; see with colors, lines and animations
 // what you can take and what is still closed, and what is missing for it to open next semester; the malla recommends
@@ -102,8 +182,8 @@ const PRACTICUM = 75;
 const practicum = (c) => /^PAS /.test(c.code);
 // The capstone is for the last semester: it is never proposed as «puedes tomar ahora».
 const last = (c) => /proyecto integrador|trabajo de titulaci|tesis/i.test(c.name);
-const stateOf = (c, passed) => (passed.has(base(c.code)) ? 'passed' : meets(c.pre, passed) && !(practicum(c) && creditsDone < PRACTICUM) ? 'ready' : 'locked');
-const STATE = { passed: 'Aprobada', ready: 'Puedes tomarla', locked: 'Te falta algo' };
+const stateOf = (c, passed) => (passed.has(base(c.code)) ? 'passed' : doingSet().has(base(c.code)) ? 'doing' : meets(c.pre, passed) && !(practicum(c) && creditsDone < PRACTICUM) ? 'ready' : 'locked');
+const STATE = { passed: 'Aprobada', doing: 'La estás cursando', ready: 'Puedes tomarla', locked: 'Te falta algo' };
 const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.2 4.2L19 7"/></svg>';
 const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 let root = null;
@@ -147,7 +227,7 @@ function chips(tree, passed, malla, met = false) {
   if (tree.any) return `<span class="mm-any">${tree.any.map((t) => chips(t, passed, malla, met || meets(tree, passed))).join('<span class="mm-or">o</span>')}</span>`;
   if (tree.code === 'ESLEXO') return '<span class="mm-chip ext">Examen de ubicación de inglés</span>';
   const c = classOf(malla, tree.code);
-  const ok = passed.has(base(tree.code));
+  const ok = has(passed, tree.code);
   return `<button class="mm-chip ${ok ? 'ok' : met ? 'alt' : 'miss'}" ${c ? `data-mm="${esc(c.code)}"` : 'disabled'}>${ok ? '✓ ' : ''}${esc(c ? nameOf(c) : tree.name || tree.code)}${GRADE(tree.grade)}</button>`;
 }
 function detail(malla, passed) {
@@ -189,6 +269,8 @@ function side(malla, passed) {
     ${malla.notes?.length ? `<details class="mm-box mm-notes" open><summary><h3>Requisitos de tu carrera <small>${malla.notes.length}</small></h3></summary>
       <ul>${malla.notes.map((n) => `<li>${n.title ? `<b>${esc(n.title)}</b> ` : ''}${esc(n.text.replace(/^\*\s*/, ''))}</li>`).join('')}</ul>
       <p class="fine">Copiado de la <a href="${esc(malla.source.url)}" target="_blank" rel="noopener">malla publicada por la U ↗</a>.</p></details>` : ''}
+    ${cappBox()}
+    ${minorBox()}
     <section class="mm-box"><h3>Antes de inscribirte</h3><ul class="mm-links">
       <li><a href="#/guia-estudiante">Guía del estudiante: inglés, notas mínimas, inscripción y más</a></li>
       <li><a href="${OFFER_URL}" target="_blank" rel="noopener">Cursos y horarios disponibles ↗</a></li>
@@ -199,7 +281,7 @@ function side(malla, passed) {
 export async function renderMalla() {
   root = document.querySelector('#malla');
   if (!root) return;
-  const [list, malla] = await Promise.all([careers(), myMalla()]);
+  const [list, malla] = await Promise.all([careers(), myMalla(), minors().then((x) => { minorList = x.minors ?? []; })]);
   const p = prefs.get();
   if (!malla) {
     root.innerHTML = `<div class="malla-empty glass">
@@ -215,7 +297,7 @@ export async function renderMalla() {
   const cr = done.reduce((a, c) => a + c.credits, 0);
   creditsDone = cr;
   const pct = malla.total ? Math.min(100, Math.round((cr / malla.total) * 100)) : 0;
-  const counts = { passed: 0, ready: 0, locked: 0 };
+  const counts = { passed: 0, doing: 0, ready: 0, locked: 0 };
   for (const c of all(malla)) counts[stateOf(c, passed)] += 1;
   root.innerHTML = `
     <div class="mm-head">
@@ -223,7 +305,7 @@ export async function renderMalla() {
         <p class="muted">${esc(title(malla.name))} · <a href="#/ajustes">cambiar en tu perfil</a></p></div>
       <div class="mm-ring" style="--mmp:${pct}"><b>${pct}%</b><small>${cr} de ${malla.total} créditos</small></div>
     </div>
-    <div class="mm-legend"><span class="mm-dot passed"></span>Aprobadas ${counts.passed}<span class="mm-dot ready"></span>Puedes tomarlas ${counts.ready}<span class="mm-dot locked"></span>Te falta algo ${counts.locked}
+    <div class="mm-legend"><span class="mm-dot passed"></span>Aprobadas ${counts.passed}${counts.doing ? `<span class="mm-dot doing"></span>Cursando ${counts.doing}` : ''}<span class="mm-dot ready"></span>Puedes tomarlas ${counts.ready}<span class="mm-dot locked"></span>Te falta algo ${counts.locked}
       <span class="fine">Cada materia está en el semestre que la U recomienda; lo que decide si puedes tomarla son sus prerrequisitos.</span></div>
     <div class="mm-body">
       <div class="mm-map">
@@ -266,7 +348,7 @@ function drawLines(malla) {
   for (const code of codes(c.pre)) {
     const el = at(classOf(malla, code)?.code ?? '');
     if (!el) continue;
-    const kind = passed.has(base(code)) ? 'ok' : met ? 'alt' : 'miss';
+    const kind = has(passed, code) ? 'ok' : met ? 'alt' : 'miss';
     line(center(el), m, kind);
     if (kind !== 'alt') el.classList.add(kind === 'ok' ? 'is-req' : 'is-miss');
   }
@@ -288,6 +370,30 @@ export function mountMalla() {
     const label = e.target.selectedOptions[0]?.textContent ?? '';
     prefs.set({ malla: code, ...(code ? { career: label.split(' · ')[0].slice(0, 80) } : {}) });
     if (e.target.closest('#malla')) renderMalla();
+  });
+  document.addEventListener('change', (e) => {
+    const sel = e.target.closest?.('[data-minor-add]');
+    if (!sel || !sel.closest('#malla') || !sel.value) return;
+    const pl = prefs.get().planner ?? {};
+    prefs.set({ planner: { ...pl, minors: [...(pl.minors ?? []), sel.value].slice(0, 3) } });
+    sfx.tick?.(); renderMalla();
+  });
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest?.('[data-minor-off],[data-capp-read]');
+    if (!t || !t.closest('#malla')) return;
+    const pl = prefs.get().planner ?? {};
+    if (t.dataset.minorOff !== undefined) { prefs.set({ planner: { ...pl, minors: (pl.minors ?? []).filter((x) => x !== t.dataset.minorOff) } }); renderMalla(); return; }
+    const box = t.closest('.mm-capp');
+    const r = parseCapp(box.querySelector('[data-capp]').value);
+    const msg = box.querySelector('[data-capp-msg]');
+    if (!r.passed.length && !r.doing.length) { msg.textContent = 'No reconocí tu CAPP en ese texto. Copia toda la página de «Resultados de Evaluación CAPP» y pégala aquí.'; return; }
+    const now = new Set(prefs.get().passed.map(norm));
+    for (const c of r.passed) now.add(norm(c));
+    for (const c of r.doing) now.delete(norm(c));
+    const touched = new Set([...r.passed, ...r.doing].map(base));
+    prefs.set({ passed: [...now].slice(0, 150), planner: { ...pl, cursando: r.doing.slice(0, 40) }, plan: (prefs.get().plan ?? []).filter((x) => !touched.has(x)) });
+    sfx.tick?.();
+    renderMalla().then(() => { const m = root?.querySelector('[data-capp-msg]'); if (m) { m.closest('details').open = true; m.textContent = `Listo: ${r.passed.length} aprobadas y ${r.doing.length} cursando, según tu CAPP.`; } });
   });
   document.addEventListener('click', async (e) => {
     const t = e.target.closest?.('[data-mm],[data-mm-pass],[data-mm-plan],[data-mm-prep],[data-malla-sem]');

@@ -510,7 +510,7 @@ export async function findBridge(port = BRIDGE_PORT) {
 }
 // The bridge's version this page expects (bridge.mjs, VERSION): an older one is downloaded again.
 // The newest bridge; the page needs at least BRIDGE_NEEDS (an older one is downloaded again). 1.12.0 only adds /v1/tools.
-export const BRIDGE_VERSION = '1.12.0';
+export const BRIDGE_VERSION = '1.13.0';
 const BRIDGE_NEEDS = '1.11.0';
 // «Ver a mi IA en una terminal»: the bridge opens a window that shows the exact instructions and, live, what the AI
 // does. Chosen by the person, kept in this browser.
@@ -625,6 +625,15 @@ export const bridgeAtLeast = (min) => atLeast(bridgeOf()?.version, min);
 export async function bridgeTools() {
   if (!atLeast(bridgeOf()?.version, '1.12.0')) return { unknown: true };
   return bridgeFetch('/v1/tools');
+}
+// Every section of the courses asked, read from the «Oferta de cursos» by the bridge (1.13.0, /v1/catalog): it opens a
+// Chrome window of its own, where the person signs in with their USFQ account the first time, and reads one course at
+// a time. Only reads; the person sees the window. { term, sections, missing }.
+export async function bridgeCatalog(codes, term = '') {
+  const hello = await findBridge(bridgeOf()?.port);
+  if (!hello) throw new AIError('El puente no está abierto. Ábrelo en tu computadora y vuelve a intentarlo.', { kind: 'account', way: 'bridge:claude' });
+  if (!atLeast(hello.version, '1.13.0')) throw new AIError(`Tu puente es la versión ${hello.version ?? 'anterior'}: para leer la oferta necesitas la ${BRIDGE_VERSION}. Ciérralo, descárgalo de nuevo desde Ajustes y ábrelo otra vez.`, { kind: 'account', way: 'bridge:claude' });
+  return bridgeFetch('/v1/catalog', { method: 'POST', body: JSON.stringify({ codes, term }) });
 }
 // The person's own folders where the bridge may work, each with its permission (bridge.mjs, «the person's own
 // folders»). A folder is added only through the computer's own dialog; the page never names a path.

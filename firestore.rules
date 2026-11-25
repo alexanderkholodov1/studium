@@ -160,7 +160,7 @@ service cloud.firestore {
     // The person's own space.
     function profile(d) {
       return d.keys().hasOnly(['nickname', 'name', 'career', 'semester', 'mode', 'ambience', 'sound', 'theme', 'lang', 'avatar',
-          'goals', 'progress', 'deadlines', 'todos', 'plan', 'tiles', 'notes', 'links', 'focus', 'bubbles', 'courses', 'interests', 'known', 'malla', 'passed', 'updated'])
+          'goals', 'progress', 'deadlines', 'todos', 'plan', 'tiles', 'notes', 'links', 'focus', 'bubbles', 'courses', 'interests', 'known', 'malla', 'passed', 'planner', 'updated'])
         && optional(d, 'nickname', 40) && optional(d, 'name', 60) && optional(d, 'career', 80)
         && (!('lang' in d) || d.lang in ['es', 'en'])
         && (!('avatar' in d) || d.avatar in ['blue', 'red', 'teal', 'butter', 'sky', 'peach'])
@@ -189,6 +189,13 @@ service cloud.firestore {
         // «Mi malla»: the career's code and the classes marked as passed.
         && (!('malla' in d) || (d.malla is string && d.malla.matches('[0-9A-Z]{0,8}')))
         && (!('passed' in d) || (d.passed is list && d.passed.size() <= 150))
+        // The enrollment planner: in progress (from the CAPP), minors, each course's weight, own say on professors.
+        && (!('planner' in d) || (d.planner is map && d.planner.keys().hasOnly(['cursando', 'minors', 'prio', 'profs', 'comfort'])
+          && (!('cursando' in d.planner) || (d.planner.cursando is list && d.planner.cursando.size() <= 40))
+          && (!('minors' in d.planner) || (d.planner.minors is list && d.planner.minors.size() <= 3))
+          && (!('prio' in d.planner) || (d.planner.prio is map && d.planner.prio.size() <= 60))
+          && (!('profs' in d.planner) || (d.planner.profs is map && d.planner.profs.size() <= 120))
+          && (!('comfort' in d.planner) || (d.planner.comfort is map && d.planner.comfort.keys().hasOnly(['max', 'start', 'prefer'])))))
         && d.updated == request.time;
     }
     match /profiles/{uid} {

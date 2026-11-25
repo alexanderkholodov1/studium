@@ -20,7 +20,7 @@ export const THEMES = { auto: 'Como tu sistema', light: 'Día', dark: 'Noche' };
 export const AVATARS = ['blue', 'red', 'teal', 'butter', 'sky', 'peach'];
 const LANG = /^en\b/i.test(globalThis.navigator?.language ?? '') ? 'en' : 'es';
 const DEFAULTS = { mode: 'examenes', ambience: 'vivo', sound: false, theme: 'auto', lang: LANG, avatar: 'blue', semester: 0, career: '', nickname: '', name: '', goals: [], progress: {},
-  deadlines: [], todos: [], tiles: [], notes: '', links: [], focus: { study: 25, rest: 5 }, bubbles: false, courses: [], interests: [], known: [], malla: '', passed: [], plan: [] };
+  deadlines: [], todos: [], tiles: [], notes: '', links: [], focus: { study: 25, rest: 5 }, bubbles: false, courses: [], interests: [], known: [], malla: '', passed: [], plan: [], planner: {} };
 // The tiles the home page can show (space.js draws them).
 const TILE_IDS = ['shelf', 'decor', 'schedule', 'todos', 'countdown', 'deadlines', 'week', 'goals', 'timer', 'notes', 'links', 'recent', 'news', 'explore', 'grade'];
 // The kinds of a dated event (Fechas y entregas, the month of «Mi horario»).
@@ -89,6 +89,20 @@ const clean = (p) => {
   out.passed = keys(out.passed, 150, /^[A-Z]{2,9}( [0-9]{1,4}[A-Z]?)?$/);
   // What the person plans to take next semester, from «Mi malla» (up to 12 classes).
   out.plan = keys(out.plan, 12, /^[A-Z]{2,9}( [0-9]{1,4}[A-Z]?)?$/);
+  // The planner (Preparar mi inscripción): what the CAPP says is in progress, the minors chosen, how much each course
+  // matters to the person (0 no, 1 si cabe, 2 me gustaría, 3 imprescindible), their own say on professors (1 sí, -1
+  // mejor no; never shown to anyone), and their comfort (most credits, earliest hour, fewer days or fewer gaps).
+  const pl = out.planner && typeof out.planner === 'object' ? out.planner : {};
+  const code = /^[A-Z]{2,9}( [0-9]{1,4}[A-Z]?)?$/;
+  const entries = (o, max, k, v) => Object.fromEntries(Object.entries(o && typeof o === 'object' ? o : {}).filter(([a, b]) => k.test(a) && v(b)).slice(0, max));
+  const cf = pl.comfort && typeof pl.comfort === 'object' ? pl.comfort : {};
+  out.planner = {
+    cursando: keys(pl.cursando, 40, code),
+    minors: keys(pl.minors, 3, /^[a-z0-9-]{2,80}$/),
+    prio: entries(pl.prio, 60, code, (b) => [0, 1, 2, 3].includes(b)),
+    profs: entries(pl.profs, 120, /^[a-z0-9 ]{3,80}$/, (b) => b === 1 || b === -1),
+    comfort: { max: range(cf.max, 6, 22, 16), start: range(cf.start, 420, 1050, 420), prefer: ['dias', 'huecos', ''].includes(cf.prefer) ? cf.prefer : '' },
+  };
   out.progress = Object.fromEntries(Object.entries(out.progress && typeof out.progress === 'object' ? out.progress : {})
     .filter(([, v]) => v === 'reading' || v === 'done').slice(0, 300));
   return out;

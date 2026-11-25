@@ -12,6 +12,7 @@ import { sfx } from './sfx.js';
 import { prefs, EVENT_KINDS } from './prefs.js';
 import { parseOffer, termName, linked, codesOf } from './offer.js';
 import { prereqNote, norm, sameTermPrereqs } from './malla.js';
+import { armarPanel, armarClick, armarChange, addToPool, fromPaste } from './armar.js';
 import { dayStatus, classesThisWeek, weekOff, longDay, iso, TERMS, finalFor, examTable, keepOwnTable } from './calendario.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -445,7 +446,7 @@ function paint() {
     </div>
   </div>
   <div class="sched-body">${week(o)}${side(o)}</div>
-  ${pastePanel()}${pickerPanel()}${askCard()}`;
+  ${pastePanel()}${pickerPanel()}${armarPanel(armarCtx)}${askCard()}`;
   paintWhere();
   const box = $('.sched-empty [data-transcribe]', root);
   if (box) mountTranscribe(box);
@@ -671,15 +672,43 @@ function answer(how) {
   if (a.kind === 'clash' && how === 'draft') { draftDialog(cls, a.with); return; }
   paint();
 }
+// «Ármalo por mí» (armar.js) works on this page: it draws itself here and creates drafts here.
+const armarCtx = {
+  paint: () => paint(), root: () => root,
+  closedToMe: (s) => !!s.excluded?.length && semesterIn(s.excluded),
+  addDraft(name, sections, term) {
+    // «Plan A» again replaces the old «Plan A»; otherwise an empty draft; otherwise a new one (the last, when six).
+    const colorOf = new Map();
+    const classes = sections.map((x) => { if (!colorOf.has(x.code)) colorOf.set(x.code, COLORS[colorOf.size % COLORS.length]); return { ...cleanClass(x, 0), color: colorOf.get(x.code) }; });
+    const draft = { id: rid(), name: text(name, 24), classes };
+    const same = state.options.findIndex((o) => o.name === draft.name);
+    const empty = state.options.findIndex((o) => !o.classes.length);
+    const at = same >= 0 ? same : empty >= 0 ? empty : state.options.length < MAX_OPTIONS ? state.options.length : MAX_OPTIONS - 1;
+    state.options[at] = draft;
+    state.active = state.options.indexOf(draft);
+    if (term) state.term = term;
+    asks = []; save();
+  },
+};
 function pasteAdd() {
   const box = $('[data-paste]', root);
+  // What the bookmark (or the bridge) read: every section of several courses, for «Ármalo por mí».
+  const read = fromPaste(box.value);
+  if (read) {
+    const n = addToPool(read.term, read.sections, read.read);
+    if (read.term) state.term = read.term;
+    box.value = '';
+    note = `Leídas ${read.sections.length} secciones de ${n} ${n === 1 ? 'materia' : 'materias'}${read.missing.length ? ` (sin resultados: ${esc(read.missing.join(', '))})` : ''}. Abajo, en «Ármalo por mí», dime qué tanto te importa cada una.`;
+    save(); paint(); sfx.chime?.();
+    return;
+  }
   const { term, sections } = parseOffer(box.value);
   if (!sections.length) {
     note = box.value.trim() ? 'No reconocí una clase de la Oferta de cursos en ese texto. Para otra cosa, usa «desde una captura o un archivo».' : 'Copia en la Oferta de cursos una clase, o toda la búsqueda, y pégala aquí.';
     paint(); return;
   }
   if (term) state.term = term;
-  if (sections.length === 1) { catalog = []; addCandidate(sections[0]); } else { catalog = sections; note = ''; }
+  if (sections.length === 1) { catalog = []; addCandidate(sections[0]); } else { catalog = sections; note = ''; addToPool(term, sections); }
   save(); paint();
 }
 // A new draft around a class: with nothing else, with what does not clash, or with what the person picks.
@@ -981,8 +1010,11 @@ export function mountSchedule() {
   addEventListener('resize', () => { clearTimeout(fitWeek.t); fitWeek.t = setTimeout(fitWeek, 150); });
   document.addEventListener('click', (e) => {
     if (!root || !root.contains(e.target)) return;
+    const bm = e.target.closest('[data-ar-bookmark]');
+    if (bm) { e.preventDefault(); armarClick(bm); return; }
     const b = e.target.closest('button');
     if (!b || b.disabled || b.closest('[data-transcribe]')) return;
+    if (b.closest('[data-armar]')) { armarClick(b); return; }
     b.closest('details')?.removeAttribute('open');
     const d = b.dataset;
     if (d.month !== undefined) { const n = Number(d.month); const t = new Date(); monthAt = n ? new Date(monthAt.getFullYear(), monthAt.getMonth() + n, 1) : new Date(t.getFullYear(), t.getMonth(), 1); paint(); $('#sched-month', root)?.scrollIntoView({ block: 'nearest' }); return; }
@@ -1012,6 +1044,7 @@ export function mountSchedule() {
     if (d.edit) classDialog(d.edit);
   });
   document.addEventListener('change', (e) => {
+    if (root?.contains(e.target) && e.target.closest?.('[data-armar]')) { armarChange(e.target); return; }
     const input = e.target.closest?.('[data-finals-file]');
     if (!input || !root?.contains(input) || !input.files[0]) return;
     transcribeFinals(input.files[0], input.closest('[data-finals-up]'));
