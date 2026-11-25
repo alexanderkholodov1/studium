@@ -11,6 +11,7 @@ import { sfx } from './sfx.js';
 import { celebrate, wearCostume } from './play.js';
 import { themeStyle, keyOf } from './themes.js';
 import { rise } from './fx.js';
+import { infoButton } from './docs.js';
 import { auth } from './data.js';
 import { communityLabel, communityOf, flag, settings } from './settings.js';
 import { seen, markSeen, unmarkSeen, hintsOn, setHints } from './hints.js';
@@ -828,7 +829,7 @@ function bridgeAdvanced() {
   const b = ai.bridgeOf();
   const engines = b?.engines ?? [];
   const names = { claude: 'Claude Code', codex: 'Codex', antigravity: 'Antigravity' };
-  return `<details class="ai-advanced" ${b?.token ? 'open' : ''}><summary>El puente: para usar tu suscripción automáticamente</summary>
+  return `<details class="ai-advanced" ${b?.token ? 'open' : ''}><summary>El puente: para usar tu suscripción automáticamente ${infoButton('puente', '¿Qué hace exactamente el puente?')}</summary>
     <div class="ai-bridge">
       <p><b>Qué es.</b> Un programa pequeño que corre en tu computadora mientras lo tienes abierto. Conecta Studium con Claude Code, Codex o Antigravity, si ya los tienes instalados con tu sesión iniciada, para usar tu suscripción sin pagar por uso.</p>
       <ul>
@@ -874,7 +875,7 @@ function bridgeLiveHTML() {
     code: ['bad', 'El puente responde, pero con otro código de enlace', 'Pulsa «Desenlazar» y enlázalo con el código que muestra ahora su terminal.'],
     noclaude: ['bad', 'El puente responde, pero Claude Code no está listo', `${esc(L.detail || 'No lo encontró o no tiene una sesión iniciada.')}${claudeInstallHTML()}`],
   }[L.state] ?? ['wait', 'Comprobando si el puente responde…', ''];
-  return `<div class="bridge-live ${say[0]}" data-ai-live role="status"><p><b>${say[1]}</b></p>${say[2] ? `<p class="fine">${say[2]}</p><p class="fine">Studium lo vuelve a comprobar solo cada pocos segundos. <button type="button" class="link" data-ai-live-check>Comprobar ahora</button></p>` : ''}</div>`;
+  return `<div class="bridge-live ${say[0]}" data-ai-live role="status"><p><b>${say[1]}</b> ${infoButton('puente', '¿Qué hace exactamente el puente?')}</p>${say[2] ? `<p class="fine">${say[2]}</p><p class="fine">Studium lo vuelve a comprobar solo cada pocos segundos. <button type="button" class="link" data-ai-live-check>Comprobar ahora</button></p>` : ''}</div>`;
 }
 let settingsBridgeTimer = null;
 function watchSettingsBridge() {
@@ -898,7 +899,7 @@ export function claudeInstallHTML() {
   const cmd = (c) => `<code class="no-i18n">${esc(c)}</code> <button type="button" class="link" data-ai-copy="${esc(c)}">copiar</button>`;
   const ps = 'irm https://claude.ai/install.ps1 | iex';
   const sh = 'curl -fsSL https://claude.ai/install.sh | bash';
-  return `<ol class="fine"><li>Instala Claude Code: en ${win ? 'PowerShell' : 'una terminal'}, ${cmd(win ? ps : sh)} <small>(${win ? `en Mac o Linux: <code class="no-i18n">${esc(sh)}</code>` : `en Windows, en PowerShell: <code class="no-i18n">${esc(ps)}</code>`}; <a href="https://code.claude.com/docs/en/setup" target="_blank" rel="noopener noreferrer">otras formas</a>)</small></li>
+  return `<ol class="fine"><li>${infoButton('instalar')} Instala Claude Code: en ${win ? 'PowerShell' : 'una terminal'}, ${cmd(win ? ps : sh)} <small>(${win ? `en Mac o Linux: <code class="no-i18n">${esc(sh)}</code>` : `en Windows, en PowerShell: <code class="no-i18n">${esc(ps)}</code>`}; <a href="https://code.claude.com/docs/en/setup" target="_blank" rel="noopener noreferrer">otras formas</a>)</small></li>
     <li>Escribe ${cmd('claude')} e inicia sesión con tu cuenta de Claude (Pro o Max) en el navegador que se abre.</li>
     <li>Cierra el puente (Ctrl+C) y ábrelo otra vez, para que lo encuentre.</li></ol>`;
 }
@@ -930,7 +931,7 @@ async function fillTools(box) {
     else rows.push(`<li>✓ GitHub CLI ${esc(t.gh.version)}, con la sesión de <b>${esc(t.gh.user || 'tu cuenta')}</b>: lo que suba tu IA sale a ese nombre.</li>`);
   }
   box.className = `bridge-live ${ok ? 'ok' : 'bad'}`;
-  box.innerHTML = `<p><b>${ok ? `Git${need === 'github' ? ' y GitHub' : ''} listos en tu computadora` : `Falta configurar Git${need === 'github' ? ' o GitHub' : ''} en tu computadora`}</b></p><ul class="fine tools-list">${rows.join('')}</ul>${ok ? '' : again}`;
+  box.innerHTML = `<p>${infoButton('instalar')} <b>${ok ? `Git${need === 'github' ? ' y GitHub' : ''} listos en tu computadora` : `Falta configurar Git${need === 'github' ? ' o GitHub' : ''} en tu computadora`}</b></p><ul class="fine tools-list">${rows.join('')}</ul>${ok ? '' : again}`;
 }
 if (typeof document !== 'undefined') document.addEventListener('click', (e) => { const b = e.target.closest?.('[data-tools-check]'); const box = b?.closest('[data-tools-box]'); if (box) { box.innerHTML = '<p><b>Comprobando…</b></p>'; fillTools(box); } });
 // How to open and pair the bridge, step by step; also used by «Trabajos» (trabajos.js).
@@ -949,7 +950,7 @@ function aiSettings() {
   const now = ai.connected();
   const v = shownVendor();
   const c = now.length ? ai.choice('guide') : null;
-  return `<section class="set glass" id="set-ai"><h2>Tu IA</h2>
+  return `<section class="set glass" id="set-ai"><h2>Tu IA ${infoButton('ia')}</h2>
     <p class="ai-lede">Studium usa una IA para leer tus archivos, tu horario y crear guías. Tú eliges cuál. <strong>Studium no cobra nada.</strong></p>
     <div class="ai-now ${now.length ? 'on' : ''}">${c ? `Ahora Studium usa <b>${esc(ai.WAYS[c.provider]?.name ?? c.provider)}</b>, con el modelo adecuado para cada tarea. Hoy: ${count(ai.usageToday(c.provider), 'pedido', 'pedidos')}.${c.provider.startsWith('bridge:') && !now.includes(c.provider) ? ' <b>Pero el puente no responde ahora</b>: abajo, en «El puente», dice qué falta.' : ''}`
       : 'Todavía no conectaste ninguna. <b>Para empezar, Gemini es gratis y toma un minuto.</b> Si usas ChatGPT o Claude, también sirven.'}</div>

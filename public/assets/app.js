@@ -33,6 +33,7 @@ import { mountHints } from './hints.js';
 import { mountEggs } from './eggs.js';
 import { mountTour, offerTour } from './tour.js';
 import { renderNews, newsOnce } from './news.js';
+import { renderDocs } from './docs.js';
 import { VERSION } from './config.js';
 import { watchUpdates } from './update.js';
 import { markWip, markBeta, BETA } from './wip.js';
@@ -122,9 +123,9 @@ document.addEventListener('click', (e) => {
 });
 
 /* ---------- views ---------- */
-const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'horario', 'malla', 'student', 'catalog', 'map', 'library', 'profes', 'contribute', 'comunidad', 'trabajos', 'trabajo', 'estudio', 'settings', 'about', 'news', 'sources', 'guide', 'admin'];
-const TABS = { home: 'home', horario: 'home', malla: 'home', catalog: 'contribute', comunidad: 'comunidad', trabajos: 'trabajos', trabajo: 'trabajos', estudio: 'contribute', map: 'map', library: 'map', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', news: 'about', admin: 'admin' };
-const PUBLIC = ['landing', 'auth', 'about', 'news', 'denied', 'verify'];
+const VIEWS = ['boot', 'landing', 'auth', 'verify', 'denied', 'home', 'horario', 'malla', 'student', 'catalog', 'map', 'library', 'profes', 'contribute', 'comunidad', 'trabajos', 'trabajo', 'estudio', 'settings', 'about', 'news', 'docs', 'sources', 'guide', 'admin'];
+const TABS = { home: 'home', horario: 'home', malla: 'home', catalog: 'contribute', comunidad: 'comunidad', trabajos: 'trabajos', trabajo: 'trabajos', estudio: 'contribute', map: 'map', library: 'map', profes: 'profes', contribute: 'contribute', landing: 'landing', about: 'about', news: 'about', docs: 'about', admin: 'admin' };
+const PUBLIC = ['landing', 'auth', 'about', 'news', 'docs', 'denied', 'verify'];
 let current = 'boot';
 function show(view) {
   const swap = () => {
@@ -134,7 +135,7 @@ function show(view) {
     const nav = $('#nav');
     nav.dataset.mode = member ? 'member' : 'public';
     nav.hidden = view === 'boot' || view === 'guide' || view === 'trabajo';
-    $('#tabbar').hidden = !member || PUBLIC.includes(view) && !['about', 'news'].includes(view) || view === 'guide' || view === 'trabajo' || view === 'boot';
+    $('#tabbar').hidden = !member || PUBLIC.includes(view) && !['about', 'news', 'docs'].includes(view) || view === 'guide' || view === 'trabajo' || view === 'boot';
     $('#foot').hidden = ['guide', 'trabajo', 'map', 'boot'].includes(view);
     const quiet = view === 'map' || view === 'guide' || view === 'trabajo';
     root.classList.toggle('quiet', quiet);
@@ -480,6 +481,7 @@ async function route() {
     if (page === 'entrar') { document.title = `${t('Entrar')} · Studium`; show('auth'); }
     else if (page === 'acerca') { document.title = `${t('Acerca')} · Studium`; show('about'); }
     else if (page === 'novedades') { document.title = 'Novedades · Studium'; show('news'); renderNews($('#news')); }
+    else if (page === 'como-funciona') { document.title = 'Cómo funciona · Studium'; show('docs'); renderDocs($('#docs-page'), arg[0]); }
     else if (!page || page === 'bienvenida') show('landing');
     // A link to something inside: sign in first, then go there.
     else { pending = location.hash; show('auth'); }
@@ -549,6 +551,7 @@ async function route() {
       ajustes: ['settings', 'Ajustes', renderSettings],
       acerca: ['about', 'Acerca', null],
       novedades: ['news', 'Novedades', () => renderNews($('#news'))],
+      'como-funciona': ['docs', 'Cómo funciona', () => renderDocs($('#docs-page'), arg[0])],
       // Guías: the person's own study guides on top («Tus guías»), then everyone's.
       // Guías de la comunidad (the person's own study guides live in Estudiar, as Trabajos keeps its own).
       guias: ['catalog', 'Guías', renderCatalog],

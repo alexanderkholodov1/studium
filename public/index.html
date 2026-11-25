@@ -88,6 +88,7 @@
       <a role="menuitem" href="#/guia-estudiante">Guía del estudiante</a>
       <a role="menuitem" href="#/mis-aportes">Lo que subiste</a>
       <a role="menuitem" href="#/ajustes">Ajustes</a>
+      <a role="menuitem" href="#/como-funciona">Cómo funciona</a>
       <a role="menuitem" href="#/acerca">Acerca de Studium</a>
       <button role="menuitem" id="sign-out">Salir</button>
     </div>
@@ -607,7 +608,7 @@
         <p>Pueden ocultar o borrar lo que se publicó para todos, restaurar una versión guardada exactamente como era, y leer el feedback. Lo que marcas «Solo yo» les aparece cerrado: solo lo leen si prenden «Ver lo privado», y eso queda registrado. No pueden leer tus claves, tu horario, tu perfil ni tus borradores. Cada acción del panel queda registrada.</p></details>
     </div>
   </section>
-  <p class="about-news"><a class="button ghost" href="#/novedades">Novedades: lo que trae cada versión</a></p>
+  <p class="about-news"><a class="button ghost" href="#/novedades">Novedades: lo que trae cada versión</a> <a class="button ghost" href="#/como-funciona">Cómo funciona cada parte</a></p>
   <section class="credits" id="creditos">
     <h2>Créditos</h2>
     <p>La música de la radio que Studium genera, sus sonidos y sus dibujos son originales. Tres estaciones son homenajes: reproducen la grabación oficial desde el canal de sus dueños en YouTube, con su reproductor; Studium no guarda ni copia esa música, y no gana nada con ella.</p>
@@ -624,6 +625,11 @@
 <main class="view page" id="view-news" hidden>
   <div class="page-head"><h1>Novedades</h1></div>
   <div id="news"></div>
+</main>
+
+<main class="view page" id="view-docs" hidden>
+  <div class="page-head"><h1>Cómo funciona</h1></div>
+  <div id="docs-page"></div>
 </main>
 
 <main class="view page" id="view-sources" hidden>
@@ -679,7 +685,7 @@
 <div class="toast glass" id="toast" role="status" hidden></div>
 <!-- A message from the admins to every member (settings/app) -->
 <div class="announce" id="announce" role="status" hidden><p id="announce-text"></p><button class="icon" id="announce-close" aria-label="Cerrar el anuncio"><svg><use href="#i-x"/></svg></button></div>
-<footer class="foot" id="foot"><span>Studium, hecho por estudiantes para estudiantes.</span><a href="#/acerca">Acerca</a><a href="#/novedades" id="foot-version">Novedades</a></footer>
+<footer class="foot" id="foot"><span>Studium, hecho por estudiantes para estudiantes.</span><a href="#/acerca">Acerca</a><a href="#/como-funciona">Cómo funciona</a><a href="#/novedades" id="foot-version">Novedades</a></footer>
 <script type="module" src="/studium/assets/app.js"></script>
 <button type="button" class="fb-fab" data-feedback="comentario" aria-label="Feedback: cuéntame un error, una idea o lo que quieras"><span aria-hidden="true">💬</span><span class="fb-fab-label">Feedback</span></button>
 </body>

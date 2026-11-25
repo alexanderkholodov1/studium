@@ -101,7 +101,7 @@ function onKey(e) {
 function place() {
   if (!tour) return;
   const { root } = tour; const step = tour.steps[tour.i];
-  const el = document.querySelector(step.sel);
+  const el = step.el ?? document.querySelector(step.sel);
   const hole = root.querySelector('.tour-hole'); const card = root.querySelector('.tour-card');
   const r = el.getBoundingClientRect(); const pad = 8;
   Object.assign(hole.style, { left: `${r.left - pad}px`, top: `${r.top - pad}px`, width: `${r.width + pad * 2}px`, height: `${r.height + pad * 2}px` });
@@ -119,7 +119,7 @@ function go(i) {
   if (i >= tour.steps.length) { close(); return; }
   tour.i = i;
   const step = tour.steps[i];
-  const el = document.querySelector(step.sel);
+  const el = step.el ?? document.querySelector(step.sel);
   el.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   const card = tour.root.querySelector('.tour-card');
   card.querySelector('.tour-text').textContent = step.text;
@@ -136,18 +136,25 @@ function go(i) {
   setTimeout(place, 420); // after the smooth scroll
 }
 export function startTour(kind = 'section') {
-  if (tour) { tour.root.remove(); tour = null; specter.comeBack(); }
   const list = kind === 'general' ? GENERAL : SECTIONS[currentView()] ?? GENERAL;
-  const steps = list.filter((s) => visible(document.querySelector(s.sel)));
+  begin(list.filter((s) => visible(document.querySelector(s.sel))));
+}
+// Specter explains one thing step by step (the ⓘ beside a control; docs.js): each step lights up the thing it talks
+// about (its selector, or the place of the ⓘ), and the card links to the whole entry in «Cómo funciona».
+export function explainTour(steps, { at = null, more = '' } = {}) {
+  begin(steps.map((x) => ({ ...x, el: (x.sel && [...document.querySelectorAll(x.sel)].find(visible)) || at })).filter((x) => visible(x.el)), { label: 'Specter te lo explica', more });
+}
+function begin(steps, { label = 'Recorrido con Specter', more = '' } = {}) {
+  if (tour) { tour.root.remove(); tour = null; specter.comeBack(); }
   if (!steps.length) return;
   const root = document.createElement('div');
   root.className = 'tour';
   root.innerHTML = `<div class="tour-hole"></div>
-    <section class="tour-card" role="dialog" aria-label="Recorrido con Specter">
+    <section class="tour-card" role="dialog" aria-label="${label}">
       <canvas class="prop tour-specter" data-prop="specter" data-skin="${specterSkin()}" aria-hidden="true"></canvas>
       <div class="tour-body"><p class="tour-text" aria-live="polite"></p>
         <div class="tour-actions"><span class="tour-count"></span><button type="button" class="button ghost small" data-tour-prev>Anterior</button><button type="button" class="button primary small" data-tour-next>Siguiente</button></div>
-        <button type="button" class="link tour-close" data-tour-close>Salir del recorrido</button></div>
+        <button type="button" class="link tour-close" data-tour-close>${more ? 'Cerrar' : 'Salir del recorrido'}</button>${more ? ` <a class="link tour-more" href="${more}" target="_blank" rel="noopener" data-tour-close>Leerlo todo en «Cómo funciona»</a>` : ''}</div>
     </section>`;
   document.body.append(root);
   tour = { steps, i: 0, root };

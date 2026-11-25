@@ -20,6 +20,7 @@ import { LETTERS, outlinePrompt as tjOutline, milestonePrompt as tjMilestone, wh
 import * as EP from './estudio-prompts.js';
 import { escenaHTML, escenaShow, cleanEscena } from './escena.js';
 import { prefs } from './prefs.js';
+import { infoButton } from './docs.js';
 
 // «Estudiar» uses this same engine for a study guide (his decision, 2026-11-23): a trabajo whose prefs say
 // kind «estudio», for one person, written from their material for one evaluation. Its own questions, its own
@@ -599,7 +600,7 @@ function collectOpen() {
   const box = document.createElement('div');
   box.className = 'tj-adjpop tj-collectpop';
   box.innerHTML = `<div class="tj-adjcard" role="dialog" aria-label="Recoger lo que hizo tu IA">
-      <h4>Recoger lo que hizo tu IA</h4>
+      <h4>Recoger lo que hizo tu IA ${infoButton('recoger')}</h4>
       <p class="fine">Lo que tu IA escribió para esta guía, aunque no haya llegado a ella (se cortó, se cerró la página o falló al guardarlo): las respuestas guardadas en este navegador${ai.bridgeOf()?.token ? ' y, con el puente, el registro de Claude Code y sus copias' : ''}. Se aplica tal cual, sin volver a pedírselo a tu IA.${T?.outline ? ' Después puedes deshacerlo.' : ' Si la guía todavía no tiene esquema, lo que recojas debe traerlo (esquema.json).'}</p>
       ${ai.bridgeOf()?.token ? `<div data-bridge-state>${bridgeStateHTML()}</div>` : ''}
       <div class="tj-collectlist" data-collect-list><p class="mut">Buscando lo que escribió tu IA…</p></div>
@@ -1031,7 +1032,7 @@ function accountPick() {
   const b = ai.bridgeOf();
   const accounts = claudeAccounts();
   if (!accounts.length) return '';
-  return `<div class="tj-accounts" role="radiogroup" aria-label="Cuenta de Claude"><h5>Con qué cuenta de Claude</h5>${accounts.map((a) => `<label class="tj-pick ${a.id === b.account ? 'on' : ''} ${a.ready ? '' : 'off'}"><input type="radio" name="claude-account" value="${esc(a.id)}" data-tj-account ${a.id === b.account ? 'checked' : ''} ${a.ready ? '' : 'disabled'}> <span class="tj-wrap">${esc(a.email || a.id)}</span> <small>${a.plan ? `plan ${esc(a.plan)} · ` : ''}${a.ready ? `carpeta ${esc(a.id)}` : 'sin sesión iniciada en esta computadora'}</small></label>`).join('')}${accounts.length > 1 ? '<p class="fine">Cada cuenta tiene su propia cuota: si una llegó a su límite, elige otra.</p>' : ''}</div>`;
+  return `<div class="tj-accounts" role="radiogroup" aria-label="Cuenta de Claude"><h5>Con qué cuenta de Claude ${infoButton('cuenta-claude')}</h5>${accounts.map((a) => `<label class="tj-pick ${a.id === b.account ? 'on' : ''} ${a.ready ? '' : 'off'}"><input type="radio" name="claude-account" value="${esc(a.id)}" data-tj-account ${a.id === b.account ? 'checked' : ''} ${a.ready ? '' : 'disabled'}> <span class="tj-wrap">${esc(a.email || a.id)}</span> <small>${a.plan ? `plan ${esc(a.plan)} · ` : ''}${a.ready ? `carpeta ${esc(a.id)}` : 'sin sesión iniciada en esta computadora'}</small></label>`).join('')}${accounts.length > 1 ? '<p class="fine">Cada cuenta tiene su propia cuota: si una llegó a su límite, elige otra.</p>' : ''}</div>`;
 }
 const FOLDERS = 'studium-tj-folders';
 const RESUME = 'studium-tj-resume';
@@ -1251,7 +1252,7 @@ function renderDraft(error = '') {
         <label><span>Escribe la guía</span>${pick('solution', writer)}</label>${writer === 'bridge:claude' ? accountPick() : ''}
         <label><span>Responde tus dudas</span>${pick('tutor', tutor)}</label>
       </div>` : '';
-    const where = writer.startsWith('bridge:') ? `<div class="tj-where"><h3>Dónde trabaja</h3>${placeHTML(draft.workspace)}${watchBox()}</div>` : '';
+    const where = writer.startsWith('bridge:') ? `<div class="tj-where"><h3>Dónde trabaja ${infoButton('carpeta')}</h3>${placeHTML(draft.workspace)}${watchBox()}</div>` : '';
     control = `${bstate}${sugg}${roles}${where}
       ${best.id === 'bridge' && draft.pairing && !usable(best) ? `<div class="tj-bridge ai-bridge">${bridgeSteps().replace('data-ai-pair>', 'data-tj="pair-code">')}</div>` : ''}
       <details class="tj-more" ${ways.length ? '' : 'open'}><summary>Conectar otra IA</summary>${allWays(best)}</details>`;
@@ -1810,7 +1811,7 @@ function bridgeStateHTML() {
   const check = '<button type="button" class="ask" data-tj="bridge-recheck">Comprobar ahora</button>';
   const pair = `<button type="button" class="ask" data-tj="pair-guide">Enlazar con el código del puente</button><div class="tj-bridge ai-bridge" data-pair-box hidden></div>`;
   const auto = '<small class="mut">Studium lo vuelve a comprobar solo cada pocos segundos.</small>';
-  const box = (cls, head, body) => `<div class="tj-howbridge tj-bstate ${cls}" role="status"><p><b>${head}</b></p>${body}</div>`;
+  const box = (cls, head, body) => `<div class="tj-howbridge tj-bstate ${cls}" role="status"><p><b>${head}</b> ${infoButton('puente', '¿Qué hace exactamente el puente?')}</p>${body}</div>`;
   if (st === 'checking') return box('wait', 'Comprobando el puente…', '');
   if (st === 'ok') return box('ok', `✓ El puente responde · versión ${esc(bridgeLive.version ?? '')} · Claude Code listo`, '');
   if (st === 'unpaired') return box('bad', `El puente no está enlazado en esta dirección (${esc(location.host)})`, `<p class="fine">Cada dirección se enlaza una vez: abre el puente en tu computadora y pega aquí el código que muestra.</p><ol class="fine"><li>En la carpeta donde guardaste el puente (<a href="${esc(ai.BRIDGE_URL)}" download="studium-bridge.mjs">descárgalo</a> si no lo tienes): ${cmd}</li><li>Copia el código que empieza con <code>41730.</code></li></ol><p>${pair}</p>`);
@@ -1838,11 +1839,11 @@ function howRunHTML() {
   else pick = '<p>Todavía no conectaste una IA en esta dirección. <button type="button" class="ask" data-tj="connect" data-vendor="gemini">Conectar Gemini, gratis</button></p>';
   const useClaude = !wantsBridge || provider !== 'bridge:claude';
   const legend = claude ? '' : ready && useClaude ? ' <button type="button" class="ask" data-tj="use-way" data-way="bridge:claude">Usar Claude Code</button>' : ' <small>(cuando el puente responda: arriba dice qué falta)</small>';
-  const opts = `<fieldset class="tj-bridgeopts ${claude ? '' : 'off'}"><legend>Con Claude Code por el puente${legend}</legend><div ${claude ? '' : 'inert class="tj-inert"'}>
+  const opts = `<fieldset class="tj-bridgeopts ${claude ? '' : 'off'}"><legend>Con Claude Code por el puente ${infoButton('puente')}${legend}</legend><div ${claude ? '' : 'inert class="tj-inert"'}>
       ${claude ? accountPick() : ''}
       ${watchBox()}
       ${T && sessionOf(T.id) ? contBox() : '<p class="fine">Esta guía no tiene una sesión de Claude Code guardada en este dispositivo: el próximo pedido empieza una nueva.</p>'}
-      <h5>Dónde trabaja</h5>${claude ? placeHTML(folderOf(T.id) || 'temp') : '<p class="fine">En la carpeta que elijas, con Claude Code.</p>'}</div></fieldset>`;
+      <h5>Dónde trabaja ${infoButton('carpeta')}</h5>${claude ? placeHTML(folderOf(T.id) || 'temp') : '<p class="fine">En la carpeta que elijas, con Claude Code.</p>'}</div></fieldset>`;
   return `<details class="tj-howrun" open><summary>Cómo lo hace</summary><div data-bridge-state>${bridgeStateHTML()}</div>${pick}${opts}</details>`;
 }
 
