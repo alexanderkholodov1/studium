@@ -848,6 +848,7 @@ function bridgeAdvanced() {
           ${on && accounts.length ? `<div class="bridge-accounts" role="radiogroup" aria-label="Cuenta de ${esc(names[e.id] ?? e.name)}">${accounts.map((a) => `<label class="check"><input type="radio" name="bridge-account" data-ai-bridge-account="${esc(a.id)}" ${a.id === b.account ? 'checked' : ''}> ${esc(a.email || a.id)}${a.plan ? ` <small>plan ${esc(a.plan)}</small>` : ''} <small>· carpeta ${esc(a.id)}</small></label>`).join('')}</div>` : ''}
           ${on ? (ai.defaultWay() === `bridge:${e.id}` ? '<span class="badge">la principal</span>' : `<button class="button ghost small" data-ai-default="bridge:${e.id}" title="Studium la usa primero para todo; ya está conectada aunque no la elijas">Hacerla la principal</button>`) : ''}</li>`;
         }).join('') : '<li>Pulsa «Revisar» con el puente abierto.</li>'}</ul>
+        ${['ok', 'noclaude'].includes(ai.bridgeLive().state) ? `<details class="tools-more"><summary>Git y GitHub en esta computadora</summary><p class="fine">Para que tu IA use git en tus carpetas, o cree un repositorio y suba el trabajo a tu nombre.</p>${toolsHTML('github')}</details>` : ''}
         <div class="actions"><button class="button ghost small" data-ai-bridge-check>Revisar</button><button class="link" data-ai-forget="bridge">Desenlazar</button></div>
         <div class="bridge-version ${ai.bridgeOld() ? 'old' : ''}">
           <p>${ai.bridgeOld() ? `<b>Tu puente está desactualizado</b>: tienes abierta la versión ${esc(b.version || 'anterior')} y la última es la ${ai.BRIDGE_VERSION}. Descárgalo de nuevo, ciérralo (Ctrl+C) y ábrelo otra vez.` : `Tu puente: versión ${esc(b.version || '?')}, la última.`}
@@ -871,7 +872,7 @@ function bridgeLiveHTML() {
     origin: ['bad', `El puente está abierto, pero para otra dirección (no ${esc(location.host)})`, `Ciérralo (Ctrl+C) y ábrelo con: ${cmd}`],
     old: ['bad', `Está abierta una versión anterior del puente (${esc(L.version ?? '?')}); hace falta la ${esc(ai.BRIDGE_VERSION)}`, `<a href="${esc(ai.BRIDGE_URL)}" download="studium-bridge.mjs">Descárgalo</a>, ciérralo (Ctrl+C) y ábrelo otra vez: ${cmd}`],
     code: ['bad', 'El puente responde, pero con otro código de enlace', 'Pulsa «Desenlazar» y enlázalo con el código que muestra ahora su terminal.'],
-    noclaude: ['bad', 'El puente responde, pero Claude Code no está listo', `${esc(L.detail || 'No lo encontró o no tiene una sesión iniciada.')} Si no lo tienes, <a href="https://docs.anthropic.com/en/docs/claude-code/setup" target="_blank" rel="noopener noreferrer">instálalo</a>; después escribe <code>claude</code> en una terminal e inicia sesión.`],
+    noclaude: ['bad', 'El puente responde, pero Claude Code no está listo', `${esc(L.detail || 'No lo encontró o no tiene una sesión iniciada.')}${claudeInstallHTML()}`],
   }[L.state] ?? ['wait', 'Comprobando si el puente responde…', ''];
   return `<div class="bridge-live ${say[0]}" data-ai-live role="status"><p><b>${say[1]}</b></p>${say[2] ? `<p class="fine">${say[2]}</p><p class="fine">Studium lo vuelve a comprobar solo cada pocos segundos. <button type="button" class="link" data-ai-live-check>Comprobar ahora</button></p>` : ''}</div>`;
 }
@@ -890,6 +891,48 @@ if (typeof window !== 'undefined') window.addEventListener('studium-bridge', () 
   const box = document.querySelector('[data-ai-live]')?.closest('.ai-advanced');
   if (box) box.outerHTML = bridgeAdvanced();
 });
+// Installing Claude Code, with the official commands (code.claude.com/docs/en/setup, checked 2026-11-25): the one for
+// this system first.
+export function claudeInstallHTML() {
+  const win = /Windows/i.test(navigator.userAgent);
+  const cmd = (c) => `<code class="no-i18n">${esc(c)}</code> <button type="button" class="link" data-ai-copy="${esc(c)}">copiar</button>`;
+  const ps = 'irm https://claude.ai/install.ps1 | iex';
+  const sh = 'curl -fsSL https://claude.ai/install.sh | bash';
+  return `<ol class="fine"><li>Instala Claude Code: en ${win ? 'PowerShell' : 'una terminal'}, ${cmd(win ? ps : sh)} <small>(${win ? `en Mac o Linux: <code class="no-i18n">${esc(sh)}</code>` : `en Windows, en PowerShell: <code class="no-i18n">${esc(ps)}</code>`}; <a href="https://code.claude.com/docs/en/setup" target="_blank" rel="noopener noreferrer">otras formas</a>)</small></li>
+    <li>Escribe ${cmd('claude')} e inicia sesión con tu cuenta de Claude (Pro o Max) en el navegador que se abre.</li>
+    <li>Cierra el puente (Ctrl+C) y ábrelo otra vez, para que lo encuentre.</li></ol>`;
+}
+// Git and GitHub on this computer, checked by the bridge, with exactly what is missing and how to set it up. need: 'git'
+// (Git and who you are, for commits) or 'github' (also GitHub CLI signed in, to create a repo and push in your name).
+export function toolsHTML(need = 'git') {
+  setTimeout(() => { for (const box of document.querySelectorAll('[data-tools-box]:not([data-filled])')) fillTools(box); }, 0);
+  return `<div class="bridge-live wait" data-tools-box data-need="${esc(need)}" role="status"><p><b>Comprobando Git${need === 'github' ? ' y GitHub' : ''} en tu computadora…</b></p></div>`;
+}
+async function fillTools(box) {
+  box.dataset.filled = '1';
+  const need = box.dataset.need;
+  const cmd = (c) => `<code class="no-i18n">${esc(c)}</code> <button type="button" class="link" data-ai-copy="${esc(c)}">copiar</button>`;
+  const again = '<p class="fine">Después de instalar algo, cierra el puente (Ctrl+C) y ábrelo otra vez, para que lo vea. <button type="button" class="link" data-tools-check>Comprobar otra vez</button></p>';
+  let t;
+  try { t = await ai.bridgeTools(); } catch (e) { box.className = 'bridge-live bad'; box.innerHTML = `<p><b>No pude preguntarle al puente por Git:</b> ${esc(e.message)}</p><p><button type="button" class="link" data-tools-check>Comprobar otra vez</button></p>`; return; }
+  if (t.unknown) { box.className = 'bridge-live wait'; box.innerHTML = `<p class="fine">Tu puente no sabe comprobar Git y GitHub: necesita la versión ${esc(ai.BRIDGE_VERSION)}. <a href="${esc(ai.BRIDGE_URL)}" download="studium-bridge.mjs">Descárgalo</a>, ciérralo (Ctrl+C) y ábrelo otra vez.</p>`; return; }
+  const win = t.platform === 'win32';
+  const rows = [];
+  let ok = true;
+  if (!t.git) { ok = false; rows.push(`<li><b>Falta Git.</b> Instálalo desde <a href="https://git-scm.com/downloads" target="_blank" rel="noopener noreferrer">git-scm.com</a>${win ? `, o en una terminal: ${cmd('winget install --id Git.Git -e')}` : ''}.</li>`); }
+  else {
+    rows.push(`<li>✓ Git ${esc(t.git.version)}</li>`);
+    if (!t.git.name || !t.git.email) { ok = false; rows.push(`<li><b>Git no sabe quién eres</b> (tus commits saldrían sin tu nombre). En una terminal, con tu nombre y el correo de tu cuenta de GitHub:<br>${t.git.name ? '' : `${cmd('git config --global user.name "Tu nombre"')}<br>`}${t.git.email ? '' : cmd('git config --global user.email "tu-correo@ejemplo.com"')}</li>`); }
+  }
+  if (need === 'github') {
+    if (!t.gh) { ok = false; rows.push(`<li><b>Falta GitHub CLI</b> (gh), con el que tu IA crea el repositorio y sube el trabajo a tu nombre. Instálalo desde <a href="https://cli.github.com" target="_blank" rel="noopener noreferrer">cli.github.com</a>${win ? `, o: ${cmd('winget install --id GitHub.cli')}` : ''}; después ${cmd('gh auth login')}.</li>`); }
+    else if (!t.gh.signedIn) { ok = false; rows.push(`<li><b>GitHub CLI no tiene tu sesión.</b> En una terminal: ${cmd('gh auth login')} y elige GitHub.com, HTTPS y entrar con el navegador.</li>`); }
+    else rows.push(`<li>✓ GitHub CLI ${esc(t.gh.version)}, con la sesión de <b>${esc(t.gh.user || 'tu cuenta')}</b>: lo que suba tu IA sale a ese nombre.</li>`);
+  }
+  box.className = `bridge-live ${ok ? 'ok' : 'bad'}`;
+  box.innerHTML = `<p><b>${ok ? `Git${need === 'github' ? ' y GitHub' : ''} listos en tu computadora` : `Falta configurar Git${need === 'github' ? ' o GitHub' : ''} en tu computadora`}</b></p><ul class="fine tools-list">${rows.join('')}</ul>${ok ? '' : again}`;
+}
+if (typeof document !== 'undefined') document.addEventListener('click', (e) => { const b = e.target.closest?.('[data-tools-check]'); const box = b?.closest('[data-tools-box]'); if (box) { box.innerHTML = '<p><b>Comprobando…</b></p>'; fillTools(box); } });
 // How to open and pair the bridge, step by step; also used by «Trabajos» (trabajos.js).
 export function bridgeSteps() {
   return `<ol class="howto">

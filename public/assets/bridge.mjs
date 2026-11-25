@@ -14,7 +14,7 @@ import { homedir, platform, tmpdir } from 'node:os';
 import path from 'node:path';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
-const VERSION = '1.11.0';
+const VERSION = '1.12.0';
 const NAME = 'studium-bridge';
 const DEFAULT_PORT = 41730;
 const MAX_BODY = 64 * 1024 * 1024;
@@ -300,6 +300,28 @@ function changeFolder(body) {
   keepFolders(list);
   console.log(`\nCarpeta ${f.path}: ahora tu IA puede ${MODES[f.mode].label}.`);
   return folderView(f);
+}
+
+/* ---------- what the computer has for git and GitHub ---------- */
+// So the page can say exactly what is missing before a guide asks for git or a repository: only local commands, asked
+// each time (something installed while the bridge runs is seen). «gh auth status» reads gh's stored session and may
+// ask GitHub whether it is still valid. Never sent: the name or the email in git's settings (only whether they exist).
+async function toolsState() {
+  const run = (b, args) => new Promise((resolve) => execFile(b.cmd, [...b.pre, ...args], { timeout: 10_000, windowsHide: true, encoding: 'utf8' }, (err, out, errOut) => resolve({ ok: !err, out: String(out ?? '').trim(), all: `${out ?? ''}
+${errOut ?? ''}` })));
+  const [git, gh] = await Promise.all([resolveBin('git'), resolveBin('gh')]);
+  const version = (t) => t.match(/\d+\.\d+(?:\.\d+)?/)?.[0] ?? '';
+  let gitInfo = null;
+  if (git) {
+    const [v, name, email] = await Promise.all([run(git, ['--version']), run(git, ['config', '--global', 'user.name']), run(git, ['config', '--global', 'user.email'])]);
+    gitInfo = { version: version(v.out), name: name.ok && !!name.out, email: email.ok && !!email.out };
+  }
+  let ghInfo = null;
+  if (gh) {
+    const [v, auth] = await Promise.all([run(gh, ['--version']), run(gh, ['auth', 'status', '--hostname', 'github.com'])]);
+    ghInfo = { version: version(v.out), signedIn: auth.ok, user: auth.ok ? (auth.all.match(/account ([\w-]+)/)?.[1] ?? auth.all.match(/as ([\w-]+)/)?.[1] ?? '') : '' };
+  }
+  return { node: process.versions.node, platform: process.platform, git: gitInfo, gh: ghInfo };
 }
 
 /* ---------- a new GitHub repository, in the person's own name ---------- */
@@ -1084,6 +1106,7 @@ const server = createServer(async (req, res) => {
   if (!tokenValid(req.headers.authorization)) return fail(res, new Failure(401, 'token', 'El código de enlace no coincide. Vuelve a enlazar el puente en Ajustes.'), ok);
   try {
     if (req.method === 'GET' && pathname === '/v1/status') return send(res, 200, { name: NAME, version: VERSION, cwd: process.cwd(), engines: (await detectAll()).map((e) => ({ ...e, accounts: e.accounts?.map(({ env, ...a }) => a) })) }, ok);
+    if (req.method === 'GET' && pathname === '/v1/tools') return send(res, 200, await toolsState(), ok);
     if (req.method === 'GET' && pathname === '/v1/progress') {
       const id = new URL(req.url, 'http://127.0.0.1').searchParams.get('id') ?? '';
       const p = progress.get(id);

@@ -15,7 +15,7 @@ import { prepare } from './files.js';
 import * as amigos from './amigos.js';
 import { communityOf } from './settings.js';
 import { reunionBlock, wireReunion, resetReunion } from './reunion.js';
-import { bridgeSteps, pairBridge, findBridgeSay } from './space.js';
+import { bridgeSteps, pairBridge, findBridgeSay, toolsHTML, claudeInstallHTML } from './space.js';
 import { LETTERS, outlinePrompt as tjOutline, milestonePrompt as tjMilestone, wholePrompt as tjWhole, adjustPrompt as tjAdjust, ADJUST_KINDS, TUTOR as TJ_TUTOR, parseJSON, cleanOutline, cleanMilestone } from './trabajo-prompts.js';
 import * as EP from './estudio-prompts.js';
 import { escenaHTML, escenaShow, cleanEscena } from './escena.js';
@@ -1109,7 +1109,7 @@ function placeHTML(now) {
       ${f ? row(f.id, true, `${esc(f.name)}`, `${esc(f.path ?? '')}${hereIsF ? ' · donde abriste el puente' : ''}`, `<span class="tj-folder-now">${modeSel(f)} <small>${esc(MODE_WHY[f.mode] ?? '')}</small></span>`) : ''}
       ${here && !hereIsF ? row('here', false, `${esc(here)}`, `${esc(cwd)} · donde abriste el puente; se presta sin preguntarte otra vez`) : ''}
       ${row('pick', false, 'Otra carpeta…', draft?.broughtFolder && !here ? `Busca «${esc(draft.broughtFolder)}» en tu computadora.` : 'Se abre la ventana de tu computadora para elegirla.')}
-    </div><p class="fine" id="tj-folder-status" role="status">${f ? 'Prestada mientras escribe; después el puente la olvida.' : 'Una carpeta se presta solo mientras escribe.'}</p>`;
+    </div>${f?.mode === 'git' && bridgeLive.state === 'ok' ? toolsHTML('git') : ''}<p class="fine" id="tj-folder-status" role="status">${f ? 'Prestada mientras escribe; después el puente la olvida.' : 'Una carpeta se presta solo mientras escribe.'}</p>`;
 }
 async function myName() {
   const p = await loadProfile(uid()).catch(() => null);
@@ -1270,7 +1270,8 @@ function renderDraft(error = '') {
         ${pick('share-repo', 'repo', 'Sí, ya lo tenemos', 'pegas su enlace', draft.prefs.share === 'repo')}
         ${pick('share-repo', 'newrepo', 'No, hay que crearlo', 'eliges quién lo crea', draft.prefs.share === 'newrepo')}</div>` : ''}
       ${draft.prefs.share === 'repo' ? `<label class="field"><span>El enlace del repo</span><input class="tj-input" name="repoUrl" value="${esc(draft.prefs.repoUrl)}" placeholder="https://github.com/usuario/repo" autocomplete="off"></label>` : ''}
-      ${draft.prefs.share === 'newrepo' ? newRepoHTML() : ''}`;
+      ${draft.prefs.share === 'newrepo' ? newRepoHTML() : ''}
+      ${share === 'github' && ai.bridgeOf()?.token && !ai.bridgeOld() ? toolsHTML('github') : ''}`;
   }
   if (q.input === 'goal') {
     const goals = [['solve', 'Resolverlo desde cero', 'la solución completa, hasta el entregable'], ['complete', 'Entender y completar lo que ya tenemos', 'parte de lo que ya hicieron'], ['review', 'Revisar y corregir nuestra solución', 'qué está bien, qué falta, qué cambiar'], ['defend', 'Prepararme para la defensa', 'entender cada parte y practicar preguntas']];
@@ -1817,7 +1818,7 @@ function bridgeStateHTML() {
   if (st === 'origin') return box('bad', `El puente está abierto, pero para otra dirección (no ${esc(location.host)})`, `<p class="fine">Ciérralo (Ctrl+C en su terminal) y ábrelo con este comando, que incluye esta dirección: ${cmd}</p><p>${check} ${auto}</p>`);
   if (st === 'old') return box('bad', `Está abierta una versión anterior del puente (${esc(bridgeLive.version ?? '?')}); esta página necesita la ${esc(ai.BRIDGE_VERSION)}`, `<ol class="fine"><li><a href="${esc(ai.BRIDGE_URL)}" download="studium-bridge.mjs">Descarga el puente nuevo</a> y reemplaza el anterior.</li><li>Ciérralo (Ctrl+C en su terminal) y ábrelo otra vez: ${cmd}</li></ol><p>${check} ${auto}</p>`);
   if (st === 'code') return box('bad', 'El puente responde, pero con otro código de enlace', `<p class="fine">Copia el código que muestra su terminal ahora y pégalo aquí.</p><p>${pair}</p>`);
-  return box('bad', 'El puente responde, pero Claude Code no está listo en esta computadora', `<p class="fine">${esc(bridgeLive.detail || 'No lo encontró o no tiene una sesión iniciada.')} Si no lo tienes, instálalo (<a href="https://docs.anthropic.com/en/docs/claude-code/setup" target="_blank" rel="noopener noreferrer">cómo</a>); después abre una terminal, escribe <code>claude</code> e inicia sesión.</p><p>${check} ${auto}</p>`);
+  return box('bad', 'El puente responde, pero Claude Code no está listo en esta computadora', `<p class="fine">${esc(bridgeLive.detail || 'No lo encontró o no tiene una sesión iniciada.')}</p>${claudeInstallHTML()}<p>${check} ${auto}</p>`);
 }
 function afterRunChoice(el) {
   if (el?.closest?.('.tj-adjpop, .tj-tray')) { for (const box of document.querySelectorAll('#tjg-body [data-howrun]')) box.innerHTML = howRunHTML(); } else repaint();

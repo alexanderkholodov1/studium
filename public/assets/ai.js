@@ -509,7 +509,9 @@ export async function findBridge(port = BRIDGE_PORT) {
   try { const r = await fetch(`http://127.0.0.1:${port}/v1/hello`); return r.ok ? await r.json() : null; } catch { return null; }
 }
 // The bridge's version this page expects (bridge.mjs, VERSION): an older one is downloaded again.
-export const BRIDGE_VERSION = '1.11.0';
+// The newest bridge; the page needs at least BRIDGE_NEEDS (an older one is downloaded again). 1.12.0 only adds /v1/tools.
+export const BRIDGE_VERSION = '1.12.0';
+const BRIDGE_NEEDS = '1.11.0';
 // «Ver a mi IA en una terminal»: the bridge opens a window that shows the exact instructions and, live, what the AI
 // does. Chosen by the person, kept in this browser.
 const WATCH = 'studium-ai-watch';
@@ -520,7 +522,7 @@ export function setWatchTerminal(on) { try { localStorage.setItem(WATCH, on ? 'o
 // Is the bridge that answered older than this page needs? (Compared number by number.)
 export function bridgeOld(version = load().bridge?.version) {
   const a = String(version ?? '0').split('.').map(Number);
-  const b = BRIDGE_VERSION.split('.').map(Number);
+  const b = BRIDGE_NEEDS.split('.').map(Number);
   for (let i = 0; i < 3; i += 1) { if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) < (b[i] || 0); }
   return false;
 }
@@ -615,6 +617,13 @@ export async function bridgeStatus() {
   if (DOWN.has(live.state)) checkBridge();
   await bridgeFolders().catch(() => {});
   return engines;
+}
+// What the computer has for git and GitHub (bridge 1.12.0, /v1/tools): Git and whether it knows who you are, GitHub
+// CLI and its session, Node. An older bridge cannot say: { unknown: true }, never a failure.
+const atLeast = (v, min) => { const a = String(v ?? '0').split('.').map(Number); const b = min.split('.').map(Number); for (let i = 0; i < 3; i += 1) if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0); return true; };
+export async function bridgeTools() {
+  if (!atLeast(bridgeOf()?.version, '1.12.0')) return { unknown: true };
+  return bridgeFetch('/v1/tools');
 }
 // The person's own folders where the bridge may work, each with its permission (bridge.mjs, «the person's own
 // folders»). A folder is added only through the computer's own dialog; the page never names a path.
