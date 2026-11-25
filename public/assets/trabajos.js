@@ -1205,14 +1205,18 @@ function renderDraft(error = '') {
     const writer = ai.choice('solution').provider;
     const tutor = ai.choice('tutor').provider;
     hint = '';
-    const pick = (task, now) => `<select data-tj-use="${task}">${ways.map((w) => `<option value="${esc(w)}" ${w === now ? 'selected' : ''}>${esc(ai.WAYS[w]?.name ?? w)}</option>`).join('')}</select>`;
-    const sugg = usable(best) ? '' : `<p class="tj-sugg">Sugerida para esto: <b>${esc(best.name)}</b>. ${best.id === 'bridge' ? '<button type="button" class="button primary small" data-tj="pair-here">Conectar</button>' : `<button type="button" class="button primary small" data-tj="connect" data-vendor="${best.vendor}">Conectar</button>`}</p>`;
+    const pick = (task, now) => `<select data-tj-use="${task}">${ways.includes(now) ? '' : `<option value="${esc(now)}" selected>${esc(ai.WAYS[now]?.name ?? now)} (no responde)</option>`}${ways.map((w) => `<option value="${esc(w)}" ${w === now ? 'selected' : ''}>${esc(ai.WAYS[w]?.name ?? w)}</option>`).join('')}</select>`;
+    // Connection first: a bridge paired here but not answering says why, with what fixes it, before any choice.
+    const paired = !!ai.bridgeOf()?.token;
+    if (paired && Date.now() - bridgeLive.at > 3000) kickBridge();
+    const bstate = paired && bridgeLive.state !== 'ok' ? `<div data-bridge-state>${bridgeStateHTML()}</div>` : '';
+    const sugg = usable(best) || (bstate && best.id === 'bridge') ? '' : `<p class="tj-sugg">Sugerida para esto: <b>${esc(best.name)}</b>. ${best.id === 'bridge' ? '<button type="button" class="button primary small" data-tj="pair-here">Conectar</button>' : `<button type="button" class="button primary small" data-tj="connect" data-vendor="${best.vendor}">Conectar</button>`}</p>`;
     const roles = ways.length ? `<div class="tj-roles2">
         <label><span>Escribe la guía</span>${pick('solution', writer)}</label>${writer === 'bridge:claude' ? accountPick() : ''}
         <label><span>Responde tus dudas</span>${pick('tutor', tutor)}</label>
       </div>` : '';
     const where = writer.startsWith('bridge:') ? `<div class="tj-where"><h3>Dónde trabaja</h3>${placeHTML(draft.workspace)}${watchBox()}</div>` : '';
-    control = `${sugg}${roles}${where}
+    control = `${bstate}${sugg}${roles}${where}
       ${best.id === 'bridge' && draft.pairing && !usable(best) ? `<div class="tj-bridge ai-bridge">${bridgeSteps().replace('data-ai-pair>', 'data-tj="pair-code">')}</div>` : ''}
       <details class="tj-more" ${ways.length ? '' : 'open'}><summary>Conectar otra IA</summary>${allWays(best)}</details>`;
   }
@@ -1743,22 +1747,8 @@ async function lendFolder(el, here) {
 // with another pairing code), noclaude (Claude Code missing or not signed in), ok.
 let bridgeLive = { state: 'checking', at: 0 };
 let bridgeTimer = null;
-async function checkBridgeLive() {
-  const b = ai.bridgeOf();
-  if (!b?.token) return { state: 'unpaired' };
-  let hello;
-  try {
-    const r = await fetch(`http://127.0.0.1:${b.port || ai.BRIDGE_PORT}/v1/hello`, { signal: AbortSignal.timeout(2500) });
-    if (r.status === 403) return { state: 'origin' };
-    hello = r.ok ? await r.json() : null;
-  } catch { hello = null; }
-  if (!hello) return { state: 'closed' };
-  if (ai.bridgeOld(hello.version)) return { state: 'old', version: hello.version };
-  try { await ai.bridgeStatus(); } catch (e) { return /código de enlace|token|401/i.test(String(e?.message)) ? { state: 'code' } : { state: 'closed', detail: String(e?.message ?? '') }; }
-  const claude = (ai.bridgeOf()?.engines ?? []).find((e) => e.id === 'claude');
-  if (!claude?.ready) return { state: 'noclaude', version: hello.version, detail: claude?.detail ?? '' };
-  return { state: 'ok', version: hello.version };
-}
+// One check for the whole page (ai.js): the pickers everywhere read the same state.
+const checkBridgeLive = () => ai.checkBridge();
 // Checks now and, while a card shows the bridge and it is not ready, every 4 seconds: when it starts answering, the
 // card redraws by itself with its models.
 async function watchBridge(force = false) {
@@ -1770,6 +1760,7 @@ async function watchBridge(force = false) {
   if (bridgeLive.state !== was) {
     for (const box of document.querySelectorAll('#tjg-body [data-howrun]')) box.innerHTML = howRunHTML();
     for (const el of document.querySelectorAll('[data-bridge-state]')) if (!el.closest('[data-howrun]')) el.innerHTML = bridgeStateHTML();
+    if (draft && questionsOf(draft)[draft.at]?.input === 'ai') renderDraft();
     if (was !== 'checking' && bridgeLive.state === 'ok') ctx.toast(`El puente responde (versión ${bridgeLive.version}).`);
     if (bridgeLive.state === 'ok' && document.querySelector('[data-collect-list]')) loadCollect();
   }
@@ -2563,7 +2554,7 @@ function wire(root) {
     }
     if (kind === 'pair-code') {
       const code = b.closest('.tj-bridge')?.querySelector('[data-ai-pair-code]')?.value;
-      await busy(b, async () => { if (await pairBridge(code)) { if (draft) { draft.pairing = false; renderDraft(); } else { bridgeLive = { state: 'checking', at: 0 }; afterRunChoice(b); await watchBridge(true); } } }).catch(() => {});
+      await busy(b, async () => { if (await pairBridge(code)) { bridgeLive = { state: 'checking', at: 0 }; if (draft) { draft.pairing = false; renderDraft(); } else afterRunChoice(b); await watchBridge(true); } }).catch(() => {});
       return;
     }
     if (kind === 'answer' || kind === 'answer-skip') {
@@ -2653,8 +2644,8 @@ function wire(root) {
     }
     if (kind === 'bridge-recheck') {
       // In a guide: the live check redraws what depends on it; in the wizard, as before.
-      if (T && !draft && document.querySelector('[data-bridge-state]')) {
-        await busy(b, async () => { bridgeLive = { state: bridgeLive.state, at: 0 }; await watchBridge(true); for (const el of document.querySelectorAll('[data-bridge-state]')) el.innerHTML = bridgeStateHTML(); if (bridgeLive.state !== 'ok') ctx.toast('El puente todavía no está listo: arriba dice qué falta.'); }).catch(() => {});
+      if (document.querySelector('[data-bridge-state]')) {
+        await busy(b, async () => { bridgeLive = { state: bridgeLive.state, at: 0 }; await watchBridge(true); for (const el of document.querySelectorAll('[data-bridge-state]')) el.innerHTML = bridgeStateHTML(); if (draft) { keepAnswer(); renderDraft(); } if (bridgeLive.state !== 'ok') ctx.toast('El puente todavía no está listo: arriba dice qué falta.'); }).catch(() => {});
         return;
       }
       await busy(b, async () => { await ai.bridgeStatus(); if (draft) { keepAnswer(); renderDraft(); } else repaint(); ctx.toast(ai.bridgeOld() ? 'Sigue abierta la versión anterior del puente.' : `Puente ${ai.bridgeOf()?.version} listo.`); }).catch(() => {});

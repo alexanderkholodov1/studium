@@ -3661,11 +3661,11 @@ canvas.prop { display: block; }
 .tj-places .tj-folder-now { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
 .tj-accounts h5 { margin: 4px 0 2px; }
 /* The bridge's live state, first in «Cómo lo hace» */
-.tj-bstate { margin: 6px 0 10px; padding: 10px 14px; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--line); }
-.tj-bstate p { margin: 4px 0; }
-.tj-bstate.ok { box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--green, #2e9d5b) 55%, transparent); background: color-mix(in oklab, var(--green, #2e9d5b) 8%, transparent); }
-.tj-bstate.bad { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--red, #d64545) 55%, transparent); background: color-mix(in oklab, var(--red, #d64545) 7%, transparent); }
-.tj-bstate code { overflow-wrap: anywhere; }
+.tj-bstate, .bridge-live { margin: 6px 0 10px; padding: 10px 14px; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--line); }
+.tj-bstate p, .bridge-live p { margin: 4px 0; }
+.tj-bstate.ok, .bridge-live.ok { box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--green, #2e9d5b) 55%, transparent); background: color-mix(in oklab, var(--green, #2e9d5b) 8%, transparent); }
+.tj-bstate.bad, .bridge-live.bad { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--red, #d64545) 55%, transparent); background: color-mix(in oklab, var(--red, #d64545) 7%, transparent); }
+.tj-bstate code, .bridge-live code { overflow-wrap: anywhere; }
 .tj-inert { opacity: .55; }
 /* «Recoger lo que hizo tu IA»: above «Pedir un cambio a tu IA», and its panel */
 .tjg-app .tj-collectfab { position: fixed; z-index: 55; right: 70px; bottom: 66px; padding: 9px 14px; border: 0; border-radius: 999px; cursor: pointer;

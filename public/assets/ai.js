@@ -132,7 +132,7 @@ export function setKey(way, key) {
 export function forget(way) {
   if (!way) { try { localStorage.removeItem(LOCAL); } catch { /* nothing to forget */ } return; }
   if (way === 'puter') { patch((s) => { s.puter = false; delete s.models.puter; }); window.puter?.auth?.signOut?.(); return; }
-  if (way === 'bridge') { patch((s) => { s.bridge = null; for (const k of Object.keys(s.models)) if (k.startsWith('bridge:')) delete s.models[k]; }); return; }
+  if (way === 'bridge') { live = { state: 'unpaired', at: Date.now() }; patch((s) => { s.bridge = null; for (const k of Object.keys(s.models)) if (k.startsWith('bridge:')) delete s.models[k]; }); return; }
   setKey(way, '');
 }
 const engineOf = (way) => load().bridge?.engines?.find((e) => e.id === WAYS[way]?.engine);
@@ -142,11 +142,12 @@ export function connected() {
   return Object.keys(WAYS).filter((way) => {
     if (!offered(way)) return false;
     if (way === 'puter') return !!s.puter;
-    if (way.startsWith('bridge:')) { const e = engineOf(way); return !!s.bridge?.token && !!e?.ready && !e.paused && !(s.bridge.off ?? []).includes(e.id); }
+    if (way.startsWith('bridge:')) { const e = engineOf(way); return !!s.bridge?.token && !DOWN.has(live.state) && !!e?.ready && !e.paused && !(s.bridge.off ?? []).includes(e.id); }
     return !!s.keys[way];
   });
 }
 export const ready = () => connected().length > 0;
+const bridgeDown = (way) => String(way).startsWith('bridge:') && !!load().bridge?.token && DOWN.has(live.state);
 export const cachedModels = (way) => load().models[way] ?? [];
 export const wayName = (way) => (WAYS[way] ? `${WAYS[way].name} · ${WAYS[way].where}` : 'tu IA');
 // What a way reads as it is: PDFs and pictures. The bridge says it for each of its engines.
@@ -295,7 +296,9 @@ export function suggest(task) {
 // recommendation, so that it stays the best as the account's models change.
 export function choice(task) {
   const saved = load().use[task];
-  if (saved && connected().includes(saved.provider)) {
+  // A bridge chosen and not answering now stays the choice: the picker says so and the request waits for it, never
+  // replaced in silence by another AI.
+  if (saved && (connected().includes(saved.provider) || bridgeDown(saved.provider))) {
     return { provider: saved.provider, model: saved.model || recommend(task, saved.provider), effort: fitEffort(saved.provider, saved.effort in EFFORTS ? saved.effort : TASKS[task]?.effort ?? 'medium') };
   }
   const s = suggest(task);
@@ -334,8 +337,12 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', 
 const SHOWN = 5;
 export function pickerHTML(task, { open = false } = {}) {
   const ways = connected();
-  if (!ways.length) return '';
   const c = choice(task);
+  if (bridgeDown(c.provider) && !ways.includes(c.provider)) {
+    return `<div class="ai-pick ai-pick-down" data-ai-pick="${esc(task)}"><p class="fine">Elegiste <b>${esc(WAYS[c.provider]?.name ?? c.provider)}</b>, por el puente, y ahora no responde: <a href="#/ajustes">ábrelo o revísalo en Ajustes</a>; sus modelos aparecen cuando responda.${ways.length ? ' O usa otra IA:' : ''}</p>
+      ${ways.length ? `<label class="field"><span>Con qué IA</span><select name="provider"><option value="${esc(c.provider)}" selected>${esc(wayName(c.provider))} (no responde)</option>${ways.map((w) => `<option value="${esc(w)}">${esc(wayName(w))}</option>`).join('')}</select></label>` : ''}</div>`;
+  }
+  if (!ways.length) return '';
   const s = suggest(task);
   const list = ranked(task, c.provider);
   if (c.model && !list.some((m) => m.id === c.model)) list.unshift({ id: c.model, tier: tierOf(c.model), cost: costOf(c.provider, c.model) });
@@ -540,14 +547,57 @@ export function setBridgeUse(engine, on) {
 export async function pairBridge(port, token) {
   const b = { port: Number(port) || BRIDGE_PORT, token: String(token), engines: [], at: 0, account: '', off: [] };
   patch((s) => { s.bridge = b; });
-  try { return await bridgeStatus(); } catch (e) {
+  live = { state: 'checking', at: 0 };
+  try { const r = await bridgeStatus(); checkBridge(); return r; } catch (e) {
     patch((s) => { s.bridge = null; });
+    live = { state: 'unpaired', at: Date.now() };
     // A browser says nothing more than «Failed to fetch» when the bridge is closed or does not accept this page.
     if (e instanceof AIError && !/El puente no responde|conexión/.test(e.message)) throw e;
     throw new AIError(bridgeKnowsThisPage()
       ? 'El puente no respondió. ¿Sigue abierta su ventana? Si la cerraste, vuelve a abrirlo y pega el código nuevo.'
       : `El puente no respondió a esta página (${location.origin}). Ciérralo con Ctrl+C y ábrelo con: ${bridgeCommand()}`, { kind: 'account', way: 'bridge:claude' });
   }
+}
+// Is the bridge answering now? (His words: «siempre primero se debe comprobar la conexión, y luego ya pedir
+// seleccionar el modelo».) The stored status says what the bridge had the last time; this says whether it answers
+// now, and every picker reads it through connected(): a closed bridge offers no models anywhere. States: checking,
+// unpaired (no code at this address), closed (paired, not answering), origin (open for another address), old (an older
+// version), code (another pairing code), noclaude (Claude Code missing or not signed in), ok. Checked when the page
+// opens, when the tab comes back, and while a card that shows it waits for it; «studium-bridge» says it changed.
+const DOWN = new Set(['closed', 'origin', 'old', 'code']);
+let live = { state: 'checking', at: 0 };
+export const bridgeLive = () => live;
+let checking = null;
+export function checkBridge() {
+  checking ??= (async () => {
+    const r = await probeBridge().catch(() => ({ state: 'closed' }));
+    const was = live.state;
+    live = { ...r, at: Date.now() };
+    if (was !== live.state) window.dispatchEvent(new CustomEvent('studium-bridge', { detail: { was, now: live } }));
+    return live;
+  })().finally(() => { checking = null; });
+  return checking;
+}
+async function probeBridge() {
+  const b = bridgeOf();
+  if (!b?.token) return { state: 'unpaired' };
+  let hello;
+  try {
+    const r = await fetch(`http://127.0.0.1:${b.port || BRIDGE_PORT}/v1/hello`, { signal: AbortSignal.timeout(2500) });
+    if (r.status === 403) return { state: 'origin' };
+    hello = r.ok ? await r.json() : null;
+  } catch { hello = null; }
+  if (!hello) return { state: 'closed' };
+  if (bridgeOld(hello.version)) return { state: 'old', version: hello.version };
+  try { await bridgeStatus(); } catch (e) { return /código de enlace|token|401/i.test(String(e?.message)) ? { state: 'code' } : { state: 'closed', detail: String(e?.message ?? '') }; }
+  const claude = (bridgeOf()?.engines ?? []).find((e) => e.id === 'claude');
+  if (!claude?.ready) return { state: 'noclaude', version: hello.version, detail: claude?.detail ?? '' };
+  return { state: 'ok', version: hello.version };
+}
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+  const again = () => { if (bridgeOf()?.token && Date.now() - live.at > 3000) checkBridge(); };
+  setTimeout(again, 0);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') again(); });
 }
 // What the bridge has: its engines, whether each is signed in, their models, efforts and what they read.
 export async function bridgeStatus() {
@@ -562,6 +612,7 @@ export async function bridgeStatus() {
     const signed = (claude?.accounts ?? []).filter((a) => a.ready);
     if (!signed.some((a) => a.id === s.bridge.account)) s.bridge.account = signed[0]?.id ?? '';
   });
+  if (DOWN.has(live.state)) checkBridge();
   await bridgeFolders().catch(() => {});
   return engines;
 }
@@ -700,6 +751,8 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
   system = guarded(system);
   const c = { ...(use ?? choice(task)) };
   const way = c.provider;
+  if (bridgeDown(way)) await checkBridge();
+  if (bridgeDown(way)) throw new AIError(`El puente no responde en esta computadora${live.state === 'old' ? ' (está abierta una versión anterior)' : live.state === 'origin' ? ' (está abierto para otra dirección)' : live.state === 'code' ? ' (tiene otro código de enlace)' : ''}. Ábrelo otra vez con: ${bridgeCommand()}`, { kind: 'account', way });
   if (!WAYS[way] || !connected().includes(way)) throw new AIError('Conecta tu IA en Ajustes.', { kind: 'account', way });
   const model = c.model || recommend(task, way);
   if (!model) throw new AIError('Elige un modelo: pulsa «Probar» en Ajustes para ver los de tu cuenta.', { kind: 'account', way });

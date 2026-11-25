@@ -837,7 +837,7 @@ function bridgeAdvanced() {
         <li><b>Cómo apagarlo:</b> cierra la ventana de la terminal, o pulsa Ctrl+C en ella.</li>
         <li><b>Para quién:</b> si nunca abriste una terminal, mejor usa la forma por chat: hace lo mismo, solo que a mano.</li>
       </ul>
-      ${b?.token ? `<p><b>Tus IA en esta computadora.</b> Elige cuáles usa Studium y, en Claude, con qué cuenta:</p>
+      ${b?.token ? `${bridgeLiveHTML()}<p><b>Tus IA en esta computadora${ai.bridgeLive().state === 'ok' || ai.bridgeLive().state === 'noclaude' ? '' : ', según la última vez que respondió'}.</b> Elige cuáles usa Studium y, en Claude, con qué cuenta:</p>
         <ul class="engines">${engines.length ? engines.map((e) => {
           const usable = e.ready && !e.paused;
           const on = usable && !(b.off ?? []).includes(e.id);
@@ -858,6 +858,38 @@ function bridgeAdvanced() {
       ${aiMsg('bridge')}
     </div></details>`;
 }
+// Connection first (ai.bridgeLive): whether the bridge answers now, and what fixes it, above what it had. Checked again
+// every 4 seconds while Ajustes shows it and it does not answer; the panel redraws when that changes.
+function bridgeLiveHTML() {
+  const L = ai.bridgeLive();
+  const cmd = `<code class="bridge-cmd">${esc(ai.bridgeCommand())}</code> <button type="button" class="link" data-ai-copy="${esc(ai.bridgeCommand())}">copiar</button>`;
+  setTimeout(watchSettingsBridge, 0);
+  const say = {
+    checking: ['wait', 'Comprobando si el puente responde…', ''],
+    ok: ['ok', `✓ El puente responde ahora · versión ${esc(L.version ?? '')}`, ''],
+    closed: ['bad', 'El puente no responde: está cerrado en esta computadora', `Ábrelo otra vez en la carpeta donde lo guardaste: ${cmd}`],
+    origin: ['bad', `El puente está abierto, pero para otra dirección (no ${esc(location.host)})`, `Ciérralo (Ctrl+C) y ábrelo con: ${cmd}`],
+    old: ['bad', `Está abierta una versión anterior del puente (${esc(L.version ?? '?')}); hace falta la ${esc(ai.BRIDGE_VERSION)}`, `<a href="${esc(ai.BRIDGE_URL)}" download="studium-bridge.mjs">Descárgalo</a>, ciérralo (Ctrl+C) y ábrelo otra vez: ${cmd}`],
+    code: ['bad', 'El puente responde, pero con otro código de enlace', 'Pulsa «Desenlazar» y enlázalo con el código que muestra ahora su terminal.'],
+    noclaude: ['bad', 'El puente responde, pero Claude Code no está listo', `${esc(L.detail || 'No lo encontró o no tiene una sesión iniciada.')} Si no lo tienes, <a href="https://docs.anthropic.com/en/docs/claude-code/setup" target="_blank" rel="noopener noreferrer">instálalo</a>; después escribe <code>claude</code> en una terminal e inicia sesión.`],
+  }[L.state] ?? ['wait', 'Comprobando si el puente responde…', ''];
+  return `<div class="bridge-live ${say[0]}" data-ai-live role="status"><p><b>${say[1]}</b></p>${say[2] ? `<p class="fine">${say[2]}</p><p class="fine">Studium lo vuelve a comprobar solo cada pocos segundos. <button type="button" class="link" data-ai-live-check>Comprobar ahora</button></p>` : ''}</div>`;
+}
+let settingsBridgeTimer = null;
+function watchSettingsBridge() {
+  clearTimeout(settingsBridgeTimer);
+  if (!document.querySelector('[data-ai-live]')) return;
+  const L = ai.bridgeLive();
+  if (Date.now() - L.at > 3000) { ai.checkBridge(); return; }
+  if (L.state !== 'ok') settingsBridgeTimer = setTimeout(() => { if (document.querySelector('[data-ai-live]')) ai.checkBridge().then(watchSettingsBridge); }, 4000);
+}
+if (typeof window !== 'undefined') window.addEventListener('studium-bridge', () => {
+  // The whole «Tu IA» section follows (what it uses now, the pickers), unless the person is typing in it.
+  const sec = document.querySelector('#set-ai');
+  if (sec && !sec.contains(document.activeElement)) { sec.outerHTML = aiSettings(); return; }
+  const box = document.querySelector('[data-ai-live]')?.closest('.ai-advanced');
+  if (box) box.outerHTML = bridgeAdvanced();
+});
 // How to open and pair the bridge, step by step; also used by «Trabajos» (trabajos.js).
 export function bridgeSteps() {
   return `<ol class="howto">
@@ -876,7 +908,7 @@ function aiSettings() {
   const c = now.length ? ai.choice('guide') : null;
   return `<section class="set glass" id="set-ai"><h2>Tu IA</h2>
     <p class="ai-lede">Studium usa una IA para leer tus archivos, tu horario y crear guías. Tú eliges cuál. <strong>Studium no cobra nada.</strong></p>
-    <div class="ai-now ${now.length ? 'on' : ''}">${c ? `Ahora Studium usa <b>${esc(ai.WAYS[c.provider]?.name ?? c.provider)}</b>, con el modelo adecuado para cada tarea. Hoy: ${count(ai.usageToday(c.provider), 'pedido', 'pedidos')}.`
+    <div class="ai-now ${now.length ? 'on' : ''}">${c ? `Ahora Studium usa <b>${esc(ai.WAYS[c.provider]?.name ?? c.provider)}</b>, con el modelo adecuado para cada tarea. Hoy: ${count(ai.usageToday(c.provider), 'pedido', 'pedidos')}.${c.provider.startsWith('bridge:') && !now.includes(c.provider) ? ' <b>Pero el puente no responde ahora</b>: abajo, en «El puente», dice qué falta.' : ''}`
       : 'Todavía no conectaste ninguna. <b>Para empezar, Gemini es gratis y toma un minuto.</b> Si usas ChatGPT o Claude, también sirven.'}</div>
     ${now.length ? `<div class="ai-status"><div class="ai-status-head"><div><h3>El estado de tus IA</h3><p class="fine">Qué está gratis, qué responde ahora, cuánto te queda y cuándo se reinicia, según cada proveedor.</p></div><div class="actions"><button type="button" class="button ghost small" data-ai-status>Revisar mis cuentas</button><button type="button" class="button ghost small" data-ai-full ${ai.connected().includes('bridge:claude') ? '' : 'disabled title="Necesita el puente con tu Claude Code"'}>Revisar el estado completo</button></div></div><div data-ai-status-out>${statusHTML(ai.lastStatus())}</div><div data-ai-full-out>${fullHTML(ai.lastCatalog())}</div></div>` : ''}
     <p class="ai-ask">¿Qué IA usas?</p>
@@ -988,6 +1020,7 @@ async function aiAction(t) {
     return;
   }
   if (t.dataset.aiPair !== undefined) { await pairBridge($('[data-ai-pair-code]')?.value); return; }
+  if (t.dataset.aiLiveCheck !== undefined) { t.disabled = true; await ai.checkBridge(); if (ai.bridgeLive().state !== 'ok') ctx?.toast('El puente todavía no responde: arriba dice qué falta.'); watchSettingsBridge(); t.disabled = false; return; }
   if (t.dataset.aiBridgeFind !== undefined) { await findBridgeSay(t.closest('.ai-bridge, .tj-bridge') ?? document); return; }
   if (t.dataset.aiBridgeCheck !== undefined) {
     const msg = $('[data-ai-msg="bridge"]');
@@ -1050,7 +1083,7 @@ export function mountSpace(context) {
       ai.forget(way); renderSettings();
       ctx?.toast(way === 'bridge' ? 'El puente quedó desenlazado.' : way === 'puter' || way === 'openrouter' ? 'Se desconectó de este navegador.' : 'La clave se borró de este navegador.');
     }
-    if (t.dataset.aiLogin || t.dataset.aiPair !== undefined || t.dataset.aiBridgeCheck !== undefined || t.dataset.aiBridgeFind !== undefined) aiAction(t);
+    if (t.dataset.aiLogin || t.dataset.aiPair !== undefined || t.dataset.aiBridgeCheck !== undefined || t.dataset.aiBridgeFind !== undefined || t.dataset.aiLiveCheck !== undefined) aiAction(t);
     if (t.dataset.aiCopy) { navigator.clipboard.writeText(t.dataset.aiCopy).then(() => ctx?.toast('Copiado.'), () => {}); }
     if (t.dataset.soundTest !== undefined) { sfx.enable(true); sfx.chime(); if (!prefs.get().sound) setTimeout(() => sfx.enable(false), 900); }
     if (t.id === 'timer-go') {
