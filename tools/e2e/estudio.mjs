@@ -303,15 +303,32 @@ try {
   ok('…it is folded at the end of «Pedir un cambio a tu IA», under «Más opciones»', fold.fold && fold.closed && fold.atEnd && fold.btn, JSON.stringify(fold));
   await B.js(`window.__b = []; const m = document.querySelector('.tj-adjpop .tj-more'); m.open = true; m.querySelector('[data-tj="collect-open"]').click(); return 1;`);
   await B.wait(`document.querySelector('.tj-collectpop [data-tj="collect-apply"]')`, 12000).catch(() => {});
-  const list = await B.js(`const p = document.querySelector('.tj-collectpop'); return { state: p?.querySelector('[data-bridge-state]')?.innerText ?? '', row: p?.querySelector('.tj-collectitems li')?.innerText ?? '', btn: p?.querySelector('[data-tj="collect-apply"]')?.innerText ?? '' }`);
+  const list = await B.js(`const p = document.querySelector('.tj-collectpop'); const li = [...(p?.querySelectorAll('.tj-collectitems li') ?? [])].find((x) => /Quiz 2/.test(x.innerText)); return { state: p?.querySelector('[data-bridge-state]')?.innerText ?? '', row: li?.innerText ?? '', btn: li?.querySelector('[data-tj="collect-apply"]')?.innerText ?? '', local: /este navegador/.test(p?.innerText ?? '') }`);
   ok('…its panel shows the bridge first, then each session: when, in which folder, what it wrote, and «Aplicar a esta guía»', /responde/.test(list.state) && /Quiz 2/.test(list.row) && /H1, H9/.test(list.row) && /Aplicar a esta guía \(1 parte\)/.test(list.btn), JSON.stringify(list));
   await B.shot('25-recoger');
-  await B.js(`document.querySelector('.tj-collectpop [data-tj="collect-apply"]').click(); return 1;`);
+  ok('…and the answers kept in this browser, with those of the bridge (the adjustment just applied)', list.local, JSON.stringify(list));
+  await B.js(`document.querySelector('.tj-collectpop [data-tj="collect-apply"][data-session]').click(); return 1;`);
   await B.wait(`/DEL-REGISTRO-TRES/.test(document.querySelector('#tjg-body')?.innerText ?? '')`, 15000).catch(() => {});
   const ap = await B.js(`return { applied: /DEL-REGISTRO-TRES/.test(document.querySelector('#tjg-body').innerText), runs: window.__b.filter((x) => x === '/v1/run').length, recover: window.__b.filter((x) => x.startsWith('/v1/recover?')).length, closed: !document.querySelector('.tj-collectpop'), undo: !!document.querySelector('[data-tj="adj-undo"]') }`);
   ok('…«Aplicar» puts it in the guide with no AI request, and it can be undone', ap.applied && ap.runs === 0 && ap.recover === 1 && ap.closed && ap.undo, JSON.stringify(ap));
   await B.js(`window.fetch = window.__f2; return 1;`);
   await B.js(`document.querySelector('.tj-adjpop [data-tj="adj-close"]')?.click(); const v = await import('/studium/assets/vault.js'); await v.set({ ...v.get(), bridge: '' }); const raw = JSON.parse(localStorage.getItem('studium-ai') ?? '{}'); raw.bridge = null; localStorage.setItem('studium-ai', JSON.stringify(raw)); const ai = await import('/studium/assets/ai.js'); ai.setChoice('solution', { provider: 'gemini', model: '', effort: '' }); return 1;`);
+
+  // Without the bridge: an answer of another AI (Gemini) kept in this browser and never applied (the page closed while
+  // it saved) is listed and applied with no request.
+  await B.js(`const { auth } = await import('/studium/assets/data.js'); const h = ${JSON.stringify({ ...h1, id: undefined })}; h.pasos[0].objetivo = 'OBJETIVO-RECOGIDO-DEL-NAVEGADOR';
+    const db = await new Promise((ok, no) => { const r = indexedDB.open('studium-trabajos', 1); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+    await new Promise((ok, no) => { const tx = db.transaction('borradores', 'readwrite'); tx.objectStore('borradores').put({ kind: 'answer', id: 'ans:${id}:prueba', tid: ${JSON.stringify(id)}, owner: auth.currentUser.uid, saved: Date.now(), step: 'chapter:H1', label: 'Hito H1', runId: '', r: { text: JSON.stringify(h), outputs: {}, way: 'gemini', model: 'gemini-2.5-flash' } }, 'ans:${id}:prueba'); tx.oncomplete = ok; tx.onerror = () => no(tx.error); }); db.close();
+    document.querySelector('.tj-askai').click(); return 1;`);
+  await W(500);
+  await B.js(`const m = document.querySelector('.tj-adjpop .tj-more'); m.open = true; m.querySelector('[data-tj="collect-open"]').click(); return 1;`);
+  await B.wait(`document.querySelector('.tj-collectpop [data-tj="collect-apply"][data-reply]')`, 12000).catch(() => {});
+  const loc = await B.js(`const p = document.querySelector('.tj-collectpop'); const li = [...(p?.querySelectorAll('.tj-collectitems li') ?? [])].find((x) => /Gemini/.test(x.innerText)); return { bridge: !!p?.querySelector('[data-bridge-state]'), row: li?.innerText ?? '', btn: !!li?.querySelector('[data-reply]') }`);
+  ok('without the bridge, «Recoger» lists an answer of Gemini kept in this browser: when, which part, which AI', !loc.bridge && /capítulo H1/.test(loc.row) && /este navegador/.test(loc.row) && loc.btn, JSON.stringify(loc));
+  await B.js(`[...document.querySelectorAll('.tj-collectpop .tj-collectitems li')].find((x) => /Gemini/.test(x.innerText)).querySelector('[data-reply]').click(); return 1;`);
+  await B.wait(`/OBJETIVO-RECOGIDO-DEL-NAVEGADOR/.test(document.querySelector('#tjg-body')?.innerText ?? '')`, 15000).catch(() => {});
+  ok('…and «Aplicar» puts that chapter in the guide, with no AI request', await B.js(`return /OBJETIVO-RECOGIDO-DEL-NAVEGADOR/.test(document.querySelector('#tjg-body')?.innerText ?? '') && !document.querySelector('.tj-collectpop')`));
+  await B.js(`document.querySelector('.tj-adjpop [data-tj="adj-close"]')?.click(); return 1;`);
 
   // No emoji as icons (CASPIAN): the top bar's buttons are words
   const pict = await B.js(`return [...(document.querySelector('nav.top')?.innerText ?? '')].filter((c) => /\\p{Extended_Pictographic}/u.test(c) && !'✓✕'.includes(c)).join('')`);

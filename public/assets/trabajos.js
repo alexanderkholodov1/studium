@@ -305,7 +305,7 @@ function aiLine(task) {
 let ctl = null;
 const stopped = () => !!ctl?.signal.aborted;
 function startWork() { ctl = new AbortController(); return ctl; }
-async function askAI(task, system, text, files = [], label = '', live = null, runId = '') {
+async function askAI(task, system, text, files = [], label = '', live = null, runId = '', step = '') {
   // The trabajo's own folder, when its writer is Claude through the bridge.
   const folder = task === 'solution' && T && ai.choice(task).provider === 'bridge:claude' ? folderOf(T.id) : '';
   if (folder && (await folderStateNow(folder)) === 'gone') {
@@ -323,6 +323,7 @@ async function askAI(task, system, text, files = [], label = '', live = null, ru
     const cont = task === 'solution' && T && ai.choice(task).provider === 'bridge:claude' && contOn(T.id) ? sessionOf(T.id) : '';
     const r = await ai.run({ system, text, files, task, label, folder, cont, runId, signal: task === 'solution' ? ctl?.signal : undefined, maxTokens: task === 'solution' ? ai.longest(ai.choice(task)) : 4000, onEvent: live?.onEvent, onProgress: live?.onProgress });
     if (task === 'solution' && T && r.session) keepSessionOf(T.id, r.session);
+    if (task === 'solution' && T && step) await keepReply(T.id, step, r, label, runId);
     if (task === 'solution' && cont) ctx?.toast?.(r.continued ? 'Siguió la misma sesión de Claude Code que escribió la guía.' : (r.note || 'Claude Code empezó una sesión nueva.'));
     return r;
   } finally { live?.stop(); }
@@ -475,12 +476,11 @@ async function applyAdjust(list, box) {
   keepPending(tid, { runId, list, at: Date.now(), way: ai.choice('solution').provider, title: T.title });
   adjusting = true;
   let r;
-  try { r = await askAI('solution', system, 'Aplica los cambios pedidos a la guía.', [], `Ajustes a «${T.title}»`, liveFeed(box), runId); } catch (e) {
+  try { r = await askAI('solution', system, 'Aplica los cambios pedidos a la guía.', [], `Ajustes a «${T.title}»`, liveFeed(box), runId, 'adjust'); } catch (e) {
     // Nothing to collect when it never ran, was stopped, or went to an AI that keeps nothing (only the bridge keeps results).
     if (['folder', 'cancel', 'account', 'model'].includes(e?.kind) || !String(ai.choice('solution').provider).startsWith('bridge:')) forgetPending(tid);
     throw e;
   } finally { adjusting = false; }
-  await keepRaw(tid, r);
   return adoptAdjust(r, `${system.split('La guía tal como está ahora:')[0]}[la guía como estaba]`);
 }
 // What the AI wrote, applied to the guide: the same every time for the same answer (no AI involved).
@@ -537,12 +537,39 @@ function forgetPending(tid) {
   try { const m = JSON.parse(localStorage.getItem(PENDING) ?? '{}'); delete m[tid]; localStorage.setItem(PENDING, JSON.stringify(m)); } catch { /* this device only */ }
   draftStore('readwrite', (st) => st.delete(`res:${tid}`)).catch(() => {});
 }
-const keepRaw = (tid, r) => draftStore('readwrite', (st) => st.put({ kind: 'result', owner: uid(), saved: Date.now(), r: { text: r.text ?? '', outputs: r.outputs ?? {}, model: r.model ?? '', way: r.way ?? '', provider: r.provider ?? '' } }, `res:${tid}`)).catch((e) => console.warn('result', e));
-const rawOf = (tid) => draftStore('readonly', (st) => st.get(`res:${tid}`)).then((x) => x?.r ?? null).catch(() => null);
+// Every answer of the AI that writes a guide (outline, whole guide, a chapter, an adjustment) is kept in this browser as
+// soon as it arrives, before it is read or saved: if reading or saving it fails, or the page closes, «Recoger» applies
+// it with no new request, whatever AI wrote it. The last 12 per guide, for 14 days.
+const REPLIES = 12;
+const REPLY_DAYS = 14;
+async function keepReply(tid, step, r, label = '', runId = '') {
+  const id = `ans:${tid}:${Date.now().toString(36)}`;
+  try {
+    await draftStore('readwrite', (st) => st.put({ kind: 'answer', id, tid, owner: uid(), saved: Date.now(), step, label: String(label).slice(0, 200), runId, r: { text: r.text ?? '', outputs: r.outputs ?? {}, model: r.model ?? '', way: r.way ?? '', provider: r.provider ?? '', error: r.error ?? '' } }, id));
+    const old = (await repliesOf(tid)).slice(REPLIES).concat((await repliesOf(tid)).filter((x) => Date.now() - x.saved > REPLY_DAYS * 864e5));
+    if (old.length) await draftStore('readwrite', (st) => { for (const x of old) st.delete(x.id); });
+  } catch (e) { console.warn('reply', e); }
+}
+const repliesOf = (tid) => draftStore('readonly', (st) => st.getAll()).then((all) => (all ?? []).filter((x) => x.kind === 'answer' && x.tid === tid && x.owner === uid()).sort((a, b) => b.saved - a.saved)).catch(() => []);
+// The answer of the adjustment still pending (by its request id).
+const rawOf = async (tid) => { const p = pendingOf(tid); return p?.runId ? (await repliesOf(tid)).find((x) => x.runId === p.runId)?.r ?? null : null; };
+// A kept answer as files, the way adoptAdjust reads them: an outline is «esquema.json», a chapter «H<n>.json».
+function replyAsResult(x) {
+  const r = { ...x.r, outputs: { ...(x.r.outputs ?? {}) } };
+  if (Object.keys(r.outputs).length) return r;
+  if (x.step === 'outline') return { ...r, outputs: { 'esquema.json': r.text } };
+  if (String(x.step).startsWith('chapter:')) {
+    const hid = x.step.slice(8);
+    const j = parseJSON(r.text);
+    return { ...r, outputs: { [`${hid}.json`]: JSON.stringify(j && typeof j === 'object' && !j.id ? { ...j, id: hid } : j) } };
+  }
+  return r;
+}
+const replyFiles = (x) => { try { const r = replyAsResult(x); if (Object.keys(r.outputs).length) return r.outputs; const j = parseJSON(r.text); return Object.fromEntries([...(j?.esquema ? ['esquema.json'] : []), ...(Array.isArray(j?.hitos) ? j.hitos.map((h) => `${h?.id}.json`) : [])].map((n) => [n, 1])); } catch { return {}; } };
 const COLLECT = '<button type="button" class="act" data-tj="adj-collect">Recoger lo que escribió tu IA</button>';
 // A rare case (his words: «un caso muy nicho»), so it sits folded at the end of «Pedir un cambio a tu IA» and of the card
 // that writes the guide, never on the main screen. Only with the bridge paired: other AIs keep no record to collect.
-const collectFold = () => (ai.bridgeOf()?.token ? `<details class="tj-more"><summary>Más opciones</summary><p class="fine">¿Tu IA ya trabajó en esta guía y lo que hizo no llegó a ella (se cortó, se cerró la página, o falló al guardarlo)? Studium lo busca en el registro que Claude Code guarda en tu computadora y lo aplica tal cual, sin volver a pedírselo.</p><p><button type="button" class="ask" data-tj="collect-open">Recoger lo que hizo tu IA</button></p></details>` : '');
+const collectFold = () => `<details class="tj-more"><summary>Más opciones</summary><p class="fine">¿Tu IA ya trabajó en esta guía y lo que hizo no llegó a ella (se cortó, se cerró la página, o falló al guardarlo)? Studium guarda en este navegador cada respuesta de tu IA${ai.bridgeOf()?.token ? ' y, con el puente, la busca también en el registro de Claude Code' : ''}, y la aplica tal cual, sin volver a pedírsela.</p><p><button type="button" class="ask" data-tj="collect-open">Recoger lo que hizo tu IA</button></p></details>`;
 // Beside «Recoger»: the bridge's state, with how to reconnect it (the answer may be kept only there).
 const COLLECT_BRIDGE = () => `<div data-bridge-state>${bridgeStateHTML()}</div>`;
 // «Recoger lo que escribió tu IA»: the answer kept in this browser, or else the one the bridge kept for that request;
@@ -573,25 +600,32 @@ function collectOpen() {
   box.className = 'tj-adjpop tj-collectpop';
   box.innerHTML = `<div class="tj-adjcard" role="dialog" aria-label="Recoger lo que hizo tu IA">
       <h4>Recoger lo que hizo tu IA</h4>
-      <p class="fine">Lo que Claude Code escribió para tus guías, aunque no haya llegado a la guía (se cortó, se cerró la página o falló al guardarlo). Studium lo lee del registro que Claude Code guarda en tu computadora y de las copias del puente, y lo aplica tal cual, sin volver a pedírselo a tu IA.${T?.outline ? ' Después puedes deshacerlo.' : ' Si la guía todavía no tiene esquema, lo que recojas debe traerlo (esquema.json).'}</p>
-      <div data-bridge-state>${bridgeStateHTML()}</div>
-      <div class="tj-collectlist" data-collect-list>${bridgeLive.state === 'ok' ? '<p class="mut">Buscando lo que escribió tu IA…</p>' : '<p class="mut">Cuando el puente responda, aquí aparece lo que encontró.</p>'}</div>
+      <p class="fine">Lo que tu IA escribió para esta guía, aunque no haya llegado a ella (se cortó, se cerró la página o falló al guardarlo): las respuestas guardadas en este navegador${ai.bridgeOf()?.token ? ' y, con el puente, el registro de Claude Code y sus copias' : ''}. Se aplica tal cual, sin volver a pedírselo a tu IA.${T?.outline ? ' Después puedes deshacerlo.' : ' Si la guía todavía no tiene esquema, lo que recojas debe traerlo (esquema.json).'}</p>
+      ${ai.bridgeOf()?.token ? `<div data-bridge-state>${bridgeStateHTML()}</div>` : ''}
+      <div class="tj-collectlist" data-collect-list><p class="mut">Buscando lo que escribió tu IA…</p></div>
       <p class="tj-adjbtns"><button type="button" class="ask" data-tj="collect-close">Cerrar</button></p>
     </div>`;
   (gRoot().querySelector('.tjg-app') ?? document.body).append(box);
-  kickBridge();
-  if (bridgeLive.state === 'ok') loadCollect();
+  if (ai.bridgeOf()?.token) kickBridge();
+  loadCollect();
 }
 const shortWhen = (at) => { const d = new Date(at); return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('es', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); };
 async function loadCollect() {
   const el = document.querySelector('[data-collect-list]');
   if (!el || !T) return;
-  if (ai.bridgeOld()) { el.innerHTML = '<p class="mut">Actualiza el puente (arriba dice cómo) para poder recoger.</p>'; return; }
   const mine = sessionOf(T.id);
   const pend = pendingOf(T.id);
   const ids = new Set((T.outline?.hitos ?? []).map((h) => `${h.id}.json`));
-  let sessions = []; let results = [];
-  try { [sessions, results] = await Promise.all([ai.bridgeRecoverable(mine ? [mine] : []), ai.bridgeResults().catch(() => [])]); } catch (e) { el.innerHTML = `<p class="tj-warn">No pude preguntarle al puente: ${esc(e.message)}</p>`; return; }
+  const local = await repliesOf(T.id);
+  // The bridge's records only when it answers (its state, with how to fix it, is shown above).
+  let sessions = []; let results = []; let note = '';
+  if (ai.bridgeOf()?.token) {
+    if (ai.bridgeOld()) note = '<p class="mut">Actualiza el puente (arriba dice cómo) para recoger también lo que guardó.</p>';
+    else if (bridgeLive.state !== 'ok') note = '<p class="mut">Cuando el puente responda, aquí aparece también lo que guardó.</p>';
+    else {
+      try { [sessions, results] = await Promise.all([ai.bridgeRecoverable(mine ? [mine] : []), ai.bridgeResults().catch(() => [])]); } catch (e) { note = `<p class="tj-warn">No pude preguntarle al puente: ${esc(e.message)}</p>`; }
+    }
+  }
   const row = (key, value, when, where, files, ours, extra = '') => {
     const names = Object.keys(files);
     const fits = names.filter((n) => n === 'esquema.json' || (T.outline ? ids.has(n) : /^H\w{0,4}\.json$/.test(n) && names.includes('esquema.json')));
@@ -599,11 +633,13 @@ async function loadCollect() {
     return `<li class="${ours ? 'ours' : ''}"><p><b>${esc(when)}</b>${ours ? ' <span class="tag rec">de esta guía</span>' : ''}${extra}<br><small class="mut">${where ? `en ${esc(where)} · ` : ''}escribió ${esc(label)} (${names.length} ${names.length === 1 ? 'archivo' : 'archivos'})</small></p>
         ${fits.length ? `<button type="button" class="act" data-tj="collect-apply" data-${key}="${esc(value)}">Aplicar a esta guía (${fits.length} ${fits.length === 1 ? 'parte' : 'partes'})</button>` : '<small class="mut">Sus partes no corresponden a esta guía.</small>'}</li>`;
   };
+  const STEP = { outline: 'el esquema', whole: 'la guía completa', adjust: 'un ajuste' };
   const items = [
+    ...local.map((x) => ({ at: new Date(x.saved).toISOString(), html: row('reply', x.id, `${shortWhen(x.saved)} · ${STEP[x.step] ?? `el capítulo ${esc(String(x.step).slice(8))}`}`, `este navegador, ${ai.WAYS[x.r.way]?.name ?? x.r.way ?? 'tu IA'}`, replyFiles(x), pend?.runId && pend.runId === x.runId) })),
     ...results.filter((r) => r.files?.length).map((r) => ({ at: r.at, html: row('result', r.id, `${shortWhen(r.at)} · ${r.label || 'pedido de Studium'}`, '', Object.fromEntries(r.files.map((n) => [n, 1])), pend?.runId === r.id, r.error ? ' <span class="tag">no terminó</span>' : '') })),
     ...sessions.map((x) => ({ at: x.at, html: row('session', x.session, `${shortWhen(x.at)} · sesión de Claude Code`, String(x.cwd ?? '').split(/[\\/]/).filter(Boolean).pop() ?? '', x.files, x.session === mine) })),
   ].sort((a, b) => String(b.at).localeCompare(String(a.at)));
-  el.innerHTML = items.length ? `<ol class="tj-collectitems">${items.map((x) => x.html).join('')}</ol>` : '<p class="mut">El puente no tiene nada escrito por tu IA en «salida»: ni sesiones de Claude Code que haya corrido, ni resultados guardados.</p>';
+  el.innerHTML = `${items.length ? `<ol class="tj-collectitems">${items.map((x) => x.html).join('')}</ol>` : `<p class="mut">No hay nada guardado de tu IA para esta guía${ai.bridgeOf()?.token && bridgeLive.state === 'ok' ? ', ni en este navegador ni en el puente' : ' en este navegador'}.</p>`}${note}`;
 }
 async function undoAdjust() {
   if (!undo) return;
@@ -1512,7 +1548,7 @@ async function generateOutline(files = [], live = null) {
   const system = outlinePrompt({ parts: T.parts, course: T.course, deadline: deadlineText(T.deadline), prefs: promptPrefs() });
   const text = sourceText();
   let r;
-  try { r = await askAI('solution', system, text, files, `Esquema de «${T.title}»`, live); T.lastError = null; failed.delete(T.id); } catch (e) { T.lastError = errInfo(e, 'Escribir la guía'); failed.set(T.id, T.lastError); throw e; }
+  try { r = await askAI('solution', system, text, files, `Esquema de «${T.title}»`, live, '', 'outline'); T.lastError = null; failed.delete(T.id); } catch (e) { T.lastError = errInfo(e, 'Escribir la guía'); failed.set(T.id, T.lastError); throw e; }
   keepResume(T.id, r.resume);
   const outline = cleanOutline(parseJSON(r.text), T.parts);
   await setDoc(tRef(T.id), { outline: await pack(outline), ai: madeBy(r), updated: serverTimestamp() }, { merge: true });
@@ -1527,7 +1563,7 @@ async function generateWhole(files = [], live = null) {
   const system = wholePrompt({ parts: T.parts, course: T.course, deadline: deadlineText(T.deadline), prefs: promptPrefs() });
   const text = sourceText();
   let r;
-  try { r = await askAI('solution', system, text, files, `Guía completa de «${T.title}»`, live); T.lastError = null; failed.delete(T.id); } catch (e) { T.lastError = errInfo(e, 'Escribir la guía'); failed.set(T.id, T.lastError); throw e; }
+  try { r = await askAI('solution', system, text, files, `Guía completa de «${T.title}»`, live, '', 'whole'); T.lastError = null; failed.delete(T.id); } catch (e) { T.lastError = errInfo(e, 'Escribir la guía'); failed.set(T.id, T.lastError); throw e; }
   keepResume(T.id, r.resume);
   const got = r.outputs ?? {};
   if (!got['esquema.json']) {
@@ -1553,7 +1589,7 @@ async function generateWhole(files = [], live = null) {
 async function generateMilestone(hid, live = null) {
   const milestone = T.outline.hitos.find((h) => h.id === hid);
   const system = milestonePrompt({ milestone, outline: T.outline, prefs: promptPrefs() });
-  const r = await askAI('solution', system, `Escribe el hito ${hid} completo.`, [], `Hito ${hid} de «${T.title}»`, live);
+  const r = await askAI('solution', system, `Escribe el hito ${hid} completo.`, [], `Hito ${hid} de «${T.title}»`, live, '', `chapter:${hid}`);
   keepResume(T.id, r.resume);
   const data = cleanMilestone(parseJSON(r.text), milestone);
   await setDoc(tRef(T.id, 'hitos', hid), { data: await pack(data), encoding: 'gzip', by: uid(), ai: madeBy(r), updated: serverTimestamp() });
@@ -2718,8 +2754,8 @@ function wire(root) {
     if (kind === 'collect-close') { b.closest('.tj-adjpop')?.remove(); return; }
     if (kind === 'collect-apply') {
       await busy(b, async () => {
-        const r = b.dataset.session ? await ai.bridgeRecover(b.dataset.session) : await ai.bridgeResult(b.dataset.result);
-        if (!r || !Object.keys(r.outputs ?? {}).length) throw new Error('El puente ya no tiene esos archivos.');
+        const r = b.dataset.reply ? replyAsResult((await repliesOf(T.id)).find((x) => x.id === b.dataset.reply) ?? { r: {} }) : b.dataset.session ? await ai.bridgeRecover(b.dataset.session) : await ai.bridgeResult(b.dataset.result);
+        if (!r || (!Object.keys(r.outputs ?? {}).length && !r.text)) throw new Error(b.dataset.reply ? 'Esa respuesta ya no está guardada en este navegador.' : 'El puente ya no tiene esos archivos.');
         const { changed, notes } = await adoptAdjust(r);
         const p = pendingOf(T.id);
         if (p?.list) adjKeep(adjList().filter((c) => !p.list.some((x) => x.at === c.at)));
