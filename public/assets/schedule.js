@@ -10,7 +10,7 @@ import { auth, loadSchedule, saveSchedule } from './data.js';
 import * as ai from './ai.js';
 import { sfx } from './sfx.js';
 import { prefs, EVENT_KINDS } from './prefs.js';
-import { parseOffer, termName } from './offer.js';
+import { parseOffer, termName, linked, codesOf } from './offer.js';
 import { prereqNote, norm } from './malla.js';
 import { dayStatus, classesThisWeek, weekOff, longDay, iso, TERMS, finalFor, examTable, keepOwnTable } from './calendario.js';
 
@@ -103,6 +103,9 @@ const samePart = (a, b) => a.code && a.code === b.code && isTheory(a) === isTheo
 function missingPart(c, list) {
   if (!c.code) return '';
   const others = list.filter((x) => x !== c && x.code === c.code && !samePart(x, c));
+  // With the group's codes: each code is a part it needs (a theory «Z3 Z4» needs its lab and its exercises).
+  const open = codesOf(c).filter((k) => !others.some((x) => codesOf(x).includes(k)));
+  if (others.length && open.length && isTheory(c) && codesOf(c).length > 1 && /lab/i.test(c.name) && /ej/i.test(c.name)) return `Le falta un NRC de su grupo (${open.join(', ')}): su ${others.some((x) => /lab/i.test(x.kind)) ? 'ejercicio' : /ej/i.test(others.map((x) => x.kind).join(' ')) ? 'laboratorio' : 'ejercicio o laboratorio'}.`;
   if (others.length || !(/\+\s*(ej|lab)/i.test(c.name) || c.group)) return '';
   return isTheory(c) ? 'Le falta su NRC de ejercicios o laboratorio.' : 'Le falta su NRC de teoría.';
 }
@@ -316,6 +319,7 @@ function side(o) {
       return `<li class="c-${c.color}"><button class="item" draggable="${mode === 'prep'}" data-drag="${c.id}" data-edit="${c.id}"><i></i><span><b>${esc(label(c))}</b><small>${[c.section && `paralelo ${esc(c.section)}`, c.nrc && `NRC ${esc(c.nrc)}`, c.prof && esc(c.prof)].filter(Boolean).join(' · ')}</small>${miss ? `<em class="miss">${miss}</em>` : ''}</span><strong>${c.credits || '–'}</strong></button>
         <button class="remove" data-remove="${c.id}" aria-label="Quitar ${esc(label(c))}" title="Quitar">×</button></li>`;
     }).join('')}</ol>
+    ${mode === 'prep' && o.classes.length ? '<p class="muted small">En Banner, «Pendiente» aún no es inscrito: pulsa <b>Enviar</b>. <a href="#/guia-estudiante/errores">Si Banner no te deja</a> · <a href="#/guia-estudiante/cupos">Si no hay cupo</a></p>' : ''}
     <p class="muted small" id="sched-where"></p>
   </aside>`;
 }
@@ -356,11 +360,11 @@ function pickerPanel() {
   const o = view();
   const kinds = [...new Set(catalog.map((s) => s.kind || 'Clase'))];
   const chosen = new Set(o.classes.map((c) => c.nrc));
-  const groups = new Set(o.classes.filter((c) => c.group).map((c) => `${c.code}|${c.group}`));
+  const ours = (s) => !!s.group && o.classes.some((c) => c.nrc !== s.nrc && c.code === s.code && (c.kind || '') !== (s.kind || '') && linked(c, s));
   const row = (s) => {
     const cls = cleanClass(s, 0);
     const mine = chosen.has(s.nrc);
-    const partner = !mine && s.group && groups.has(`${s.code}|${s.group}`);
+    const partner = !mine && ours(s);
     const clashes = !mine && o.classes.some((c) => c.nrc !== s.nrc && !samePart(c, cls) && meets(c, cls));
     return `<li><button class="sched-pick${mine ? ' on' : ''}${partner ? ' partner' : ''}" data-pick="${esc(s.nrc)}" ${mine ? 'disabled' : ''}>
       <b>Paralelo ${esc(s.section)} <small>NRC ${esc(s.nrc)}</small></b>
@@ -371,7 +375,7 @@ function pickerPanel() {
   return `<div class="sched-picker glass">
     <div class="sched-picker-head"><h3>${esc(catalog[0].code)} · ${esc(catalog[0].name)}${state.term ? ` <small>${esc(termName(state.term))}</small>` : ''}</h3><button class="link" data-picker-close>Cerrar</button></div>
     <p class="muted small">Elige un paralelo. Los ejercicios o el laboratorio que van con tu teoría aparecen «de tu grupo».</p>
-    <div class="sched-picker-cols">${kinds.map((k) => `<section><h4>${esc(k)}</h4><ol>${catalog.filter((s) => (s.kind || 'Clase') === k).sort((a, b) => (groups.has(`${b.code}|${b.group}`) ? 1 : 0) - (groups.has(`${a.code}|${a.group}`) ? 1 : 0)).map(row).join('')}</ol></section>`).join('')}</div>
+    <div class="sched-picker-cols">${kinds.map((k) => `<section><h4>${esc(k)}</h4><ol>${catalog.filter((s) => (s.kind || 'Clase') === k).sort((a, b) => (ours(b) ? 1 : 0) - (ours(a) ? 1 : 0)).map(row).join('')}</ol></section>`).join('')}</div>
   </div>`;
 }
 // What adding a class asks: the first of the queue, with what can be done.
@@ -640,7 +644,7 @@ function addCandidate(raw, list = view()) {
   note = '';
   const old = list.classes.find((c) => samePart(c, cls));
   if (old) { asks.push({ kind: 'dup', cls, old, raw, list }); return; }
-  const other = cls.group && list.classes.find((c) => c.code === cls.code && c.group && c.group !== cls.group && !samePart(c, cls));
+  const other = cls.group && list.classes.find((c) => c.code === cls.code && c.group && !samePart(c, cls) && !linked(c, cls));
   if (other) { asks.push({ kind: 'group', cls, other, raw, list }); return; }
   place(cls, list, raw);
 }
@@ -703,7 +707,7 @@ function moveTo(id, target) {
   const from = view();
   const c = from.classes.find((x) => x.id === id);
   if (!c || target === from) return 0;
-  const group = [c, ...from.classes.filter((x) => x !== c && x.code === c.code && c.group && x.group === c.group)];
+  const group = [c, ...from.classes.filter((x) => x !== c && x.code === c.code && linked(x, c))];
   for (const g of group) if (!target.classes.some((x) => g.nrc && x.nrc === g.nrc)) target.classes.push({ ...g, id: rid(), slots: g.slots.map((s) => ({ ...s })) });
   from.classes = from.classes.filter((x) => !group.includes(x));
   save();

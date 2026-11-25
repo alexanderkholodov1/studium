@@ -61,5 +61,10 @@ export function termName(code) {
   const y = Number(m[1]);
   return `${{ 1: 'Primer Semestre', 2: 'Segundo Semestre', 3: 'Verano' }[m[2]] ?? 'Periodo'} ${y}–${y + 1}`;
 }
-// The sections that go with this one: the same course and the same group, of another kind (its exercises, its lab).
-export const partners = (sec, all) => (sec.group ? all.filter((x) => x !== sec && x.code === sec.code && x.group === sec.group && x.kind !== sec.kind) : []);
+// «Agrupado con» lists two codes per section, and parts go together when they share one: in USFQ's offer 202620 a
+// theory «| Z3 || Z4 |» goes with the lab «| Z3 || Z5 |» and the exercises «| Z4 || Z5 |» (seen in his registration,
+// 2026-11-25: a lab of another group gave «Errores impiden la inscripción»). Each code is a link the theory needs.
+export const codesOf = (c) => String(c?.group ?? '').split(/[\s|]+/).filter(Boolean);
+export const linked = (a, b) => { const s = new Set(codesOf(a)); return codesOf(b).some((x) => s.has(x)); };
+// The sections that go with this one: the same course, a shared group code, of another kind (its exercises, its lab).
+export const partners = (sec, all) => all.filter((x) => x !== sec && x.code === sec.code && x.kind !== sec.kind && linked(x, sec));
