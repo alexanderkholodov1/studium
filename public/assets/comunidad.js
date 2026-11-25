@@ -10,14 +10,14 @@ const $ = (s, r = document) => r.querySelector(s);
 
 // The same ids as the rules (firestore.rules, ideas()).
 export const IDEAS = [
-  { id: 'amigos', icon: '🤝', title: 'Amigos y avatares', text: 'Agrega a tus compañeros, mira qué estudian y date una cara propia.' },
-  { id: 'grupos', icon: '👥', title: 'Grupos de estudio', text: 'Un grupo por materia o por examen, con sus guías, su material y su chat.' },
-  { id: 'horario', icon: '🗓️', title: 'Horario compartido', text: 'Compara tu horario con tus amigos y encuentren las horas libres en común.' },
-  { id: 'musica', icon: '🎧', title: 'Música para estudiar juntos', text: 'Una sala con la misma música para todos, mientras cada uno estudia.' },
-  { id: 'postits', icon: '📝', title: 'Post-its de los profes', text: 'Notas cortas sobre cada profe y cada materia, dejadas por quienes ya pasaron.' },
-  { id: 'juego', icon: '🎮', title: 'Un juego para repasar', text: 'Repasa los conceptos de tu grafo jugando, solo o contra tus amigos.' },
-  { id: 'logros', icon: '🏅', title: 'Logros y graduación', text: 'Cada materia aprobada se celebra, hasta el día de tu graduación.' },
-  { id: 'campus', icon: '🏛️', title: 'Tu campus y la universidad', text: 'Aulas, el Learning Center, la biblioteca, los Leos: lo que nadie te explica el primer día.' },
+  { id: 'amigos', title: 'Amigos y avatares', text: 'Agrega a tus compañeros, mira qué estudian y date una cara propia.' },
+  { id: 'grupos', title: 'Grupos de estudio', text: 'Un grupo por materia o por examen, con sus guías, su material y su chat.' },
+  { id: 'horario', title: 'Horario compartido', text: 'Compara tu horario con tus amigos y encuentren las horas libres en común.' },
+  { id: 'musica', title: 'Música para estudiar juntos', text: 'Una sala con la misma música para todos, mientras cada uno estudia.' },
+  { id: 'postits', title: 'Post-its de los profes', text: 'Notas cortas sobre cada profe y cada materia, dejadas por quienes ya pasaron.' },
+  { id: 'juego', title: 'Un juego para repasar', text: 'Repasa los conceptos de tu grafo jugando, solo o contra tus amigos.' },
+  { id: 'logros', title: 'Logros y graduación', text: 'Cada materia aprobada se celebra, hasta el día de tu graduación.' },
+  { id: 'campus', title: 'Tu campus y la universidad', text: 'Aulas, el Learning Center, la biblioteca, los Leos: lo que nadie te explica el primer día.' },
 ];
 
 let counts = {};
@@ -33,7 +33,6 @@ async function load() {
 }
 const waiting = (n) => (n === 0 ? 'Sé el primero en pedirlo' : n === 1 ? '1 persona lo espera' : `${n.toLocaleString('es')} personas lo esperan`);
 const card = (i) => `<article class="cm-idea ${mine.has(i.id) ? 'wanted' : ''}" data-idea="${esc(i.id)}">
-    <span class="cm-icon" aria-hidden="true">${i.icon}</span>
     <h3>${esc(i.title)}</h3><p>${esc(i.text)}</p>
     <div class="cm-foot"><button type="button" class="cm-want" aria-pressed="${mine.has(i.id)}">${mine.has(i.id) ? '✓ Lo quiero' : 'Yo quiero'}</button><span class="cm-count">${esc(waiting(counts[i.id] ?? 0))}</span></div>
   </article>`;

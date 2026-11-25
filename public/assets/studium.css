@@ -2259,7 +2259,7 @@ html.has-announce .page { padding-top: 170px; }
 .cm-idea { display: flex; flex-direction: column; gap: 6px; padding: 18px; border-radius: 22px; background: var(--card); border: 1px solid var(--line); transition: transform .25s var(--spring, ease), border-color .2s; }
 .cm-idea:hover { transform: translateY(-3px); }
 .cm-idea.wanted { border-color: var(--blue); }
-.cm-icon { font-size: 30px; } .cm-idea h3 { margin: 2px 0 0; font-size: 18px; } .cm-idea p { margin: 0; color: var(--ink-2); font-size: 14px; flex: 1; }
+.cm-idea h3 { margin: 2px 0 0; font-size: 18px; } .cm-idea p { margin: 0; color: var(--ink-2); font-size: 14px; flex: 1; }
 .cm-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
 .cm-want { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--blue); background: none; color: var(--blue); font: inherit; font-weight: 800; cursor: pointer; }
 .cm-want[aria-pressed="true"] { background: var(--blue); color: #fff; }

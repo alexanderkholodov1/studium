@@ -18,7 +18,7 @@ export const DOCS = [
       { text: 'Si tú le prestas una carpeta tuya, trabaja dentro de ella, en una subcarpeta propia (.studium/run-…), con el permiso que elegiste. Nunca acepta un disco entero ni tu carpeta personal.', sel: '.tj-places' },
       { text: 'Tu IA deja lo que escribe en «salida» (por ejemplo, esquema.json y un archivo por capítulo). Studium lee esos archivos tal cual y los revisa con reglas fijas, sin otra IA en medio.' },
       { text: 'Mientras trabaja, Studium solo le pregunta su avance para mostrártelo. La ventana de Claude Code, si la dejas activada, te muestra cada archivo que lee o cambia.' },
-      { text: 'Tu IA no puede buscar en internet ni lanzar otros agentes, y solo abre páginas si trajiste enlaces (esos sitios). Fuera de su carpeta y de la que le prestaste, no toca nada.' },
+      { text: 'Tu IA no puede buscar en internet ni lanzar otros agentes, y solo abre páginas si trajiste enlaces (esos sitios). Fuera de su carpeta y de la que le prestaste, no toca nada; y ni ahí lee o cambia archivos de claves (.env, llaves, certificados, credenciales).' },
       { text: 'A Studium solo llega la guía escrita. Tu pedido y tus archivos van a la empresa de tu IA (Anthropic, con Claude Code), como cuando la usas tú.' },
     ],
     more: [

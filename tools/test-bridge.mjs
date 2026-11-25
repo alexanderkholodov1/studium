@@ -204,6 +204,7 @@ await test('links brought as a source: Claude Code may open only those sites, ne
   check(web.length === 3 && web.includes('WebFetch(domain:profe.usfq.edu.ec)') && web.includes('WebFetch(domain:github.com)') && web.includes('WebFetch(domain:raw.githubusercontent.com)'), `sites: ${web.join(' ')}`);
   check(!allowed.includes('WebFetch') && !allowed.includes('WebSearch'), 'a WebFetch without a site, or WebSearch, allowed');
   check(denied.includes('WebSearch') && denied.includes('Task') && !denied.includes('WebFetch'), `denied: ${denied.join(' ')}`);
+  check(['Read(./**/.env)', 'Read(./**/*.pem)', 'Read(./**/*adminsdk*.json)', 'Edit(./**/.env)', 'Write(./**/id_rsa*)'].every((t) => denied.includes(t)), 'files with keys are not denied');
   const ask = c.args[c.args.indexOf('-p') + 1] ?? '';
   check(ask.includes('fuentes.json') && ask.includes('https://profe.usfq.edu.ec/clases/redes') && !ask.includes('javascript:') && !ask.includes('file:'), 'the prompt names only the valid links and asks for fuentes.json');
   scenario({ claude: { answer: '{}' } });

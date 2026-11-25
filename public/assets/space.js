@@ -4,7 +4,6 @@ import { careers, careerPicker } from './malla.js';
 import { myClasses } from './schedule.js';
 import * as vault from './vault.js';
 import { prefs, MODES, AMBIENCES, THEMES, AVATARS, EVENT_KINDS } from './prefs.js';
-const KIND_ICON = { examen: '📝', entrega: '📦', presentacion: '🎤', reunion: '👥', otro: '•' };
 import * as ai from './ai.js';
 import { when, nextMidnight } from './aierror.js';
 import { sfx } from './sfx.js';
@@ -176,11 +175,11 @@ function deadlinesTile(span) {
   return tile('deadlines', span, `<h2>Fechas y entregas <small>${next.length ? `${next.length} por venir` : ''}</small></h2>
     ${next.length ? `<ul class="dlist">${next.map((d) => { const n = daysTo(d.date); return `<li class="${n <= 2 ? 'near' : ''}">
       <span class="when"><b>${n === 0 ? 'Hoy' : n}</b><small>${n === 0 ? '' : n === 1 ? 'día' : 'días'}</small></span>
-      <span class="text"><strong>${esc(KIND_ICON[d.kind] ?? '')} ${esc(d.text)}</strong><span class="muted">${esc([EVENT_KINDS[d.kind], d.course, longDate(d.date), d.time].filter(Boolean).join(' · '))}</span></span>
+      <span class="text"><strong>${esc(d.text)}</strong><span class="muted">${esc([EVENT_KINDS[d.kind], d.course, longDate(d.date), d.time].filter(Boolean).join(' · '))}</span></span>
       <button class="icon x" data-deadline-remove="${esc(d.id)}" aria-label="Quitar esta fecha"><svg><use href="#i-x"/></svg></button></li>`; }).join('')}</ul>`
       : '<p class="muted">Exámenes, entregas, presentaciones, reuniones: todo lo que tenga fecha, con cuánto falta. También en el calendario de «Mi horario».</p>'}
     <form class="dl-add" id="deadline-add">
-      <select name="kind" aria-label="Qué es">${Object.entries(EVENT_KINDS).map(([k, v]) => `<option value="${k}">${KIND_ICON[k]} ${v}</option>`).join('')}</select>
+      <select name="kind" aria-label="Qué es">${Object.entries(EVENT_KINDS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
       <input name="text" maxlength="100" placeholder="Entrega del proyecto, Parcial 2…" aria-label="Qué" required autocomplete="off">
       <input name="date" type="date" aria-label="Cuándo" required><input name="time" type="time" aria-label="Hora (opcional)">
       <input name="course" maxlength="80" list="home-courses" placeholder="Materia (opcional)" aria-label="Materia" autocomplete="off">
@@ -966,8 +965,8 @@ function aiSettings() {
 function vaultHTML() {
   const v = vault.state();
   const note = v.note ? `<p class="msg">${esc(v.note)}</p>` : '';
-  if (v.synced) return `${note}<p class="vault-on"><b>🔒 Tus claves están cifradas</b>, en este dispositivo y en tu cuenta. Solo tu contraseña de Studium las abre: ni Studium ni sus admins pueden leerlas. En tu celular aparecen al iniciar sesión; al cerrar sesión se borran de aquí y vuelven cuando entras.</p>`;
-  return `${note}<p><b>🔒 Tus claves están cifradas en este dispositivo.</b> No necesitas hacer nada más para usarlas aquí.</p>
+  if (v.synced) return `${note}<p class="vault-on"><b>Tus claves están cifradas</b>, en este dispositivo y en tu cuenta. Solo tu contraseña de Studium las abre: ni Studium ni sus admins pueden leerlas. En tu celular aparecen al iniciar sesión; al cerrar sesión se borran de aquí y vuelven cuando entras.</p>`;
+  return `${note}<p><b>Tus claves están cifradas en este dispositivo.</b> No necesitas hacer nada más para usarlas aquí.</p>
     <details class="vault-more"><summary>Opcional: llevarlas también a tu celular y tus otros dispositivos</summary>
     <p class="fine">Para eso, confirma tu contraseña de Studium una vez: con ella se cifran en tu cuenta, y nadie más puede abrirlas, ni Studium ni sus admins.</p>
     <form class="vault-confirm" data-vault-confirm><label class="field"><span>Tu contraseña de Studium</span><input type="password" name="password" autocomplete="current-password" required></label><button class="button ghost small">Llevar mis claves a mis dispositivos</button></form></details><p class="msg" data-vault-msg></p>`;

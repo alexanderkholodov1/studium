@@ -183,6 +183,10 @@ const MODES = {
     'Bash(git status:*)', 'Bash(git diff:*)', 'Bash(git log:*)', 'Bash(git add:*)', 'Bash(git commit:*)', 'Bash(git push:*)', 'Bash(git pull:*)', 'Bash(git switch:*)', 'Bash(git branch:*)'], deny: [] },
 };
 const NEVER = ['WebFetch', 'WebSearch', 'Task', 'Agent'];
+// Files that hold keys are never read or changed, in any folder, even with «leer y escribir» (deny wins over allow, and
+// Read rules also apply to Grep and Glob): environment files, private keys, certificates, credentials, tokens.
+const SECRET_FILES = ['.env', '.env.*', '*.pem', '*.key', '*.p12', '*.pfx', 'id_rsa*', 'id_ed25519*', 'id_ecdsa*', '.npmrc', '.netrc', '.pypirc', '*credentials*.json', '*service-account*.json', '*adminsdk*.json', '*.keystore', '*.jks'];
+const SECRETS = SECRET_FILES.flatMap((f) => [`Read(./**/${f})`, `Edit(./**/${f})`, `Write(./**/${f})`]);
 // The links the person brought as a guide's source (his decision 2026-11-25): Claude Code may open those sites, and
 // nothing else on the internet (one «WebFetch(domain:…)» rule per site, exact host; searching stays denied; in -p mode
 // a fetch with no matching rule is denied, per code.claude.com/docs/en/headless). Claude Code's own preapproved
@@ -794,7 +798,7 @@ const ENGINES = {
       const web = hosts.map((h) => `WebFetch(domain:${h})`);
       const never = hosts.length ? NEVER.filter((t) => t !== 'WebFetch') : NEVER;
       const allow = [...(mode ? [...mode.allow, ...out] : ['Read(./**)', ...out]), ...web];
-      const deny = mode ? [...mode.deny, ...never] : ['Bash', 'MultiEdit', 'NotebookEdit', ...never];
+      const deny = [...(mode ? [...mode.deny, ...never] : ['Bash', 'MultiEdit', 'NotebookEdit', ...never]), ...SECRETS];
       const links = (Array.isArray(body.links) ? body.links.slice(0, 10) : []).map(String).filter((u) => { try { return hosts.includes(new URL(u).hostname.toLowerCase()); } catch { return false; } });
       const ask = (body.place ? placePrompt(names, body.place) : prompt(names)) + outNote(body.place) + linksNote(links, body.place);
       if (hosts.length) console.log(`  Puede abrir solo estos sitios: ${hosts.join(', ')}.`);

@@ -129,7 +129,7 @@ function proposalHTML(p) {
 // The block, wherever the guide places it. «why» is what the AI said the group does together there.
 export function reunionBlock(T, { repaint: rp, ref, people, why = '' }) {
   repaint = rp; tRef = ref; members = people;
-  if (!R || R.tid !== T.id) { load(T); return '<div class="rn" id="cap-reunion"><h3 class="rn-title">👥 ¿Cuándo nos reunimos?</h3><p class="mut">Cargando…</p></div>'; }
+  if (!R || R.tid !== T.id) { load(T); return '<div class="rn" id="cap-reunion"><h3 class="rn-title">¿Cuándo nos reunimos?</h3><p class="mut">Cargando…</p></div>'; }
   R.title = T.title;
   const ms = members();
   const missing = ms.filter((m) => !(R.all[m.uid]?.weeks?.[R.week] ?? []).length);
@@ -140,7 +140,7 @@ export function reunionBlock(T, { repaint: rp, ref, people, why = '' }) {
   const chip = (key, label, color, on, note = '') => `<button type="button" class="rn-chip ${on ? 'on' : ''}" data-rn="layer" data-k="${esc(key)}" aria-pressed="${on}" style="--mc:${color}"><i></i>${esc(label)}${note ? ` <small>${esc(note)}</small>` : ''}</button>`;
   const noteOf = (m) => { const a = R.all[m.uid]; const marked = (a?.weeks?.[R.week] ?? []).length; const sh = a?.share ?? 'none'; return `${marked ? 'marcó' : 'sin marcar'}${sh === 'detail' ? ' · horario' : sh === 'busy' ? ' · ocupado' : ''}`; };
   return `<div class="rn" id="cap-reunion">
-    <h3 class="rn-title">👥 ¿Cuándo nos reunimos?</h3>
+    <h3 class="rn-title">¿Cuándo nos reunimos?</h3>
     ${why ? `<p class="rn-why"><b>Este paso se hace juntos:</b> ${esc(why)}</p>` : '<p class="rn-why">Si necesitan reunirse (repartir, juntar las partes, ensayar la defensa), cada uno marca cuándo puede y Studium encuentra la hora.</p>'}
     ${R.error ? `<p class="tj-warn">${esc(R.error)}</p>` : ''}
     <div class="rn-bar">

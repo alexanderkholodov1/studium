@@ -1107,7 +1107,7 @@ function placeHTML(now) {
   const hereIsF = !!(f && cwd && norm(f.path) === norm(cwd));
   const row = (value, on, title, note, extra = '') => `<label class="tj-pick ${on ? 'on' : ''}"><input type="radio" name="workspace" value="${esc(value)}" data-tj-ws ${on ? 'checked' : ''}> <span><b>${title}</b><br><small>${note}</small>${extra}</span></label>`;
   return `<div class="tj-places" role="radiogroup" aria-label="Dónde trabaja">
-      ${row('temp', !f, 'Sin carpeta tuya: solo lo que trajiste', 'Studium copia lo que subiste a una carpeta temporal y la borra al terminar.')}
+      ${row('temp', !f && !(now && now !== 'temp'), 'Sin carpeta tuya: solo lo que trajiste', 'Studium copia lo que subiste a una carpeta temporal y la borra al terminar.')}
       ${f ? row(f.id, true, `${esc(f.name)}`, `${esc(f.path ?? '')}${hereIsF ? ' · donde abriste el puente' : ''}`, `<span class="tj-folder-now">${modeSel(f)} <small>${esc(MODE_WHY[f.mode] ?? '')}</small></span>`) : ''}
       ${here && !hereIsF ? row('here', false, `${esc(here)}`, `${esc(cwd)} · donde abriste el puente; se presta sin preguntarte otra vez`) : ''}
       ${row('pick', false, 'Otra carpeta…', draft?.broughtFolder && !here ? `Busca «${esc(draft.broughtFolder)}» en tu computadora.` : 'Se abre la ventana de tu computadora para elegirla.')}
@@ -1848,7 +1848,11 @@ async function watchBridge(force = false) {
   if (bridgeLive.state !== was) {
     for (const box of document.querySelectorAll('#tjg-body [data-howrun]')) box.innerHTML = howRunHTML();
     for (const el of document.querySelectorAll('[data-bridge-state]')) if (!el.closest('[data-howrun]')) el.innerHTML = bridgeStateHTML();
-    if (draft && ['ai', 'files'].includes(questionsOf(draft)[draft.at]?.input)) { keepAnswer(); renderDraft(); }
+    // In the wizard: a bridge that only confirms it is fine loses its notice in place (no redraw under the person's
+    // hand); any other change redraws the step, since what can be chosen changed.
+    if (draft && ['ai', 'files'].includes(questionsOf(draft)[draft.at]?.input)) {
+      if (was === 'checking' && bridgeLive.state === 'ok') { for (const el of root.querySelectorAll('.tj-wizard [data-bridge-state]')) el.remove(); } else { keepAnswer(); renderDraft(); }
+    }
     if (was !== 'checking' && bridgeLive.state === 'ok') ctx.toast(`El puente responde (versión ${bridgeLive.version}).`);
     if (bridgeLive.state === 'ok' && document.querySelector('[data-collect-list]')) loadCollect();
   }

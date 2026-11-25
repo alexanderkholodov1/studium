@@ -590,7 +590,7 @@ export function celebrate(x, y, all = false) {
   if (nodo) {
     nodo.vy = -rand(160, 220);
     mood('glad', 1800);
-    say(all ? '¡Todas tus metas! 🎉' : ['¡Bien!', '¡Una menos!', '¡Eso!', '¡Sigue así!'][Math.floor(Math.random() * 4)]);
+    say(all ? '¡Todas tus metas!' : ['¡Bien!', '¡Una menos!', '¡Eso!', '¡Sigue así!'][Math.floor(Math.random() * 4)]);
     wake();
   }
 }

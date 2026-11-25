@@ -34,8 +34,8 @@ const stub = http.createServer((req, res) => {
   req.on('end', () => {
     const send = (code, obj) => { res.writeHead(code, { ...cors, 'content-type': 'application/json' }); res.end(JSON.stringify(obj)); };
     const u = req.url.split('?')[0];
-    if (u === '/v1/hello') return send(200, { app: 'studium-bridge', version: '1.7.0' });
-    if (u === '/v1/status') return send(200, { version: '1.7.0', cwd: 'C:/tmp', engines: [{ id: 'claude', name: 'Claude Code', ready: true, models: [{ id: 'claude-haiku-5-5' }], accounts: [{ id: 'prueba', ready: true }], reads: { pdf: true, images: true } }] });
+    if (u === '/v1/hello') return send(200, { app: 'studium-bridge', version: '1.12.0' });
+    if (u === '/v1/status') return send(200, { version: '1.12.0', cwd: 'C:/tmp', engines: [{ id: 'claude', name: 'Claude Code', ready: true, models: [{ id: 'claude-haiku-5-5' }], accounts: [{ id: 'prueba', ready: true }], reads: { pdf: true, images: true } }] });
     if (u === '/v1/folders') return send(200, { folders, modes: {} });
     if (u === '/v1/folders/pick') { const f = { id: 'f1', name: 'Lab Redes', path: 'C:/tmp/Lab Redes', mode: 'read', label: 'Solo leer', exists: true, expires: '', expired: false }; folders = [f]; return send(200, { folder: f }); }
     if (u === '/v1/folders/change') { folders = []; return send(200, { ok: true }); }
@@ -83,7 +83,7 @@ try {
   await A.js(`const t = document.querySelector('.tj-wizard textarea'); t.value = 'Laboratorio 4: OSPF multiárea y una VPN. Entregar el .pkt y un informe.'; t.dispatchEvent(new Event('input', { bubbles: true }));`);
   ok('reached «Tu IA»', await until(A, /Tu IA/), await step(A));
   await W(800);
-  await click(A, '[data-tj="folder-pick"]'); await W(1200);
+  await A.js(`document.querySelector('[data-tj-ws][value="pick"]')?.click(); return 1;`); await W(1500);
   ok('A lends the folder «Lab Redes»', await A.js(`return /Lab Redes/.test(document.querySelector('.tj-where')?.innerText ?? '')`));
   await A.shot('a1-carpeta-prestada');
   folders = []; // the bridge was restarted: the folder is no longer lent
@@ -94,6 +94,8 @@ try {
   ok('a disconnected folder sends A back to «Tu IA», saying so', /se desconectó/.test(warn), warn.slice(0, 120));
   ok('…and no trabajo was created, nothing was sent to the AI', (await trabajoIds(A)).length === before && runs.length === 0, `${runs.length} requests`);
   await A.shot('a2-carpeta-desconectada');
+  ok('…with no place marked, so «Sin carpeta tuya» is a real choice', await A.js(`return !document.querySelector('[data-tj-ws]:checked')`));
+  await A.js(`document.querySelector('[data-tj-ws][value="temp"]')?.click(); return 1;`); await W(600);
   await until(A, /Todo listo/);
   await A.js(`document.querySelector('.tj-wizard [type=submit]').click();`);
   await A.wait(`/^#\\/trabajos\\/[\\w-]{10,}/.test(location.hash) && document.querySelector('#tjg-body .tj-error, #tjg-body [data-tj="edit-questions"]')`, 20000);
@@ -190,7 +192,8 @@ try {
   await A.wait(`document.querySelector('.progress .prow')`, 15000);
   const prog = await A.js(`return document.querySelector('.progress').innerText`);
   ok('A sees B’s progress (B did their part, understands half the guide)', /hizo 100% de su parte/.test(prog) && /entiende 50% de la gu/.test(prog), prog.replace(/\s+/g, ' ').slice(0, 200));
-  ok('…and on the step itself, who did it', /Ya lo hizo/.test(await A.js(`return document.querySelector('#paso-H1\\\\.2, [id="paso-H1.2"]')?.innerText ?? document.body.innerText`)));
+  // Who did it is shown as their avatar, with the names in its title.
+  ok('…and on the step itself, who did it', /Ya lo hizo: /.test(await A.js(`return [...document.querySelectorAll('.who-did')].map((x) => x.title).join(' ')`)));
   await A.js(`document.querySelector('.progress').scrollIntoView({ block: 'center' });`); await W(300);
   await A.shot('d1-a-progreso-del-grupo');
   // GitHub, for real: a public repository, read without a key.
@@ -229,7 +232,7 @@ try {
   await paint(B, 48, 53); await W(1800);
   ok('each one’s hours are saved', /Guardado/.test(await B.js(`return document.querySelector('[data-rn-status]')?.textContent ?? ''`)));
   await A.js(`location.reload();`); await W(3000);
-  await A.wait(`document.querySelector('.rn-best li')`, 15000);
+  await A.wait(`document.querySelector('.rn-best li')`, 15000).catch(async (e) => { console.log('RN', JSON.stringify(await A.js(`return document.querySelector('#cap-reunion')?.innerText?.slice(0, 800) ?? 'none'`))); throw e; });
   const busyCell = await A.js(`const c = document.querySelector('[data-rn-slot="34"]'); return { bars: c.querySelectorAll('u').length, tip: c.title };`);
   ok('A sees B busy on Tuesday 9:00, without the class name', busyCell.bars === 1 && /ocupados: /.test(busyCell.tip) && !/Cálculo/.test(busyCell.tip), JSON.stringify(busyCell));
   await A.js(`document.querySelector('[data-rn="layer"][data-k="${B_ACC.uid}"]').click();`); await W(500);
