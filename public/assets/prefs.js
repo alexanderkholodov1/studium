@@ -103,6 +103,9 @@ const clean = (p) => {
     profs: entries(pl.profs, 120, /^[a-z0-9 ]{3,80}$/, (b) => b === 1 || b === -1),
     comfort: { max: range(cf.max, 6, 22, 16), start: range(cf.start, 420, 1050, 420), prefer: ['dias', 'huecos', ''].includes(cf.prefer) ? cf.prefer : '' },
   };
+  // Untouched, it is not written: a profile without it is accepted by the rules of every published version.
+  const p = out.planner;
+  if (!p.cursando.length && !p.minors.length && !Object.keys(p.prio).length && !Object.keys(p.profs).length && p.comfort.max === 16 && p.comfort.start === 420 && !p.comfort.prefer) delete out.planner;
   out.progress = Object.fromEntries(Object.entries(out.progress && typeof out.progress === 'object' ? out.progress : {})
     .filter(([, v]) => v === 'reading' || v === 'done').slice(0, 300));
   return out;
