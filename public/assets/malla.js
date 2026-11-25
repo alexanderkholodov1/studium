@@ -67,6 +67,20 @@ export async function prereqNote(code) {
   return { name: c.name, needs: missing(c.pre, malla) };
 }
 
+// The prerequisites of a class that are in the same plan, to be taken in the same semester: Banner checks a
+// prerequisite against what was already passed or is in progress, so the two cannot go together (seen in a real
+// registration, 2026-11-25: Aplicaciones Distribuidas planned with Base de Datos, its prerequisite, was refused).
+export async function sameTermPrereqs(code, codes) {
+  const malla = await myMalla();
+  const c = malla && classOf(malla, code);
+  if (!c?.pre || meets(c.pre)) return [];
+  const set = new Set(codes.map(base));
+  const out = [];
+  const walk = (t) => { if (!t) return; if (t.code) { if (set.has(base(t.code))) out.push(one(t)); return; } (t.all ?? t.any).forEach(walk); };
+  walk(c.pre);
+  return out;
+}
+
 /* ---------- the page ---------- */
 // His words (2026-11-20): the career comes from the profile; mark what you took; see with colors, lines and animations
 // what you can take and what is still closed, and what is missing for it to open next semester; the malla recommends

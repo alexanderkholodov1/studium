@@ -11,7 +11,7 @@ import * as ai from './ai.js';
 import { sfx } from './sfx.js';
 import { prefs, EVENT_KINDS } from './prefs.js';
 import { parseOffer, termName, linked, codesOf } from './offer.js';
-import { prereqNote, norm } from './malla.js';
+import { prereqNote, norm, sameTermPrereqs } from './malla.js';
 import { dayStatus, classesThisWeek, weekOff, longDay, iso, TERMS, finalFor, examTable, keepOwnTable } from './calendario.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -387,6 +387,7 @@ function askCard() {
     group: () => `<b>${esc(which(a.cls))}</b> es de otro grupo que tu ${isTheory(a.cls) ? 'ejercicio o laboratorio' : 'teoría'} <b>${esc(which(a.other))}</b>: no van juntos y no te dejarán inscribirte así.`,
     clash: () => `<b>${esc(which(a.cls))}</b> choca con ${a.with.map((c) => `<b>${esc(which(c))}</b>`).join(', ')}.`,
     prereq: () => `Según tu malla, <b>${esc(which(a.cls))}</b> pide ${esc(a.needs)}, y no lo tienes marcado como aprobado. Si ya lo aprobaste o lo estás cursando, puedes dejarla.`,
+    together: () => `<b>${esc(which(a.needer))}</b> pide ${esc(a.needs)}, y está en este mismo borrador. No se pueden tomar en el mismo semestre: Banner rechaza <b>${esc(which(a.needer))}</b> («Requiere Curso Prerrequisito»). Busca otra materia para ese espacio.`,
     excluded: () => `<b>${esc(which(a.cls))}</b> no está abierta para: ${a.excluded.map(esc).join('; ')}.${a.applies ? ' Según tu perfil, eso te incluye.' : ''}`,
   })[a.kind]();
   const actions = {
@@ -394,9 +395,10 @@ function askCard() {
     group: '<button class="button primary" data-ask="cancel">No agregarla</button><button class="button ghost" data-ask="add">Agregarla igual</button>',
     clash: '<button class="button ghost" data-ask="keep">Dejar el choque</button><button class="button primary" data-ask="draft">Llevarla a un borrador nuevo</button><button class="link" data-ask="remove">Quitarla</button>',
     excluded: '<button class="button ghost" data-ask="keep">Entendido</button><button class="link" data-ask="remove">Quitarla</button>',
+    together: '<button class="button primary" data-ask="remove">Quitar la que acabo de agregar</button><button class="link" data-ask="keep">Dejarla igual</button>',
     prereq: '<button class="button primary" data-ask="keep">Dejarla</button><a class="button ghost" href="#/malla">Ver Mi malla</a><button class="link" data-ask="remove">Quitarla</button>',
   }[a.kind];
-  const tone = a.kind === 'clash' || a.kind === 'group' ? 'red' : 'amber';
+  const tone = a.kind === 'clash' || a.kind === 'group' || a.kind === 'together' ? 'red' : 'amber';
   return `<div class="sched-ask ${tone}" role="alertdialog" aria-live="assertive">
     <span class="sched-ask-icon" aria-hidden="true">!</span><p>${body}</p><div class="actions">${actions}</div></div>`;
 }
@@ -630,6 +632,16 @@ const warned = new Set();
 async function checkPrereq(cls, list) {
   if (!prefs.get().malla) {
     if (note.startsWith('Agregada') && !note.includes('malla')) { note += ' Si eliges tu carrera en <a href="#/malla">Mi malla</a>, Studium revisa sus prerrequisitos.'; paint(); }
+    return;
+  }
+  // A class and its own prerequisite in the same draft: Banner refuses the first one. Said every time, in red.
+  const others = list.classes.filter((c) => c !== cls && c.code && norm(c.code) !== norm(cls.code));
+  const mine = await sameTermPrereqs(cls.code, others.map((c) => c.code));
+  const theirs = [];
+  for (const c of others) if ((await sameTermPrereqs(c.code, [cls.code])).length) theirs.push(c);
+  if (list.classes.includes(cls) && (mine.length || theirs.length)) {
+    asks.push(mine.length ? { kind: 'together', cls, needer: cls, needs: mine.join(' y '), list } : { kind: 'together', cls, needer: theirs[0], needs: which(cls), list });
+    paint();
     return;
   }
   const n = await prereqNote(cls.code);
