@@ -322,7 +322,8 @@ async function askAI(task, system, text, files = [], label = '', live = null, ru
   try {
     // The Claude Code session that wrote this guide is continued (his words: the same session, in its window).
     const cont = task === 'solution' && T && ai.choice(task).provider === 'bridge:claude' && contOn(T.id) ? sessionOf(T.id) : '';
-    const r = await ai.run({ system, text, files, task, label, folder, cont, runId, signal: task === 'solution' ? ctl?.signal : undefined, maxTokens: task === 'solution' ? ai.longest(ai.choice(task)) : 4000, onEvent: live?.onEvent, onProgress: live?.onProgress });
+    const links = task === 'solution' && T && ai.choice(task).provider === 'bridge:claude' ? guideLinks() : [];
+    const r = await ai.run({ system, text, files, task, label, folder, cont, runId, links, signal: task === 'solution' ? ctl?.signal : undefined, maxTokens: task === 'solution' ? ai.longest(ai.choice(task)) : 4000, onEvent: live?.onEvent, onProgress: live?.onProgress });
     if (task === 'solution' && T && r.session) keepSessionOf(T.id, r.session);
     if (task === 'solution' && T && step) await keepReply(T.id, step, r, label, runId);
     if (task === 'solution' && cont) ctx?.toast?.(r.continued ? 'Siguió la misma sesión de Claude Code que escribió la guía.' : (r.note || 'Claude Code empezó una sesión nueva.'));
@@ -1152,6 +1153,30 @@ function roleOf(f, d = draft) {
   if (PROF.test(f.name)) return 'prof';
   return isStudy(d) ? 'mio' : 'prof';
 }
+// Where a guide's information comes from, besides the files (006; his decision 2026-11-25): a folder of the person's
+// computer read in place through the bridge (it is also where the AI works), and links that Claude Code opens through
+// the bridge, only those addresses. Small «+» lines under the drop zone; each opens only when chosen.
+const LINK_ROLES = [['contexto', 'contexto'], ['profe', 'del profe'], ['avance', 'nuestro avance']];
+const linkOk = (u) => { try { const x = new URL(u); return /^https?:$/.test(x.protocol) && !!x.hostname && u.length <= 500; } catch { return false; } };
+function bringHTML() {
+  const f = (ai.bridgeOf()?.folders ?? []).find((x) => x.id === draft.workspace && !x.expired && x.exists !== false);
+  const links = draft.links ?? [];
+  const rows = [
+    ...(f ? [`<li><span>Carpeta <b>${esc(f.name)}</b> <small class="mut">${esc(f.path ?? '')} · tu IA la lee ahí mismo, por el puente; no se sube nada</small></span><button type="button" class="link" data-tj="src-folder-off">quitar</button></li>`] : []),
+    ...links.map((l, i) => `<li><span class="no-i18n">${esc(l.url)}</span><select class="tj-role" data-tj-linkrole="${i}" aria-label="Qué es este enlace">${LINK_ROLES.map(([v, t]) => `<option value="${v}" ${l.role === v ? 'selected' : ''}>${t}</option>`).join('')}</select><button type="button" class="link" data-tj="src-link-off" data-i="${i}" aria-label="Quitar el enlace">quitar</button></li>`),
+  ];
+  const paired = !!ai.bridgeOf()?.token;
+  const github = links.some((l) => /(^|\.)github\.com$/i.test(new URL(l.url).hostname));
+  return `<div class="tj-sources">
+      ${rows.length ? `<ul class="tj-files">${rows.join('')}</ul>` : ''}
+      ${draft.addLink ? `<p class="tj-linkadd"><input class="tj-input" name="link" type="url" inputmode="url" placeholder="https://… (la página del profe, un documento, un repositorio de GitHub)" maxlength="500" autocomplete="off"> <button type="button" class="button ghost small" data-tj="src-link-add">Agregar</button></p>` : ''}
+      <p class="tj-addsrc">${f ? '' : '<button type="button" class="link" data-tj="src-folder">+ Una carpeta de tu computadora</button>'} <button type="button" class="link" data-tj="src-link">+ Un enlace o un repositorio de GitHub</button> ${infoButton('fuentes', 'De dónde saca tu IA la información')}</p>
+      ${draft.srcBridge && bridgeLive.state !== 'ok' ? `<div data-bridge-state>${bridgeStateHTML()}</div><p class="fine">O, sin el puente, sube sus archivos con «Elegir una carpeta…».</p>` : ''}
+      <p class="fine" id="tj-src-status" role="status"></p>
+      ${links.length ? `<p class="fine">Claude Code abre los enlaces por el puente (solo esos sitios) y la guía guarda lo que leyó.${!paired ? ' Con otra IA, solo recibe la dirección.' : ai.bridgeAtLeast('1.12.0') ? '' : ` Tu puente no los abre todavía: <a href="${esc(ai.BRIDGE_URL)}" download="studium-bridge.mjs">descarga la versión ${esc(ai.BRIDGE_VERSION)}</a> y ábrelo otra vez.`}</p>` : ''}
+      ${github ? '<p class="fine">¿Repositorio privado? Clónalo en tu computadora y presta esa carpeta.</p>' : ''}
+    </div>`;
+}
 function roleSelect(f, i) {
   const now = roleOf(f);
   return `<select class="tj-role" data-tj-role="${i}" aria-label="De quién es ${esc(f.name)}">${ROLES[isStudy(draft) ? 'estudio' : 'trabajo'].map(([v, l]) => `<option value="${v}" ${v === now ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
@@ -1231,6 +1256,7 @@ function renderDraft(error = '') {
       ${draft.unread?.length ? `<p class="tj-warn">No pude leer ${draft.unread.map((n) => `«${esc(n)}»`).join(', ')}: puede que esté abierto en otro programa, se haya movido o se esté sincronizando (OneDrive). Ciérralo o espera, y vuelve a traerlo.</p>` : ''}
       ${draft.files.length ? `${roleHint()}<ul class="tj-files">${draft.files.slice(0, 8).map((f, i) => `<li><span>${esc(f.name)}</span>${roleSelect(f, i)}<small>${sizeText(f.size)}</small><button type="button" class="link" data-tj="drop-file" data-i="${i}" aria-label="Quitar ${esc(f.name)}">quitar</button></li>`).join('')}${draft.files.length > 8 ? `<li class="fine">y ${draft.files.length - 8} archivos más · <button type="button" class="link" data-tj="drop-all">quitar todos</button></li>` : ''}</ul>` : ''}
       ${draft.pasting || draft.text ? `<textarea class="tj-paste plain" name="text" rows="5" placeholder="${isStudy(draft) ? 'Pega aquí tus apuntes, el temario o lo que entra' : 'Pega aquí el enunciado y la rúbrica'}">${esc(draft.text)}</textarea>` : '<button type="button" class="link" data-tj="paste">Prefiero pegar el texto</button>'}
+      ${bringHTML()}
       ${isStudy(draft) ? graphLine() : ''}`;
   }
   if (q.input === 'ai') {
@@ -1253,7 +1279,8 @@ function renderDraft(error = '') {
         <label><span>Responde tus dudas</span>${pick('tutor', tutor)}</label>
       </div>` : '';
     const where = writer.startsWith('bridge:') ? `<div class="tj-where"><h3>Dónde trabaja ${infoButton('carpeta')}</h3>${placeHTML(draft.workspace)}${watchBox()}</div>` : '';
-    control = `${bstate}${sugg}${roles}${where}
+    const lost = !writer.startsWith('bridge:') && ((draft.workspace ?? 'temp') !== 'temp' || (draft.links ?? []).length) ? `<p class="tj-warn">${(draft.workspace ?? 'temp') !== 'temp' ? 'La carpeta que trajiste' : 'Los enlaces que trajiste'} solo los abre Claude Code por el puente: con ${esc(ai.WAYS[writer]?.name ?? 'otra IA')}, ${(draft.workspace ?? 'temp') !== 'temp' ? 'no la verá' : 'solo recibe las direcciones'}. Elige Claude Code en «Escribe la guía».</p>` : '';
+    control = `${bstate}${sugg}${lost}${roles}${where}
       ${best.id === 'bridge' && draft.pairing && !usable(best) ? `<div class="tj-bridge ai-bridge">${bridgeSteps().replace('data-ai-pair>', 'data-tj="pair-code">')}</div>` : ''}
       <details class="tj-more" ${ways.length ? '' : 'open'}><summary>Conectar otra IA</summary>${allWays(best)}</details>`;
   }
@@ -1363,6 +1390,7 @@ function keepAnswer() {
   if (!form) return;
   if (q.input === 'text') draft[q.key] = String(form.v.value).trim();
   if (q.input === 'files' && form.text) draft.text = String(form.text.value).trim();
+  if (q.input === 'files' && form.link?.value.trim() && linkOk(form.link.value.trim()) && !(draft.links ?? []).some((l) => l.url === form.link.value.trim())) draft.links = [...(draft.links ?? []), { url: form.link.value.trim(), role: 'contexto' }].slice(0, 10);
   if (q.input === 'prefs' && form.note) draft.prefs.note = String(form.note.value).trim().slice(0, 1500);
   if (q.input === 'work' && form.repoUrl) draft.prefs.repoUrl = String(form.repoUrl.value).trim().slice(0, 200);
   if (q.input === 'work' && form.repoName) draft.prefs.repoName = String(form.repoName.value).trim().slice(0, 100);
@@ -1375,7 +1403,7 @@ function nextQuestion() {
   keepAnswer();
   const q = questionsOf(draft)[draft.at];
   if (q.required && q.input === 'text' && !draft[q.key]) return renderDraft('Escríbelo para seguir.');
-  if (q.input === 'files' && q.required && !draft.files.length && !draft.text && !draft.kept) return renderDraft('Trae el enunciado para seguir: uno o varios archivos, o el texto pegado.');
+  if (q.input === 'files' && q.required && !draft.files.length && !draft.text && !draft.kept && !(draft.links ?? []).length && (draft.workspace ?? 'temp') === 'temp') return renderDraft('Trae el enunciado para seguir: uno o varios archivos, el texto pegado, una carpeta o un enlace.');
   // What can be checked here is checked here, not at the end.
   if (q.input === 'work' && draft.prefs.share === 'repo' && !repoOf(draft.prefs).repo) return renderDraft('Pega el enlace del repo, como https://github.com/usuario/repo, o elige «No, hay que crearlo».');
   if (q.input === 'work' && draft.prefs.share === 'newrepo' && !/^[A-Za-z0-9._-]{1,100}$/.test(String(draft.prefs.repoName || slug(draft.title)))) return renderDraft('El nombre del repo solo puede tener letras, números, puntos, guiones y guiones bajos, sin espacios.');
@@ -1479,14 +1507,15 @@ async function createTrabajo() {
   const { texts, binaries, notes } = await readAll(draft.files);
   const s = isStudy(draft);
   const context = s && draft.graph ? await (graphOf?.context({ course: draft.course, route: draft.route, exams: draft.exams }) ?? '') : '';
-  let statement = [draft.text, ...texts, context].filter(Boolean).join('\n\n');
-  if (s && !statement && !binaries.length) statement = `(El estudiante no trajo material. Escribe la guía con lo que sabes de ${draft.course}, al nivel de un curso universitario${draft.prefs.scope ? ', con lo que él dijo que entra' : ''}.)`;
+  let statement = [draft.text, ...texts, context, linksText(draft.links)].filter(Boolean).join('\n\n');
+  if (s && !statement && !binaries.length && !(draft.links ?? []).length && (draft.workspace ?? 'temp') === 'temp') statement = `(El estudiante no trajo material. Escribe la guía con lo que sabes de ${draft.course}, al nivel de un curso universitario${draft.prefs.scope ? ', con lo que él dijo que entra' : ''}.)`;
+  if (!statement && !binaries.length && (draft.workspace ?? 'temp') !== 'temp') statement = '(Lo que trajo el estudiante está en la carpeta donde trabajas: revísala antes de escribir.)';
   if (!statement && !binaries.length) throw new Error(`No se pudo leer lo que trajiste${notes.length ? `: ${notes.join('; ')}` : ''}.`);
   const ref = doc(collection(db, 'trabajos'));
   const code = newCode();
   const batch = writeBatch(db);
   batch.set(ref, {
-    title: titleOf(draft).slice(0, 160), course: draft.course.slice(0, 120), group: draft.group.slice(0, 80), deadline: draftDeadline(), prefs: { ...draft.prefs, inFolder: !!(draft.workspace && draft.workspace !== 'temp') },
+    title: titleOf(draft).slice(0, 160), course: draft.course.slice(0, 120), group: draft.group.slice(0, 80), deadline: draftDeadline(), prefs: { ...draft.prefs, inFolder: !!(draft.workspace && draft.workspace !== 'temp'), links: (draft.links ?? []).slice(0, 10) },
     parts: s ? 1 : draft.parts, owner: uid(), code, ...repoOf(draft.prefs), statement: await fitStatement(statement + (binaries.length ? `\n\n(Archivos entregados a la IA tal como son: ${binaries.map((p) => `${p.role ?? ''} ${p.name}`.trim()).join(', ')})` : '')),
     encoding: 'gzip', created: serverTimestamp(), updated: serverTimestamp(),
   });
@@ -1507,11 +1536,11 @@ async function updateTrabajo() {
   let pdfs = await filesOf(tid);
   let statement = '';
   const { texts, binaries, notes } = await readAll(draft.files);
-  const add = [draft.text, ...texts].filter(Boolean).join('\n\n');
+  const add = [draft.text, ...texts, linksText((draft.links ?? []).filter((l) => !(draft.prefs.links ?? []).some((x) => x.url === l.url)))].filter(Boolean).join('\n\n');
   if (binaries.length) { pdfs = [...pdfs, ...binaries]; await keepFiles(tid, pdfs); }
   if (add || binaries.length) statement = `${old}\n\n${add}${binaries.length ? `\n\n(Archivos agregados, entregados a la IA tal como son: ${binaries.map((x) => x.name).join(', ')})` : ''}`;
   await setDoc(tRef(tid), {
-    title: titleOf(draft).slice(0, 160), course: draft.course.slice(0, 120), group: draft.group.slice(0, 80), deadline: draftDeadline(), prefs: { ...draft.prefs, inFolder: !!(draft.workspace && draft.workspace !== 'temp') },
+    title: titleOf(draft).slice(0, 160), course: draft.course.slice(0, 120), group: draft.group.slice(0, 80), deadline: draftDeadline(), prefs: { ...draft.prefs, inFolder: !!(draft.workspace && draft.workspace !== 'temp'), links: (draft.links ?? []).slice(0, 10) },
     parts: isStudy(draft) ? 1 : draft.parts, ...repoOf(draft.prefs), ...(statement ? { statement: await fitStatement(statement) } : {}), updated: serverTimestamp(),
   }, { merge: true });
   keepFolder(tid, draft.workspace);
@@ -1525,15 +1554,34 @@ async function draftFromTrabajo(at = questionsOf(T).length - 1) {
   const kept = await filesOf(T.id);
   const prefs = { ...(study() ? STUDY_DEFAULT : PREF_DEFAULT), ...(T.prefs ?? {}) };
   delete prefs.inFolder;
+  const links = Array.isArray(prefs.links) ? prefs.links : [];
   const kind = study() ? 'estudio' : undefined;
   const folder = folderOf(T.id);
   draft = {
     id: `e${T.id}`, tid: T.id, at, title: T.title ?? '', course: T.course ?? '', text: '', files: [], parts: T.parts ?? 3, group: T.group ?? '', date, time: time.slice(0, 5), pasting: false,
-    workspace: folderState(folder) === 'ok' ? folder : 'temp', prefs, kept: { chars: T.statement?.length ?? 0, files: kept.map((f) => ({ name: f.name, size: f.data?.length ?? 0 })) },
+    workspace: folderState(folder) === 'ok' ? folder : 'temp', links, prefs, kept: { chars: T.statement?.length ?? 0, files: kept.map((f) => ({ name: f.name, size: f.data?.length ?? 0 })) },
     ...(kind ? { kind, graph: false } : {}),
   };
   T = null;
   location.hash = kind ? '#/estudiar/guia' : '#/trabajos';
+}
+// The links, said in the statement with what each one is; the AI knows which are the professor's.
+const ROLE_SAY = { contexto: 'contexto', profe: 'del profesor (manda)', avance: 'nuestro avance' };
+const linksText = (links = []) => (links.length ? `Enlaces que trajo el estudiante (ábrelos si puedes; si no, tenlos en cuenta por su dirección):\n${links.map((l) => `- [${ROLE_SAY[l.role] ?? 'contexto'}] ${l.url}`).join('\n')}` : '');
+// The links for the bridge: Claude Code may open these addresses, and nothing else on the internet.
+const guideLinks = () => (Array.isArray(T?.prefs?.links) ? T.prefs.links.map((l) => l.url).filter(linkOk).slice(0, 10) : []);
+// What Claude Code read from the links (salida/fuentes.json), kept with the guide's source with when it was read (his
+// decision: the guide keeps a copy of what was read and when). Only the owner keeps it; each page up to 30 000 chars.
+async function keepRead(r) {
+  const raw = r?.outputs?.['fuentes.json'];
+  if (!raw || T.owner !== uid()) return;
+  let list;
+  try { list = parseJSON(raw); } catch { return; }
+  if (!Array.isArray(list) || !list.length) return;
+  const page = (x) => `## ${String(x?.url ?? '').slice(0, 500)}\nLeído: ${String(x?.leido ?? new Date().toISOString()).slice(0, 40)}${x?.error ? `\nNo se pudo abrir: ${String(x.error).slice(0, 300)}` : ''}\n\n${String(x?.contenido ?? '').slice(0, 30000)}`;
+  const add = `# Lo que tu IA leyó de los enlaces\n\n${list.slice(0, 10).map(page).join('\n\n')}`;
+  T.statement = `${T.statement ?? ''}\n\n${add}`;
+  await setDoc(tRef(T.id), { statement: await fitStatement(T.statement), updated: serverTimestamp() }, { merge: true }).catch((e) => console.warn('fuentes', e));
 }
 // What the AI reads: a trabajo's statement, or the material of a study guide.
 function sourceText() {
@@ -1552,6 +1600,7 @@ async function generateOutline(files = [], live = null) {
   let r;
   try { r = await askAI('solution', system, text, files, `Esquema de «${T.title}»`, live, '', 'outline'); T.lastError = null; failed.delete(T.id); } catch (e) { T.lastError = errInfo(e, 'Escribir la guía'); failed.set(T.id, T.lastError); throw e; }
   keepResume(T.id, r.resume);
+  await keepRead(r);
   const outline = cleanOutline(parseJSON(r.text), T.parts);
   await setDoc(tRef(T.id), { outline: await pack(outline), ai: madeBy(r), updated: serverTimestamp() }, { merge: true });
   T.outline = outline; T.ai = madeBy(r);
@@ -1567,6 +1616,7 @@ async function generateWhole(files = [], live = null) {
   let r;
   try { r = await askAI('solution', system, text, files, `Guía completa de «${T.title}»`, live, '', 'whole'); T.lastError = null; failed.delete(T.id); } catch (e) { T.lastError = errInfo(e, 'Escribir la guía'); failed.set(T.id, T.lastError); throw e; }
   keepResume(T.id, r.resume);
+  await keepRead(r);
   const got = r.outputs ?? {};
   if (!got['esquema.json']) {
     const e = new Error(`Tu IA terminó sin escribir el esquema de la guía (salida/esquema.json).${Object.keys(got).length ? ` Escribió: ${Object.keys(got).join(', ')}.` : ''}`);
@@ -1767,7 +1817,7 @@ const contBox = () => `<label class="tj-pick ${contOn(T.id) ? 'on' : ''}"><input
 // Lending a folder: where the bridge was opened (no dialog), or another one through the computer's dialog. Lent for 8
 // hours (the questions may take a while) and released once the guide is written.
 async function lendFolder(el, here) {
-  say('#tj-folder-status', here ? 'Prestando la carpeta…' : 'Elige la carpeta en la ventana de tu computadora…');
+  say('#tj-folder-status, #tj-src-status', here ? 'Prestando la carpeta…' : 'Elige la carpeta en la ventana de tu computadora…');
   const close = here ? () => {} : pickingNotice();
   try {
     const f = await ai.pickBridgeFolder('read', { hours: 8, here }).finally(close);
@@ -1775,7 +1825,7 @@ async function lendFolder(el, here) {
     ctx.toast(`Tu IA trabajará en ${f.name} (${MODE_TEXT[f.mode]}).`);
   } catch (e) {
     if (draft) renderDraft(); else if (T) afterRunChoice(el);
-    say('#tj-folder-status', e.message);
+    say('#tj-folder-status, #tj-src-status', e.message);
   }
 }
 // The bridge as it is now, checked live (his words: «siempre primero se debe comprobar la conexión, y luego ya pedir
@@ -1798,7 +1848,7 @@ async function watchBridge(force = false) {
   if (bridgeLive.state !== was) {
     for (const box of document.querySelectorAll('#tjg-body [data-howrun]')) box.innerHTML = howRunHTML();
     for (const el of document.querySelectorAll('[data-bridge-state]')) if (!el.closest('[data-howrun]')) el.innerHTML = bridgeStateHTML();
-    if (draft && questionsOf(draft)[draft.at]?.input === 'ai') renderDraft();
+    if (draft && ['ai', 'files'].includes(questionsOf(draft)[draft.at]?.input)) { keepAnswer(); renderDraft(); }
     if (was !== 'checking' && bridgeLive.state === 'ok') ctx.toast(`El puente responde (versión ${bridgeLive.version}).`);
     if (bridgeLive.state === 'ok' && document.querySelector('[data-collect-list]')) loadCollect();
   }
@@ -2531,6 +2581,7 @@ function wire(root) {
       f.querySelector('[data-share-warn]')?.toggleAttribute('hidden', el.value === 'private');
       f.querySelector('.tj-sharelink')?.toggleAttribute('hidden', el.value === 'private');
     }
+    else if (el.dataset?.tjLinkrole !== undefined && draft) { const l = (draft.links ?? [])[Number(el.dataset.tjLinkrole)]; if (l) { l.role = el.value; saveDraft(); } }
     else if (el.dataset?.tjRole !== undefined && draft) { const f = draft.files[Number(el.dataset.tjRole)]; if (f) { draft.roles = { ...(draft.roles ?? {}), [`${f.name}|${f.size}`]: el.value }; saveDraft(); } }
     else if (el.dataset?.tjGraph !== undefined && draft) { keepAnswer(); draft.graph = el.checked; renderDraft(); }
     else if (el.dataset?.tjPref) { keepAnswer(); draft.prefs[el.dataset.tjPref] = el.type === 'checkbox' ? el.checked : el.value; renderDraft(); }
@@ -2788,6 +2839,24 @@ function wire(root) {
     if (kind === 'drop-file') { keepAnswer(); draft.files.splice(Number(b.dataset.i), 1); renderDraft(); return; }
     if (kind === 'connect') { if (draft) keepAnswer(); await connectWay(b.dataset.vendor, !!b.dataset.bridge); return; }
     if (kind === 'paste') { draft.pasting = true; renderDraft(); return; }
+    if (kind === 'src-link') { keepAnswer(); draft.addLink = true; renderDraft(); root.querySelector('input[name="link"]')?.focus(); return; }
+    if (kind === 'src-link-add') {
+      const v = String(root.querySelector('input[name="link"]')?.value ?? '').trim();
+      if (!linkOk(v)) { say('#tj-src-status', 'Ese enlace no parece una dirección web: pégalo entero, con https://'); return; }
+      keepAnswer(); // adds it
+      if (!(draft.links ?? []).some((l) => l.url === v)) draft.links = [...(draft.links ?? []), { url: v, role: 'contexto' }].slice(0, 10);
+      draft.addLink = false; renderDraft(); return;
+    }
+    if (kind === 'src-link-off') { keepAnswer(); draft.links = (draft.links ?? []).filter((_, i) => i !== Number(b.dataset.i)); renderDraft(); return; }
+    if (kind === 'src-folder-off') { keepAnswer(); draft.workspace = 'temp'; renderDraft(); return; }
+    if (kind === 'src-folder') {
+      keepAnswer();
+      if (!ai.bridgeOf()?.token || bridgeLive.state !== 'ok') { draft.srcBridge = true; bridgeLive = { state: bridgeLive.state, at: 0 }; renderDraft(); kickBridge(); if (bridgeLive.state !== 'ok') return; }
+      draft.srcBridge = false;
+      say('#tj-src-status', 'Elige la carpeta en la ventana de tu computadora…');
+      await lendFolder(b, false);
+      return;
+    }
     if (kind === 'jump') { ev.preventDefault(); const el = document.getElementById(b.getAttribute('href').slice(1)); if (el) { const sc = scroller(); sc.scrollTo({ top: el.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - 56, behavior: 'smooth' }); } return; }
     if (kind === 'share-open') {
       const open = gRoot().querySelector('.tj-sharepop');

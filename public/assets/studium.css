@@ -3706,3 +3706,9 @@ canvas.prop { display: block; }
 .docs-entry summary::after { content: '+'; float: right; font-size: 22px; opacity: .6; }
 .docs-entry[open] summary::after { content: '–'; }
 .docs-steps li, .docs-more li { margin: 6px 0; line-height: 1.5; }
+/* A guide's sources besides the files (006) */
+.tj-addsrc { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; margin: 8px 0; }
+.tj-linkadd { display: flex; gap: 8px; align-items: center; }
+.tj-linkadd .tj-input { flex: 1; min-width: 0; }
+.tj-wizard .tj-bstate .ask, .bridge-live .ask { padding: 6px 14px; border: 0; border-radius: 999px; font: inherit; font-weight: 600; color: inherit; cursor: pointer;
+  background: var(--glass-2); box-shadow: inset 0 0 0 1px var(--line); }

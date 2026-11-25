@@ -183,6 +183,18 @@ const MODES = {
     'Bash(git status:*)', 'Bash(git diff:*)', 'Bash(git log:*)', 'Bash(git add:*)', 'Bash(git commit:*)', 'Bash(git push:*)', 'Bash(git pull:*)', 'Bash(git switch:*)', 'Bash(git branch:*)'], deny: [] },
 };
 const NEVER = ['WebFetch', 'WebSearch', 'Task', 'Agent'];
+// The links the person brought as a guide's source (his decision 2026-11-25): Claude Code may open those sites, and
+// nothing else on the internet (one «WebFetch(domain:…)» rule per site; searching stays denied). Only http(s), at most
+// 10; a GitHub link also opens its raw files.
+function linkHosts(links) {
+  const hosts = new Set();
+  for (const u of Array.isArray(links) ? links.slice(0, 10) : []) {
+    try { const x = new URL(String(u)); if (/^https?:$/.test(x.protocol) && /^[a-z0-9.-]{1,253}$/i.test(x.hostname) && x.hostname.includes('.')) hosts.add(x.hostname.toLowerCase()); } catch { /* not a link */ }
+  }
+  if (hosts.has('github.com')) hosts.add('raw.githubusercontent.com');
+  return [...hosts];
+}
+const linksNote = (links, place) => (links.length ? ` El estudiante trajo estos enlaces como fuente: ${links.join(' ')}. Ábrelos con WebFetch (solo esos sitios están permitidos) y úsalos. Guarda en ${OUT(place)}/fuentes.json una copia de lo que leíste: [{"url": "...", "leido": "fecha y hora ISO", "contenido": "el texto que usaste, en Markdown"}]. Si uno no se puede abrir, ponlo con "contenido": "" y "error": "por qué".` : '');
 // The folders the person chose live only in memory, while the bridge is open: access is for one task (his words: «que
 // sea algo de acceso único»), never stored on the computer. Folders an older bridge stored are forgotten on start.
 let FOLDERS = [];
@@ -776,9 +788,14 @@ const ENGINES = {
       const mode = body.place ? MODES[body.place.mode] : null;
       // It may write only in «salida» (besides what the folder's permission allows); everything else stays as it was.
       const out = [`Write(./${OUT(body.place)}/**)`, `Edit(./${OUT(body.place)}/**)`];
-      const allow = mode ? [...mode.allow, ...out] : ['Read(./**)', ...out];
-      const deny = mode ? [...mode.deny, ...NEVER] : ['Bash', 'MultiEdit', 'NotebookEdit', ...NEVER];
-      const ask = (body.place ? placePrompt(names, body.place) : prompt(names)) + outNote(body.place);
+      const hosts = linkHosts(body.links);
+      const web = hosts.map((h) => `WebFetch(domain:${h})`);
+      const never = hosts.length ? NEVER.filter((t) => t !== 'WebFetch') : NEVER;
+      const allow = [...(mode ? [...mode.allow, ...out] : ['Read(./**)', ...out]), ...web];
+      const deny = mode ? [...mode.deny, ...never] : ['Bash', 'MultiEdit', 'NotebookEdit', ...never];
+      const links = (Array.isArray(body.links) ? body.links.slice(0, 10) : []).map(String).filter((u) => { try { return hosts.includes(new URL(u).hostname.toLowerCase()); } catch { return false; } });
+      const ask = (body.place ? placePrompt(names, body.place) : prompt(names)) + outNote(body.place) + linksNote(links, body.place);
+      if (hosts.length) console.log(`  Puede abrir solo estos sitios: ${hosts.join(', ')}.`);
       const cwd = body.place ? body.place.path : dir;
       // The session to continue, only from the folder it worked in and while Claude Code still keeps it.
       const prevS = body.continue ? findSession(body.continue, body.place?.path ?? '') : null;

@@ -621,6 +621,7 @@ export async function bridgeStatus() {
 // What the computer has for git and GitHub (bridge 1.12.0, /v1/tools): Git and whether it knows who you are, GitHub
 // CLI and its session, Node. An older bridge cannot say: { unknown: true }, never a failure.
 const atLeast = (v, min) => { const a = String(v ?? '0').split('.').map(Number); const b = min.split('.').map(Number); for (let i = 0; i < 3; i += 1) if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0); return true; };
+export const bridgeAtLeast = (min) => atLeast(bridgeOf()?.version, min);
 export async function bridgeTools() {
   if (!atLeast(bridgeOf()?.version, '1.12.0')) return { unknown: true };
   return bridgeFetch('/v1/tools');
@@ -753,7 +754,7 @@ const TIMEOUT_OF = { solution: 15 * 60_000 };
 const BRIDGE_SOLUTION = 60 * 60_000;
 const limitOf = (task, way) => (task === 'solution' && way.startsWith('bridge:') ? BRIDGE_SOLUTION + 2 * 60_000 : TIMEOUT_OF[task] ?? TIMEOUT);
 export const longest = (c) => (c.provider === 'anthropic' || c.provider === 'bridge:claude' ? 64000 : 32000);
-export async function run({ system, text, files = [], maxTokens = 32000, onProgress, onEvent = null, signal, task = 'guide', use = null, label = '', entry = null, folder = '', cont = '', runId = '' } = {}) {
+export async function run({ system, text, files = [], maxTokens = 32000, onProgress, onEvent = null, signal, task = 'guide', use = null, label = '', entry = null, folder = '', cont = '', runId = '', links = [] } = {}) {
   // Keys and passwords never reach the AI: whatever text goes, from a file or typed, is filtered here first.
   if (text) text = redact(text).text;
   files = files.map((f) => (f?.text ? { ...f, text: redact(f.text).text } : f));
@@ -784,7 +785,7 @@ export async function run({ system, text, files = [], maxTokens = 32000, onProgr
     // Adapters report a count of characters written (or -1: «waiting, nothing yet»).
     const watched = (n) => { if (typeof n === 'number' && n >= 0) { rec.received = n; rec.phase = 'receiving'; } tell(rec); onProgress?.(n); };
     const out = await Promise.race([
-      send({ way, model, effort, system, text, files: usable, maxTokens, onProgress: watched, signal, folder, cont, onEvent, runId, label, timeoutMs: task === 'solution' ? BRIDGE_SOLUTION : undefined }),
+      send({ way, model, effort, system, text, files: usable, maxTokens, onProgress: watched, signal, folder, cont, onEvent, runId, label, links, timeoutMs: task === 'solution' ? BRIDGE_SOLUTION : undefined }),
       new Promise((_, reject) => { const limit = limitOf(task, way); timer = setTimeout(() => reject(new AIError(`${model} no respondió en ${limit / 60000} minutos: Studium cortó el pedido.`, { kind: 'transient', way })), limit); }),
     ]).finally(() => clearTimeout(timer));
     rec.phase = 'done'; rec.ms = Date.now() - rec.started; rec.response = String(out.text ?? '').slice(0, 60000);
@@ -907,7 +908,7 @@ function geminiThinking(model, effort, maxTokens) {
   const budget = { low: 1024, medium: 4096, high: 12288, xhigh: 24576 }[effort] ?? 4096;
   return { thinkingConfig: { thinkingBudget: Math.min(budget, Math.floor(maxTokens / 2)) } };
 }
-async function send({ way, model, effort, system, text, files, maxTokens, onProgress, signal, folder = '', cont = '', onEvent = null, runId: wanted = '', label = '', timeoutMs = undefined }) {
+async function send({ way, model, effort, system, text, files, maxTokens, onProgress, signal, folder = '', cont = '', onEvent = null, runId: wanted = '', label = '', timeoutMs = undefined, links = [] }) {
   if (way === 'anthropic') {
     const client = await claude(keyOf(way));
     // Pictures carry their name in a line before them, so the AI knows their order («hoja 1», «hoja 2»).
@@ -1015,7 +1016,7 @@ async function send({ way, model, effort, system, text, files, maxTokens, onProg
   try {
     body = await bridgeFetch('/v1/run', {
       method: 'POST', signal, engine,
-      body: JSON.stringify({ runId, label: String(label ?? '').slice(0, 200), watch: watchTerminal(), timeoutMs, engine, account: engine === 'claude' ? load().bridge?.account ?? '' : '', folder: engine === 'claude' ? folder : '', ...(engine === 'claude' && cont ? { continue: cont } : {}), model, effort, system, text, files: files.map((f) => (f.data ? { name: f.name, type: f.type, data: f.data } : { name: f.name, type: 'text/plain', text: f.text })) }),
+      body: JSON.stringify({ runId, label: String(label ?? '').slice(0, 200), watch: watchTerminal(), timeoutMs, engine, account: engine === 'claude' ? load().bridge?.account ?? '' : '', folder: engine === 'claude' ? folder : '', ...(engine === 'claude' && cont ? { continue: cont } : {}), ...(engine === 'claude' && links.length ? { links } : {}), model, effort, system, text, files: files.map((f) => (f.data ? { name: f.name, type: f.type, data: f.data } : { name: f.name, type: 'text/plain', text: f.text })) }),
     });
   } finally { if (watch) clearInterval(watch); }
   return { text: String(body.text ?? ''), resume: String(body.resume ?? ''), session: String(body.session ?? ''), continued: !!body.continued, note: String(body.note ?? ''), outputs: body.outputs && typeof body.outputs === 'object' ? body.outputs : {} };

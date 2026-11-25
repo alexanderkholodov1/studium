@@ -193,6 +193,24 @@ await test('claude runs read-only in a folder with the material and the instruct
   check(!c.args.includes('--bare'), '--bare breaks macOS sign-in');
   check(leftovers().length === 0, 'folder left behind');
 });
+await test('links brought as a source: Claude Code may open only those sites, never search, and is told to keep a copy', async () => {
+  scenario({ claude: { answer: '{}' } });
+  const r = await run({ engine: 'claude', model: 'claude-haiku-5-5', effort: 'low', links: ['https://profe.usfq.edu.ec/clases/redes', 'https://github.com/alguien/repo', 'javascript:alert(1)', 'file:///C:/secreto.txt', 'https://x'] });
+  check(r.status === 200, JSON.stringify(r.data));
+  const [c] = calls();
+  const allowed = c.args.slice(c.args.indexOf('--allowedTools') + 1, c.args.indexOf('--disallowedTools'));
+  const denied = c.args.slice(c.args.indexOf('--disallowedTools') + 1);
+  const web = allowed.filter((t) => t.startsWith('WebFetch'));
+  check(web.length === 3 && web.includes('WebFetch(domain:profe.usfq.edu.ec)') && web.includes('WebFetch(domain:github.com)') && web.includes('WebFetch(domain:raw.githubusercontent.com)'), `sites: ${web.join(' ')}`);
+  check(!allowed.includes('WebFetch') && !allowed.includes('WebSearch'), 'a WebFetch without a site, or WebSearch, allowed');
+  check(denied.includes('WebSearch') && denied.includes('Task') && !denied.includes('WebFetch'), `denied: ${denied.join(' ')}`);
+  const ask = c.args[c.args.indexOf('-p') + 1] ?? '';
+  check(ask.includes('fuentes.json') && ask.includes('https://profe.usfq.edu.ec/clases/redes') && !ask.includes('javascript:') && !ask.includes('file:'), 'the prompt names only the valid links and asks for fuentes.json');
+  scenario({ claude: { answer: '{}' } });
+  await run({ engine: 'claude', model: 'claude-haiku-5-5', effort: 'low' });
+  const [d] = calls();
+  check(d.args.slice(d.args.indexOf('--disallowedTools') + 1).includes('WebFetch') && !d.args.some((t) => String(t).startsWith('WebFetch(')), 'without links, no internet at all');
+});
 await test('claude works in a folder of the person, with the tools of its permission, and leaves nothing there', async () => {
   const work = mkdtempSync(path.join(tmpdir(), 'bridge-work-'));
   writeFileSync(path.join(work, 'notebook.ipynb'), '{}');
