@@ -140,6 +140,10 @@ const leftovers = () => readdirSync(temp).filter((n) => n.startsWith('studium-ru
 async function test(name, fn) {
   try { await fn(); results.push([true, name]); } catch (e) { results.push([false, `${name}: ${e.message}`]); }
 }
+// «Ver a Claude Code trabajando» is a Windows console of its own (bridge.mjs: `body.watch && WIN`); elsewhere a
+// request with «watch» runs as any other. Those tests run where the window exists, and say so where it does not.
+const skipped = [];
+const windowTest = (name, fn) => (process.platform === 'win32' ? test(name, fn) : (skipped.push(name), Promise.resolve()));
 
 await test('it prints a pairing link and keeps the code in the home folder', async () => {
   check(printed.includes(`${SITE}/studium/#/ajustes?puente=${PORT}.${token}`), 'no pairing link');
@@ -396,7 +400,7 @@ await test('the bridge keeps each result, and Studium collects it again by its r
   const kept = await call('GET', '/v1/result?id=rkeep0002');
   check(t.status === 504 && kept.data.outputs?.['H3.json'] === '{"d":4}' && /tard|time|minut|504|respond/i.test(kept.data.error ?? ''), JSON.stringify(kept.data).slice(0, 200));
 });
-await test('«ver a Claude Code trabajando» opens the official CLI with the request, follows it live, and gets its answer', async () => {
+await windowTest('«ver a Claude Code trabajando» opens the official CLI with the request, follows it live, and gets its answer', async () => {
   scenario({ claude: {} });
   const r = await run({ engine: 'claude', model: 'claude-sonnet-5-5', runId: 'ventana-123', watch: true });
   const prog = await call('GET', '/v1/progress?id=ventana-123');
@@ -409,17 +413,17 @@ await test('«ver a Claude Code trabajando» opens the official CLI with the req
   // itself: Claude Code must never work in C:\ (his report, 2026-11-23).
   check(c.cwd && path.parse(c.cwd).root !== c.cwd && !/^[A-Z]:\?$/i.test(c.cwd), `the window's Claude Code ran in ${c.cwd}`);
 });
-await test('a limit said inside the Claude Code window comes back as a limit, not as «you closed it»', async () => {
+await windowTest('a limit said inside the Claude Code window comes back as a limit, not as «you closed it»', async () => {
   scenario({ claude: { saysLimit: true, windowOpen: 4000 } });
   const r = await run({ engine: 'claude', model: 'claude-sonnet-5-5', watch: true });
   check(r.status === 429 && /límite/.test(r.data.error.message) && !/cerr/i.test(r.data.error.message), `${r.status} ${JSON.stringify(r.data)}`);
 });
-await test('Claude Code ending with an error in its window is an error, not «you closed it»', async () => {
+await windowTest('Claude Code ending with an error in its window is an error, not «you closed it»', async () => {
   scenario({ claude: { exitCode: 1 } });
   const r = await run({ engine: 'claude', model: 'claude-sonnet-5-5', watch: true });
   check(r.status === 502 && !/cerr/i.test(r.data.error.message), `${r.status} ${JSON.stringify(r.data)}`);
 });
-await test('Studium\'s «Detener» closes the Claude Code window', async () => {
+await windowTest('Studium\'s «Detener» closes the Claude Code window', async () => {
   scenario({ claude: { neverDone: true, windowOpen: 60000 } });
   const body = JSON.stringify({ engine: 'claude', model: 'claude-sonnet-5-5', system: 'x', text: 'y', files: [], watch: true });
   const req = http.request({ host: '127.0.0.1', port: PORT, path: '/v1/run', method: 'POST', headers: { authorization: `Bearer ${token}`, origin: SITE, 'content-type': 'application/json' } });
@@ -501,4 +505,5 @@ for (const dir of [fakes, home, temp]) { try { rmSync(dir, { recursive: true, fo
 for (const [ok, name] of results) console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}`);
 const failed = results.filter(([ok]) => !ok).length;
 console.log(`\n${results.length - failed} of ${results.length} passed`);
+if (skipped.length) console.log(`${skipped.length} only on Windows (the Claude Code window), not run here: ${skipped.join('; ')}`);
 process.exit(failed ? 1 : 0);
