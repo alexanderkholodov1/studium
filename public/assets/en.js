@@ -1150,3 +1150,71 @@ Object.assign(EN, {
   'Tu IA devolvió una respuesta vacía. Studium vuelve a probar.': 'Your AI returned an empty answer. Studium tries again.',
 });
 PATTERNS.push([/^(Claude Code|Codex|Antigravity|Esta IA) no lee escaneos ni fotos: elige otra IA para esta parte\.$/, (m, n) => `${n === 'Esta IA' ? 'This AI' : n} reads no scans or photos: choose another AI for this part.`]);
+
+// «Ármalo por mí» (armar.js), the CAPP and the minors (malla.js), 0.6.0
+const AR_TAGS = { 'explica claro': 'explains clearly', 'muchos ejemplos': 'lots of examples', 'práctico': 'practical', 'responde dudas': 'answers questions', 'tutorías': 'office hours', 'examen de lo visto': 'tests what was taught', 'deja recuperar': 'lets you make up', 'comparte material': 'shares material', 'puntos extra': 'extra points', 'valora el procedimiento': 'values the working' };
+const AR_KIND = { 'Teoría': 'Theory', 'Laboratorio': 'Lab', 'Ejercicios': 'Exercises', 'Clase': 'Class' };
+const AR_DAY = { Lun: 'Mon', Mar: 'Tue', 'Mié': 'Wed', Jue: 'Thu', Vie: 'Fri', 'Sáb': 'Sat' };
+// The reasons under each course, joined by « · »: translated only when every part is one of them.
+const AR_WHY = (x) => {
+  const fixed = { 'para tu próximo semestre': 'for your next semester', 'cuenta para tu minor': 'counts for your minor', 'ya la aprobaste: sería repetir': 'already passed: it would be a repeat', 'la estás cursando': 'you are taking it', 'fuera de tu malla: electiva u optativa': 'outside your curriculum: an elective' };
+  if (fixed[x]) return fixed[x];
+  const o = x.match(/^abre (\d+)$/); if (o) return `opens ${o[1]}`;
+  const n = x.match(/^te falta (.+)$/); if (n) return `you still need ${n[1]}`;
+  return null;
+};
+Object.assign(EN, {
+  'Ármalo por mí': 'Build it for me', 'Trae todos los paralelos y Studium te propone horarios A, B y C.': 'Bring every section and Studium proposes schedules A, B and C.',
+  'Trae todos los paralelos': 'Bring every section', 'Tus materias': 'Your courses', 'códigos o nombres, separados por coma': 'codes or names, separated by commas',
+  'En tu navegador': 'In your browser', 'Arrastra este botón a tu barra de marcadores (una vez):': 'Drag this button to your bookmarks bar (once):',
+  'Studium: leer la oferta': 'Studium: read the offer', 'Arrástralo a tu barra de marcadores': 'Drag it to your bookmarks bar', 'Abre la': 'Open the', 'Oferta de cursos ↗': 'course offering ↗',
+  'con tu cuenta, pulsa el marcador, «Leer» y «Copiar para Studium», y pégalo arriba, en «Agregar clases».': 'with your account, press the bookmark, “Leer” and “Copiar para Studium”, and paste it above, in “Add classes”.',
+  'Con el puente': 'With the bridge', 'El puente abre una ventana de Chrome propia; la primera vez inicias sesión ahí con tu cuenta de la U.': 'The bridge opens a Chrome window of its own; the first time, you sign in there with your university account.',
+  'Leer con el puente': 'Read with the bridge', 'Leyendo…': 'Reading…', 'Enlaza el puente en Ajustes': 'Pair the bridge in Settings', 'para usar esta forma.': 'to use this way.',
+  'Qué hacen exactamente': 'What exactly they do',
+  'Los dos usan el mismo lector: pide a la Oferta de cursos, con tu sesión, lo mismo que pide su botón «Actualizar Cursos», una materia a la vez y con una pausa. Solo lee: no inscribe ni cambia nada. Lo leído llega a Studium cuando tú lo pegas (marcador) o cuando el puente termina, y queda solo en este dispositivo. Tu contraseña nunca pasa por Studium: inicias sesión en la página de la U.': 'Both use the same reader: it asks the course offering, with your session, the same thing its “Actualizar Cursos” button asks, one course at a time and with a pause. It only reads: it does not enroll or change anything. What it reads reaches Studium when you paste it (bookmark) or when the bridge finishes, and stays on this device only. Your password never goes through Studium: you sign in on the university’s page.',
+  'Borrarlas': 'Delete them', 'Qué tanto te importa cada una': 'How much each one matters to you', 'Imprescindible': 'Must have', 'Me gustaría': 'I’d like it', 'Si cabe': 'If it fits',
+  'Lo prefiero': 'I prefer them', 'Mejor no': 'Rather not', 'Lo que eliges aquí es solo tuyo: nadie más lo ve. Lo que cuenta la comunidad está en': 'What you choose here is yours only: nobody else sees it. What the community says is in',
+  'Tu comodidad': 'Your comfort', 'Máximo de créditos': 'Maximum credits', 'No antes de': 'Not before', 'Prefiero': 'I prefer', 'Equilibrado': 'Balanced',
+  'Menos días de clase': 'Fewer days of class', 'Menos huecos entre clases': 'Fewer gaps between classes', 'Armar horarios': 'Build schedules',
+  'sin cupo: pide cupo o usa otra': 'full: request a seat or use another', 'Crear como borrador': 'Create as a draft', 'Copiados': 'Copied', 'No se pudo copiar': 'Could not copy',
+  'El orden de cada plan es el orden para escribirlos en Banner: lo imprescindible y con menos cupos primero. Las partes de una materia (teoría, laboratorio, ejercicios) van juntas. Studium propone; tú decides.': 'Each plan’s order is the order to type them in Banner: the must-haves with the fewest seats first. The parts of a course (theory, lab, exercises) go together. Studium proposes; you decide.',
+  'No encontré una combinación sin choques con esas materias. Prueba marcar alguna como «Si cabe» o subir el máximo de créditos.': 'I found no combination without clashes for those courses. Try marking one as “If it fits” or raising the maximum credits.',
+  'Escribe primero tus materias.': 'Write your courses first.', 'El puente no pudo leer la oferta.': 'The bridge could not read the offer.',
+  'El puente abrió una ventana de Chrome: si te pide tu cuenta de la U, inicia sesión ahí. Lee una materia a la vez.': 'The bridge opened a Chrome window: if it asks for your university account, sign in there. It reads one course at a time.',
+  'Arrastra el botón a tu barra de marcadores; púlsalo en la Oferta de cursos, no aquí.': 'Drag the button to your bookmarks bar; press it on the course offering, not here.',
+  'El puente no está abierto. Ábrelo en tu computadora y vuelve a intentarlo.': 'The bridge is not open. Open it on your computer and try again.',
+  'Para leer la oferta, el puente necesita Node 22 o más nuevo. Instálalo desde nodejs.org y vuelve a abrir el puente.': 'To read the offer, the bridge needs Node 22 or newer. Install it from nodejs.org and open the bridge again.',
+  'No encontré Chrome ni Edge en este computador. Usa el marcador de Studium en tu navegador.': 'I found neither Chrome nor Edge on this computer. Use Studium’s bookmark in your browser.',
+  'No se inició sesión en la Oferta de cursos a tiempo. Vuelve a intentarlo e inicia sesión en la ventana que se abre.': 'Nobody signed in to the course offering in time. Try again and sign in in the window that opens.',
+  // the CAPP and the minors
+  'Traer mi CAPP': 'Bring my CAPP', 'Abre tu': 'Open your', 'evaluación CAPP ↗': 'CAPP evaluation ↗',
+  ', copia toda la página (Ctrl+A, Ctrl+C) y pégala aquí. Studium marca lo que aprobaste y lo que estás cursando, que cuenta como prerrequisito para el próximo semestre.': ', copy the whole page (Ctrl+A, Ctrl+C) and paste it here. Studium marks what you passed and what you are taking, which counts as a prerequisite next semester.',
+  'Pega aquí tu CAPP': 'Paste your CAPP here', 'Leer mi CAPP': 'Read my CAPP',
+  'No reconocí tu CAPP en ese texto. Copia toda la página de «Resultados de Evaluación CAPP» y pégala aquí.': 'I did not recognize your CAPP in that text. Copy the whole “Resultados de Evaluación CAPP” page and paste it here.',
+  'Tu minor': 'Your minor', 'quitar': 'remove', 'Su malla en PDF ↗': 'Its curriculum as PDF ↗', 'Su página ↗': 'Its page ↗', '· Sus materias están en su página.': '· Its courses are on its page.',
+  'Otro minor': 'Another minor', 'Elige tu minor': 'Choose your minor', 'De la': 'From the', 'página de minors de la U ↗': 'university’s minors page ↗',
+  '. Un minor pide de 15 a 18 créditos, la mitad en la USFQ.': '. A minor asks for 15 to 18 credits, half of them at USFQ.',
+  'La estás cursando': 'You are taking it',
+});
+PATTERNS.push(
+  [/^Tienes (\d+) secciones de (\d+) materias( del periodo (\d+))?, leídas (.+)\.$/, (m, a, b, c, term, at) => `You have ${a} sections of ${b} courses${term ? ` for term ${term}` : ''}, read ${at}.`],
+  [/^(\S+) · (\d+) secciones( · (\d+) cupos)?$/, (m, code, n, c, s) => `${code} · ${n} sections${c ? ` · ${s} seats` : ''}`],
+  [/^Qué tanto te importa (.+)$/, 'How much $1 matters to you'],
+  [/^Profesores \((\d+)\)$/, 'Professors ($1)'],
+  [/^(\d+) (persona|personas) en Comunidad: (.*)$/, (m, n, p, tags) => `${n} ${p === 'persona' ? 'person' : 'people'} in Community: ${tags.split(', ').map((g) => AR_TAGS[g] ?? g).join(', ')}`],
+  [/^(\d+) créditos$/, '$1 credits'], [/^(\d+) créditos · /, '$1 credits · '],
+  [/^(Teoría|Laboratorio|Ejercicios|Clase) (\d+): (.+)$/, (m, k, nrc, rest) => `${AR_KIND[k]} ${nrc}: ${rest.replace(/\b(Lun|Mar|Mié|Jue|Vie|Sáb)(?= \d)/g, (d) => AR_DAY[d]).replace(/ (\d+) cupos$/, ' $1 seats')}`],
+  [/^Si se llena: (.+)$/, (m, x) => `If it fills up: ${x.replace(/ o /g, ' or ')}`],
+  [/^No entra: (.+)\.$/, 'Does not fit: $1.'],
+  [/^Copiar NRC \((\d+)\)$/, 'Copy NRCs ($1)'],
+  [/^(Plan [ABC]) quedó como borrador: revísalo arriba\.$/, '$1 is now a draft: check it above.'],
+  [/^Listo: (\d+) secciones de (\d+) materias\.(?: Sin resultados: (.+)\.)?$/, (m, a, b, miss) => `Done: ${a} sections of ${b} courses.${miss ? ` No results: ${miss}.` : ''}`],
+  [/^(.+): nunca van en el mismo plan\.$/, (m, x) => `${x.split('; ').map((p) => p.replace(/ pide /, ' requires ')).join('; ')}: never in the same plan.`],
+  [/^Leídas (\d+) secciones de (\d+) (materia|materias)(?: \(sin resultados: (.+)\))?\. Abajo, en «Ármalo por mí», dime qué tanto te importa cada una\.$/, (m, a, b, k, miss) => `Read ${a} sections of ${b} ${k === 'materia' ? 'course' : 'courses'}${miss ? ` (no results: ${miss})` : ''}. Below, in “Build it for me”, tell me how much each one matters.`],
+  [/^Tu puente es la versión (.+): para leer la oferta necesitas la (.+)\. Ciérralo, descárgalo de nuevo desde Ajustes y ábrelo otra vez\.$/, (m, v, need) => `Your bridge is version ${v === 'anterior' ? 'older' : v}: reading the offer needs ${need}. Close it, download it again from Settings and open it again.`],
+  [/^La Oferta de cursos no respondió como se esperaba \((.+)\)\.$/, 'The course offering did not answer as expected ($1).'],
+  [/^(\d+) cursando$/, '$1 in progress'], [/^Cursando (\d+)$/, 'In progress $1'],
+  [/^Listo: (\d+) aprobadas y (\d+) cursando, según tu CAPP\.$/, 'Done: $1 passed and $2 in progress, from your CAPP.'],
+  [/^[a-zé].*$/, (m) => { const out = m.split(' · ').map(AR_WHY); return out.every(Boolean) ? out.join(' · ') : m; }],
+);

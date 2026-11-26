@@ -227,9 +227,10 @@ try {
   await B.wait(`document.querySelector('[data-rn-share][value="busy"]:not([disabled])')`, 15000);
   await B.js(`document.querySelector('[data-rn-share][value="busy"]').click();`); await W(2000);
   ok('B shares only the busy hours', /ocupadas/.test(await B.js(`return document.body.innerText`)) || true);
-  // Tuesday 15:00–18:00 for A (slots 46–51), Tuesday 16:00–19:00 for B (48–53): together 16:00–18:00.
-  await paint(A, 46, 51); await W(1800);
-  await paint(B, 48, 53); await W(1800);
+  // Sunday 15:00–18:00 for A (slots 196–201), Sunday 16:00–19:00 for B (198–203): together 16:00–18:00. Sunday is
+  // always ahead (the timeline shows next week from Saturday on), and past hours are never offered.
+  await paint(A, 196, 201); await W(1800);
+  await paint(B, 198, 203); await W(1800);
   ok('each one’s hours are saved', /Guardado/.test(await B.js(`return document.querySelector('[data-rn-status]')?.textContent ?? ''`)));
   await A.js(`location.reload();`); await W(3000);
   await A.wait(`document.querySelector('.rn-best li')`, 15000).catch(async (e) => { console.log('RN', JSON.stringify(await A.js(`return document.querySelector('#cap-reunion')?.innerText?.slice(0, 800) ?? 'none'`))); throw e; });
@@ -239,12 +240,12 @@ try {
   ok('turning B off hides B’s layer', (await A.js(`return document.querySelector('[data-rn-slot="34"]').querySelectorAll('u').length`)) === 0);
   await A.js(`document.querySelector('[data-rn="layer"][data-k="${B_ACC.uid}"]').click();`); await W(500);
   const bestA = await A.js(`return document.querySelector('.rn-best li')?.innerText ?? ''`);
-  ok('the best hour is the one both can', /martes/.test(bestA) && /16:00–17:00/.test(bestA) && /pueden todos/.test(bestA), bestA.replace(/\s+/g, ' '));
+  ok('the best hour is the one both can', /domingo/.test(bestA) && /16:00–17:00/.test(bestA) && /pueden todos/.test(bestA), bestA.replace(/\s+/g, ' '));
   await A.js(`document.querySelector('#cap-reunion').scrollIntoView();`); await W(300);
   await A.shot('c1-a-reunion');
   // Choosing on the timeline itself: «Elegir la hora», a click, «Proponer esta hora» appears.
   await A.js(`document.querySelector('[data-rn="mode"][data-m="pick"]').click();`); await W(400);
-  await A.js(`document.querySelector('[data-rn-slot="50"]').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));`); await W(500);
+  await A.js(`document.querySelector('[data-rn-slot="200"]').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));`); await W(500);
   ok('choosing an hour on the timeline offers to propose it', /Elegiste/.test(await A.js(`return document.querySelector('.rn-picked')?.textContent ?? ''`)));
   await A.js(`document.querySelector('[data-rn="unsel"]').click();`); await W(300);
   await A.js(`document.querySelector('.rn-best [data-rn="propose"]').click();`);

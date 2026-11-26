@@ -129,7 +129,7 @@ function bringStep() {
     <div class="ar-ways">
       <div class="ar-way"><b>En tu navegador</b>
         <p class="fine">Arrastra este botón a tu barra de marcadores (una vez): <a class="ar-bookmark" href="${esc(bookmarklet(codes, getPool().term))}" data-ar-bookmark title="Arrástralo a tu barra de marcadores">Studium: leer la oferta</a></p>
-        <p class="fine">Abre la <a href="${CATALOG}" target="_blank" rel="noopener">Oferta de cursos ↗</a> con tu cuenta, pulsa el marcador, «Leer» y «Copiar para Studium», y pégalo abajo en «Agregar clases».</p></div>
+        <p class="fine">Abre la <a href="${CATALOG}" target="_blank" rel="noopener">Oferta de cursos ↗</a> con tu cuenta, pulsa el marcador, «Leer» y «Copiar para Studium», y pégalo arriba, en «Agregar clases».</p></div>
       <div class="ar-way"><b>Con el puente</b>
         <p class="fine">El puente abre una ventana de Chrome propia; la primera vez inicias sesión ahí con tu cuenta de la U.</p>
         ${b?.token ? `<button class="button ghost small" data-ar-bridge ${busy ? 'disabled' : ''}>${busy === 'bridge' ? 'Leyendo…' : 'Leer con el puente'}</button>` : '<p class="fine"><a href="#/ajustes">Enlaza el puente en Ajustes</a> para usar esta forma.</p>'}</div>
