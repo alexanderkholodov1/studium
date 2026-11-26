@@ -38,7 +38,10 @@ try {
   const s = await B.js(`const t = document.querySelector('#dash [data-tile="schedule"]'); const r = t.getBoundingClientRect(); const sheet = t.querySelector('.sched-sheet'); const body = t.querySelector('.tile-body');
     return { w: Math.round(r.width), h: Math.round(r.height), top: Math.round(r.top + scrollY), days: t.querySelectorAll('.sched-head b').length, classes: t.querySelectorAll('.sched-class').length, now: !!t.querySelector('.sched-now'), over: body.scrollHeight - body.clientHeight, rowh: getComputedStyle(sheet).getPropertyValue('--rowh') }`);
   ok('the default Inicio shows the whole week (wide, every day, every class)', s.w > 700 && s.days >= 5 && s.classes === 6, JSON.stringify(s));
-  ok('…with «now» on it', s.now, JSON.stringify(s));
+  // «Now» is drawn only inside the hours the week shows (a test run at night or on Sunday has none to see).
+  const clock = new Date(); const minute = clock.getHours() * 60 + clock.getMinutes();
+  const inside = clock.getDay() >= 1 && clock.getDay() <= 5 && minute > 7 * 60 && minute < 17 * 60;
+  ok('…with «now» on it (when now is inside the week shown)', s.now || !inside, JSON.stringify({ ...s, inside }));
   ok('…fitted to its tile (nothing cut)', s.over <= 2, JSON.stringify(s));
   const tiles = await B.js(`return [...document.querySelectorAll('#dash [data-tile]')].map((t) => t.dataset.tile)`);
   ok('one of Pendientes/Metas/Notas and one of Próximo examen/Fechas by default', tiles.filter((x) => ['todos', 'goals', 'notes'].includes(x)).length === 1 && tiles.filter((x) => ['countdown', 'deadlines'].includes(x)).length === 1, tiles.join(','));

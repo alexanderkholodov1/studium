@@ -119,6 +119,15 @@ try {
   ok('at phone width nothing overflows sideways', over <= 1, String(over));
   await B.js(`document.querySelector('#horario [data-armar]').scrollIntoView();`); await W(400);
   await B.shot('05-telefono');
+  // In English, the panel has no Spanish left but the catalog's own words (course names, professors, its buttons).
+  await B.send('Emulation.clearDeviceMetricsOverride', {});
+  await B.js(`(await import('/studium/assets/i18n.js')).setLang('en'); document.querySelector('#horario [data-ar-profs]')?.click();`); await W(1200);
+  const left = await B.js(`const a = document.querySelector('#horario [data-armar]'); const out = []; const w = document.createTreeWalker(a, NodeFilter.SHOW_TEXT);
+    const data = new Set([...document.querySelectorAll('#horario .ar-course-head b, #horario .ar-plan ol li > b, #horario .ar-profs li > span')].map((e) => e));
+    for (let n = w.nextNode(); n; n = w.nextNode()) { const t = ${JSON.stringify([...new Set(sections.map((s) => s.name.replace(/\s*\+.*$/, '')))].concat(['Seguridad Informática', 'Base de Datos']))}.reduce((x, name) => x.split(name).join(''), n.nodeValue.trim()); if (!t || n.parentElement.closest('textarea, input') || [...data].some((e) => e.contains(n) && e.firstChild === n)) continue;
+      if (/[áéíóúñ¿]|\\b(de|tu|tus|las|los|para|que|con|por|del|una|sin|cupos|secciones|materias)\\b/i.test(t.replace(/«[^»]*»|Leer|Copiar para Studium|Agregar clases|Actualizar Cursos/g, '')) && !/^[A-Z]{3,4}[- ]\\d{4}/.test(t)) out.push(t.slice(0, 90)); }
+    (await import('/studium/assets/i18n.js')).setLang('es'); return out;`);
+  ok('in English, nothing of the panel is left in Spanish (but the catalog’s names)', left.length === 0, left.join(' | '));
 } catch (e) { results.push(`FAIL ${e.message}`); }
 console.log(results.join('\n'));
 console.log(B.logs.filter((l) => !/favicon|ERR_CONNECTION_REFUSED|41730/.test(l)).slice(0, 10).join('\n'));

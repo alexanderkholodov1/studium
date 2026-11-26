@@ -1,4 +1,4 @@
-// Usage: node tools/e2e/trabajos.mjs private/emulator-account.json <folder for screenshots>
+// Usage: node tools/e2e/trabajos.mjs private/emulator-account.json <folder for screenshots> [port, 5181]
 // Needs: firebase emulators:start --only auth,firestore; node tools/dev.mjs --port 5181 --emulators; node tools/seed-emulators.mjs.
 // End to end, as a person: sign in, create a trabajo from a file on disk that changes after being chosen (the
 // «could not be read» case), without GitHub and without an AI; then the GitHub path that must fail plainly, with
@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync, appendFileSync, mkdirSync } from 'node:fs'
 import path from 'node:path';
 import { open } from './cdp.mjs';
 
-const [, , ACCOUNT, SHOTS] = process.argv;
+const [, , ACCOUNT, SHOTS, PORT = '5181'] = process.argv;
 mkdirSync(SHOTS, { recursive: true });
 const { email, password } = JSON.parse(readFileSync(ACCOUNT, 'utf8'));
 const B = await open({ shots: SHOTS });
@@ -22,7 +22,7 @@ const next = async () => {
   await W(500);
 };
 try {
-  await B.go('http://localhost:5181/studium/#/entrar');
+  await B.go(`http://localhost:${PORT}/studium/#/entrar`);
   await B.wait(`document.querySelector('input[type=password]')?.offsetParent`);
   await B.js(`const f = [...document.querySelectorAll('input')].filter((i) => i.offsetParent); const em = f.find((i) => i.type === 'email' || /mail/i.test(i.name)); const pw = f.find((i) => i.type === 'password'); em.value = ${JSON.stringify(email)}; pw.value = ${JSON.stringify(password)}; em.dispatchEvent(new Event('input', { bubbles: true })); pw.dispatchEvent(new Event('input', { bubbles: true })); pw.form.requestSubmit();`);
   await W(2500);

@@ -1,4 +1,4 @@
-// Usage: node tools/e2e/amigos.mjs private/emulator-account.json private/emulator-account-2.json <folder for screenshots>
+// Usage: node tools/e2e/amigos.mjs private/emulator-account.json private/emulator-account-2.json <folder for screenshots> [port, 5181]
 // Needs: firebase emulators:start --only auth,firestore; node tools/dev.mjs --port 5181 --emulators; two accounts from
 // node tools/seed-emulators.mjs <file>.
 // End to end, as two people (two headless Chromes):
@@ -13,11 +13,11 @@ import { readFileSync, mkdirSync } from 'node:fs';
 import http from 'node:http';
 import { open } from './cdp.mjs';
 
-const [, , ACC_A, ACC_B, SHOTS] = process.argv;
+const [, , ACC_A, ACC_B, SHOTS, PORT = '5181'] = process.argv;
 mkdirSync(SHOTS, { recursive: true });
 const A_ACC = JSON.parse(readFileSync(ACC_A, 'utf8'));
 const B_ACC = JSON.parse(readFileSync(ACC_B, 'utf8'));
-const APP = 'http://localhost:5181/studium/';
+const APP = `http://localhost:${PORT}/studium/`;
 const results = [];
 const ok = (name, cond, detail = '') => { results.push(`${cond ? 'ok  ' : 'FAIL'} ${name}${detail ? ` — ${detail}` : ''}`); };
 const W = (ms) => new Promise((r) => setTimeout(r, ms));

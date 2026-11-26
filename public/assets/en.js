@@ -1160,7 +1160,7 @@ const AR_WHY = (x) => {
   const fixed = { 'para tu próximo semestre': 'for your next semester', 'cuenta para tu minor': 'counts for your minor', 'ya la aprobaste: sería repetir': 'already passed: it would be a repeat', 'la estás cursando': 'you are taking it', 'fuera de tu malla: electiva u optativa': 'outside your curriculum: an elective' };
   if (fixed[x]) return fixed[x];
   const o = x.match(/^abre (\d+)$/); if (o) return `opens ${o[1]}`;
-  const n = x.match(/^te falta (.+)$/); if (n) return `you still need ${n[1]}`;
+  const n = x.match(/^te falta (.+)$/); if (n) return `you still need ${n[1].replace(/\) con ([A-D]) o más/g, ') with $1 or better').replace(/\) y /g, ') and ').replace(/\) o /g, ') or ').replace(/^tu examen de ubicación de inglés/, 'your English placement test')}`;
   return null;
 };
 Object.assign(EN, {
