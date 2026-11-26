@@ -26,8 +26,9 @@ const rel = (file) => path.relative(ROOT, file).split(path.sep).join('/');
 if (!existsSync(path.join(ROOT, 'index.html'))) errors.push('public/index.html is missing');
 for (const file of files) {
   const name = rel(file);
-  // The mallas are the university's public data, read by tools/malla.mjs; nothing else ships beside the app.
-  const malla = /^data\/mallas\/[0-9A-Z]+\.json$|^data\/mallas\/index\.json$|^data\/models\.json$|^data\/changelog\.json$/.test(name);
+  // The mallas and the minors are the university's public data, read by tools/malla.mjs and tools/minors.mjs;
+  // nothing else ships beside the app.
+  const malla = /^data\/mallas\/[0-9A-Z]+\.json$|^data\/mallas\/index\.json$|^data\/minors\/index\.json$|^data\/models\.json$|^data\/changelog\.json$/.test(name);
   // frame.html is the empty frame a guide is drawn in (viewer.js), never a guide.
   if (name !== 'index.html' && name !== 'frame.html' && !name.startsWith('assets/') && !malla) errors.push(`${file}: only index.html, assets/ and data/mallas/ ship; guides go to the database`);
   if (name.startsWith('assets/') && name.endsWith('.html')) errors.push(`${file}: no HTML pages in assets/; guides go to the database`);
